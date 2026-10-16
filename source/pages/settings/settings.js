@@ -25,14 +25,17 @@ Page({
       slots: d.slots.map((s) => {
         const wk = (rp.counts[d.id] || 0) + 1, ef = GZ.effectiveSlot(db, s, wk);
         const list = names[s.tier].indexOf(ef.slot.name) < 0 ? [ef.slot.name].concat(names[s.tier]) : names[s.tier];
+        const eq = GZ.equipOf(ef.slot.name, ef.slot.equip), rec = GZ.recommendWeight(db, ef.slot.name, s.tier, { preferLast: false });
         return {
-        id: s.id, tier: s.tier, name: ef.slot.name, init: s.init, opts: list, optIdx: list.indexOf(ef.slot.name),
+        id: s.id, tier: s.tier, name: ef.slot.name, equip: eq, equipLabel: eq + (eq === '哑铃' ? '·单只' : eq === '负重' ? '·外加' : ''),
+        recText: rec.text + (rec.unit === '自重' ? '' : ' ' + rec.unit), recNote: rec.note, recWeight: rec.weight,
+        init: s.init, opts: list, optIdx: list.indexOf(ef.slot.name),
         changeText: ef.change ? '第 ' + ef.change.fromWeek + ' 周起更换 · 原 ' + s.name : '',
         initW: GZ.fmtW(GZ.initWeight(s, P)),
         baseIdx: s.init.type === 'pct' ? GZ.LIFT_ORDER.indexOf(s.init.base) : 0,
         baseName: s.init.type === 'pct' ? GZ.LIFTS[s.init.base] : '',
         pctText: s.init.type === 'pct' ? Math.round(s.init.pct * 100) : '',
-        stepText: (P.steps[s.step] || 0) + ' kg' + (s.roundProg ? ' · 取整' : '')
+        stepText: eq === '自重' ? '达阈值后改负重' : GZ.stepOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg · 按 ' + GZ.incOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg 档'
       }; })
     }));
     this.setData({
@@ -59,6 +62,7 @@ Page({
     const name = slot.opts[Number(e.detail.value)];
     if (!name || name === slot.name) return;
     const db = store.load(), r = GZ.swapSlot(db, this.data.days[this.data.dIdx].id, slot.id, name, null);
+    if (r && r.error) return wx.showToast({ title: r.error, icon: 'none' });
     store.save(db); this.refresh();
     wx.showToast({ title: r && r.base ? '已更换为 ' + name : '第 ' + r.fromWeek + ' 周起改为 ' + name, icon: 'none' });
   },
@@ -74,6 +78,14 @@ Page({
   onBase(e) { const si = Number(e.currentTarget.dataset.si); this.slotMut(si, (s) => { s.init.base = GZ.LIFT_ORDER[Number(e.detail.value)]; }); },
   onPct(e) { const v = parseFloat(e.detail.value); if (isNaN(v)) return; this.slotMut(Number(e.currentTarget.dataset.si), (s) => { s.init.pct = v / 100; }); },
   onFixed(e) { const v = parseFloat(e.detail.value); if (isNaN(v)) return; this.slotMut(Number(e.currentTarget.dataset.si), (s) => { s.init.value = v; }); },
+  onApplyRec(e) {
+    const si = Number(e.currentTarget.dataset.si), di = this.data.dIdx, view = this.data.days[di].slots[si];
+    const db = store.load(), day = db.days[di], s = day.slots[si], rec = GZ.recommendWeight(db, view.name, s.tier, { preferLast: false });
+    const ef = GZ.effectiveSlot(db, s, (GZ.replay(db).counts[day.id] || 0) + 1);
+    if (ef.change) GZ.swapSlot(db, day.id, s.id, view.name, rec.weight);
+    else s.init = { type: 'fixed', value: rec.weight };
+    store.save(db); this.refresh(); wx.showToast({ title: '已采用推荐 ' + rec.text + (rec.unit === '自重' ? '' : ' ' + rec.unit), icon: 'none' });
+  },
 
   exportData() {
     wx.setClipboardData({ data: JSON.stringify(store.load()), success: () => { store.markBackup(); this.refresh(); wx.showToast({ title: '已复制，粘贴到文件传输助手保存', icon: 'none' }); } });

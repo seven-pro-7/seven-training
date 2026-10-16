@@ -56,6 +56,14 @@ page {
 .t-T1 { color: #FF6B1A; background: rgba(255,107,26,0.12); }
 .t-T2 { color: #0A84FF; background: rgba(10,132,255,0.12); }
 .t-T3 { color: #8E8E93; background: rgba(142,142,147,0.14); }
+/* 器械类型：所有动作都必须有且只有一个明确标签 */
+.equip-tag { display: inline-flex; align-items: center; height: 34rpx; padding: 0 10rpx; border-radius: 9rpx; font-size: 19rpx; font-weight: 600; line-height: 34rpx; flex-shrink: 0; }
+.eq-杠铃 { color: #5856D6; background: rgba(88,86,214,0.11); }
+.eq-哑铃 { color: #007AFF; background: rgba(0,122,255,0.10); }
+.eq-自重 { color: #248A3D; background: rgba(52,199,89,0.12); }
+.eq-负重 { color: #C93400; background: rgba(255,107,26,0.12); }
+.eq-器械 { color: #636366; background: rgba(142,142,147,0.14); }
+.lib-rec { font-size: 22rpx; color: var(--accent); margin-top: 5rpx; line-height: 1.4; }
 .jtag { font-size: 26rpx; font-weight: 600; }
 
 /* 按钮 */
@@ -72,7 +80,9 @@ page {
 /* 底部弹层 */
 .mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.32); z-index: 100; display: flex; align-items: flex-end; }
 .mask.center { align-items: center; justify-content: center; }
-.sheet { width: 100%; max-height: 86vh; overflow-y: auto; background: var(--bg); border-radius: 40rpx 40rpx 0 0; padding: 16rpx 32rpx calc(40rpx + env(safe-area-inset-bottom)); box-sizing: border-box; }
+.sheet { width: 100%; max-height: 86vh; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border-radius: 40rpx 40rpx 0 0; padding: 16rpx 32rpx calc(56rpx + env(safe-area-inset-bottom)); box-sizing: border-box; }
+.sheet .sheet-btns { position: sticky; bottom: calc(-40rpx - env(safe-area-inset-bottom)); z-index: 2; padding: 20rpx 0 calc(40rpx + env(safe-area-inset-bottom)); background: var(--bg); }
+.sheet .swap-ok { position: sticky; bottom: calc(-40rpx - env(safe-area-inset-bottom)); z-index: 2; margin-bottom: 0; box-shadow: 0 -12rpx 0 var(--bg), 0 12rpx 0 var(--bg); }
 .grabber { width: 72rpx; height: 10rpx; border-radius: 10rpx; background: var(--label3); margin: 0 auto 24rpx; }
 .sheet-cap { font-size: 26rpx; color: var(--label2); }
 .sheet-title { font-size: 48rpx; font-weight: 700; margin: 4rpx 0 24rpx; letter-spacing: -0.5rpx; }

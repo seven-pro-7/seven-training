@@ -95,14 +95,16 @@ Page({
     this.setData({ swap: s });
   },
   closeSwap() { this.setData({ 'swap.show': false }); },
-  swapTier(e) { this.swapState.tier = e.currentTarget.dataset.t; this.renderSwap(); },
+  swapTier(e) { if (this.swapState.slotTier === 'T1') return; this.swapState.tier = e.currentTarget.dataset.t; this.renderSwap(); },
   swapQ(e) { this.swapState.q = e.detail.value; this.renderSwap(); },
   swapPick(e) {
     const s = this.swapState, name = e.currentTarget.dataset.name;
     if (name === s.curName) return this.closeSwap();
     s.sel = name;
-    s.weight = s.lastW[name] !== undefined ? String(s.lastW[name]) : GZ.fmtW(s.ctxW);
-    this.setData({ 'swap.sel': s.sel, 'swap.weight': s.weight });
+    const rec = GZ.recommendWeight(this.db(), name, s.slotTier, { preferLast: true });
+    s.weight = String(rec.weight);
+    s.recText = rec.text; s.recUnit = rec.unit; s.recNote = rec.note; s.selEquip = rec.equip;
+    this.setData({ 'swap.sel': s.sel, 'swap.weight': s.weight, 'swap.recText': s.recText, 'swap.recUnit': s.recUnit, 'swap.recNote': s.recNote, 'swap.selEquip': s.selEquip });
   },
   swapScope(e) { this.swapState.scope = e.currentTarget.dataset.s; this.setData({ 'swap.scope': this.swapState.scope }); },
   swapWeight(e) { this.swapState.weight = e.detail.value; },
@@ -113,12 +115,13 @@ Page({
   swapConfirm() {
     const s = this.swapState, en = this.entry(s.slotId);
     if (s.scope === 'once' || s.editing) {
-      en.ex = s.sel; en.w = null;
-      wx.showToast({ title: '本次改为 ' + s.sel, icon: 'none' });
+      en.ex = s.sel; en.w = Number(s.weight) || 0; // 本次替换直接采用该动作的器械感知推荐重量
+      wx.showToast({ title: '本次改为 ' + s.sel + ' · ' + s.recText + (s.recUnit === '自重' ? '' : ' ' + s.recUnit), icon: 'none' });
     } else {
       const w = parseFloat(s.weight);
       if (isNaN(w) || w < 0) return wx.showToast({ title: '请填写起始重量', icon: 'none' });
       const db = this.db(), r = GZ.swapSlot(db, s.dayId, s.slotId, s.sel, w);
+      if (r && r.error) return wx.showToast({ title: r.error, icon: 'none' });
       store.save(db);
       delete en.ex; en.w = null; en.editW = false;
       wx.showToast({ title: r && r.base ? '已更换为 ' + s.sel : '第 ' + r.fromWeek + ' 周起改为 ' + s.sel, icon: 'none' });
@@ -194,11 +197,13 @@ Page({
 
   save() {
     const db = this.db();
+    const bw = this.data.bw ? Number(this.data.bw) : null;
     const rec = GZ.saveRecord(db, {
       id: this.recordId, date: this.data.date, day: this.day, deload: this.data.vm.deload,
-      note: this.data.note, bw: this.data.bw ? Number(this.data.bw) : null, entries: this.draft,
+      note: this.data.note, bw, entries: this.draft,
       createdAt: this.recordId ? this.editCreatedAt : Date.now()
     });
+    if (bw > 0) db.params.bodyWeight = bw; // 负重动作推荐重量以最近体重为基准
     store.save(db);
     const s = GZ.sessionResult(db, rec.id), rd = GZ.roundInfo(db);
     const weekDone = !this.recordId && s && rd.week > s.week;

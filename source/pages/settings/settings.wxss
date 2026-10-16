@@ -8,7 +8,7 @@
 
 .slot { flex-direction: column; align-items: stretch; padding: 24rpx 32rpx; }
 .slot-top { display: flex; align-items: center; }
-.ex-pick { margin-left: 16rpx; font-size: 32rpx; font-weight: 500; display: flex; align-items: center; }
+.ex-pick { margin-left: 16rpx; font-size: 32rpx; font-weight: 500; display: flex; align-items: center; flex-wrap: wrap; gap: 8rpx; }
 .init { font-size: 32rpx; font-weight: 600; }
 .init .f-u { font-size: 24rpx; font-weight: 400; }
 .slot-cfg { display: flex; align-items: center; margin-top: 16rpx; font-size: 26rpx; }
@@ -21,6 +21,8 @@
 .imp { width: 100%; height: 220rpx; background: var(--fill2); border-radius: 16rpx; padding: 16rpx; box-sizing: border-box; font-size: 24rpx; color: var(--label); }
 
 .slot-chg { font-size: 22rpx; color: var(--green); margin-top: 8rpx; }
+.slot-rec { display: flex; align-items: flex-start; gap: 12rpx; font-size: 22rpx; color: var(--accent); margin-top: 8rpx; line-height: 1.45; }
+.rec-apply { flex-shrink: 0; font-size: 23rpx; font-weight: 600; padding: 4rpx 14rpx; border-radius: 999rpx; background: var(--accent-soft); }
 .cfg-l { font-size: 22rpx; color: var(--label2); margin-right: 12rpx; }
 .init-step { font-size: 22rpx; color: var(--label2); margin-right: 16rpx; white-space: nowrap; }
 .cfg-l, .mini-seg, .ms, .base-pick { white-space: nowrap; flex-shrink: 0; }

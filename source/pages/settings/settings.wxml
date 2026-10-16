@@ -12,8 +12,13 @@
       <input class="f-in num" type="digit" value="{{tmPct}}" data-k="tmRatio" data-pct="1" bindblur="onParam" />
       <text class="f-u">%</text>
     </view>
+    <view class="cell">
+      <text class="flex1">当前体重</text>
+      <input class="f-in num" type="digit" value="{{p.bodyWeight}}" data-k="bodyWeight" bindblur="onParam" />
+      <text class="f-u">kg</text>
+    </view>
   </view>
-  <view class="sec-f">训练最大值 TM = 1RM × {{tmPct}}%，首周重量 = TM × 系数，按 {{p.rounding}} kg 取整</view>
+  <view class="sec-f">T1 以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</view>
 
   <view class="sec-h">加重步幅</view>
   <view class="list">
@@ -56,12 +61,13 @@
       <view class="slot-top">
         <text class="tier t-{{s.tier}}">{{s.tier}}</text>
         <picker class="flex1" range="{{s.opts}}" value="{{s.optIdx}}" data-si="{{si}}" bindchange="onEx">
-          <view class="ex-pick">{{s.name}}<text class="chev">⌄</text></view>
+          <view class="ex-pick">{{s.name}}<text class="equip-tag eq-{{s.equip}}">{{s.equipLabel}}</text><text class="chev">⌄</text></view>
         </picker>
         <text class="init-step">每次 +{{s.stepText}}</text>
         <text class="init num">{{s.initW}}<text class="f-u"> kg</text></text>
       </view>
       <view class="slot-chg" wx:if="{{s.changeText}}">{{s.changeText}}</view>
+      <view class="slot-rec"><text class="flex1">系统推荐 {{s.recText}} · {{s.recNote}}</text><text class="rec-apply" data-si="{{si}}" bindtap="onApplyRec">采用</text></view>
       <view class="slot-cfg">
         <text class="cfg-l">首周</text>
         <view class="mini-seg">

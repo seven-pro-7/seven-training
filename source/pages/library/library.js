@@ -2,7 +2,7 @@ const GZ = require('../../utils/engine.js');
 const store = require('../../utils/store.js');
 
 const TIER_TIP = {
-  T1: 'T1 主项：大重量复合动作，按 5×3+ → 6×2+ → 10×1+ 进阶',
+  T1: 'T1 严格限定四大项：杠铃深蹲、平板卧推、传统硬拉、站姿实力推。不能添加其他 T1 动作。',
   T2: 'T2 次主项：中等重量，按 3×10 → 3×8 → 3×6 退阶',
   T3: 'T3 辅助项：小重量高次数，末组达阈值加重'
 };
@@ -20,7 +20,7 @@ Page({
       success: (r) => { if (!r.confirm) return; const db = store.load(); GZ.removeCustomEx(db, name); store.save(db); this.refresh(); }
     });
   },
-  openAdd() { this.setData({ add: { show: true, name: '', desc: '', tier: this.data.q ? 'T3' : this.data.tier, partIdx: GZ.PARTS.length - 1, equipIdx: 0 } }); },
+  openAdd() { const t = this.data.q || this.data.tier === 'T1' ? 'T3' : this.data.tier; this.setData({ add: { show: true, name: '', desc: '', tier: t, partIdx: GZ.PARTS.length - 1, equipIdx: 0 } }); },
   closeAdd() { this.setData({ 'add.show': false }); },
   addName(e) { this.setData({ 'add.name': e.detail.value }); },
   addDesc(e) { this.setData({ 'add.desc': e.detail.value }); },

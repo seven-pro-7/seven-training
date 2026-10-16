@@ -8,9 +8,10 @@
   <view class="list">
     <view wx:for="{{lib.list}}" wx:key="name" class="cell lib-row">
       <view class="flex1">
-        <view class="lib-n">{{item.name}}<text class="tier t-{{item.tier}} lib-t" wx:if="{{q}}">{{item.tier}}</text><text class="lib-c" wx:if="{{item.custom}}">自定义</text></view>
-        <view class="lib-s">{{item.part}} · {{item.equip}}{{item.last ? ' · 最近 ' + item.last + ' kg' : ''}}</view>
+        <view class="lib-n">{{item.name}}<text class="equip-tag eq-{{item.equip}}">{{item.equip}}{{item.equip === '哑铃' ? '·单只' : item.equip === '负重' ? '·外加' : ''}}</text><text class="tier t-{{item.tier}} lib-t" wx:if="{{q}}">{{item.tier}}</text><text class="lib-c" wx:if="{{item.custom}}">自定义</text></view>
+        <view class="lib-s">{{item.part}}{{item.last ? ' · 最近 ' + item.last + ' ' + item.recUnit : ''}}</view>
         <view class="lib-d">{{item.desc}}</view>
+        <view class="lib-rec">推荐 {{item.rec}}{{item.recUnit === '自重' ? '' : ' ' + item.recUnit}} · {{item.recNote}}</view>
       </view>
       <text class="lib-del" wx:if="{{item.custom}}" data-name="{{item.name}}" bindtap="onDel">删除</text>
     </view>
@@ -32,7 +33,7 @@
       </view>
       <view class="sec-h">层级</view>
       <view class="seg">
-        <view wx:for="{{['T1','T2','T3']}}" wx:key="*this" class="seg-i {{add.tier === item ? 'on' : ''}}" data-t="{{item}}" bindtap="addTier">{{item}}</view>
+        <view wx:for="{{['T2','T3']}}" wx:key="*this" class="seg-i {{add.tier === item ? 'on' : ''}}" data-t="{{item}}" bindtap="addTier">{{item}}</view>
       </view>
       <view class="sec-f">{{tierTip[add.tier]}}</view>
       <view class="sheet-btns">

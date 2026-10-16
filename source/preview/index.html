@@ -38,7 +38,8 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 #toast { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.96); background: rgba(28,28,30,.86); color: #fff; padding: 12px 20px; border-radius: 14px; font-size: 15px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 300; max-width: 78%; text-align: center; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .app .mask { position: absolute; }
-#rest .mask { z-index: 200; }
+.app #body .mask { bottom: calc(54px + env(safe-area-inset-bottom)); }
+#rest .mask { z-index: 200; bottom: 0; }
 input, textarea, select, button { font: inherit; color: inherit; outline: none; }
 input, textarea { border: none; background: transparent; -webkit-appearance: none; appearance: none; }
 .app input::placeholder, .app textarea::placeholder { color: #C7C7CC; }
@@ -133,6 +134,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .t-T1 { color: #FF6B1A; background: rgba(255,107,26,0.12); }
 .t-T2 { color: #0A84FF; background: rgba(10,132,255,0.12); }
 .t-T3 { color: #8E8E93; background: rgba(142,142,147,0.14); }
+
+.equip-tag { display: inline-flex; align-items: center; height: 17px; padding: 0 5px; border-radius: 4.5px; font-size: 9.5px; font-weight: 600; line-height: 17px; flex-shrink: 0; }
+.eq-杠铃 { color: #5856D6; background: rgba(88,86,214,0.11); }
+.eq-哑铃 { color: #007AFF; background: rgba(0,122,255,0.10); }
+.eq-自重 { color: #248A3D; background: rgba(52,199,89,0.12); }
+.eq-负重 { color: #C93400; background: rgba(255,107,26,0.12); }
+.eq-器械 { color: #636366; background: rgba(142,142,147,0.14); }
+.lib-rec { font-size: 11px; color: var(--accent); margin-top: 2.5px; line-height: 1.4; }
 .jtag { font-size: 13px; font-weight: 600; }
 
 
@@ -149,7 +158,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
 .mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.32); z-index: 100; display: flex; align-items: flex-end; }
 .mask.center { align-items: center; justify-content: center; }
-.sheet { width: 100%; max-height: 86vh; overflow-y: auto; background: var(--bg); border-radius: 20px 20px 0 0; padding: 8px 16px calc(20px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+.sheet { width: 100%; max-height: 86vh; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border-radius: 20px 20px 0 0; padding: 8px 16px calc(28px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+.sheet .sheet-btns { position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom)); z-index: 2; padding: 10px 0 calc(20px + env(safe-area-inset-bottom)); background: var(--bg); }
+.sheet .swap-ok { position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom)); z-index: 2; margin-bottom: 0; box-shadow: 0 -6px 0 var(--bg), 0 6px 0 var(--bg); }
 .grabber { width: 36px; height: 5px; border-radius: 5px; background: var(--label3); margin: 0 auto 12px; }
 .sheet-cap { font-size: 13px; color: var(--label2); }
 .sheet-title { font-size: 24px; font-weight: 700; margin: 2px 0 12px; letter-spacing: -0.25px; }
@@ -217,7 +228,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .lib-cur { font-size: 12px; color: var(--label2); margin-left: 6px; }
 .pg-train .lib-ck { font-size: 16px; color: var(--accent); font-weight: 700; margin-left: 8px; }
 .pg-train .swap-scope { margin: 10px 0 6px; }
-.pg-train .swap-ok { margin-top: 10px; }
+.pg-train .swap-ok { margin-top: 10px; flex-shrink: 0; }
+.pg-train .swap-rec { display: flex; align-items: flex-start; gap: 7px; padding: 9px 11px; margin: 6px 0; border-radius: 10px; background: var(--accent-soft); }
+.pg-train .swap-rec-v { font-size: 13.5px; font-weight: 600; color: var(--accent); }
+.pg-train .swap-rec-n { font-size: 10.5px; color: var(--label2); margin-top: 1px; }
 .pg-train .ex-skip { font-size: 13px; color: var(--label2); padding: 4px 0 4px 12px; }
 .pg-train .ex-main { display: flex; align-items: baseline; justify-content: space-between; margin-top: 6px; }
 .pg-train .wbox { display: flex; align-items: baseline; border-radius: 8px; margin-left: -4px; padding: 0 4px; }
@@ -229,7 +243,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .we-step { font-size: 12px; color: var(--label2); }
 .pg-train .we-reset { margin-left: auto; font-size: 13px; font-weight: 600; }
 .pg-train .w-num { font-size: 52px; font-weight: 700; line-height: 1.05; letter-spacing: -1.5px; }
-.pg-train .w-unit { font-size: 16px; font-weight: 600; color: var(--label2); margin-left: 4px; }
+.pg-train .w-num.bw-text { font-size: 36px; letter-spacing: -0.5px; color: #248A3D; }
+.pg-train .wbox.bw-only { padding: 1px 5px; background: rgba(52,199,89,0.08); }
+.pg-train .w-unit { font-size: 14px; font-weight: 600; color: var(--label2); margin-left: 4px; white-space: nowrap; }
 .pg-train .reps { font-size: 20px; font-weight: 600; color: var(--label2); }
 .pg-train .ex-sub { font-size: 12px; color: var(--label2); margin-top: 1px; }
 .pg-train .dots { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; align-items: center; }
@@ -408,7 +424,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-settings .mode-seg { margin-bottom: 0; }
 .pg-settings .slot { flex-direction: column; align-items: stretch; padding: 12px 16px; }
 .pg-settings .slot-top { display: flex; align-items: center; }
-.pg-settings .ex-pick { margin-left: 8px; font-size: 16px; font-weight: 500; display: flex; align-items: center; }
+.pg-settings .ex-pick { margin-left: 8px; font-size: 16px; font-weight: 500; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .pg-settings .init { font-size: 16px; font-weight: 600; }
 .pg-settings .init .f-u { font-size: 12px; font-weight: 400; }
 .pg-settings .slot-cfg { display: flex; align-items: center; margin-top: 8px; font-size: 13px; }
@@ -419,6 +435,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-settings .step { margin-left: auto; font-size: 12px; color: var(--label2); }
 .pg-settings .imp { width: 100%; height: 110px; background: var(--fill2); border-radius: 8px; padding: 8px; box-sizing: border-box; font-size: 12px; color: var(--label); }
 .pg-settings .slot-chg { font-size: 11px; color: var(--green); margin-top: 4px; }
+.pg-settings .slot-rec { display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: var(--accent); margin-top: 4px; line-height: 1.45; }
+.pg-settings .rec-apply { flex-shrink: 0; font-size: 11.5px; font-weight: 600; padding: 2px 7px; border-radius: 499.5px; background: var(--accent-soft); }
 .pg-settings .cfg-l { font-size: 11px; color: var(--label2); margin-right: 6px; }
 .pg-settings .init-step { font-size: 11px; color: var(--label2); margin-right: 8px; white-space: nowrap; }
 .pg-settings .cfg-l, .pg-settings .mini-seg, .pg-settings .ms, .pg-settings .base-pick { white-space: nowrap; flex-shrink: 0; }
@@ -514,11 +532,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
   // Apple 系统色
   var JUDGE_COLORS = {
-    '加重': '#FF6B1A', '保持': '#34C759', '建议降阶': '#FF9F0A',
+    '加重': '#FF6B1A', '建议负重': '#5856D6', '保持': '#34C759', '建议降阶': '#FF9F0A',
     '降阶': '#AF52DE', '退阶': '#AF52DE', '重置': '#FF3B30', '减载': '#5AC8FA', '跳过': '#C7C7CC', '替换': '#5856D6'
   };
   var TIER_COLORS = { T1: '#FF6B1A', T2: '#0A84FF', T3: '#AEAEB2' };
-  var JUDGE_ICON = { '加重': '↑', '保持': '=', '建议降阶': '!', '降阶': '↓', '退阶': '↓', '重置': '↺', '减载': '~', '跳过': '–', '替换': '⇄' };
+  var JUDGE_ICON = { '加重': '↑', '建议负重': '＋', '保持': '=', '建议降阶': '!', '降阶': '↓', '退阶': '↓', '重置': '↺', '减载': '~', '跳过': '–', '替换': '⇄' };
   var INS_ICON = { info: 'i', up: '↑', warn: '!', tip: '→', trend: '↗' };
   function dateLabel(d) {
     if (!d) return '';
@@ -532,63 +550,72 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function fmtRest(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
 
-  // 动作库（来自「动作库」工作表）
+  /**
+   * 动作库 —— 每个动作归入 5 类器械：杠铃 / 哑铃 / 自重 / 负重 / 器械（固定器械·绳索）
+   * 列：[层级, 名称, 部位, 器械, 说明, 基准主项, 系数, 取整档]
+   *  - 基准主项：该动作的重量挂在四大项哪一项的 1RM 上（squat/bench/deadlift/ohp）
+   *  - 系数：该动作「推荐重量」占基准主项 1RM 的比例（杠铃=总重；哑铃=单只；器械=配重片；负重=外加重量）
+   *  - 取整档：该器械的最小可加重量（杠铃 2.5 / 哑铃 1 或 2 / 器械 5 / 负重 1.25 或 2.5）
+   *  依据：NSCA %1RM–次数表（10RM≈75%、15RM≈65%）、Strength Level / Symmetric Strength / ExRx 的动作间强度比例，
+   *  哑铃单只≈杠铃 1RM×(0.36~0.40)、变式相对主项 0.75~0.85 等，见 RULES_WEIGHT 的说明。
+   */
   var LIB = [
-    ['T1', '杠铃深蹲', '下肢·蹲', '杠铃', '主项；末组AMRAP≥6次加重'],
-    ['T1', '前蹲', '下肢·蹲', '杠铃', '颈前位深蹲，核心与股四侧重'],
-    ['T1', '泽奇深蹲', '下肢·蹲', '杠铃', '肘托杠深蹲，躯干承重更强'],
-    ['T1', '传统硬拉', '下肢·髋铰链', '杠铃', '主项；髋主导拉起'],
-    ['T1', '相扑硬拉', '下肢·髋铰链', '杠铃', '宽站距硬拉变式，腿部参与多'],
-    ['T1', '平板卧推', '上肢·水平推', '杠铃', '主项；胸大肌主导'],
-    ['T1', '暂停卧推', '上肢·水平推', '杠铃', '触胸停顿1秒，消除反弹借力'],
-    ['T1', '上斜卧推', '上肢·水平推', '杠铃', '上胸侧重'],
-    ['T1', '站姿实力推', '上肢·垂直推', '杠铃', '主项；站姿推举'],
-    ['T1', '双杠臂屈伸', '上肢·水平推', '自重/负重', '下胸与三头'],
-    ['T2', '罗马尼亚硬拉', '下肢·髋铰链', '杠铃', '腘绳肌主导，屈膝小'],
-    ['T2', '杠铃深蹲', '下肢·蹲', '杠铃', '与 T1 同源，中等强度做容量'],
-    ['T2', '腿举', '下肢·蹲', '器械', '腿部容量'],
-    ['T2', '泽奇深蹲', '下肢·蹲', '杠铃', '肘托杠深蹲，躯干承重更强'],
-    ['T2', '窄距卧推', '上肢·水平推', '杠铃', '三头侧重'],
-    ['T2', '暂停卧推', '上肢·水平推', '杠铃', '触胸停顿，消除反弹借力'],
-    ['T2', '坐姿哑铃推肩', '上肢·垂直推', '哑铃', '肩部容量'],
-    ['T2', '潘德雷划船', '上肢·水平拉', '杠铃', '躯干平行地面划船'],
-    ['T2', '坐姿划船', '上肢·水平拉', '绳索/器械', '背部厚度'],
-    ['T2', '引体向上', '上肢·垂直拉', '自重', '背阔肌主项'],
-    ['T2', '杠铃弯举', '上肢·屈肘', '杠铃', '二头主项'],
-    ['T2', '绳索下压', '上肢·伸肘', '绳索', '三头主项'],
-    ['T3', '高位下拉', '上肢·垂直拉', '器械', '背阔肌容量'],
-    ['T3', '俯身划船', '上肢·水平拉', '杠铃', '背部容量'],
-    ['T3', '反向飞鸟', '肩·后束', '哑铃', '三角肌后束'],
-    ['T3', '面拉', '肩·后束', '绳索', '肩袖与后束'],
-    ['T3', '哑铃侧平举', '肩·中束', '哑铃', '三角肌中束'],
-    ['T3', '俯卧腿弯举', '下肢·屈膝', '器械', '腘绳肌容量'],
-    ['T3', '坐姿腿屈伸', '下肢·伸膝', '器械', '股四头肌容量'],
-    ['T3', '杠铃二头弯举', '上肢·屈肘', '杠铃', '二头容量'],
-    ['T3', '绳索三头屈伸', '上肢·伸肘', '绳索', '三头容量'],
-    ['T3', '哑铃耸肩', '肩·斜方', '哑铃', '斜方肌容量'],
-    ['T3', '提踵', '下肢·踝', '器械/自重', '小腿容量'],
-    ['T3', '卷腹', '核心·屈曲', '自重', '腹直肌'],
-    ['T3', '悬垂举腿', '核心·屈髋', '自重', '下腹与髋屈肌'],
-    ['T3', '保加利亚分腿蹲', '下肢·单腿', '哑铃', '单腿稳定与臀部'],
-    ['T3', '山羊挺身', '下背·伸髋', '器械', '竖脊肌'],
-    ['T1', '低杠深蹲', '下肢·蹲', '杠铃', '杠铃置于后三角肌，髋部参与更多'],
-    ['T1', '箱式深蹲', '下肢·蹲', '杠铃', '坐箱停顿，强化底部发力'],
-    ['T1', '赤字硬拉', '下肢·髋铰链', '杠铃', '站在垫高平台上拉，强化起拉段'],
-    ['T2', '前蹲', '下肢·蹲', '杠铃', '股四头肌与核心'],
-    ['T2', '哈克深蹲', '下肢·蹲', '器械', '股四头肌容量'],
-    ['T2', '臀推', '下肢·髋伸', '杠铃', '臀大肌主导'],
-    ['T2', '哑铃卧推', '上肢·水平推', '哑铃', '活动范围大，左右均衡'],
-    ['T2', '上斜哑铃卧推', '上肢·水平推', '哑铃', '上胸容量'],
-    ['T2', 'T杠划船', '上肢·水平拉', '杠铃', '背部厚度'],
-    ['T2', '单臂哑铃划船', '上肢·水平拉', '哑铃', '单侧背阔'],
-    ['T2', '负重引体向上', '上肢·垂直拉', '自重/负重', '背阔力量'],
-    ['T3', '锤式弯举', '上肢·屈肘', '哑铃', '肱桡肌与二头'],
-    ['T3', '哑铃弯举', '上肢·屈肘', '哑铃', '二头容量'],
-    ['T3', '绳索夹胸', '上肢·水平内收', '绳索', '胸大肌孤立'],
-    ['T3', '直臂下压', '上肢·垂直拉', '绳索', '背阔孤立'],
-    ['T3', '腿外展', '下肢·髋外展', '器械', '臀中肌'],
-    ['T3', '高脚杯深蹲', '下肢·蹲', '哑铃', '深蹲模式容量']
-  ].map(function (r) { return { tier: r[0], name: r[1], part: r[2], equip: r[3], desc: r[4] }; });
+    // ---- T1：严格只保留四大项，不提供变式或其他复合动作 ----
+    ['T1', '杠铃深蹲', '下肢·蹲', '杠铃', '主项；末组AMRAP≥6次加重', 'squat', 1, 2.5],
+    ['T1', '传统硬拉', '下肢·髋铰链', '杠铃', '主项；髋主导拉起', 'deadlift', 1, 2.5],
+    ['T1', '平板卧推', '上肢·水平推', '杠铃', '主项；胸大肌主导', 'bench', 1, 2.5],
+    ['T1', '站姿实力推', '上肢·垂直推', '杠铃', '主项；站姿推举', 'ohp', 1, 2.5],
+    // ---- T2：四大项的变式 + 次级复合动作 ----
+    ['T2', '前蹲', '下肢·蹲', '杠铃', '股四头肌与核心；约为深蹲的 82%', 'squat', 0.82, 2.5],
+    ['T2', '杠铃深蹲', '下肢·蹲', '杠铃', '与 T1 同源，中等强度做容量', 'squat', 1, 2.5],
+    ['T2', '箱式深蹲', '下肢·蹲', '杠铃', '坐箱停顿，强化底部发力；约为深蹲的 90%', 'squat', 0.9, 2.5],
+    ['T2', '泽奇深蹲', '下肢·蹲', '杠铃', '肘托杠深蹲，躯干承重更强；约为深蹲的 80%', 'squat', 0.8, 2.5],
+    ['T2', '罗马尼亚硬拉', '下肢·髋铰链', '杠铃', '腘绳肌主导；约为硬拉的 75%', 'deadlift', 0.75, 2.5],
+    ['T2', '赤字硬拉', '下肢·髋铰链', '杠铃', '站垫高平台拉，强化起拉段；约为硬拉的 90%', 'deadlift', 0.9, 2.5],
+    ['T2', '臀推', '下肢·髋伸', '杠铃', '臀大肌主导；可达硬拉的 100%', 'deadlift', 1, 2.5],
+    ['T2', '暂停卧推', '上肢·水平推', '杠铃', '触胸停顿1秒，消除反弹借力；约为卧推的 92%', 'bench', 0.92, 2.5],
+    ['T2', '窄距卧推', '上肢·水平推', '杠铃', '三头侧重；约为卧推的 85%', 'bench', 0.85, 2.5],
+    ['T2', '上斜卧推', '上肢·水平推', '杠铃', '上胸侧重；约为卧推的 80%', 'bench', 0.8, 2.5],
+    ['T2', '杠铃推举', '上肢·垂直推', '杠铃', '坐姿或站姿推举，约为站姿实力推的 110%', 'ohp', 1.1, 2.5],
+    ['T2', '潘德雷划船', '上肢·水平拉', '杠铃', '躯干平行地面，约为卧推的 90%', 'bench', 0.9, 2.5],
+    ['T2', '杠铃划船', '上肢·水平拉', '杠铃', '俯身杠铃划船，约为卧推的 95%', 'bench', 0.95, 2.5],
+    ['T2', 'T杠划船', '上肢·水平拉', '杠铃', '背部厚度，约为卧推的 80%', 'bench', 0.8, 2.5],
+    ['T2', '坐姿哑铃推肩', '上肢·垂直推', '哑铃', '肩部容量；单只≈卧推的 32%', 'bench', 0.32, 2],
+    ['T2', '哑铃卧推', '上肢·水平推', '哑铃', '活动范围大；单只≈卧推的 38%', 'bench', 0.38, 2],
+    ['T2', '上斜哑铃卧推', '上肢·水平推', '哑铃', '上胸容量；单只≈卧推的 30%', 'bench', 0.3, 2],
+    ['T2', '单臂哑铃划船', '上肢·水平拉', '哑铃', '单侧背阔；单只≈卧推的 35%', 'bench', 0.35, 2],
+    ['T2', '引体向上', '上肢·垂直拉', '自重', '背阔肌主项；以体重做次数，无外加重量', 'bench', 0, 0],
+    ['T2', '负重引体向上', '上肢·垂直拉', '负重', '外加重量≈卧推的 10%，起步附加体重 5~10%', 'bench', 0.1, 2.5],
+    ['T2', '双杠臂屈伸', '上肢·水平推', '自重', '下胸与三头；以体重做次数', 'bench', 0, 0],
+    ['T2', '负重双杠臂屈伸', '上肢·水平推', '负重', '外加重量≈卧推的 12%', 'bench', 0.12, 2.5],
+    ['T2', '腿举', '下肢·蹲', '器械', '腿部容量；配重约为深蹲的 140%', 'squat', 1.4, 5],
+    ['T2', '哈克深蹲', '下肢·蹲', '器械', '股四头肌容量；配重约为深蹲的 90%', 'squat', 0.9, 5],
+    ['T2', '坐姿划船', '上肢·水平拉', '器械', '背部厚度；配重约为卧推的 70%', 'bench', 0.7, 2.5],
+    // ---- T3：辅助孤立动作，按 15RM（≈65% 以下）取重 ----
+    ['T3', '高位下拉', '上肢·垂直拉', '器械', '背阔肌容量；配重约为卧推的 85%', 'bench', 0.85, 2.5],
+    ['T3', '直臂下压', '上肢·垂直拉', '器械', '背阔孤立；配重约为卧推的 25%', 'bench', 0.25, 2.5],
+    ['T3', '绳索下压', '上肢·伸肘', '器械', '三头主项；配重约为卧推的 30%', 'bench', 0.3, 2.5],
+    ['T3', '绳索三头屈伸', '上肢·伸肘', '器械', '三头容量；配重约为卧推的 25%', 'bench', 0.25, 2.5],
+    ['T3', '面拉', '肩·后束', '器械', '肩袖与后束；配重约为卧推的 22%', 'bench', 0.22, 2.5],
+    ['T3', '绳索夹胸', '上肢·水平内收', '器械', '胸大肌孤立；单侧配重约为卧推的 15%', 'bench', 0.15, 2.5],
+    ['T3', '俯卧腿弯举', '下肢·屈膝', '器械', '腘绳肌容量；配重约为深蹲的 30%', 'squat', 0.3, 2.5],
+    ['T3', '坐姿腿屈伸', '下肢·伸膝', '器械', '股四头肌容量；配重约为深蹲的 40%', 'squat', 0.4, 2.5],
+    ['T3', '腿外展', '下肢·髋外展', '器械', '臀中肌；配重约为深蹲的 40%', 'squat', 0.4, 5],
+    ['T3', '山羊挺身', '下背·伸髋', '器械', '竖脊肌；以体重做次数，需要时再手动加重', 'deadlift', 0, 0],
+    ['T3', '提踵', '下肢·踝', '器械', '小腿容量；配重约为深蹲的 60%', 'squat', 0.6, 5],
+    ['T3', '杠铃弯举', '上肢·屈肘', '杠铃', '二头主项；约为卧推的 40%', 'bench', 0.4, 1.25],
+    ['T3', '杠铃二头弯举', '上肢·屈肘', '杠铃', '二头容量；约为卧推的 35%', 'bench', 0.35, 1.25],
+    ['T3', '俯身划船', '上肢·水平拉', '杠铃', '背部容量；约为卧推的 85%', 'bench', 0.85, 2.5],
+    ['T3', '哑铃弯举', '上肢·屈肘', '哑铃', '二头容量；单只≈卧推的 15%', 'bench', 0.15, 1],
+    ['T3', '锤式弯举', '上肢·屈肘', '哑铃', '肱桡肌与二头；单只≈卧推的 17%', 'bench', 0.17, 1],
+    ['T3', '哑铃侧平举', '肩·中束', '哑铃', '三角肌中束；单只≈卧推的 14%', 'bench', 0.14, 1],
+    ['T3', '反向飞鸟', '肩·后束', '哑铃', '三角肌后束；单只≈卧推的 12%', 'bench', 0.12, 1],
+    ['T3', '哑铃耸肩', '肩·斜方', '哑铃', '斜方肌容量；单只≈硬拉的 30%', 'deadlift', 0.3, 2],
+    ['T3', '高脚杯深蹲', '下肢·蹲', '哑铃', '深蹲模式容量；单只≈深蹲的 25%', 'squat', 0.25, 2],
+    ['T3', '保加利亚分腿蹲', '下肢·单腿', '哑铃', '单腿稳定与臀部；单只≈深蹲的 25%', 'squat', 0.25, 2],
+    ['T3', '卷腹', '核心·屈曲', '自重', '腹直肌；以体重做次数', 'squat', 0, 0],
+    ['T3', '悬垂举腿', '核心·屈髋', '自重', '下腹与髋屈肌；以体重做次数', 'squat', 0, 0]
+  ].map(function (r) { return { tier: r[0], name: r[1], part: r[2], equip: r[3], desc: r[4], base: r[5], ratio: r[6], inc: r[7] }; });
 
   function libFind(name) {
     for (var i = 0; i < LIB.length; i++) if (LIB[i].name === name) return LIB[i];
@@ -596,7 +623,31 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   var PARTS = ['下肢·蹲', '下肢·髋铰链', '下肢·髋伸', '下肢·屈膝', '下肢·伸膝', '下肢·单腿', '上肢·水平推', '上肢·垂直推', '上肢·水平拉', '上肢·垂直拉',
     '上肢·屈肘', '上肢·伸肘', '肩·中束', '肩·后束', '核心', '其他'];
-  var EQUIPS = ['杠铃', '哑铃', '器械', '绳索', '自重', '自重/负重', '壶铃', '其他'];
+  var EQUIPS = ['杠铃', '哑铃', '自重', '负重', '器械'];
+  // 器械类别说明（显示在动作库顶部与标签 tooltip）
+  var EQUIP_NOTE = {
+    '杠铃': '杠铃动作 · 重量=杠铃总重（含杆）',
+    '哑铃': '哑铃动作 · 重量=单只哑铃',
+    '自重': '自重动作 · 以体重做次数，无外加重量',
+    '负重': '负重动作 · 重量=外加重量（腰带/背心），不含体重',
+    '器械': '固定器械/绳索 · 重量=配重片'
+  };
+  // 旧数据迁移：历史自定义动作里的 绳索/自重/负重/壶铃/其他 归并到新分类
+  function normEquip(e) {
+    if (EQUIPS.indexOf(e) >= 0) return e;
+    if (e === '自重/负重') return '负重';
+    if (e === '绳索' || e === '器械/自重') return '器械';
+    if (e === '壶铃') return '哑铃';
+    return '杠铃';
+  }
+  // 自定义动作缺省推算档案：按器械给一个保守的起步比例
+  var DEF_PROFILE = {
+    '杠铃': { base: 'bench', ratio: 0.4, inc: 2.5 },
+    '哑铃': { base: 'bench', ratio: 0.15, inc: 1 },
+    '自重': { base: 'bench', ratio: 0, inc: 0 },
+    '负重': { base: 'bench', ratio: 0.1, inc: 2.5 },
+    '器械': { base: 'bench', ratio: 0.3, inc: 2.5 }
+  };
   // 动作库 = 内置 + 自定义
   function libAll(db) {
     var custom = (db && db.customLib) || [];
@@ -609,11 +660,15 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function addCustomEx(db, ex) {
     var name = String(ex.name || '').trim();
+    if ((ex.tier || 'T3') === 'T1') return 'T1 严格限定为深蹲、卧推、硬拉、实力推四大项，不能添加自定义动作';
     if (!name) return '请填写动作名称';
     if (name.length > 16) return '名称最多 16 个字';
     if (libFindIn(db, name)) return '动作库里已有「' + name + '」';
     db.customLib = db.customLib || [];
-    db.customLib.unshift({ tier: ex.tier || 'T3', name: name, part: ex.part || '其他', equip: ex.equip || '其他', desc: String(ex.desc || '').trim() || '自定义动作' });
+    var eq = normEquip(ex.equip);
+    var d0 = DEF_PROFILE[eq] || DEF_PROFILE['杠铃'];
+    db.customLib.unshift({ tier: ex.tier || 'T3', name: name, part: ex.part || '其他', equip: eq, desc: String(ex.desc || '').trim() || '自定义动作',
+      base: ex.base || d0.base, ratio: ex.ratio !== undefined ? ex.ratio : d0.ratio, inc: ex.inc !== undefined ? ex.inc : d0.inc });
     return '';
   }
   function removeCustomEx(db, name) { db.customLib = (db.customLib || []).filter(function (x) { return x.name !== name; }); }
@@ -622,7 +677,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function slot(id, tier, name, init, step, roundProg, lift) {
     var lib = libFind(name);
     return {
-      id: id, tier: tier, name: name, equip: lib ? lib.equip : '', init: init,
+      id: id, tier: tier, name: name, equip: lib ? lib.equip : normEquip(''), init: init,
       step: step, roundProg: !!roundProg, lift: lift || null
     };
   }
@@ -678,6 +733,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       t3Threshold: 25,
       rounding: 2.5,
       barWeight: 20,
+      bodyWeight: 70, // 自重/负重动作推算用（负重动作按体重百分比给起步）。训练卡上的「体重」会同步到这里
       plates: [25, 20, 15, 10, 5, 2.5, 1.25],
       ruleMode: 'full', // full = 按「进阶规则备查」完整三阶；excel = 严格按表格公式
       totalWeeks: 8,
@@ -712,6 +768,18 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     db.params.steps = Object.assign(defaultParams().steps, db.params.steps);
     db.records = db.records || [];
     db.customLib = db.customLib || [];
+    // 器械分类迁移：所有旧值统一到 杠铃/哑铃/自重/负重/器械；自定义 T1 降为 T2，避免污染 T1 四大项
+    db.customLib.forEach(function (x) {
+      x.equip = normEquip(x.equip);
+      if (x.tier === 'T1') x.tier = 'T2';
+      var dp = DEF_PROFILE[x.equip] || DEF_PROFILE['杠铃'];
+      if (!x.base) x.base = dp.base;
+      if (x.ratio === undefined || x.ratio === null) x.ratio = dp.ratio;
+      if (x.inc === undefined || x.inc === null) x.inc = dp.inc;
+    });
+    db.days.forEach(function (d) { d.slots.forEach(function (s) { s.equip = equipOf(s.name, s.equip); }); });
+    // 最近一次填写体重时，自动作为负重动作的推算体重
+    sortRecords(db.records).forEach(function (r) { if (Number(r.bw) > 0) db.params.bodyWeight = Number(r.bw); });
     // 动作库刷新迁移：把未被用户永久更换过（无 changes）的 T2/T3 槽位同步为最新默认动作，
     // 保留用户已手动更换的槽位；T1 四大项默认不变。记录按槽位 ID 存储，不受动作名变化影响。
     if (db.daysVersion !== DAYS_VERSION) {
@@ -741,6 +809,62 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var r = q >= 0 ? Math.floor(q + 0.5 + 1e-9) : -Math.floor(-q + 0.5 + 1e-9);
     return fix(r * inc);
   }
+  // ---------- 器械感知的取整档位与加重步幅 ----------
+  /**
+   * 不同器械能加的最小重量完全不同：杠铃按配重片 2.5kg、哑铃按单只 1~2kg、
+   * 固定器械按配重销 2.5~5kg、负重（腰带/背心）按 1.25~2.5kg。
+   * 取整档位 = 该器械的最小可加重量；步幅 = 一次加重实际跨几档。
+   */
+  var EQUIP_RULE = {
+    '杠铃': { inc: 2.5, step: 2.5, incL: 2.5, stepL: 5 },
+    '哑铃': { inc: 1, step: 1, incL: 2, stepL: 2 },
+    '器械': { inc: 2.5, step: 2.5, incL: 5, stepL: 5 },
+    '负重': { inc: 1.25, step: 1.25, incL: 2.5, stepL: 2.5 },
+    '自重': { inc: 0, step: 0, incL: 0, stepL: 0 }
+  };
+  // 动作的真实器械类别：以动作库为准，库里没有的（旧数据/自定义）归并到新分类
+  function equipOf(name, fallback) {
+    var lb = libFindIn(null, name);
+    return lb ? lb.equip : normEquip(fallback);
+  }
+  function isLowerSlot(s) {
+    if (s.lift) return s.lift === 'squat' || s.lift === 'deadlift';
+    var lb = libFindIn(null, s.name);
+    return !!(lb && (lb.base === 'squat' || lb.base === 'deadlift') ||
+      /深蹲|硬拉|腿|臀|小腿|提踵|分腿|台阶/.test(s.name || ''));
+  }
+  /** 该槽位的取整档位（优先用动作库声明的 inc） */
+  function incOf(s, P) {
+    var lb = libFindIn(null, s.name);
+    if (lb && lb.inc) return lb.inc;
+    var r = EQUIP_RULE[s.equip]; if (!r) return P.rounding || 2.5;
+    return isLowerSlot(s) ? r.incL : r.inc;
+  }
+  /**
+   * 该槽位的加重步幅
+   *  - T1/T2：按器械和上下肢取（杠铃上肢 2.5、下肢 5；哑铃 1~2；器械 2.5~5；负重 1.25~2.5）
+   *  - T3：孤立动作肌群小，一律只跨 1 个最小档位，避免一次加得太猛
+   *  - 自重：没有"加重"，步幅为 0（想加重请换成「负重」版本）
+   *  - 严格按表格模式：沿用设置里的旧步幅，保证与 Excel 逐格一致
+   */
+  function stepOf(s, P) {
+    var legacy = P.steps[s.step];
+    var lb = libFindIn(null, s.name);
+    var eq = (lb && lb.equip) || normEquip(s.equip);
+    if (P.ruleMode === 'excel' && s.step && legacy) return legacy;
+    var r = EQUIP_RULE[eq];
+    if (!r) return legacy || 2.5;
+    if (eq === '自重') return 0;
+    var inc = (lb && lb.inc) || r.inc;
+    // 关键：步幅不得小于取整档位，否则「加完再取整」会回到原值，永远加不上去
+    if (s.tier === 'T3') return inc;
+    return Math.max(inc, isLowerSlot(s) ? r.stepL : r.step);
+  }
+  // 把结果按该器械的档位对齐
+  function alignTo(w, inc) {
+    if (!inc || inc <= 0) return fix(w);
+    return roundTo(w, inc);
+  }
   function tm(P, lift) { return fix(P.oneRM[lift] * P.tmRatio); }
   function initWeight(s, P) {
     if (!s.init) return 0;
@@ -766,6 +890,45 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return txt;
   }
 
+  // ---------- 推荐重量（按器械类型科学推算） ----------
+  /**
+   * 档位目标 %1RM（NSCA %1RM–次数表）：
+   *   3 次 ≈ 93%  → T1 用 TM×0.85 已覆盖
+   *   10 次 ≈ 75% → T2 取 70%（留 1~2 次余量，GZCLP 要求 3×10 能干净完成）
+   *   15 次 ≈ 65% → T3 取 55%（末组要冲 15~25 次 AMRAP，起手不能太重）
+   */
+  var TIER_PCT = { T1: 0.765, T2: 0.65, T3: 0.5 }; // 对 1RM 的直接比例：T1=TM(90%)×85%，T2≈15RM~10RM 之间，T3≈15RM 以下
+  /**
+   * 算出某个动作的推荐重量（含单位说明）。
+   * 优先级：用户上次实际用过的重量 > 按 1RM×系数×档位比例推算。
+   * @return { weight, unit, text, note, source, inc, equip }
+   */
+  function recommendWeight(db, name, tier, opts) {
+    opts = opts || {};
+    var P = db.params, lb = libFindIn(db, name), tierKey = tier || (lb && lb.tier) || 'T3';
+    var equip = (lb && lb.equip) || normEquip(opts.equip);
+    var base = (lb && lb.base) || 'bench', inc = (lb && lb.inc) || (EQUIP_RULE[equip] ? EQUIP_RULE[equip].inc : 2.5);
+    var last = lastWeights(replay(db))[name];
+    if (opts.preferLast !== false && last !== undefined && last !== null) {
+      return { weight: fix(last), unit: unitOf(equip), text: fmtW(last), source: 'last', equip: equip, inc: inc,
+        note: '沿用上次 ' + fmtW(last) + ' kg' };
+    }
+    var BW = Number(P.bodyWeight) || 70;
+    if (equip === '自重' || !base || !(lb && lb.ratio)) {
+      return { weight: 0, unit: unitOf(equip), text: '自重', source: 'bodyweight', equip: equip, inc: 0,
+        note: '以体重做次数，达到次数上限后再加重' };
+    }
+    var w = P.oneRM[base] * lb.ratio * TIER_PCT[tierKey];
+    if (equip === '负重') w = Math.max(w, BW * 0.05); // 起步至少加体重 5%
+    if (equip === '杠铃') w = Math.max(w, P.barWeight || 20); // 杠铃动作不低于空杆
+    w = alignTo(w, inc) || 0;
+    return { weight: w, unit: unitOf(equip), text: fmtW(w), source: 'model', equip: equip, inc: inc,
+      note: LIFTS[base] + ' 1RM ' + fmtW(P.oneRM[base]) + ' × ' + Math.round(lb.ratio * 100) + '% × ' + Math.round(TIER_PCT[tierKey] * 100) + '%' };
+  }
+  /** 重量单位：哑铃按单只，负重按外加，自重无重量 */
+  function unitOf(equip) {
+    return equip === '哑铃' ? 'kg 单只' : equip === '负重' ? 'kg 外加' : equip === '自重' ? '自重' : 'kg';
+  }
   function linreg(points) {
     var n = points.length;
     if (n < 2) return null;
@@ -796,7 +959,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function evaluate(s, st, e, P, deload) {
     var def = stageDef(s.tier, st.stage);
-    var planned = st.weight, mw = manualW(e), step = P.steps[s.step] || 0;
+    var planned = st.weight, mw = manualW(e);
+    var step = stepOf(s, P), inc = incOf(s, P);
     // 手动重量：本次按实际重量计算判定，下次重量在实际重量上推进
     var w = mw !== null && !deload ? mw : planned;
     var r = {
@@ -808,7 +972,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (deload) {
       var f = s.tier === 'T1' ? 0.5 : s.tier === 'T2' ? 0.6 : 1;
       r.deload = true;
-      r.autoWeight = s.tier === 'T3' ? planned : roundTo(planned * f, P.rounding);
+      r.autoWeight = s.tier === 'T3' ? planned : alignTo(planned * f, inc);
       r.dWeight = mw !== null ? mw : r.autoWeight;
       r.dSets = s.tier === 'T3' ? Math.max(1, def.sets - 1) : def.sets;
       r.judgment = '减载';
@@ -831,13 +995,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         r.nextWeight = a >= 6 ? fix(w + step) : w;
         r.nextFail = 0;
       } else {
-        if (a >= def.add) { r.judgment = '加重'; r.nextWeight = fix(w + step); r.nextFail = 0; }
+        if (a >= def.add) { r.judgment = '加重'; r.nextWeight = alignTo(fix(w + step), inc); r.nextFail = 0; }
         else if (a >= def.hold && def.next !== null) { r.judgment = '保持'; r.nextFail = 0; }
         else if (def.next === null) {
           // 10×1+ 未达标：测试新 5RM，取 90% 为新 TM，重置回 5×3+
           r.judgment = '重置'; r.nextStage = FIRST_STAGE.T1; r.nextFail = 0;
           var p0 = s.init && s.init.type === 'pct' ? s.init.pct : 0.85;
-          r.nextWeight = e.new5RM ? roundTo(Number(e.new5RM) * P.tmRatio * p0, P.rounding) : roundTo(w * 0.85, P.rounding);
+          r.nextWeight = e.new5RM ? alignTo(Number(e.new5RM) * P.tmRatio * p0, inc) : alignTo(w * 0.85, inc);
           r.reset5RM = e.new5RM || null;
         } else {
           var fails = (st.fail || 0) + 1;
@@ -851,15 +1015,17 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       r.volume = fix(w * actual);
       r.actualReps = actual;
       // =IF(F="完成","加重","退阶") / 下次阶段 3×10→3×8→3×6→3×10 / =IF(OR(F="完成",D="3×6"),E+步幅,E)
-      if (done) { r.judgment = '加重'; r.nextStage = '3×10'; r.nextWeight = fix(w + step); }
-      else if (st.stage === '3×6') { r.judgment = mode === 'excel' ? '退阶' : '重置'; r.nextStage = '3×10'; r.nextWeight = fix(w + step); }
+      if (done) { r.judgment = '加重'; r.nextStage = '3×10'; r.nextWeight = alignTo(fix(w + step), inc); }
+      else if (st.stage === '3×6') { r.judgment = mode === 'excel' ? '退阶' : '重置'; r.nextStage = '3×10'; r.nextWeight = alignTo(fix(w + step), inc); }
       else { r.judgment = '退阶'; r.nextStage = def.next; r.nextWeight = w; }
     } else {
       var t = Number(e.v);
       r.volume = fix(w * ((def.sets - 1) * def.reps + t));
       // =IF(F>=阈值,"加重","保持") / 上肢：ROUND((E+步幅)/2.5)*2.5
-      if (t >= P.t3Threshold) { r.judgment = '加重'; r.nextWeight = s.roundProg ? roundTo(w + step, P.rounding) : fix(w + step); }
-      else { r.judgment = '保持'; r.nextWeight = s.roundProg ? roundTo(w, P.rounding) : w; }
+      if (t >= P.t3Threshold && equipOf(s.name, s.equip) === '自重') {
+        r.judgment = '建议负重'; r.nextWeight = w; // 自重无法直接增加 kg，引导更换到同动作的负重版本
+      } else if (t >= P.t3Threshold) { r.judgment = '加重'; r.nextWeight = alignTo(fix(w + step), inc); }
+      else { r.judgment = '保持'; r.nextWeight = w; }
     }
     r.delta = fix(r.nextWeight - w);
     return r;
@@ -1037,15 +1203,18 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var dots = [];
       for (var k = 0; k < showSets; k++) dots.push({ i: k, on: k < (e.done || 0), amrap: !deload && s.tier !== 'T2' && k === showSets - 1 });
       return {
-        slotId: s.id, tier: s.tier, tierColor: TIER_COLORS[s.tier], name: res.name, equip: res.equip,
+        slotId: s.id, tier: s.tier, tierColor: TIER_COLORS[s.tier], name: res.name, equip: equipOf(res.name, res.equip), equipNote: EQUIP_NOTE[equipOf(res.name, res.equip)] || '',
+        unitText: unitOf(equipOf(res.name, res.equip)), isBW: equipOf(res.name, res.equip) === '自重',
         planName: s.name, sub: !!res.sub, changed: !!run.eff.change, changeNew: !!run.eff.resetNow,
-        stage: st.stage, sets: showSets, reps: def.reps, weight: showW, weightText: fmtW(showW),
-        plates: platesFor(showW, P, res.equip), fail: res.sub ? 0 : (st.fail || 0),
+        stage: st.stage, sets: showSets, reps: def.reps, weight: showW,
+        weightText: equipOf(res.name, res.equip) === '自重' ? '自重' : fmtW(showW),
+        canAdjust: equipOf(res.name, res.equip) !== '自重',
+        plates: platesFor(showW, P, equipOf(res.name, res.equip)), fail: res.sub ? 0 : (st.fail || 0),
         restText: fmtRest(REST[s.tier]),
-        manual: res.sub ? manualW(e) !== subDefault : res.manual, autoWeight: res.sub ? subDefault : res.autoWeight, autoText: fmtW(res.sub ? subDefault : res.autoWeight), wStep: P.rounding || 2.5, editW: !!e.editW,
+        manual: res.sub ? manualW(e) !== subDefault : res.manual, autoWeight: res.sub ? subDefault : res.autoWeight, autoText: fmtW(res.sub ? subDefault : res.autoWeight), wStep: incOf(Object.assign({}, s, { name: res.name, equip: equipOf(res.name, res.equip) }), P) || 1, editW: !!e.editW,
         repsText: showSets + '×' + def.reps + (s.tier !== 'T2' && !deload ? '+' : ''),
         inputType: deload ? 'deload' : s.tier === 'T2' ? 'done' : 'amrap',
-        amrapHint: s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + ' 加重') : '',
+        amrapHint: s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + (equipOf(res.name, res.equip) === '自重' ? ' 建议切换负重版' : ' 加重')) : '',
         value: e.v, reps2: e.reps, skip: !!e.skip, new5RM: e.new5RM || '', done: e.done || 0, dots: dots,
         need5RM: s.tier === 'T1' && P.ruleMode !== 'excel' && st.stage === '10×1+',
         rest: REST[s.tier],
@@ -1331,7 +1500,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var d = dayById(db, dayId), s = null;
     d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
     if (!s) return null;
-    var rp = replay(db), fromWeek = (rp.counts[dayId] || 0) + 1, lib = libFindIn(db, name);
+    var lib = libFindIn(db, name);
+    if (s.tier === 'T1' && (!lib || lib.tier !== 'T1')) return { error: 'T1 严格限定四大项，不能更换为其他动作' };
+    var rp = replay(db), fromWeek = (rp.counts[dayId] || 0) + 1;
     var w = weight === null || weight === undefined || weight === '' || isNaN(Number(weight)) ? null : fix(Number(weight));
     s.changes = (s.changes || []).filter(function (c) { return c.fromWeek < fromWeek; });
     if (fromWeek === 1) {
@@ -1353,13 +1524,19 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var all = libAll(db);
     all.forEach(function (x) { counts[x.tier] = (counts[x.tier] || 0) + 1; });
     var list = all.filter(function (x) {
+      // T1 是安全边界：即使搜索也不能跨层级混入非四大项；T2/T3 搜索仍可跨层查找替代动作
+      if (tier === 'T1' && x.tier !== 'T1') return false;
       if (q) return x.name.indexOf(q) >= 0 || (x.part || '').indexOf(q) >= 0 || (x.equip || '').indexOf(q) >= 0;
       return x.tier === tier;
     }).map(function (x) {
+      var rc = recommendWeight(db, x.name, x.tier, { preferLast: false });
       return { name: x.name, tier: x.tier, part: x.part, equip: x.equip, desc: x.desc, custom: !!x.custom, current: x.name === cur,
-        last: lastW[x.name] !== undefined ? fmtW(lastW[x.name]) : '' };
+        last: lastW[x.name] !== undefined ? fmtW(lastW[x.name]) : '',
+        rec: rc.text, recUnit: rc.unit, recNote: rc.note, isBW: x.equip === '自重' };
     });
-    return { tier: tier, q: q, list: list, counts: counts, tiers: ['T1', 'T2', 'T3'].map(function (t) { return { id: t, n: counts[t] }; }),
+    var eqCount = {}; EQUIPS.forEach(function (e) { eqCount[e] = 0; });
+    all.filter(function (x) { return x.tier === tier; }).forEach(function (x) { eqCount[x.equip] = (eqCount[x.equip] || 0) + 1; });
+    return { tier: tier, q: q, list: list, counts: counts, equipCounts: EQUIPS.map(function (e) { return { id: e, n: eqCount[e] || 0 }; }), tiers: ['T1', 'T2', 'T3'].map(function (t) { return { id: t, n: counts[t] }; }),
       customCount: ((db && db.customLib) || []).length };
   }
   /** 某槽位“下一次”的更换上下文（弹层用） */
@@ -1419,7 +1596,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     '组间休息：T1 3~5 分钟，T2 2~3 分钟，T3 60~90 秒',
     '减载：每 6 周 1 次，T1 -50%，T2 -40%，T3 减 1 组（不改变进阶链）',
     'T1 降阶：需连续 2 次未达标，单次失败只预警',
-    '首周重量 = ROUND(TM × 系数 / 2.5) × 2.5，TM = 1RM × 90%',
+    '推荐重量：T1=1RM×76.5%；T2≈1RM×动作系数×65%；T3≈1RM×动作系数×50%',
+    '器械取整：杠铃按 2.5kg；哑铃按单只 1~2kg；负重按外加重量；自重只记次数；固定器械按配重档',
     '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
   ];
 
@@ -1427,7 +1605,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     VERSION: VERSION, LIFTS: LIFTS, LIFT_ORDER: LIFT_ORDER, STEP_KEYS: STEP_KEYS, STAGES: STAGES, FIRST_STAGE: FIRST_STAGE,
     REST: REST, LIB: LIB, JUDGE_COLORS: JUDGE_COLORS, JUDGE_ICON: JUDGE_ICON, dateLabel: dateLabel, backupLabel: backupLabel, TIER_COLORS: TIER_COLORS, RULES: RULES, GENERAL_RULES: GENERAL_RULES,
     defaults: defaults, defaultDays: defaultDays, defaultParams: defaultParams, excelSeedRecords: excelSeedRecords, normalize: normalize,
-    roundTo: roundTo, tm: tm, initWeight: initWeight, fmtW: fmtW, platesFor: platesFor, linreg: linreg,
+    roundTo: roundTo, tm: tm, recommendWeight: recommendWeight, equipOf: equipOf, unitOf: unitOf, incOf: incOf, stepOf: stepOf, EQUIP_NOTE: EQUIP_NOTE, EQUIP_RULE: EQUIP_RULE, normEquip: normEquip, initWeight: initWeight, fmtW: fmtW, platesFor: platesFor, linreg: linreg,
     evaluate: evaluate, replay: replay, recommend: recommend, isDeloadWeek: isDeloadWeek, dayById: dayById,
     blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
     saveRecord: saveRecord, deleteRecord: deleteRecord, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
@@ -1621,7 +1799,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     { id: 'review', title: '回顾' }, { id: 'settings', title: '设置' }
   ];
   var TIER_TIP = {
-    T1: 'T1 主项：大重量复合动作，按 5×3+ → 6×2+ → 10×1+ 进阶',
+    T1: 'T1 严格限定四大项：杠铃深蹲、平板卧推、传统硬拉、站姿实力推。不能添加其他 T1 动作。',
     T2: 'T2 次主项：中等重量，按 3×10 → 3×8 → 3×6 退阶',
     T3: 'T3 辅助项：小重量高次数，末组达阈值加重'
   };
@@ -1638,9 +1816,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         ? (x.current ? '<span class="lib-cur">当前</span>' : '') + (opts.sel === x.name ? '<span class="lib-ck">✓</span>' : '')
         : (x.custom ? '<span class="lib-del" data-act="libdel" data-name="' + esc(x.name) + '">删除</span>' : '');
       return '<div class="cell ' + (opts.pick ? 'tap ' : '') + 'lib-row ' + (opts.sel === x.name ? 'sel' : '') + '"' + (opts.pick ? ' data-act="swappick" data-name="' + esc(x.name) + '"' : '') + '>' +
-        '<div class="flex1"><div class="lib-n">' + esc(x.name) + tierTag + (x.custom ? '<span class="lib-c">自定义</span>' : '') + '</div>' +
-        '<div class="lib-s">' + esc(x.part) + ' · ' + esc(x.equip) + (x.last ? ' · ' + (opts.pick ? '上次 ' : '最近 ') + x.last + ' kg' : '') + '</div>' +
-        (opts.pick ? '' : '<div class="lib-d">' + esc(x.desc || '') + '</div>') + '</div>' + right + '</div>';
+        '<div class="flex1"><div class="lib-n">' + esc(x.name) + equipTag(x.equip) + tierTag + (x.custom ? '<span class="lib-c">自定义</span>' : '') + '</div>' +
+        '<div class="lib-s">' + esc(x.part) + (x.last ? ' · ' + (opts.pick ? '上次 ' : '最近 ') + x.last + ' ' + esc(x.recUnit) : '') + '</div>' +
+        (opts.pick ? '' : '<div class="lib-d">' + esc(x.desc || '') + '</div>') +
+        '<div class="lib-rec">推荐 ' + esc(x.rec) + (x.recUnit === '自重' ? '' : ' ' + esc(x.recUnit)) + ' · ' + esc(x.recNote) + '</div></div>' + right + '</div>';
     }).join('');
   }
 
@@ -1651,6 +1830,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove('show'); }, 1800); }
   function confirmBox(title, content, ok) { if (window.confirm(title + '\n\n' + content)) ok(); }
   function tier(t) { return '<span class="tier t-' + t + '">' + t + '</span>'; }
+  function equipTag(e) {
+    var suffix = e === '哑铃' ? '·单只' : e === '负重' ? '·外加' : '';
+    return '<span class="equip-tag eq-' + esc(e) + '">' + esc(e + suffix) + '</span>';
+  }
   function seg(items, cur, act, cls) {
     return '<div class="seg ' + (cls || '') + '">' + items.map(function (it, i) {
       return '<div class="seg-i ' + (it.on !== undefined ? (it.on ? 'on' : '') : (cur === i ? 'on' : '')) + '" data-act="' + act + '" data-i="' + i + '"' + (it.data || '') + '>' + it.html + '</div>';
@@ -1701,12 +1884,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     }
     vm.items.forEach(function (it) {
       h += '<div class="card ex ' + (it.skip ? 'skipped' : '') + '">';
-      h += '<div class="ex-head">' + tier(it.tier) + '<div class="ex-title"><span class="ex-name">' + esc(it.name) + '</span>' +
+      h += '<div class="ex-head">' + tier(it.tier) + '<div class="ex-title"><span class="ex-name">' + esc(it.name) + '</span>' + equipTag(it.equip) +
         (it.sub ? '<span class="ex-tag sub">替换 ' + esc(it.planName) + '</span>' : it.changeNew ? '<span class="ex-tag new">新动作</span>' : '') + '</div>' +
         '<span class="ex-act" data-act="openswap" data-slot="' + it.slotId + '">更换</span>' +
         '<span class="ex-skip" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</span></div>';
-      h += '<div class="ex-main"><div class="wbox ' + (it.editW ? 'editing' : '') + '" data-act="editW" data-slot="' + it.slotId + '"><span class="w-num num ' + (it.manual ? 'manual' : '') + '">' + it.weightText + '</span><span class="w-unit">kg</span>' +
-        '<span class="w-edit">' + (it.editW ? '完成' : '调整') + '</span></div><span class="reps num">' + it.repsText + '</span></div>';
+      h += '<div class="ex-main">' + (it.canAdjust
+        ? '<div class="wbox ' + (it.editW ? 'editing' : '') + '" data-act="editW" data-slot="' + it.slotId + '"><span class="w-num num ' + (it.manual ? 'manual' : '') + '">' + it.weightText + '</span><span class="w-unit">' + esc(it.unitText) + '</span><span class="w-edit">' + (it.editW ? '完成' : '调整') + '</span></div>'
+        : '<div class="wbox bw-only"><span class="w-num bw-text">自重</span></div>') + '<span class="reps num">' + it.repsText + '</span></div>';
       if (it.manual || it.plates || it.fail > 0) h += '<div class="ex-sub">' + (it.manual ? '<span class="accent">已手动调整 · 建议 ' + it.autoText + ' kg' + (it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.plates || '') + (it.fail > 0 ? '<span class="amber">' + (it.plates ? ' · ' : '') + '已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
       if (it.editW) {
         h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
@@ -1763,12 +1947,15 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'editLocked': startEdit(ds.id); return true;
       case 'openswap': openSwap(ds.slot); return true;
       case 'closeswap': t.swap.show = false; return true;
-      case 'swaptier': t.swap.tier = ds.t; return true;
+      case 'swaptier': if (t.swap.slotTier === 'T1') return false; t.swap.tier = ds.t; return true;
       case 'swapq': t.swap.q = el.value; updateSwapList(); return false;
       case 'swappick':
         var sw = t.swap;
         if (ds.name === sw.curName) { sw.show = false; return true; }
-        sw.sel = ds.name; sw.weight = sw.lastW[ds.name] !== undefined ? String(sw.lastW[ds.name]) : GZ.fmtW(sw.ctxW); return true;
+        sw.sel = ds.name;
+        var sr = GZ.recommendWeight(load(), ds.name, sw.slotTier, { preferLast: true });
+        sw.weight = String(sr.weight); sw.recText = sr.text; sw.recUnit = sr.unit; sw.recNote = sr.note; sw.selEquip = sr.equip;
+        return true;
       case 'swapscope': t.swap.scope = ds.s; return true;
       case 'swapw': t.swap.weight = el.value; return false;
       case 'swaprestore': en = entry(t.swap.slotId); delete en.ex; en.w = null; t.swap.show = false; return true;
@@ -1819,7 +2006,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var go = function () {
       missing.forEach(function (it) { entry(it.slotId).skip = true; });
       var db = load();
-      var rec = GZ.saveRecord(db, { id: t.recordId, date: t.date, day: t.day, deload: vm.deload, note: t.note, bw: t.bw ? Number(t.bw) : null, entries: t.draft, createdAt: t.recordId ? t.createdAt : Date.now() });
+      var bw = t.bw ? Number(t.bw) : null;
+      var rec = GZ.saveRecord(db, { id: t.recordId, date: t.date, day: t.day, deload: vm.deload, note: t.note, bw: bw, entries: t.draft, createdAt: t.recordId ? t.createdAt : Date.now() });
+      if (bw > 0) db.params.bodyWeight = bw;
       save(db);
       var s = GZ.sessionResult(db, rec.id), rdn = GZ.roundInfo(db), wDone = !t.recordId && s && rdn.week > s.week;
       var dCyc = s ? GZ.cycleOf(s.week, db.params).cycle : 1, nCyc = GZ.cycleOf(rdn.week, db.params).cycle, cDone = wDone && nCyc > dCyc;
@@ -1850,13 +2039,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       '<span class="sheet-cap">' + sw.slotTier + ' · 当前 ' + esc(sw.curName) + (sw.planName !== sw.curName ? '（原 ' + esc(sw.planName) + '）' : '') + '</span>' +
       '<div class="row between"><div class="sheet-title">更换动作</div>' + (sw.isSub ? '<span class="link" data-act="swaprestore">恢复 ' + esc(sw.planName) + '</span>' : '') + '</div>' +
       '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="swapq" value="' + esc(sw.q) + '" placeholder="搜索动作、部位或器械"></div>' +
-      '<div id="swapSeg"' + (sw.q ? ' style="display:none"' : '') + '>' + seg(lib.tiers.map(function (x) { return { html: x.id + '<span class="seg-n">' + x.n + '</span>', on: sw.tier === x.id, data: ' data-t="' + x.id + '"' }; }), -1, 'swaptier') + '</div>' +
+      (sw.slotTier === 'T1'
+        ? '<div class="sec-f t1-only">T1 严格限定四大项，只能在深蹲、卧推、硬拉、实力推之间选择。</div>'
+        : '<div id="swapSeg"' + (sw.q ? ' style="display:none"' : '') + '>' + seg(lib.tiers.map(function (x) { return { html: x.id + '<span class="seg-n">' + x.n + '</span>', on: sw.tier === x.id, data: ' data-t="' + x.id + '"' }; }), -1, 'swaptier') + '</div>') +
       '<div class="lib-list" id="swapList"><div class="list">' + libRows(lib, { pick: true, sel: sw.sel, slotTier: sw.slotTier, showTier: !!sw.q, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div></div>';
     if (sw.sel) {
       if (!sw.editing) h += seg([{ html: '仅本次', on: sw.scope === 'once', data: ' data-s="once"' }, { html: '以后都用', on: sw.scope === 'perm', data: ' data-s="perm"' }], -1, 'swapscope', 'swap-scope');
-      if (sw.scope === 'perm' && !sw.editing) h += '<div class="list"><div class="cell"><span class="flex1">起始重量</span><input class="cell-in num" inputmode="decimal" data-act="swapw" value="' + esc(sw.weight) + '"><span class="unit">kg</span></div></div>';
+      h += '<div class="swap-rec">' + equipTag(sw.selEquip) + '<div><div class="swap-rec-v">推荐 ' + esc(sw.recText) + (sw.recUnit === '自重' ? '' : ' ' + esc(sw.recUnit)) + '</div><div class="swap-rec-n">' + esc(sw.recNote) + '</div></div></div>';
+      if (sw.scope === 'perm' && !sw.editing && sw.selEquip !== '自重') h += '<div class="list"><div class="cell"><span class="flex1">起始重量</span><input class="cell-in num" inputmode="decimal" data-act="swapw" value="' + esc(sw.weight) + '"><span class="unit">' + esc(sw.recUnit) + '</span></div></div>';
       h += '<div class="sec-f">' + (sw.scope === 'once' || sw.editing
-        ? '本次用「' + esc(sw.sel) + '」代替，记录容量，不改变「' + esc(sw.planName) + '」的阶段和重量。'
+        ? '本次用推荐重量练「' + esc(sw.sel) + '」，记录容量，不改变「' + esc(sw.planName) + '」的阶段和重量。'
         : '从第 ' + sw.week + ' 周起，' + sw.dayId + ' 的这个位置改为「' + esc(sw.sel) + '」，按 ' + sw.slotTier + ' 规则从起始重量重新进阶；历史记录保持不变。') + '</div>' +
         '<button class="btn-primary swap-ok" data-act="swapok">确认更换</button>';
     }
@@ -1865,11 +2057,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function swapConfirm() {
     var t = S.train, sw = t.swap, en = entry(sw.slotId);
     var wEl = document.querySelector('[data-act=swapw]'); if (wEl) sw.weight = wEl.value;
-    if (sw.scope === 'once' || sw.editing) { en.ex = sw.sel; en.w = null; toast('本次改为 ' + sw.sel); }
+    if (sw.scope === 'once' || sw.editing) {
+      en.ex = sw.sel; en.w = Number(sw.weight) || 0;
+      toast('本次改为 ' + sw.sel + ' · ' + sw.recText + (sw.recUnit === '自重' ? '' : ' ' + sw.recUnit));
+    }
     else {
       var w = parseFloat(sw.weight);
       if (isNaN(w) || w < 0) { toast('请填写起始重量'); return false; }
-      var db = load(), r = GZ.swapSlot(db, sw.dayId, sw.slotId, sw.sel, w); save(db);
+      var db = load(), r = GZ.swapSlot(db, sw.dayId, sw.slotId, sw.sel, w);
+      if (r && r.error) { toast(r.error); return false; }
+      save(db);
       delete en.ex; en.w = null; en.editW = false;
       toast(r && r.base ? '已更换为 ' + sw.sel : '第 ' + r.fromWeek + ' 周起改为 ' + sw.sel);
     }
@@ -2088,7 +2285,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         '<label class="cell tap pick-cell"><span class="f-l">部位</span><span class="f-v val">' + esc(a.part) + '</span><span class="chev">›</span><select data-act="addpart">' + GZ.PARTS.map(function (x) { return '<option ' + (x === a.part ? 'selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
         '<label class="cell tap pick-cell"><span class="f-l">器械</span><span class="f-v val">' + esc(a.equip) + '</span><span class="chev">›</span><select data-act="addequip">' + GZ.EQUIPS.map(function (x) { return '<option ' + (x === a.equip ? 'selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
         '<div class="cell"><span class="f-l">说明</span><input class="f-v" data-act="adddesc" maxlength="30" value="' + esc(a.desc) + '" placeholder="可选"></div></div>' +
-        '<div class="sec-h">层级</div>' + seg(['T1', 'T2', 'T3'].map(function (x) { return { html: x, on: a.tier === x, data: ' data-t="' + x + '"' }; }), -1, 'addtier') +
+        '<div class="sec-h">层级</div>' + seg(['T2', 'T3'].map(function (x) { return { html: x, on: a.tier === x, data: ' data-t="' + x + '"' }; }), -1, 'addtier') +
         '<div class="sec-f">' + TIER_TIP[a.tier] + '</div>' +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="addclose">取消</div><div class="btn-ghost solid" data-act="adddo">添加</div></div></div></div>';
     }
@@ -2100,8 +2297,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var inp = function (k, v, unit, extra) { return '<input class="f-in num" inputmode="decimal" data-act="param" data-k="' + k + '" ' + (extra || '') + ' value="' + v + '"><span class="f-u">' + unit + '</span>'; };
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
-      '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div></div>' +
-      '<div class="sec-f">训练最大值 TM = 1RM × ' + tmPct + '%，首周重量 = TM × 系数，按 ' + P.rounding + ' kg 取整</div>';
+      '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
+      '<div class="cell"><span class="flex1">当前体重</span>' + inp('bodyWeight', P.bodyWeight || 70, 'kg') + '</div></div>' +
+      '<div class="sec-f">T1 以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
     h += '<div class="sec-h">加重步幅</div><div class="list">' +
       GZ.STEP_KEYS.map(function (s) { return '<div class="cell"><span class="flex1">' + s.label + '</span>' + inp('steps.' + s.key, P.steps[s.key], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">T3 加重阈值</span>' + inp('t3Threshold', P.t3Threshold, '次') + '</div>' +
@@ -2120,11 +2318,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     d.slots.forEach(function (s, si) {
       var ef = GZ.effectiveSlot(db, s, (rp.counts[d.id] || 0) + 1), cur = ef.slot.name;
       var opts = names[s.tier].indexOf(cur) < 0 ? [cur].concat(names[s.tier]) : names[s.tier];
-      h += '<div class="cell slot"><div class="slot-top">' + tier(s.tier) + '<label class="flex1 ex-pick">' + esc(cur) + '<span class="chev">⌄</span><select data-act="ex" data-si="' + si + '">' +
+      var eq = GZ.equipOf(cur, ef.slot.equip), ss = Object.assign({}, s, { name: cur, equip: eq });
+      var rc = GZ.recommendWeight(db, cur, s.tier, { preferLast: false });
+      h += '<div class="cell slot"><div class="slot-top">' + tier(s.tier) + '<label class="flex1 ex-pick">' + esc(cur) + equipTag(eq) + '<span class="chev">⌄</span><select data-act="ex" data-si="' + si + '">' +
         opts.map(function (n) { return '<option ' + (n === cur ? 'selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '</select></label>' +
-        '<span class="init-step">每次 +' + (P.steps[s.step] || 0) + ' kg' + (s.roundProg ? ' · 取整' : '') + '</span>' +
-        '<span class="init num">' + GZ.fmtW(GZ.initWeight(s, P)) + '<span class="f-u"> kg</span></span></div>' +
+        '<span class="init-step">' + (eq === '自重' ? '达阈值后改负重' : '每次 +' + GZ.stepOf(ss, P) + ' kg · 按 ' + GZ.incOf(ss, P) + ' kg 档') + '</span>' +
+        '<span class="init num">' + (eq === '自重' ? '自重' : GZ.fmtW(GZ.initWeight(s, P)) + '<span class="f-u"> kg</span>') + '</span></div>' +
         (ef.change ? '<div class="slot-chg">第 ' + ef.change.fromWeek + ' 周起更换 · 原 ' + esc(s.name) + '</div>' : '') +
+        '<div class="slot-rec"><span class="flex1">系统推荐 ' + esc(rc.text) + (rc.unit === '自重' ? '' : ' ' + esc(rc.unit)) + ' · ' + esc(rc.note) + '</span><span class="rec-apply" data-act="applyrec" data-si="' + si + '">采用</span></div>' +
         '<div class="slot-cfg"><span class="cfg-l">首周</span><div class="mini-seg"><div class="ms ' + (s.init.type === 'pct' ? 'on' : '') + '" data-act="itype" data-si="' + si + '" data-v="pct">TM%</div><div class="ms ' + (s.init.type === 'fixed' ? 'on' : '') + '" data-act="itype" data-si="' + si + '" data-v="fixed">固定</div></div>';
       if (s.init.type === 'pct') {
         h += '<label class="base-pick">' + GZ.LIFTS[s.init.base] + '<span class="chev">⌄</span><select data-act="base" data-si="' + si + '">' + GZ.LIFT_ORDER.map(function (k) { return '<option value="' + k + '" ' + (k === s.init.base ? 'selected' : '') + '>' + GZ.LIFTS[k] + '</option>'; }).join('') + '</select></label>' +
@@ -2180,7 +2381,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'dlen': return mutate(function (db) { db.params.deloadEnabled = el.checked; });
       case 'sday': st.d = Number(ds.i); return true;
       case 'ex':
-        var dbx = load(), dd = dbx.days[st.d], rx = GZ.swapSlot(dbx, dd.id, dd.slots[si].id, el.value, null); save(dbx);
+        var dbx = load(), dd = dbx.days[st.d], rx = GZ.swapSlot(dbx, dd.id, dd.slots[si].id, el.value, null);
+        if (rx && rx.error) { toast(rx.error); return false; }
+        save(dbx);
         toast(rx && rx.base ? '已更换为 ' + el.value : '第 ' + rx.fromWeek + ' 周起改为 ' + el.value); return true;
       case 'openlib': st.view = 'lib'; st.q = ''; render(); return false;
       case 'libback': st.view = ''; st.add = null; render(); return false;
@@ -2193,7 +2396,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'libdel':
         confirmBox('删除「' + ds.name + '」？', '已经练过的记录会保留；正在使用它的训练位置仍按原名显示。', function () { var dbd = load(); GZ.removeCustomEx(dbd, ds.name); save(dbd); render(true); });
         return false;
-      case 'libadd': st.add = { name: '', desc: '', tier: st.q ? 'T3' : st.tier, part: '其他', equip: '杠铃' }; return true;
+      case 'libadd': st.add = { name: '', desc: '', tier: (st.q || st.tier === 'T1') ? 'T3' : st.tier, part: '其他', equip: '杠铃' }; return true;
       case 'addclose': st.add = null; return true;
       case 'addname': st.add.name = el.value; return false;
       case 'adddesc': st.add.desc = el.value; return false;
@@ -2209,6 +2412,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'base': return slotMut(function (s) { s.init.base = el.value; });
       case 'pctv': var pv = parseFloat(el.value); if (isNaN(pv)) return true; return slotMut(function (s) { s.init.pct = pv / 100; });
       case 'fixv': var fv = parseFloat(el.value); if (isNaN(fv)) return true; return slotMut(function (s) { s.init.value = fv; });
+      case 'applyrec':
+        var dbr = load(), dyr = dbr.days[st.d], sr0 = dyr.slots[si], wkr = (GZ.replay(dbr).counts[dyr.id] || 0) + 1;
+        var efr = GZ.effectiveSlot(dbr, sr0, wkr), rr = GZ.recommendWeight(dbr, efr.slot.name, sr0.tier, { preferLast: false });
+        if (efr.change) GZ.swapSlot(dbr, dyr.id, sr0.id, efr.slot.name, rr.weight); else sr0.init = { type: 'fixed', value: rr.weight };
+        save(dbr); toast('已采用推荐 ' + rr.text + (rr.unit === '自重' ? '' : ' ' + rr.unit)); return true;
       case 'export': exportFile(); return false;
       case 'copyjson': copyText(JSON.stringify(load()), '已复制，粘贴到文件传输助手保存'); markBackup(); setTimeout(function () { render(true); }, 50); return false;
       case 'impfile':

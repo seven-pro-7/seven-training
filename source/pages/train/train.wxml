@@ -61,6 +61,7 @@
       <text class="tier t-{{item.tier}}">{{item.tier}}</text>
       <view class="ex-title">
         <text class="ex-name">{{item.name}}</text>
+        <text class="equip-tag eq-{{item.equip}}">{{item.equip}}{{item.equip === '哑铃' ? '·单只' : item.equip === '负重' ? '·外加' : ''}}</text>
         <text class="ex-tag sub" wx:if="{{item.sub}}">替换 {{item.planName}}</text>
         <text class="ex-tag new" wx:elif="{{item.changeNew}}">新动作</text>
       </view>
@@ -69,10 +70,11 @@
     </view>
 
     <view class="ex-main">
-      <view class="wbox {{item.editW ? 'editing' : ''}}" data-slot="{{item.slotId}}" bindtap="onEditW">
-        <text class="w-num num {{item.manual ? 'manual' : ''}}">{{item.weightText}}</text><text class="w-unit">kg</text>
+      <view class="wbox {{item.editW ? 'editing' : ''}}" data-slot="{{item.slotId}}" bindtap="onEditW" wx:if="{{item.canAdjust}}">
+        <text class="w-num num {{item.manual ? 'manual' : ''}}">{{item.weightText}}</text><text class="w-unit">{{item.unitText}}</text>
         <text class="w-edit">{{item.editW ? '完成' : '调整'}}</text>
       </view>
+      <view class="wbox bw-only" wx:else><text class="w-num bw-text">自重</text></view>
       <text class="reps num">{{item.repsText}}</text>
     </view>
     <view class="ex-sub" wx:if="{{item.manual || item.plates || item.fail > 0}}">
@@ -160,15 +162,17 @@
       <text class="sheet-cap">{{swap.slotTier}} · 当前 {{swap.curName}}{{swap.planName !== swap.curName ? '（原 ' + swap.planName + '）' : ''}}</text>
       <view class="row between"><view class="sheet-title">更换动作</view><text class="link" wx:if="{{swap.isSub}}" bindtap="swapRestore">恢复 {{swap.planName}}</text></view>
       <view class="search"><text class="search-ic">⌕</text><input class="search-in" value="{{swap.q}}" placeholder="搜索动作、部位或器械" placeholder-class="ph" bindinput="swapQ" /></view>
-      <view class="seg" wx:if="{{!swap.q}}">
+      <view class="seg" wx:if="{{!swap.q && swap.slotTier !== 'T1'}}">
         <view wx:for="{{swap.lib.tiers}}" wx:key="id" class="seg-i {{swap.tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="swapTier">{{item.id}}<text class="seg-n">{{item.n}}</text></view>
       </view>
+      <view class="sec-f t1-only" wx:if="{{swap.slotTier === 'T1'}}">T1 严格限定四大项，只能在深蹲、卧推、硬拉、实力推之间选择。</view>
       <scroll-view scroll-y class="lib-list">
         <view class="list">
           <view wx:for="{{swap.lib.list}}" wx:key="name" class="cell tap lib-row {{swap.sel === item.name ? 'sel' : ''}}" data-name="{{item.name}}" bindtap="swapPick">
             <view class="flex1">
               <view class="lib-n">{{item.name}}<text class="tier t-{{item.tier}} lib-t" wx:if="{{swap.q || item.tier !== swap.slotTier}}">{{item.tier}}</text><text class="lib-c" wx:if="{{item.custom}}">自定义</text></view>
-              <view class="lib-s">{{item.part}} · {{item.equip}}{{item.last ? ' · 上次 ' + item.last + ' kg' : ''}}</view>
+              <view class="lib-s"><text class="equip-tag eq-{{item.equip}}">{{item.equip}}{{item.equip === '哑铃' ? '·单只' : item.equip === '负重' ? '·外加' : ''}}</text>{{item.part}}{{item.last ? ' · 上次 ' + item.last + ' ' + item.recUnit : ''}}</view>
+              <view class="lib-rec">推荐 {{item.rec}}{{item.recUnit === '自重' ? '' : ' ' + item.recUnit}} · {{item.recNote}}</view>
             </view>
             <text class="lib-cur" wx:if="{{item.current}}">当前</text>
             <text class="lib-ck" wx:if="{{swap.sel === item.name}}">✓</text>
@@ -181,10 +185,11 @@
           <view class="seg-i {{swap.scope === 'once' ? 'on' : ''}}" data-s="once" bindtap="swapScope">仅本次</view>
           <view class="seg-i {{swap.scope === 'perm' ? 'on' : ''}}" data-s="perm" bindtap="swapScope">以后都用</view>
         </view>
-        <view class="list" wx:if="{{swap.scope === 'perm'}}">
-          <view class="cell"><text class="flex1">起始重量</text><input class="cell-in num" type="digit" value="{{swap.weight}}" bindinput="swapWeight" /><text class="unit">kg</text></view>
+        <view class="swap-rec"><text class="equip-tag eq-{{swap.selEquip}}">{{swap.selEquip}}{{swap.selEquip === '哑铃' ? '·单只' : swap.selEquip === '负重' ? '·外加' : ''}}</text><view><view class="swap-rec-v">推荐 {{swap.recText}} {{swap.recUnit === '自重' ? '' : swap.recUnit}}</view><view class="swap-rec-n">{{swap.recNote}}</view></view></view>
+        <view class="list" wx:if="{{swap.scope === 'perm' && swap.selEquip !== '自重'}}">
+          <view class="cell"><text class="flex1">起始重量</text><input class="cell-in num" type="digit" value="{{swap.weight}}" bindinput="swapWeight" /><text class="unit">{{swap.recUnit}}</text></view>
         </view>
-        <view class="sec-f">{{swap.scope === 'once' ? '本次用「' + swap.sel + '」代替，记录容量，不改变「' + swap.planName + '」的阶段和重量。' : '从第 ' + swap.week + ' 周起，' + swap.dayId + ' 的这个位置改为「' + swap.sel + '」，按 ' + swap.slotTier + ' 规则从起始重量重新进阶；历史记录保持不变。'}}</view>
+        <view class="sec-f">{{swap.scope === 'once' ? '本次用推荐重量练「' + swap.sel + '」，记录容量，不改变「' + swap.planName + '」的阶段和重量。' : '从第 ' + swap.week + ' 周起，' + swap.dayId + ' 的这个位置改为「' + swap.sel + '」，按 ' + swap.slotTier + ' 规则从起始重量重新进阶；历史记录保持不变。'}}</view>
         <button class="btn-primary swap-ok" bindtap="swapConfirm">确认更换</button>
       </block>
     </view>

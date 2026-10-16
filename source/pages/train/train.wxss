@@ -60,7 +60,10 @@
 .lib-cur { font-size: 24rpx; color: var(--label2); margin-left: 12rpx; }
 .lib-ck { font-size: 32rpx; color: var(--accent); font-weight: 700; margin-left: 16rpx; }
 .swap-scope { margin: 20rpx 0 12rpx; }
-.swap-ok { margin-top: 20rpx; }
+.swap-ok { margin-top: 20rpx; flex-shrink: 0; }
+.swap-rec { display: flex; align-items: flex-start; gap: 14rpx; padding: 18rpx 22rpx; margin: 12rpx 0; border-radius: 20rpx; background: var(--accent-soft); }
+.swap-rec-v { font-size: 27rpx; font-weight: 600; color: var(--accent); }
+.swap-rec-n { font-size: 21rpx; color: var(--label2); margin-top: 2rpx; }
 .ex-skip { font-size: 26rpx; color: var(--label2); padding: 8rpx 0 8rpx 24rpx; }
 
 .ex-main { display: flex; align-items: baseline; justify-content: space-between; margin-top: 12rpx; }
@@ -73,7 +76,9 @@
 .we-step { font-size: 24rpx; color: var(--label2); }
 .we-reset { margin-left: auto; font-size: 26rpx; font-weight: 600; }
 .w-num { font-size: 104rpx; font-weight: 700; line-height: 1.05; letter-spacing: -3rpx; }
-.w-unit { font-size: 32rpx; font-weight: 600; color: var(--label2); margin-left: 8rpx; }
+.w-num.bw-text { font-size: 72rpx; letter-spacing: -1rpx; color: #248A3D; }
+.wbox.bw-only { padding: 2rpx 10rpx; background: rgba(52,199,89,0.08); }
+.w-unit { font-size: 28rpx; font-weight: 600; color: var(--label2); margin-left: 8rpx; white-space: nowrap; }
 .reps { font-size: 40rpx; font-weight: 600; color: var(--label2); }
 .ex-sub { font-size: 24rpx; color: var(--label2); margin-top: 2rpx; }
 

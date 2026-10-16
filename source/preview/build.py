@@ -70,7 +70,8 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 #toast { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.96); background: rgba(28,28,30,.86); color: #fff; padding: 12px 20px; border-radius: 14px; font-size: 15px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 300; max-width: 78%; text-align: center; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .app .mask { position: absolute; }
-#rest .mask { z-index: 200; }
+.app #body .mask { bottom: calc(54px + env(safe-area-inset-bottom)); }
+#rest .mask { z-index: 200; bottom: 0; }
 input, textarea, select, button { font: inherit; color: inherit; outline: none; }
 input, textarea { border: none; background: transparent; -webkit-appearance: none; appearance: none; }
 .app input::placeholder, .app textarea::placeholder { color: #C7C7CC; }
