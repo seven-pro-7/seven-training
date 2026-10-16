@@ -1,0 +1,14 @@
+{
+  "description": "GZCLP 8 周训练追踪小程序",
+  "packOptions": { "ignore": [{ "type": "folder", "value": "preview" }, { "type": "file", "value": "README.md" }], "include": [] },
+  "setting": {
+    "urlCheck": false, "es6": true, "enhance": true, "postcss": true, "minified": true,
+    "showShadowRootInWxmlPanel": true, "compileHotReLoad": true, "babelSetting": { "ignore": [], "disablePlugins": [], "outputPath": "" }
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.4.0",
+  "appid": "touristappid",
+  "projectname": "gzclp-tracker",
+  "condition": {},
+  "editorSetting": { "tabIndent": "insertSpaces", "tabSize": 2 }
+}

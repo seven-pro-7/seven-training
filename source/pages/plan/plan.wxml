@@ -1,0 +1,86 @@
+<view class="page">
+  <!-- 下一次 + 进度 -->
+  <view class="card next-card">
+    <view class="row">
+      <view class="flex1">
+        <text class="cap">下一次训练</text>
+        <view class="next-t"><text class="num accent">{{vm.next.day}}</text> {{vm.next.name}}</view>
+        <text class="cap">{{vm.next.weekText}}{{vm.next.deload ? ' · 减载周' : ''}}</text>
+      </view>
+      <view class="go-btn" data-day="{{vm.next.day}}" bindtap="goNext">开始</view>
+    </view>
+    <view class="prog">
+      <view class="row between"><text class="cap">本轮进度（{{vm.weeksPerCycle}} 周 / 轮）</text><text class="cap"><text class="num strong">{{vm.cycleDone}}</text> / {{vm.cyclePlanned}} 次 · {{vm.cycleProgress}}%</text></view>
+      <view class="bar"><view class="bar-in" style="width: {{vm.cycleProgress}}%"></view></view>
+      <text class="cap total-cap">累计已完成 {{vm.done}} 次训练</text>
+    </view>
+  </view>
+
+  <!-- 矩阵 -->
+  <view class="card">
+    <view class="card-title">
+      <view class="cyc-nav">
+        <text class="cyc-btn {{vm.canPrev ? '' : 'off'}}" data-d="-1" bindtap="onCycle">‹</text>
+        <text class="t cyc-label">{{vm.cycleText}}{{vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : ''}}</text>
+        <text class="cyc-btn {{vm.canNext ? '' : 'off'}}" data-d="1" bindtap="onCycle">›</text>
+      </view>
+      <text class="s">T1 重量 kg</text>
+    </view>
+    <view class="grid-head">
+      <text class="gw"></text>
+      <text wx:for="{{vm.days}}" wx:key="id" class="gh num">{{item.id}}</text>
+    </view>
+    <view wx:for="{{vm.rows}}" wx:key="week" wx:for-item="row" class="grid-row">
+      <view class="gw"><text class="num">W{{row.wc}}</text><text class="dltag" wx:if="{{row.deload}}">减载</text></view>
+      <view wx:for="{{row.cells}}" wx:key="day" wx:for-item="c" class="gcell {{c.status}}" data-c="{{c}}" bindtap="onCell">
+        <text class="cw num">{{c.w}}</text>
+        <view class="cdot" wx:if="{{c.status === 'done'}}" style="background: {{c.color}}"></view>
+      </view>
+    </view>
+    <view class="legend">
+      <view class="lg"><view class="sw" style="background: #FF6B1A"></view>已完成 · 圆点为判定</view>
+      <view class="lg"><view class="sw" style="box-shadow: inset 0 0 0 2px #FF6B1A"></view>下一次</view>
+      <view class="lg"><view class="sw" style="background: #E5E5EA"></view>每次加重的推演</view>
+    </view>
+  </view>
+
+  <!-- 当前状态 -->
+  <view class="card">
+    <view class="card-title"><text class="t">当前状态</text><text class="s">自动更新</text></view>
+    <view class="seg">
+      <view wx:for="{{vm.overview}}" wx:key="day" class="seg-i {{ovIdx === index ? 'on' : ''}}" data-i="{{index}}" bindtap="onOv"><text class="num">{{item.day}}</text></view>
+    </view>
+    <view class="ov-row" wx:for="{{vm.overview[ovIdx].slots}}" wx:key="id">
+      <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+      <view class="ov-main">
+        <text class="ovn">{{item.name}}</text>
+        <text class="ov-sub">{{item.stage}}<text class="amber" wx:if="{{item.fail > 0}}"> · 预警 {{item.fail}}</text></text>
+      </view>
+      <view class="ov-right">
+        <text class="num ov-w">{{item.weight}}<text class="ov-u"> kg</text></text>
+        <text class="ov-last"><text style="color: {{item.lastColor}}">{{item.last}}</text><text class="green" wx:if="{{item.gain}}"> {{item.gain}}</text></text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 详情 -->
+  <view class="mask" wx:if="{{detail}}" bindtap="closeDetail">
+    <view class="sheet" catchtap="noop">
+      <view class="grabber"></view>
+      <text class="sheet-cap">{{detail.dateText}} · 第 {{detail.week}} 次 · 容量 {{detail.vol}} kg</text>
+      <view class="sheet-title">{{detail.day}} {{detail.dayName}}</view>
+      <view class="list">
+        <view class="cell d-row" wx:for="{{detail.items}}" wx:key="name">
+          <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+          <view class="d-main"><text>{{item.name}}</text><text class="d-sub">{{item.w}} kg × {{item.input}}<text class="accent" wx:if="{{item.manual}}"> · 手动</text></text></view>
+          <view class="d-right"><text class="jtag" style="color: {{item.color}}">{{item.j}}</text><text class="d-sub">{{item.next}}</text></view>
+        </view>
+      </view>
+      <view class="note-box" wx:if="{{detail.note}}">{{detail.note}}</view>
+      <view class="sheet-btns">
+        <view class="btn-ghost" data-id="{{detail.id}}" bindtap="editRecord">修改这次</view>
+        <view class="btn-ghost solid" bindtap="closeDetail">完成</view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,84 @@
+<view class="page">
+  <view class="seg">
+    <view class="seg-i {{tab === 0 ? 'on' : ''}}" data-t="0" bindtap="onTab">总结</view>
+    <view class="seg-i {{tab === 1 ? 'on' : ''}}" data-t="1" bindtap="onTab">周报</view>
+    <view class="seg-i {{tab === 2 ? 'on' : ''}}" data-t="2" bindtap="onTab">日志</view>
+  </view>
+
+  <!-- 总结 -->
+  <view wx:if="{{tab === 0}}">
+    <view class="card">
+      <view class="card-title"><text class="t">训练小结</text><text class="link" bindtap="copySummary">复制</text></view>
+      <view class="ins" wx:for="{{vm.insights}}" wx:key="text">
+        <view class="ins-ic {{item.type}}">{{item.icon}}</view>
+        <text class="ins-t">{{item.text}}</text>
+      </view>
+    </view>
+    <view class="card">
+      <view class="card-title rules-h" bindtap="toggleRules"><text class="t">规则速查</text><text class="link">{{showRules ? '收起' : '展开'}}</text></view>
+      <block wx:if="{{showRules}}">
+        <view wx:for="{{rules}}" wx:key="title" wx:for-item="g" class="rg">
+          <view class="rg-t">{{g.title}}</view>
+          <view class="rr" wx:for="{{g.rows}}" wx:for-item="r">
+            <text class="r1 num">{{r[0]}}</text><text class="r2">{{r[1]}}</text><text class="r3">{{r[2]}}</text>
+          </view>
+        </view>
+        <view class="gen" wx:for="{{general}}" wx:key="*this">{{item}}</view>
+      </block>
+      <text class="cap" wx:else>T1 三阶进阶、T2 退阶重置、T3 阈值加重与通用规则</text>
+    </view>
+  </view>
+
+  <!-- 周报 -->
+  <view wx:if="{{tab === 1}}">
+    <view class="empty-tip" wx:if="{{!vm.weeks.length}}">完成第一次训练后生成周报</view>
+    <view class="card wk" wx:for="{{vm.weeks}}" wx:key="week">
+      <view class="row between">
+        <view class="row"><text class="wk-n">第 {{item.week}} 周</text><text class="dltag" wx:if="{{item.deload}}">减载</text></view>
+        <view class="row dflags">
+          <text wx:for="{{item.days}}" wx:for-item="d" wx:key="id" class="dflag num {{d.on ? 'on' : ''}}">{{d.id}}</text>
+        </view>
+      </view>
+      <view class="wk-k">
+        <view class="wkk"><text class="num kv">{{item.volText}}</text><text class="ks">容量<text class="{{item.dvUp ? 'dv-up' : 'dv-down'}}" wx:if="{{item.dv}}"> {{item.dv}}</text></text></view>
+        <view class="wkk"><text class="num kv">{{item.sessions}}/{{item.total}}</text><text class="ks">完成</text></view>
+        <view class="wkk"><text class="num kv accent">{{item.adds}}</text><text class="ks">加重</text></view>
+        <view class="wkk"><text class="num kv {{item.warns ? 'amber' : ''}}">{{item.warns}}</text><text class="ks">预警</text></view>
+      </view>
+      <view class="t1row" wx:for="{{item.t1}}" wx:for-item="t" wx:key="day">
+        <text class="num t1d">{{t.day}}</text><text class="t1n">{{t.name}}</text>
+        <text class="num t1w">{{t.w}} kg × {{t.input === null ? '—' : t.input}}</text>
+        <text class="jtag" style="color: {{t.color}}">{{t.j}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 日志 -->
+  <view wx:if="{{tab === 2}}">
+    <view class="empty-tip" wx:if="{{!vm.logs.length}}">暂无记录</view>
+    <view class="list" wx:if="{{vm.logs.length}}">
+      <view class="log" wx:for="{{vm.logs}}" wx:key="id">
+        <view class="cell tap" data-id="{{item.id}}" bindtap="toggle">
+          <text class="num log-day">{{item.day}}</text>
+          <view class="log-meta"><text>{{item.dayName}} · 第 {{item.week}} 次</text><text class="log-d">{{item.dateText}}{{item.deload ? ' · 减载' : ''}}{{item.bw ? ' · ' + item.bw + ' kg' : ''}}</text></view>
+          <text class="num log-v">{{item.vol}}<text class="log-u"> kg</text></text>
+          <text class="chev">{{open[item.id] ? '⌃' : '›'}}</text>
+        </view>
+        <view wx:if="{{open[item.id]}}" class="log-body">
+          <view class="li" wx:for="{{item.items}}" wx:for-item="it" wx:key="name">
+            <text class="tier t-{{it.tier}}">{{it.tier}}</text>
+            <text class="li-n">{{it.name}}</text>
+            <text class="li-w num"><text class="accent" wx:if="{{it.manual}}">手动 </text>{{it.w}} × {{it.input}}</text>
+            <text class="jtag" style="color: {{it.color}}">{{it.j}}</text>
+          </view>
+          <view class="note-box" wx:if="{{item.note}}">{{item.note}}</view>
+          <view class="log-act">
+            <text class="btn-small danger" data-id="{{item.id}}" bindtap="del">删除</text>
+            <text class="btn-small rust" data-id="{{item.id}}" bindtap="edit">修改</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="sec-f" style="text-align: center">修改或删除任意一次记录，之后的重量与阶段会自动重算</view>
+  </view>
+</view>

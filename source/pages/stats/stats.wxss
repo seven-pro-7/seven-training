@@ -1,0 +1,36 @@
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; margin-bottom: 24rpx; }
+.kpi { background: var(--card); border-radius: 32rpx; padding: 26rpx 28rpx; display: flex; flex-direction: column; }
+.k-l { font-size: 26rpx; font-weight: 600; color: var(--label2); }
+.kv { font-size: 56rpx; font-weight: 700; line-height: 1.2; letter-spacing: -1rpx; }
+.ku { font-size: 28rpx; color: var(--label2); margin-left: 6rpx; font-weight: 500; }
+.ks { font-size: 24rpx; color: var(--label2); }
+.kbar { height: 8rpx; background: var(--fill); border-radius: 8rpx; margin-top: 14rpx; overflow: hidden; }
+.kin { height: 100%; background: var(--accent); border-radius: 8rpx; }
+
+.cv { width: 100%; height: 400rpx; }
+.cv.short { height: 260rpx; }
+.cv-sq { width: 260rpx; height: 260rpx; flex-shrink: 0; }
+
+.hero { display: flex; align-items: baseline; margin: 2rpx 0 16rpx; }
+.hero-v { font-size: 76rpx; font-weight: 700; letter-spacing: -2rpx; line-height: 1.1; }
+.hero-u { font-size: 30rpx; color: var(--label2); font-weight: 600; margin-left: 8rpx; }
+.hero-d { margin-left: auto; }
+
+.mini { display: flex; margin-top: 24rpx; padding-top: 24rpx; border-top: 1rpx solid var(--sep); }
+.mi { flex: 1; display: flex; flex-direction: column; }
+.mi + .mi { padding-left: 24rpx; border-left: 1rpx solid var(--sep); }
+.mi-v { font-size: 38rpx; font-weight: 700; }
+.mi-l { font-size: 22rpx; color: var(--label2); }
+.tip { font-size: 24rpx; color: var(--label2); margin-top: 20rpx; padding: 16rpx 20rpx; background: var(--fill2); border-radius: 16rpx; }
+
+.pie-list { flex: 1; margin-left: 36rpx; }
+.pl { display: flex; align-items: center; padding: 10rpx 0; font-size: 28rpx; }
+.pl .sw { width: 16rpx; height: 16rpx; border-radius: 50%; margin-right: 14rpx; }
+.pl-l { flex: 1; }
+.pl-v { font-weight: 700; width: 60rpx; text-align: right; }
+.pl-p { width: 84rpx; text-align: right; font-size: 24rpx; color: var(--label2); }
+
+.pr-main { flex: 1; margin-left: 18rpx; display: flex; flex-direction: column; font-size: 30rpx; }
+.pr-sub { font-size: 24rpx; color: var(--label2); }
+.pr-w { font-size: 34rpx; font-weight: 700; }
+.pr-u { font-size: 22rpx; font-weight: 500; color: var(--label2); }

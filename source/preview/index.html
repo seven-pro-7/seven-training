@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="GZCLP">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>GZCLP 训练追踪</title>
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: #E5E5EA; font-family: -apple-system, "SF Pro Text", "PingFang SC", sans-serif; }
+body { display: flex; align-items: center; justify-content: center; gap: 56px; }
+.side { width: 300px; color: #6E6E73; font-size: 14px; line-height: 1.7; }
+.side h1 { color: #1C1C1E; font-size: 28px; margin: 0 0 4px; letter-spacing: -0.5px; }
+.side h1 span { color: #FF6B1A; }
+.side b { color: #1C1C1E; font-weight: 600; }
+.side ul { padding-left: 18px; margin: 12px 0 18px; }
+.side .tag { display: inline-block; background: #fff; border-radius: 6px; padding: 1px 8px; margin: 3px 4px 3px 0; font-size: 12px; color: #3A3A3C; }
+.phone { width: 390px; height: 844px; border-radius: 54px; padding: 11px; background: #1C1C1E; box-shadow: 0 40px 90px rgba(0,0,0,.25), inset 0 0 0 2px #3A3A3C; flex-shrink: 0; }
+.app { position: relative; width: 100%; height: 100%; border-radius: 44px; overflow: hidden; display: flex; flex-direction: column; }
+.status { height: 47px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 32px 6px; font-size: 15px; font-weight: 600; color: #1C1C1E; background: #F2F2F7; }
+.nav { position: relative; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(242,242,247,0.92); color: #1C1C1E; font-size: 17px; font-weight: 600; z-index: 5; }
+.capsule { position: absolute; right: 8px; top: 7px; width: 87px; height: 31px; border-radius: 16px; border: 0.5px solid rgba(0,0,0,.12); display: flex; align-items: center; justify-content: space-around; color: #1C1C1E; font-size: 14px; background: rgba(255,255,255,.7); }
+.capsule i { width: 0.5px; height: 18px; background: rgba(0,0,0,.15); }
+#body { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; background: #F2F2F7; }
+#body::-webkit-scrollbar { display: none; }
+.tabbar { flex-shrink: 0; display: flex; padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); background: rgba(249,249,249,0.94); border-top: 0.5px solid rgba(0,0,0,0.16); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+.phone .tabbar { padding-bottom: 26px; }
+.tb-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; color: #8E8E93; cursor: pointer; user-select: none; }
+.tb-item img { width: 26px; height: 26px; margin-bottom: 1px; }
+.tb-item .on-i { display: none; }
+.tb-item.on { color: #FF6B1A; }
+.tb-item.on .on-i { display: block; } .tb-item.on .off-i { display: none; }
+#toast { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.96); background: rgba(28,28,30,.86); color: #fff; padding: 12px 20px; border-radius: 14px; font-size: 15px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 300; max-width: 78%; text-align: center; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+#toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.app .mask { position: absolute; }
+#rest .mask { z-index: 200; }
+input, textarea, select, button { font: inherit; color: inherit; outline: none; }
+input, textarea { border: none; background: transparent; -webkit-appearance: none; appearance: none; }
+.app input::placeholder, .app textarea::placeholder { color: #C7C7CC; }
+.app input { caret-color: #FF6B1A; }
+.app button.btn-primary { width: 100%; cursor: pointer; }
+.app [data-act], .app .tb-item, .app label { cursor: pointer; }
+.app .cv, .app .cv-sq { display: block; }
+.app textarea.note { resize: none; display: block; font-family: inherit; }
+.app textarea.imp { resize: vertical; display: block; }
+.date-pick, .ex-pick, .base-pick, .pick-cell { position: relative; }
+.date-pick input, .ex-pick select, .base-pick select, .pick-cell select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.lib-back { color: #FF6B1A; font-size: 17px; padding: 2px 0 12px; display: inline-block; }
+.app .lib-list { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.cyc-nav { display: flex; align-items: center; gap: 4px; }
+.cyc-btn { width: 24px; height: 24px; border-radius: 50%; background: #EFEFF4; color: #FF6B1A; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
+.cyc-btn.off { color: #C7C7CC; opacity: .5; cursor: default; }
+.cyc-label { font-size: 15px; }
+.total-cap { display: block; margin-top: 7px; }
+.ios-sw { position: relative; display: inline-block; width: 51px; height: 31px; flex-shrink: 0; }
+.ios-sw input { display: none; }
+.ios-sw i { position: absolute; inset: 0; background: #E9E9EA; border-radius: 16px; transition: background .2s; }
+.ios-sw i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 1px 1px rgba(0,0,0,.16); transition: left .2s; }
+.ios-sw input:checked + i { background: #FF6B1A; }
+.ios-sw.green input:checked + i { background: #34C759; }
+.ios-sw input:checked + i::after { left: 22px; }
+@media (max-width: 760px) {
+  html, body { background: #F2F2F7; height: 100%; overflow: hidden; }
+  body { display: block; }
+  .side, .status, .capsule { display: none; }
+  .phone { width: 100%; height: 100%; height: 100dvh; border-radius: 0; padding: 0; box-shadow: none; background: none; }
+  .app { border-radius: 0; }
+  .nav { padding-top: env(safe-area-inset-top); height: calc(44px + env(safe-area-inset-top)); }
+  .phone .tabbar { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+  .app .f-in.sm, .app .note, .app .imp { font-size: 16px; }
+}
+
+
+.app {
+  --bg: #F2F2F7; --card: #FFFFFF; --fill: rgba(118,118,128,0.12); --fill2: rgba(118,118,128,0.08);
+  --sep: rgba(60,60,67,0.12); --label: #1C1C1E; --label2: #8E8E93; --label3: #C7C7CC;
+  --accent: #FF6B1A; --accent-soft: rgba(255,107,26,0.12);
+  --blue: #0A84FF; --green: #34C759; --amber: #FF9F0A; --red: #FF3B30; --purple: #AF52DE; --teal: #5AC8FA;
+  background: var(--bg);
+  color: var(--label);
+  font-family: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.page { padding: 8px 16px 32px; box-sizing: border-box; }
+.num { font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.25px; }
+.flex1 { flex: 1; min-width: 0; }
+.row { display: flex; align-items: center; }
+.between { justify-content: space-between; }
+.wrap { flex-wrap: wrap; }
+.gap { gap: 8px; }
+.muted, .dim, .cap { color: var(--label2); }
+.cap { font-size: 13px; }
+.accent, .rust { color: var(--accent); }
+.amber { color: var(--amber); }
+.green { color: var(--green); }
+.red { color: var(--red); }
+.strong { color: var(--label); font-weight: 600; }
+
+
+.large-title { font-size: 34px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.15; }
+
+
+.card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.card-title { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.card-title .t { font-size: 17px; font-weight: 600; }
+.card-title .s { font-size: 13px; color: var(--label2); }
+.link { font-size: 15px; color: var(--accent); }
+
+
+.sec-h { font-size: 13px; color: var(--label2); padding: 16px 16px 7px; }
+.sec-f { font-size: 12px; color: var(--label2); padding: 7px 16px 4px; line-height: 1.5; }
+.list { background: var(--card); border-radius: 16px; overflow: hidden; margin-bottom: 4px; }
+.cell { position: relative; display: flex; align-items: center; min-height: 46px; padding: 9px 16px; box-sizing: border-box; font-size: 16px; }
+.cell + .cell::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; background: var(--sep); }
+.cell.tap:active { background: var(--fill2); }
+.cell .val { color: var(--label2); }
+.chev { color: var(--label3); font-size: 15px; margin-left: 6px; }
+
+
+.seg, .tabs { display: flex; background: var(--fill); border-radius: 9px; padding: 2px; margin-bottom: 12px; }
+.seg-i, .tabs .tab { position: relative; flex: 1; text-align: center; padding: 6px 0; font-size: 13px; font-weight: 500; color: var(--label); border-radius: 7px; white-space: nowrap; }
+.seg-i.on, .tabs .tab.on { background: var(--card); font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,0.10), 0 1px 1px rgba(0,0,0,0.04); }
+
+
+.tier { display: inline-flex; align-items: center; justify-content: center; height: 19px; padding: 0 6px; border-radius: 5px; font-size: 11px; font-weight: 700; flex-shrink: 0; box-sizing: border-box; }
+.t-T1 { color: #FF6B1A; background: rgba(255,107,26,0.12); }
+.t-T2 { color: #0A84FF; background: rgba(10,132,255,0.12); }
+.t-T3 { color: #8E8E93; background: rgba(142,142,147,0.14); }
+.jtag { font-size: 13px; font-weight: 600; }
+
+
+.btn-primary { display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border-radius: 14px;
+  font-size: 17px; font-weight: 600; height: 52px; line-height: 52px; border: none; padding: 0; }
+.btn-primary::after { border: none; }
+.btn-primary:active { opacity: 0.85; }
+.btn-ghost { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 14px; background: var(--fill); color: var(--accent); font-size: 16px; font-weight: 600; }
+.btn-ghost.solid { background: var(--accent); color: #fff; }
+.btn-small { display: inline-flex; align-items: center; font-size: 13px; font-weight: 500; padding: 6px 13px; border-radius: 499.5px; background: var(--fill); color: var(--label); }
+.btn-small.rust { color: var(--accent); }
+.btn-small.danger { color: var(--red); }
+
+
+.mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.32); z-index: 100; display: flex; align-items: flex-end; }
+.mask.center { align-items: center; justify-content: center; }
+.sheet { width: 100%; max-height: 86vh; overflow-y: auto; background: var(--bg); border-radius: 20px 20px 0 0; padding: 8px 16px calc(20px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+.grabber { width: 36px; height: 5px; border-radius: 5px; background: var(--label3); margin: 0 auto 12px; }
+.sheet-cap { font-size: 13px; color: var(--label2); }
+.sheet-title { font-size: 24px; font-weight: 700; margin: 2px 0 12px; letter-spacing: -0.25px; }
+.sheet-btns { display: flex; gap: 10px; margin-top: 16px; }
+.sheet-btns .btn-ghost { flex: 1; }
+
+.empty-tip { text-align: center; color: var(--label2); padding: 32px 0; font-size: 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; }
+.legend .lg { display: flex; align-items: center; font-size: 12px; color: var(--label2); }
+.legend .sw { width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+.legend .sw.dash { height: 0; width: 13px; border-radius: 0; border-top: 1.5px dashed; }
+.ph { color: var(--label3); }
+
+.pg-train .head { padding: 4px 0 12px; }
+.pg-train .head-sub { font-size: 13px; color: var(--label2); font-weight: 500; }
+.pg-train .large-title .num { color: var(--accent); }
+.pg-train .day-seg { margin-bottom: 8px; }
+.pg-train .day-seg .seg-i { display: flex; align-items: center; justify-content: center; }
+.pg-train .day-seg .seg-i.is-done { color: var(--label2); }
+.pg-train .day-seg .seg-i.is-done.on { color: var(--label); }
+.pg-train .ds-ck { color: var(--green); font-size: 11px; font-weight: 800; margin-right: 3px; }
+.pg-train .wk-prog { display: flex; align-items: center; gap: 8px; margin: 0 2px 12px; }
+.pg-train .wk-bar { width: 60px; height: 4px; border-radius: 4px; background: var(--fill); overflow: hidden; flex-shrink: 0; }
+.pg-train .wk-in { height: 100%; background: var(--green); border-radius: 4px; }
+.pg-train .wk-t { font-size: 12px; color: var(--label2); }
+.pg-train .locked { padding: 16px; }
+.pg-train .lk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pg-train .lk-ic { width: 32px; height: 32px; border-radius: 50%; background: var(--green); color: #fff; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.pg-train .lk-t { font-size: 17px; font-weight: 700; }
+.pg-train .lk-s { font-size: 12px; color: var(--label2); }
+.pg-train .lk-row { position: relative; display: flex; align-items: center; padding: 10px 0; }
+.pg-train .lk-row + .lk-row::before { content: ''; position: absolute; top: 0; left: 35px; right: 0; height: 0.5px; background: var(--sep); }
+.pg-train .lk-n { flex: 1; margin-left: 8px; font-size: 15px; }
+.pg-train .lk-w { font-size: 14px; color: var(--label2); margin-right: 10px; }
+.pg-train .lk-j { width: 52px; text-align: right; }
+.pg-train .lk-tip { margin-top: 8px; padding: 9px 11px; border-radius: 8px; background: var(--fill2); font-size: 12px; color: var(--label2); }
+.pg-train .wk-done { margin: -6px 0 12px; padding: 10px 12px; border-radius: 10px; background: rgba(52,199,89,0.12); color: #248A3D; font-size: 14px; font-weight: 600; }
+.pg-train .wk-left { margin: -6px 0 12px; font-size: 14px; color: var(--label2); }
+.pg-train .rec-dot { position: absolute; top: 5px; right: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.pg-train .deload { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.pg-train .dl-ic { width: 28px; height: 28px; border-radius: 8px; background: var(--teal); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; }
+.pg-train .dl-t { font-size: 15px; font-weight: 600; }
+.pg-train .dl-s { font-size: 12px; color: var(--label2); }
+.pg-train .ex { padding: 14px 16px 16px; }
+.pg-train .ex.skipped { opacity: 0.45; }
+.pg-train .ex-head { display: flex; align-items: center; }
+.pg-train .ex-title { flex: 1; min-width: 0; margin-left: 7px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; }
+.pg-train .ex-name { font-size: 16px; font-weight: 600; }
+.pg-train .ex-tag { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; }
+.pg-train .ex-tag.sub { color: #5856D6; background: rgba(88,86,214,0.12); }
+.pg-train .ex-tag.new { color: var(--green); background: rgba(52,199,89,0.12); }
+.pg-train .ex-act { font-size: 13px; color: var(--accent); font-weight: 500; padding: 4px 0 4px 12px; }
+.pg-train .swap-sheet { max-height: 90vh; display: flex; flex-direction: column; }
+.pg-train .search { display: flex; align-items: center; background: var(--fill); border-radius: 10px; padding: 0 10px; height: 36px; margin-bottom: 10px; }
+.pg-train .search-ic { color: var(--label2); font-size: 16px; margin-right: 5px; }
+.pg-train .search-in { flex: 1; font-size: 15px; color: var(--label); }
+.pg-train .seg-n { font-size: 10px; color: var(--label2); margin-left: 3px; font-weight: 500; }
+.pg-train .lib-list { max-height: 46vh; }
+.pg-train .lib-row { min-height: 52px; }
+.pg-train .lib-row.sel { background: var(--accent-soft); }
+.pg-train .lib-n { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+.pg-train .lib-t { height: 15px; font-size: 9px; padding: 0 4px; }
+.pg-train .lib-c { font-size: 10px; color: var(--blue); }
+.pg-train .lib-s { font-size: 12px; color: var(--label2); margin-top: 1px; }
+.pg-train .lib-cur { font-size: 12px; color: var(--label2); margin-left: 6px; }
+.pg-train .lib-ck { font-size: 16px; color: var(--accent); font-weight: 700; margin-left: 8px; }
+.pg-train .swap-scope { margin: 10px 0 6px; }
+.pg-train .swap-ok { margin-top: 10px; }
+.pg-train .ex-skip { font-size: 13px; color: var(--label2); padding: 4px 0 4px 12px; }
+.pg-train .ex-main { display: flex; align-items: baseline; justify-content: space-between; margin-top: 6px; }
+.pg-train .wbox { display: flex; align-items: baseline; border-radius: 8px; margin-left: -4px; padding: 0 4px; }
+.pg-train .wbox:active { background: var(--fill2); }
+.pg-train .w-num.manual { color: var(--accent); }
+.pg-train .w-edit { font-size: 12px; font-weight: 600; color: var(--accent); margin-left: 8px; padding: 2px 7px; border-radius: 499.5px; background: var(--accent-soft); align-self: center; }
+.pg-train .wedit { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 10px; background: var(--fill2); border-radius: 10px; }
+.pg-train .st-val.wide { width: 70px; }
+.pg-train .we-step { font-size: 12px; color: var(--label2); }
+.pg-train .we-reset { margin-left: auto; font-size: 13px; font-weight: 600; }
+.pg-train .w-num { font-size: 52px; font-weight: 700; line-height: 1.05; letter-spacing: -1.5px; }
+.pg-train .w-unit { font-size: 16px; font-weight: 600; color: var(--label2); margin-left: 4px; }
+.pg-train .reps { font-size: 20px; font-weight: 600; color: var(--label2); }
+.pg-train .ex-sub { font-size: 12px; color: var(--label2); margin-top: 1px; }
+.pg-train .dots { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; align-items: center; }
+.pg-train .dot { width: 30px; height: 30px; border-radius: 50%; background: var(--fill); color: var(--label2);
+  font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.pg-train .dot.on { background: var(--accent); color: #fff; }
+.pg-train .dot.amrap { box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent); background: transparent; }
+.pg-train .dot.amrap.on { background: var(--accent); color: #fff; }
+.pg-train .rest-btn { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--label2); padding: 5px 10px; border-radius: 499.5px; background: var(--fill2); }
+.pg-train .inrow { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 0.5px solid var(--sep); }
+.pg-train .inrow.col { flex-direction: column; align-items: stretch; }
+.pg-train .in-label { font-size: 15px; font-weight: 500; }
+.pg-train .in-hint { font-size: 12px; color: var(--label2); margin-top: 1px; }
+.pg-train .stepper { display: flex; align-items: center; background: var(--fill); border-radius: 10px; }
+.pg-train .st-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--accent); font-weight: 400; }
+.pg-train .st-btn:active { opacity: 0.5; }
+.pg-train .st-val { width: 44px; height: 40px; text-align: center; font-size: 20px; font-weight: 700; color: var(--label); }
+.pg-train .mini-in { width: 75px; height: 36px; text-align: center; background: var(--fill); border-radius: 8px; color: var(--label); font-size: 16px; font-weight: 600; }
+.pg-train .seg-done { margin-bottom: 0; }
+.pg-train .seg-done .seg-i { padding: 9px 0; font-size: 14px; }
+.pg-train .seg-done .seg-i.ok { color: var(--green); }
+.pg-train .seg-done .seg-i.bad { color: var(--purple); }
+.pg-train .subrow { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.pg-train .verdict { display: flex; align-items: center; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--fill2); }
+.pg-train .v-ic { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pg-train .v-j { font-size: 15px; font-weight: 700; margin-left: 7px; }
+.pg-train .v-next { margin-left: auto; display: flex; align-items: baseline; }
+.pg-train .v-l { font-size: 13px; color: var(--label2); margin-left: auto; }
+.pg-train .v-next .v-l { margin-right: 5px; }
+.pg-train .v-w { font-size: 18px; font-weight: 700; }
+.pg-train .v-u { font-size: 12px; color: var(--label2); margin-left: 2px; }
+.pg-train .v-stage { font-size: 13px; color: var(--label2); margin-left: 5px; }
+.pg-train .cell-in { width: 100px; text-align: right; font-size: 16px; color: var(--label); }
+.pg-train .unit { color: var(--label2); margin-left: 5px; font-size: 15px; }
+.pg-train .note { width: 100%; min-height: 30px; font-size: 15px; color: var(--label); padding: 2px 0; }
+.pg-train .submit { margin-top: 16px; }
+.pg-train .btn-count { font-size: 13px; font-weight: 600; margin-left: 8px; padding: 1px 7px; border-radius: 499.5px; background: rgba(255,255,255,0.24); line-height: 1.5; }
+.pg-train .rest-mask { background: rgba(242,242,247,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.pg-train .rest-box { width: 320px; display: flex; flex-direction: column; align-items: center; }
+.pg-train .rest-name { font-size: 14px; color: var(--label2); font-weight: 500; }
+.pg-train .rest-num { font-size: 100px; font-weight: 200; line-height: 1.1; letter-spacing: -3px; margin-top: 4px; }
+.pg-train .rest-bar { width: 240px; height: 4px; background: var(--fill); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+.pg-train .rest-in { height: 100%; background: var(--accent); border-radius: 4px; transition: width 1s linear; }
+.pg-train .rest-btns { display: flex; align-items: center; gap: 14px; margin-top: 36px; }
+.pg-train .rb { width: 64px; height: 64px; border-radius: 50%; background: var(--fill); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--label); }
+.pg-train .rb.main { width: auto; height: 48px; padding: 0 22px; border-radius: 499.5px; background: var(--accent); color: #fff; }
+.pg-train .res-kpi { display: flex; gap: 10px; margin-bottom: 12px; }
+.pg-train .rk { flex: 1; background: var(--card); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; }
+.pg-train .rk-v { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.pg-train .rk-l { font-size: 12px; color: var(--label2); }
+.pg-train .res-row { font-size: 15px; }
+.pg-train .res-name { margin-left: 8px; }
+.pg-train .res-r { display: flex; flex-direction: column; align-items: flex-end; }
+.pg-train .res-next { font-size: 12px; color: var(--label2); }
+.pg-plan .next-card { padding: 16px; }
+.pg-plan .next-t { font-size: 22px; font-weight: 700; letter-spacing: -0.25px; margin: 2px 0; }
+.pg-plan .go-btn { height: 36px; padding: 0 20px; border-radius: 499.5px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; display: flex; align-items: center; }
+.pg-plan .go-btn:active { opacity: 0.85; }
+.pg-plan .prog { margin-top: 14px; padding-top: 12px; border-top: 0.5px solid var(--sep); }
+.pg-plan .bar { height: 6px; background: var(--fill); border-radius: 6px; overflow: hidden; margin-top: 7px; }
+.pg-plan .bar-in { height: 100%; background: var(--accent); border-radius: 6px; }
+.pg-plan .total-cap { display: block; margin-top: 7px; }
+.pg-plan .cyc-nav { display: flex; align-items: center; gap: 4px; }
+.pg-plan .cyc-btn { width: 24px; height: 24px; border-radius: 50%; background: var(--fill); color: var(--accent); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.pg-plan .cyc-btn:active { opacity: 0.6; }
+.pg-plan .cyc-btn.off { color: var(--label3); opacity: 0.4; }
+.pg-plan .cyc-label { font-size: 15px; }
+.pg-plan .grid-head, .pg-plan .grid-row { display: flex; align-items: center; gap: 6px; }
+.pg-plan .grid-head { margin-bottom: 6px; }
+.pg-plan .gw { width: 36px; display: flex; flex-direction: column; font-size: 13px; font-weight: 600; color: var(--label2); }
+.pg-plan .dltag { font-size: 10px; color: var(--teal); font-weight: 600; }
+.pg-plan .gh { flex: 1; text-align: center; font-size: 13px; font-weight: 600; color: var(--label2); }
+.pg-plan .grid-row { margin-bottom: 6px; }
+.pg-plan .gcell { position: relative; flex: 1; height: 42px; border-radius: 9px; background: var(--fill2); display: flex; align-items: center; justify-content: center; }
+.pg-plan .gcell .cw { font-size: 14px; font-weight: 500; color: var(--label3); }
+.pg-plan .gcell.done { background: var(--accent-soft); }
+.pg-plan .gcell.done .cw { color: var(--label); font-weight: 600; }
+.pg-plan .gcell.ready .cw { color: var(--label2); }
+.pg-plan .gcell.next { background: var(--card); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.pg-plan .gcell.next .cw { color: var(--accent); font-weight: 700; }
+.pg-plan .cdot { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; }
+.pg-plan .ov-row { position: relative; display: flex; align-items: center; padding: 10px 0; }
+.pg-plan .ov-row + .ov-row::before { content: ''; position: absolute; top: 0; left: 35px; right: 0; height: 0.5px; background: var(--sep); }
+.pg-plan .ov-main { flex: 1; margin-left: 9px; display: flex; flex-direction: column; }
+.pg-plan .ovn { font-size: 15px; font-weight: 500; }
+.pg-plan .ov-sub { font-size: 12px; color: var(--label2); }
+.pg-plan .ov-right { display: flex; flex-direction: column; align-items: flex-end; }
+.pg-plan .ov-w { font-size: 17px; font-weight: 700; }
+.pg-plan .ov-u { font-size: 11px; font-weight: 500; color: var(--label2); }
+.pg-plan .ov-last { font-size: 11px; font-weight: 600; }
+.pg-plan .d-main { flex: 1; margin-left: 8px; display: flex; flex-direction: column; font-size: 15px; }
+.pg-plan .d-right { display: flex; flex-direction: column; align-items: flex-end; }
+.pg-plan .d-sub { font-size: 12px; color: var(--label2); }
+.pg-plan .note-box { margin-top: 10px; padding: 12px 14px; background: var(--card); border-radius: 12px; color: var(--label2); font-size: 14px; }
+.pg-stats .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.pg-stats .kpi { background: var(--card); border-radius: 16px; padding: 13px 14px; display: flex; flex-direction: column; }
+.pg-stats .k-l { font-size: 13px; font-weight: 600; color: var(--label2); }
+.pg-stats .kv { font-size: 28px; font-weight: 700; line-height: 1.2; letter-spacing: -0.5px; }
+.pg-stats .ku { font-size: 14px; color: var(--label2); margin-left: 3px; font-weight: 500; }
+.pg-stats .ks { font-size: 12px; color: var(--label2); }
+.pg-stats .kbar { height: 4px; background: var(--fill); border-radius: 4px; margin-top: 7px; overflow: hidden; }
+.pg-stats .kin { height: 100%; background: var(--accent); border-radius: 4px; }
+.pg-stats .cv { width: 100%; height: 200px; }
+.pg-stats .cv.short { height: 130px; }
+.pg-stats .cv-sq { width: 130px; height: 130px; flex-shrink: 0; }
+.pg-stats .hero { display: flex; align-items: baseline; margin: 1px 0 8px; }
+.pg-stats .hero-v { font-size: 38px; font-weight: 700; letter-spacing: -1px; line-height: 1.1; }
+.pg-stats .hero-u { font-size: 15px; color: var(--label2); font-weight: 600; margin-left: 4px; }
+.pg-stats .hero-d { margin-left: auto; }
+.pg-stats .mini { display: flex; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--sep); }
+.pg-stats .mi { flex: 1; display: flex; flex-direction: column; }
+.pg-stats .mi + .mi { padding-left: 12px; border-left: 0.5px solid var(--sep); }
+.pg-stats .mi-v { font-size: 19px; font-weight: 700; }
+.pg-stats .mi-l { font-size: 11px; color: var(--label2); }
+.pg-stats .tip { font-size: 12px; color: var(--label2); margin-top: 10px; padding: 8px 10px; background: var(--fill2); border-radius: 8px; }
+.pg-stats .pie-list { flex: 1; margin-left: 18px; }
+.pg-stats .pl { display: flex; align-items: center; padding: 5px 0; font-size: 14px; }
+.pg-stats .pl .sw { width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
+.pg-stats .pl-l { flex: 1; }
+.pg-stats .pl-v { font-weight: 700; width: 30px; text-align: right; }
+.pg-stats .pl-p { width: 42px; text-align: right; font-size: 12px; color: var(--label2); }
+.pg-stats .pr-main { flex: 1; margin-left: 9px; display: flex; flex-direction: column; font-size: 15px; }
+.pg-stats .pr-sub { font-size: 12px; color: var(--label2); }
+.pg-stats .pr-w { font-size: 17px; font-weight: 700; }
+.pg-stats .pr-u { font-size: 11px; font-weight: 500; color: var(--label2); }
+.pg-review .ins { display: flex; align-items: flex-start; padding: 8px 0; }
+.pg-review .ins-ic { width: 22px; height: 22px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; color: #fff; font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; background: #8E8E93; margin-top: 1px; }
+.pg-review .ins-ic.up { background: var(--accent); }
+.pg-review .ins-ic.warn { background: var(--amber); }
+.pg-review .ins-ic.tip { background: var(--green); }
+.pg-review .ins-ic.trend { background: var(--blue); }
+.pg-review .ins-t { flex: 1; font-size: 15px; line-height: 1.5; }
+.pg-review .rules-h { margin-bottom: 6px; }
+.pg-review .rg { margin-top: 12px; }
+.pg-review .rg-t { font-size: 13px; font-weight: 600; color: var(--label2); margin-bottom: 4px; }
+.pg-review .rr { position: relative; display: flex; font-size: 13px; padding: 7px 0; }
+.pg-review .rr + .rr::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 0.5px; background: var(--sep); }
+.pg-review .r1 { width: 55px; font-weight: 600; }
+.pg-review .r2 { width: 125px; color: var(--label2); }
+.pg-review .r3 { flex: 1; }
+.pg-review .gen { font-size: 13px; color: var(--label2); line-height: 1.7; margin-top: 4px; }
+.pg-review .rg + .gen { margin-top: 14px; }
+.pg-review .wk-n { font-size: 18px; font-weight: 700; }
+.pg-review .dltag { font-size: 11px; color: var(--teal); font-weight: 600; margin-left: 7px; }
+.pg-review .dflags { gap: 4px; }
+.pg-review .dflag { font-size: 10px; font-weight: 600; padding: 2px 5px; border-radius: 4px; color: var(--label3); background: var(--fill2); }
+.pg-review .dflag.on { background: var(--accent-soft); color: var(--accent); }
+.pg-review .wk-k { display: flex; margin: 12px 0 6px; }
+.pg-review .wkk { flex: 1; display: flex; flex-direction: column; }
+.pg-review .kv { font-size: 20px; font-weight: 700; }
+.pg-review .ks { font-size: 11px; color: var(--label2); }
+.pg-review .dv-up { color: var(--green); font-weight: 600; }
+.pg-review .dv-down { color: var(--red); font-weight: 600; }
+.pg-review .t1row { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 8px 0; border-top: 0.5px solid var(--sep); }
+.pg-review .t1d { color: var(--label2); font-weight: 600; width: 26px; }
+.pg-review .t1n { flex: 1; }
+.pg-review .t1w { color: var(--label2); }
+.pg-review .log + .log .cell::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; background: var(--sep); }
+.pg-review .log-day { font-size: 17px; font-weight: 700; color: var(--accent); width: 42px; }
+.pg-review .log-meta { flex: 1; display: flex; flex-direction: column; font-size: 15px; }
+.pg-review .log-d { font-size: 12px; color: var(--label2); }
+.pg-review .log-v { font-size: 15px; font-weight: 600; }
+.pg-review .log-u { font-size: 11px; color: var(--label2); font-weight: 400; }
+.pg-review .log-body { padding: 0 16px 12px 58px; }
+.pg-review .li { display: flex; align-items: center; padding: 5px 0; font-size: 14px; }
+.pg-review .li-n { flex: 1; margin-left: 7px; }
+.pg-review .li-w { margin-right: 8px; color: var(--label2); }
+.pg-review .note-box { margin-top: 6px; padding: 9px 11px; background: var(--fill2); border-radius: 8px; color: var(--label2); font-size: 13px; }
+.pg-review .log-act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.pg-settings .sec-h:first-child { padding-top: 4px; }
+.pg-settings .f-in { width: 70px; height: 28px; text-align: right; font-size: 16px; color: var(--label); }
+.pg-settings .f-in.sm { width: 45px; height: 26px; text-align: center; font-size: 14px; background: var(--fill); border-radius: 6px; margin: 0 5px; }
+.pg-settings .f-u { color: var(--label2); margin-left: 4px; font-size: 15px; }
+.pg-settings .tm { color: var(--label2); font-size: 13px; margin-right: 12px; }
+.pg-settings .mode-seg { margin-bottom: 0; }
+.pg-settings .slot { flex-direction: column; align-items: stretch; padding: 12px 16px; }
+.pg-settings .slot-top { display: flex; align-items: center; }
+.pg-settings .ex-pick { margin-left: 8px; font-size: 16px; font-weight: 500; display: flex; align-items: center; }
+.pg-settings .init { font-size: 16px; font-weight: 600; }
+.pg-settings .init .f-u { font-size: 12px; font-weight: 400; }
+.pg-settings .slot-cfg { display: flex; align-items: center; margin-top: 8px; font-size: 13px; }
+.pg-settings .mini-seg { display: flex; background: var(--fill); border-radius: 6px; padding: 1.5px; margin-right: 8px; }
+.pg-settings .ms { padding: 3px 8px; color: var(--label2); font-size: 11px; font-weight: 600; border-radius: 5px; }
+.pg-settings .ms.on { background: var(--card); color: var(--label); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.pg-settings .base-pick { font-size: 13px; color: var(--label); display: flex; align-items: center; margin-right: 4px; }
+.pg-settings .step { margin-left: auto; font-size: 12px; color: var(--label2); }
+.pg-settings .imp { width: 100%; height: 110px; background: var(--fill2); border-radius: 8px; padding: 8px; box-sizing: border-box; font-size: 12px; color: var(--label); }
+.pg-settings .slot-chg { font-size: 11px; color: var(--green); margin-top: 4px; }
+.pg-settings .cfg-l { font-size: 11px; color: var(--label2); margin-right: 6px; }
+.pg-settings .init-step { font-size: 11px; color: var(--label2); margin-right: 8px; white-space: nowrap; }
+.pg-settings .cfg-l, .pg-settings .mini-seg, .pg-settings .ms, .pg-settings .base-pick { white-space: nowrap; flex-shrink: 0; }
+.pg-settings .search { display: flex; align-items: center; background: var(--fill); border-radius: 10px; padding: 0 10px; height: 36px; margin-bottom: 10px; }
+.pg-settings .search-ic { color: var(--label2); font-size: 16px; margin-right: 5px; }
+.pg-settings .search-in { flex: 1; font-size: 15px; color: var(--label); }
+.pg-settings .seg-n { font-size: 10px; color: var(--label2); margin-left: 3px; font-weight: 500; }
+.pg-settings .tier-tip { padding-top: 0; margin-top: -4px; margin-bottom: 6px; }
+.pg-settings .lib-row { align-items: flex-start; padding-top: 11px; padding-bottom: 11px; }
+.pg-settings .lib-n { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+.pg-settings .lib-t { height: 15px; font-size: 9px; padding: 0 4px; }
+.pg-settings .lib-c { font-size: 10px; color: var(--blue); }
+.pg-settings .lib-s { font-size: 12px; color: var(--label2); margin-top: 1px; }
+.pg-settings .lib-d { font-size: 12px; color: var(--label3); margin-top: 1px; }
+.pg-settings .lib-del { font-size: 13px; color: var(--red); padding: 2px 0 2px 12px; }
+.pg-settings .add-btn { margin-top: 16px; }
+.pg-settings .f-l { width: 60px; color: var(--label); }
+.pg-settings .f-v { flex: 1; text-align: right; font-size: 15px; color: var(--label); }
+.pg-settings .f-v.val { color: var(--label2); }</style></head>
+<body>
+
+<div class="side">
+  <h1>GZCLP <span>训练追踪</span></h1>
+  <div>8 周 · A1 → B1 → A2 → B2 循环</div>
+  <ul>
+    <li><b>训练</b>：只填末组次数或是否完成，下次重量自动算出</li>
+    <li><b>计划</b>：下一次训练、8 周矩阵、当前状态</li>
+    <li><b>数据</b>：e1RM 回归、重量走势、容量、判定分布</li>
+    <li><b>回顾</b>：训练小结、周报、日志（可改可删，自动重算）</li>
+    <li><b>设置</b>：1RM、步幅、规则、动作替换、备份</li>
+  </ul>
+  <div>手机打开此链接 → 分享 → <b>添加到主屏幕</b>，即可全屏使用。</div>
+  <div style="margin-top:14px">
+  <span class="tag">参数设置 → 设置</span><span class="tag">A1/B1/A2/B2 → 训练</span><span class="tag">状态总览 → 计划</span><span class="tag">图表 → 数据</span><span class="tag">规则备查 → 回顾</span>
+  </div>
+</div>
+
+<div class="phone"><div class="app">
+  <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+  <div class="nav"><span id="navTitle">训练</span><div class="capsule">•••<i></i>◎</div></div>
+  <div id="body"></div>
+  <div class="tabbar" id="tabbar"><div class="tb-item" data-tab="train"><img class="off-i" src="data:image/png;base64,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" alt=""><img class="on-i" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFEAAABRCAYAAACqj0o2AAAFhUlEQVR4nO2az28bVRDHv/PWaztJSUVQqjhBICQkhJFACPEvcOHCL/8BIFGpSS+c4JbkgvhxqFQ1QU0FEgdOOXDjhIQo1yJxoIHChahNHUGSlpA2ib37pnpv1wbHu4693k2cMp9q5Sq72pmdnTe/3gKCIAiCIAiCIAiCIAiCIAiCIAiCIJxMKGsBPAsF2ANYAdMy/IdRZtYP0wJzti/uOGTmsroxM4gIms9NPY8cXgVzHlp/R7R+lQEigB8GmYa2t5YGXIFDBOaZqTdRwDXk6UPk1RyKue95pvS+eRhzzUmX2SATN2dz30rZxZk71+Gqp1HjGggEhRw074PzT9Hi6nqa3nEcMlNbznwgiGMZ2r710e1TAMbh2Yjk2hemwVBUhK5NAljHLAjz/T9QwzDdyrQGTzHx5Po1IM1DA/Zo/s0aJq8Y8H3rDdxiKIajPGRBdzKNzl6LzkEs5SM3YmwQn1+/eki4MN6RZbbsKNMYMO3Eo1IP4tOlD+xFQ/VMgnhifG0dhs9PVdJOPMmy8zI0V8p5QH8EwMWurmFf11HXJhbN8dsT49jz9pBxfdYTjvJsqGFu1xmY4+knJ0xsDONltkZsun17EHdtlFGqgGE9gRee2LcLfiAgQHseUM5F60xFkE08sMnuyOpEG8QRBPFWGEr5uL07IAZsI1rnPpKdyiSI+zyoBswk2WXSsfzfSF4n1jShGHOO2cH2dnymY+3YTFiF4koKyedPEJ8Bw687sW5xmE46+epJbsThogf/XnRd5Tp36cKtXZ6ZjDnv3g27hFRHVDx7dgsbS8l0glNPkpmTGbHRqtXqY3CpcKAzMNUj4NMST0/uABgJzzaUC/qCuvcZT5f+RtpsXDEZ91S7zA46Gf0VEXx/goDrvNJ7iOvZ8rbWWgFhfPIbFOgV1Nh4U+syyVNQCO03OytEnk8bY5zaITIP6sTQcEnB079juPYSPt3cCQ3TdfdCiRr99x4fQ81fA1lPjLgP18PL8zG3qoONe6RM0NjFyOygk/HGPBHq6mVauHntPzOB9JezNaD1xNEdjN/5BS69iHqEJ+aUWVaAF2OnHLmZ7UzEyozRyRgwRwRPb0L5qzYu9jhZSpRYaHmlxudK70LzDwAK4UL61yp1fQOEfYCeazOwfRB9A4y9JLIP0cwB4dlImfE6MZSpbek8Xar+ZecCPY7Gejdi4y39o3/FqNqFQ0N2ZtdUyI4mXsNjZ3/DxpUtKJwOz1NTYXLeoou3fkbK8DvPPIKh7VUoerRVZgedzD/bMfNP1gvLvU9ykhfbp51iRPsUoLWDra+C5ROFZseqXUHw2/9helAC3esg8xCdiIaOdBQWKJXrHHjH8h0VsgqXYSrcvg80foN+PplOTF0nkoNI25cC/RqRI//qmBU2sETrppJvDyQ3YlGb7kPFxp/JocE0ZJzO4eQ7CUlaHFMlE7ac+wDu2yGSLZ7h2f9r1vC8Lfx4282koE4EBwOIlRUzS4zQ2eRq3rSXJth9TOaJFSj6ctXUeR+j4CjkVR4FlcOI44B5iS5vrZkRRdgpDwiOa+s/pk/adAZfpsX1VVsjJsjQCYtt+EFrVL3IM6WbUPQGQC5q/rcYr35hL/IdDXeAviMKJ9e0uHaBZ0p/tOh8qfo5L4DM3lGSWyeOA6a3tL30QvVrAOawNMdJwR5w6kG8CzrKtN52QGcs9Cewr8375jZjGWS/fjC/QePONvHspx/EO9KNzHKkzn4/n5b0/TAU0Wc2E8+Ib4L4qOmWbVZU4V5GH0H80GTXhUyz94cUyabYrnRIPH0G8YGSGZLZrhyHMzmeKb3eDOJa2yDekJr2Ax2HzMzhI/iceRBkZv/NdiXdID6oMgVBEARBEARBEARBEARBEARBEARBwAnkAehbEV+3LdcQAAAAAElFTkSuQmCC" alt="">训练</div><div class="tb-item" data-tab="plan"><img class="off-i" src="data:image/png;base64,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" alt=""><img class="on-i" src="data:image/png;base64,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" alt="">计划</div><div class="tb-item" data-tab="stats"><img class="off-i" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFEAAABRCAYAAACqj0o2AAAC50lEQVR4nO3bz2oTQRwH8Pmzm0IXWqOHHjy4IPTSd/DixT5A8wAVE+greBgWvHrxkqXkCZKjT+BVz/FgFbznktCmmGVnR35JCmKqNHGdzEy/HwjZbnbYyS+/zJ8fKWMAAAAAAAAAAAAAAHDPcHZ/cGPM6knOV0/Cqn6/Lzd57a4iFjhjDOeca6VU4/DwMJlMJvPz+/v77OrqatZqta7/9R6CBUwpJejr2u12O2mafp5OpxdCiK9Sym90HMfxlzzP31Cg6dpN7xPsmHhyciIHg4HO8/zZ7u7uh7IsmdaaxsD56zfj497eHhuPx686nU5PKRVlWVaue69gM/Hs7OwmQZ4LIcxsNiu01qYsy/mDjquqKoqi0MaYF3Th0dHRRpNM8GMiY6xaTMKcvtr8liSSnHO6ZmPBZqJNCGINEMQauDAmct93ElvNxP5it0Cr4ZVHHTuJ4DPRWNhJBJ2JytJOwhaxjZ1ElmUV7SSSJMmNMU8554+iKHoopWzSsdb6cbPZfH1+fv6SrqWdBHOYCHknYUsU8k7CFufHGx84Pdb4srb0LhP7Dq4tvcpE4+ja0ptMVA6vLb3IxOFwSGvLYlmlzqlKTRN6FC26T+MjVa2Xa8vvWZb10jRtMMbWrlIHm4lpmop115Y+ZyL/z7Omk2tLEfKs6VUmGkdnTW8yUTk8a3qRicuKjHZ11rRF2K7IhCgKeda0JcgxyjYEsQYIYg0QxBogiDVAEGuAINYAQawBglgDBNGVIPI7FF3Nb9Val9tsJYhVVcX0dFtnlm9CM8ZiX9pYDeJoNJp3TAjxSSzEv3aWDquqkjs7O1SA+EjnDg4OnG0zHA659SC2Wi2qZot2u/3+8vLybRzHP6SUXAhBnWdSShbHsRmPxwPG2DsqzB4fHxeutqHa6Nb/GajX6z1pNBoPptPp/O8kSVhZltenp6cXPraxTv2l9E+f8m0fmMtttpaJ6g+dpR9q+tgGAAAAAAAAAABYQH4CxVbAbYrhq1wAAAAASUVORK5CYII=" alt=""><img class="on-i" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFEAAABRCAYAAACqj0o2AAAClklEQVR4nO3bz2oTQRwH8O9vdqMVxX+9tFToobf4Dl68+ALxBUSE+AgeQsCrl6og4hv06BN41XsPtkIv2ptUSIom2fxkJqmkJdQmjpOZyfcDS7abmezuL7+dfyUAEREREREREREREREtGcGSUHuvOnHH430Z7dHfaAPFPO9dlCxDBgqg2qhfwlbnKn6M37gB4Hv/l7w9PP7XcxhkTFswLoDNtSfYONpFp9qD6e/D9L+4/RX5rM315zbQtuy858k2E7WBQnZQafPOPazgAyqF207dsQBXDNAdPJbXh++0hVLaGMx6rnwzsX4Sruq+61L62oNCMZzYKu1hoBUUD1zR3fk6mRLZk+H4iTNTnjx7zHYstszc8s3EgBhEDxhEDxbeJmoGMwmz8GEIoCJQ9zqx72MmkX0mqp1J2HHcf5xJZJ2JGmgmEYpZyCPcxnA0kyjfQGUL0FUYuQ0jtyC6CpUNXCuf4en6I1e2tfi2+zwm55lEKGXOM4lQom9vUhB1W5PK2DK5TNQIx5ZJZaJGOrZMJhM14rFlGkGs12ceW+JgM9hTlkYQD7pm5rFlQGVavaZEObY0OfeaSWWiRtprJpOJGnGvGYoJvSKDgL1mKCb4ikyGypx7zVCybKNCYxA9YBA9YBA9YBA9YBA9YBA9YBA9YBA9YBCjCaJcYNH1bJmY6ywmE7XmlhumXczoWAXVWjp1Qgbx7smFyScU7rPsxZy+WEWBmhSAfHR/X6/FW+fPqlTAIMpDVG6h9dW39+hUL1DiJ4yI+1S3iV0nUnQHOxhgWxWCl/u9aOu0Uc0VB3ikzbVNXC5uoj8+YL/7Csey/XUvxTrB6TlL//ZbPvtbptjrLC4TW9Mv1v1bIME6RERERERERESEjPwGN2IBP7JQAvQAAAAASUVORK5CYII=" alt="">数据</div><div class="tb-item" data-tab="review"><img class="off-i" src="data:image/png;base64,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" alt=""><img class="on-i" src="data:image/png;base64,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" alt="">回顾</div><div class="tb-item" data-tab="settings"><img class="off-i" src="data:image/png;base64,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" alt=""><img class="on-i" src="data:image/png;base64,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" alt="">设置</div></div>
+  <div id="rest"></div>
+  <div id="toast"></div>
+</div></div>
+<script>/**
+ * GZCLP 规则引擎（小程序 / H5 共用）
+ * 1:1 复刻《SEVEN_GZCLP_扩展容量版_8周全自动追踪表.xlsx》的计算逻辑：
+ *  - 参数设置：1RM → TM(×90%)、进阶步幅、T3 阈值、取整档位
+ *  - A1/B1/A2/B2 四个训练日：首周重量 = ROUND(TM×系数/2.5)×2.5，之后每周 = 上周"下次重量"
+ *  - T1 / T2 / T3 判定 → 下次阶段 → 下次重量（链式传递）
+ *  - 统计：判定结果分布（COUNTIF）、各动作每周重量走势
+ * 在此基础上扩展：完整三阶 T1 规则、减载周、容量、e1RM、线性回归、阶段总结
+ * 设计：事件溯源 —— 只存"每次填写的 AMRAP/完成情况"，所有状态由回放计算（与 Excel 只填 F 列一致）
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.GZ = api;
+})(typeof window !== 'undefined' ? window : this, function () {
+  'use strict';
+
+  // ---------- 基础常量 ----------
+  var VERSION = 1;
+  var DAYS_VERSION = 2; // 动作模板版本，升级后 normalize 会刷新未自定义的 T2/T3 槽位
+  var LIFTS = { squat: '杠铃深蹲', bench: '平板卧推', deadlift: '传统硬拉', ohp: '站姿实力推' };
+  var LIFT_ORDER = ['squat', 'bench', 'deadlift', 'ohp'];
+  var STEP_KEYS = [
+    { key: 't1u', label: 'T1 上肢加重步幅', note: '原版 5 磅' },
+    { key: 't1l', label: 'T1 下肢加重步幅', note: '原版 10 磅' },
+    { key: 't2u', label: 'T2 上肢加重步幅', note: '' },
+    { key: 't2l', label: 'T2 下肢加重步幅', note: '' },
+    { key: 't3u', label: 'T3 上肢加重步幅', note: '按档位取整' },
+    { key: 't3l', label: 'T3 下肢加重步幅', note: '' }
+  ];
+
+  var STAGES = {
+    T1: {
+      '5×3+': { sets: 5, reps: 3, add: 6, hold: 3, next: '6×2+' },
+      '6×2+': { sets: 6, reps: 2, add: 4, hold: 2, next: '10×1+' },
+      '10×1+': { sets: 10, reps: 1, add: 2, hold: 2, next: null }
+    },
+    T2: {
+      '3×10': { sets: 3, reps: 10, next: '3×8' },
+      '3×8': { sets: 3, reps: 8, next: '3×6' },
+      '3×6': { sets: 3, reps: 6, next: '3×10' }
+    },
+    T3: { '3×15+': { sets: 3, reps: 15 } }
+  };
+  var FIRST_STAGE = { T1: '5×3+', T2: '3×10', T3: '3×15+' };
+  var REST = { T1: 180, T2: 150, T3: 75 }; // 组间休息（秒）：T1 3~5min / T2 2~3min / T3 60~90s
+  var DAY_ORDER = ['A1', 'B1', 'A2', 'B2'];
+
+  // Apple 系统色
+  var JUDGE_COLORS = {
+    '加重': '#FF6B1A', '保持': '#34C759', '建议降阶': '#FF9F0A',
+    '降阶': '#AF52DE', '退阶': '#AF52DE', '重置': '#FF3B30', '减载': '#5AC8FA', '跳过': '#C7C7CC', '替换': '#5856D6'
+  };
+  var TIER_COLORS = { T1: '#FF6B1A', T2: '#0A84FF', T3: '#AEAEB2' };
+  var JUDGE_ICON = { '加重': '↑', '保持': '=', '建议降阶': '!', '降阶': '↓', '退阶': '↓', '重置': '↺', '减载': '~', '跳过': '–', '替换': '⇄' };
+  var INS_ICON = { info: 'i', up: '↑', warn: '!', tip: '→', trend: '↗' };
+  function dateLabel(d) {
+    if (!d) return '';
+    var p = d.split('-'), dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    return (+p[1]) + '月' + (+p[2]) + '日 周' + '日一二三四五六'.charAt(dt.getDay());
+  }
+  function backupLabel(ts) {
+    if (!ts) return '从未备份';
+    var d = Math.floor((Date.now() - ts) / 86400000);
+    return d <= 0 ? '今天已备份' : d + ' 天前备份';
+  }
+  function fmtRest(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+
+  // 动作库（来自「动作库」工作表）
+  var LIB = [
+    ['T1', '杠铃深蹲', '下肢·蹲', '杠铃', '主项；末组AMRAP≥6次加重'],
+    ['T1', '前蹲', '下肢·蹲', '杠铃', '颈前位深蹲，核心与股四侧重'],
+    ['T1', '泽奇深蹲', '下肢·蹲', '杠铃', '肘托杠深蹲，躯干承重更强'],
+    ['T1', '传统硬拉', '下肢·髋铰链', '杠铃', '主项；髋主导拉起'],
+    ['T1', '相扑硬拉', '下肢·髋铰链', '杠铃', '宽站距硬拉变式，腿部参与多'],
+    ['T1', '平板卧推', '上肢·水平推', '杠铃', '主项；胸大肌主导'],
+    ['T1', '暂停卧推', '上肢·水平推', '杠铃', '触胸停顿1秒，消除反弹借力'],
+    ['T1', '上斜卧推', '上肢·水平推', '杠铃', '上胸侧重'],
+    ['T1', '站姿实力推', '上肢·垂直推', '杠铃', '主项；站姿推举'],
+    ['T1', '双杠臂屈伸', '上肢·水平推', '自重/负重', '下胸与三头'],
+    ['T2', '罗马尼亚硬拉', '下肢·髋铰链', '杠铃', '腘绳肌主导，屈膝小'],
+    ['T2', '杠铃后蹲', '下肢·蹲', '杠铃', '高杠后蹲变式'],
+    ['T2', '腿举', '下肢·蹲', '器械', '腿部容量'],
+    ['T2', '泽奇深蹲', '下肢·蹲', '杠铃', '肘托杠深蹲，躯干承重更强'],
+    ['T2', '窄距卧推', '上肢·水平推', '杠铃', '三头侧重'],
+    ['T2', '暂停卧推', '上肢·水平推', '杠铃', '触胸停顿，消除反弹借力'],
+    ['T2', '坐姿哑铃推肩', '上肢·垂直推', '哑铃', '肩部容量'],
+    ['T2', '潘德雷划船', '上肢·水平拉', '杠铃', '躯干平行地面划船'],
+    ['T2', '坐姿划船', '上肢·水平拉', '绳索/器械', '背部厚度'],
+    ['T2', '引体向上', '上肢·垂直拉', '自重', '背阔肌主项'],
+    ['T2', '杠铃弯举', '上肢·屈肘', '杠铃', '二头主项'],
+    ['T2', '绳索下压', '上肢·伸肘', '绳索', '三头主项'],
+    ['T3', '高位下拉', '上肢·垂直拉', '器械', '背阔肌容量'],
+    ['T3', '俯身划船', '上肢·水平拉', '杠铃', '背部容量'],
+    ['T3', '反向飞鸟', '肩·后束', '哑铃', '三角肌后束'],
+    ['T3', '面拉', '肩·后束', '绳索', '肩袖与后束'],
+    ['T3', '哑铃侧平举', '肩·中束', '哑铃', '三角肌中束'],
+    ['T3', '俯卧腿弯举', '下肢·屈膝', '器械', '腘绳肌容量'],
+    ['T3', '坐姿腿屈伸', '下肢·伸膝', '器械', '股四头肌容量'],
+    ['T3', '杠铃二头弯举', '上肢·屈肘', '杠铃', '二头容量'],
+    ['T3', '绳索三头屈伸', '上肢·伸肘', '绳索', '三头容量'],
+    ['T3', '哑铃耸肩', '肩·斜方', '哑铃', '斜方肌容量'],
+    ['T3', '提踵', '下肢·踝', '器械/自重', '小腿容量'],
+    ['T3', '卷腹', '核心·屈曲', '自重', '腹直肌'],
+    ['T3', '悬垂举腿', '核心·屈髋', '自重', '下腹与髋屈肌'],
+    ['T3', '保加利亚分腿蹲', '下肢·单腿', '哑铃', '单腿稳定与臀部'],
+    ['T3', '山羊挺身', '下背·伸髋', '器械', '竖脊肌'],
+    ['T1', '低杠深蹲', '下肢·蹲', '杠铃', '杠铃置于后三角肌，髋部参与更多'],
+    ['T1', '箱式深蹲', '下肢·蹲', '杠铃', '坐箱停顿，强化底部发力'],
+    ['T1', '赤字硬拉', '下肢·髋铰链', '杠铃', '站在垫高平台上拉，强化起拉段'],
+    ['T2', '前蹲', '下肢·蹲', '杠铃', '股四头肌与核心'],
+    ['T2', '哈克深蹲', '下肢·蹲', '器械', '股四头肌容量'],
+    ['T2', '臀推', '下肢·髋伸', '杠铃', '臀大肌主导'],
+    ['T2', '哑铃卧推', '上肢·水平推', '哑铃', '活动范围大，左右均衡'],
+    ['T2', '上斜哑铃卧推', '上肢·水平推', '哑铃', '上胸容量'],
+    ['T2', 'T杠划船', '上肢·水平拉', '杠铃', '背部厚度'],
+    ['T2', '单臂哑铃划船', '上肢·水平拉', '哑铃', '单侧背阔'],
+    ['T2', '负重引体向上', '上肢·垂直拉', '自重/负重', '背阔力量'],
+    ['T3', '锤式弯举', '上肢·屈肘', '哑铃', '肱桡肌与二头'],
+    ['T3', '哑铃弯举', '上肢·屈肘', '哑铃', '二头容量'],
+    ['T3', '绳索夹胸', '上肢·水平内收', '绳索', '胸大肌孤立'],
+    ['T3', '直臂下压', '上肢·垂直拉', '绳索', '背阔孤立'],
+    ['T3', '腿外展', '下肢·髋外展', '器械', '臀中肌'],
+    ['T3', '高脚杯深蹲', '下肢·蹲', '哑铃', '深蹲模式容量']
+  ].map(function (r) { return { tier: r[0], name: r[1], part: r[2], equip: r[3], desc: r[4] }; });
+
+  function libFind(name) {
+    for (var i = 0; i < LIB.length; i++) if (LIB[i].name === name) return LIB[i];
+    return null;
+  }
+  var PARTS = ['下肢·蹲', '下肢·髋铰链', '下肢·髋伸', '下肢·屈膝', '下肢·伸膝', '下肢·单腿', '上肢·水平推', '上肢·垂直推', '上肢·水平拉', '上肢·垂直拉',
+    '上肢·屈肘', '上肢·伸肘', '肩·中束', '肩·后束', '核心', '其他'];
+  var EQUIPS = ['杠铃', '哑铃', '器械', '绳索', '自重', '自重/负重', '壶铃', '其他'];
+  // 动作库 = 内置 + 自定义
+  function libAll(db) {
+    var custom = (db && db.customLib) || [];
+    return custom.map(function (x) { return Object.assign({ custom: true }, x); }).concat(LIB);
+  }
+  function libFindIn(db, name) {
+    var all = libAll(db);
+    for (var i = 0; i < all.length; i++) if (all[i].name === name) return all[i];
+    return null;
+  }
+  function addCustomEx(db, ex) {
+    var name = String(ex.name || '').trim();
+    if (!name) return '请填写动作名称';
+    if (name.length > 16) return '名称最多 16 个字';
+    if (libFindIn(db, name)) return '动作库里已有「' + name + '」';
+    db.customLib = db.customLib || [];
+    db.customLib.unshift({ tier: ex.tier || 'T3', name: name, part: ex.part || '其他', equip: ex.equip || '其他', desc: String(ex.desc || '').trim() || '自定义动作' });
+    return '';
+  }
+  function removeCustomEx(db, name) { db.customLib = (db.customLib || []).filter(function (x) { return x.name !== name; }); }
+
+  // ---------- 默认数据（来自 Excel 当前填写） ----------
+  function slot(id, tier, name, init, step, roundProg, lift) {
+    var lib = libFind(name);
+    return {
+      id: id, tier: tier, name: name, equip: lib ? lib.equip : '', init: init,
+      step: step, roundProg: !!roundProg, lift: lift || null
+    };
+  }
+  function pct(base, p) { return { type: 'pct', base: base, pct: p }; }
+  function fixed(v) { return { type: 'fixed', value: v }; }
+
+  /**
+   * GZCLP 四天模板（扩展容量版，每天 1×T1 + 2×T2 + 2×T3）
+   * 设计原则：
+   *  - T1 四大项不变：A1 深蹲 / B1 实力推 / A2 卧推 / B2 硬拉
+   *  - 每个 T2/T3 动作在整套计划里唯一，不跨天重复（避免同名动作出现两套独立重量，造成理解/误操作成本）
+   *  - T2 配该训练日主题的相关复合动作；T3 补齐背、肩、臂、腿等孤立肌群，保证全身均衡
+   *  - 加重按「每次练到该动作时推进」：四天轮转里每个动作每轮（每周）出现一次，所以表现为每周加重，符合 GZCLP
+   */
+  function defaultDays() {
+    return [
+      { id: 'A1', name: '下肢蹲主导', slots: [
+        slot('A1_1', 'T1', '杠铃深蹲', pct('squat', 0.85), 't1l', false, 'squat'),
+        slot('A1_2', 'T2', '前蹲', pct('squat', 0.6), 't2l'),
+        slot('A1_3', 'T2', '上斜卧推', pct('bench', 0.55), 't2u'),
+        slot('A1_4', 'T3', '高位下拉', fixed(30), 't3u', true),
+        slot('A1_5', 'T3', '俯卧腿弯举', fixed(20), 't3l', false)
+      ] },
+      { id: 'B1', name: '垂直推主导', slots: [
+        slot('B1_1', 'T1', '站姿实力推', pct('ohp', 0.85), 't1u', false, 'ohp'),
+        slot('B1_2', 'T2', '坐姿哑铃推肩', pct('ohp', 0.6), 't2u'),
+        slot('B1_3', 'T2', '罗马尼亚硬拉', pct('deadlift', 0.6), 't2l'),
+        slot('B1_4', 'T3', '引体向上', fixed(0), 't3u', true),
+        slot('B1_5', 'T3', '哑铃侧平举', fixed(8), 't3u', true)
+      ] },
+      { id: 'A2', name: '水平推主导', slots: [
+        slot('A2_1', 'T1', '平板卧推', pct('bench', 0.85), 't1u', false, 'bench'),
+        slot('A2_2', 'T2', '窄距卧推', pct('bench', 0.65), 't2u'),
+        slot('A2_3', 'T2', '杠铃后蹲', pct('squat', 0.7), 't2l'),
+        slot('A2_4', 'T3', '杠铃弯举', fixed(20), 't3u', true),
+        slot('A2_5', 'T3', '绳索三头屈伸', pct('bench', 0.5), 't3u', true)
+      ] },
+      { id: 'B2', name: '水平拉主导', slots: [
+        slot('B2_1', 'T1', '传统硬拉', pct('deadlift', 0.85), 't1l', false, 'deadlift'),
+        slot('B2_2', 'T2', '潘德雷划船', pct('deadlift', 0.55), 't2u'),
+        slot('B2_3', 'T2', '坐姿划船', fixed(35), 't2u'),
+        slot('B2_4', 'T3', '面拉', fixed(15), 't3u', true),
+        slot('B2_5', 'T3', '哑铃弯举', fixed(12), 't3u', true)
+      ] }
+    ];
+  }
+
+  function defaultParams() {
+    return {
+      oneRM: { bench: 70, deadlift: 100, squat: 80, ohp: 30 },
+      tmRatio: 0.9,
+      steps: { t1u: 2.5, t1l: 5, t2u: 2.5, t2l: 5, t3u: 1.25, t3l: 2.5 },
+      t3Threshold: 25,
+      rounding: 2.5,
+      barWeight: 20,
+      plates: [25, 20, 15, 10, 5, 2.5, 1.25],
+      ruleMode: 'full', // full = 按「进阶规则备查」完整三阶；excel = 严格按表格公式
+      totalWeeks: 8,
+      deloadEnabled: true,
+      deloadEvery: 6,
+      t1FailLimit: 2
+    };
+  }
+
+  // Excel 中已填写的第 1 周数据（A1、B1），作为初始记录导入
+  function excelSeedRecords() {
+    return [
+      { id: 'xls_A1_w1', date: '2026-10-13', day: 'A1', deload: false, note: '从 Excel 导入（日期可编辑）', bw: null, createdAt: 1,
+        entries: { A1_1: { v: 10 }, A1_2: { v: '完成' }, A1_3: { v: '完成' }, A1_4: { v: 15 }, A1_5: { v: 19 } } },
+      { id: 'xls_B1_w1', date: '2026-10-14', day: 'B1', deload: false, note: '从 Excel 导入（日期可编辑）', bw: null, createdAt: 2,
+        entries: { B1_1: { v: 12 }, B1_2: { v: '完成' }, B1_3: { v: '完成' }, B1_4: { v: 17 }, B1_5: { v: 18 } } }
+    ];
+  }
+
+  function defaults(withSeed) {
+    return { version: VERSION, daysVersion: DAYS_VERSION, params: defaultParams(), days: defaultDays(), records: withSeed === false ? [] : excelSeedRecords() };
+  }
+
+  function normalize(db) {
+    if (!db || !db.params || !db.days) return defaults(true);
+    var p = defaultParams();
+    db.params = Object.assign(p, db.params);
+    db.params.oneRM = Object.assign(defaultParams().oneRM, db.params.oneRM);
+    db.params.steps = Object.assign(defaultParams().steps, db.params.steps);
+    db.records = db.records || [];
+    db.customLib = db.customLib || [];
+    // 动作库刷新迁移：把未被用户永久更换过（无 changes）的 T2/T3 槽位同步为最新默认动作，
+    // 保留用户已手动更换的槽位；T1 四大项默认不变。记录按槽位 ID 存储，不受动作名变化影响。
+    if (db.daysVersion !== DAYS_VERSION) {
+      var fresh = defaultDays();
+      db.days.forEach(function (d) {
+        var nd = fresh.filter(function (x) { return x.id === d.id; })[0];
+        if (!nd) return;
+        d.slots.forEach(function (s) {
+          if (s.changes && s.changes.length) return; // 用户已永久更换，保留
+          var ns = nd.slots.filter(function (x) { return x.id === s.id; })[0];
+          if (!ns) return;
+          s.name = ns.name; s.equip = ns.equip; s.tier = ns.tier;
+          s.init = ns.init; s.step = ns.step; s.roundProg = ns.roundProg; s.lift = ns.lift;
+        });
+      });
+      db.daysVersion = DAYS_VERSION;
+    }
+    return db;
+  }
+
+  // ---------- 数学工具 ----------
+  function fix(n) { return Math.round(n * 100) / 100; }
+  // Excel ROUND(x/inc,0)*inc，四舍五入远离 0
+  function roundTo(x, inc) {
+    inc = inc || 2.5;
+    var q = x / inc;
+    var r = q >= 0 ? Math.floor(q + 0.5 + 1e-9) : -Math.floor(-q + 0.5 + 1e-9);
+    return fix(r * inc);
+  }
+  function tm(P, lift) { return fix(P.oneRM[lift] * P.tmRatio); }
+  function initWeight(s, P) {
+    if (!s.init) return 0;
+    if (s.init.type === 'fixed') return Number(s.init.value) || 0;
+    return roundTo(tm(P, s.init.base) * s.init.pct, P.rounding);
+  }
+  function fmtW(w) {
+    if (w === null || w === undefined || isNaN(w)) return '—';
+    return (Math.round(w * 100) / 100).toString();
+  }
+  function platesFor(weight, P, equip) {
+    if (equip !== '杠铃') return '';
+    var side = (weight - P.barWeight) / 2;
+    if (side < -1e-9) return '轻于空杆';
+    if (side < 1e-9) return '空杆';
+    var list = [], left = side;
+    var plates = (P.plates || []).slice().sort(function (a, b) { return b - a; });
+    for (var i = 0; i < plates.length; i++) {
+      while (left + 1e-9 >= plates[i]) { list.push(plates[i]); left = fix(left - plates[i]); }
+    }
+    var txt = '每侧 ' + list.join('+');
+    if (left > 1e-9) txt += '（差' + fmtW(left) + '）';
+    return txt;
+  }
+
+  function linreg(points) {
+    var n = points.length;
+    if (n < 2) return null;
+    var sx = 0, sy = 0, sxx = 0, sxy = 0, syy = 0;
+    points.forEach(function (p) { sx += p[0]; sy += p[1]; sxx += p[0] * p[0]; sxy += p[0] * p[1]; syy += p[1] * p[1]; });
+    var den = n * sxx - sx * sx;
+    if (Math.abs(den) < 1e-12) return null;
+    var slope = (n * sxy - sx * sy) / den;
+    var intercept = (sy - slope * sx) / n;
+    var ssTot = syy - sy * sy / n, ssRes = 0;
+    points.forEach(function (p) { var e = p[1] - (slope * p[0] + intercept); ssRes += e * e; });
+    var r2 = ssTot < 1e-12 ? 1 : Math.max(0, 1 - ssRes / ssTot);
+    return { slope: slope, intercept: intercept, r2: r2, n: n, predict: function (x) { return slope * x + intercept; } };
+  }
+
+  // ---------- 判定（核心规则） ----------
+  function stageDef(tier, stage) { return STAGES[tier][stage] || STAGES[tier][FIRST_STAGE[tier]]; }
+  function hasValue(e) { return e && e.v !== null && e.v !== undefined && e.v !== '' && !e.skip; }
+
+  /**
+   * @param s 槽位  @param st 当前状态 {stage, weight, fail}  @param e 本次输入 {v, reps, new5RM, skip}
+   * @return 结果对象（含判定、下次阶段、下次重量、容量、e1RM）
+   */
+  function manualW(e) {
+    if (!e || e.w === undefined || e.w === null || e.w === '') return null;
+    var n = Number(e.w);
+    return isNaN(n) || n < 0 ? null : fix(n);
+  }
+  function evaluate(s, st, e, P, deload) {
+    var def = stageDef(s.tier, st.stage);
+    var planned = st.weight, mw = manualW(e), step = P.steps[s.step] || 0;
+    // 手动重量：本次按实际重量计算判定，下次重量在实际重量上推进
+    var w = mw !== null && !deload ? mw : planned;
+    var r = {
+      slotId: s.id, tier: s.tier, name: s.name, equip: s.equip, lift: s.lift,
+      stage: st.stage, sets: def.sets, reps: def.reps, weight: w, planned: planned, manual: mw !== null, fail: st.fail || 0,
+      input: e ? e.v : null, judgment: '', nextStage: st.stage, nextWeight: w, nextFail: st.fail || 0,
+      volume: 0, e1rm: null, delta: 0, deload: false
+    };
+    if (deload) {
+      var f = s.tier === 'T1' ? 0.5 : s.tier === 'T2' ? 0.6 : 1;
+      r.deload = true;
+      r.autoWeight = s.tier === 'T3' ? planned : roundTo(planned * f, P.rounding);
+      r.dWeight = mw !== null ? mw : r.autoWeight;
+      r.dSets = s.tier === 'T3' ? Math.max(1, def.sets - 1) : def.sets;
+      r.judgment = '减载';
+      r.nextWeight = planned; // 减载不改变进阶链
+      r.volume = e && e.skip ? 0 : fix(r.dWeight * r.dSets * def.reps);
+      return r;
+    }
+    r.autoWeight = planned;
+    if (!hasValue(e)) { r.judgment = '跳过'; r.input = null; r.nextWeight = planned; return r; }
+
+    var mode = P.ruleMode;
+    if (s.tier === 'T1') {
+      var a = Number(e.v);
+      r.volume = fix(w * ((def.sets - 1) * def.reps + a));
+      if (a > 0) r.e1rm = fix(w * (1 + a / 30));
+      if (mode === 'excel') {
+        // =IF(F>=6,"加重",IF(F>=3,"保持","建议降阶")) / =IF(F>=3,"5×3+","6×2+") / =IF(F>=6,E+步幅,E)
+        r.judgment = a >= 6 ? '加重' : a >= 3 ? '保持' : '建议降阶';
+        r.nextStage = a >= 3 ? '5×3+' : '6×2+';
+        r.nextWeight = a >= 6 ? fix(w + step) : w;
+        r.nextFail = 0;
+      } else {
+        if (a >= def.add) { r.judgment = '加重'; r.nextWeight = fix(w + step); r.nextFail = 0; }
+        else if (a >= def.hold && def.next !== null) { r.judgment = '保持'; r.nextFail = 0; }
+        else if (def.next === null) {
+          // 10×1+ 未达标：测试新 5RM，取 90% 为新 TM，重置回 5×3+
+          r.judgment = '重置'; r.nextStage = FIRST_STAGE.T1; r.nextFail = 0;
+          var p0 = s.init && s.init.type === 'pct' ? s.init.pct : 0.85;
+          r.nextWeight = e.new5RM ? roundTo(Number(e.new5RM) * P.tmRatio * p0, P.rounding) : roundTo(w * 0.85, P.rounding);
+          r.reset5RM = e.new5RM || null;
+        } else {
+          var fails = (st.fail || 0) + 1;
+          if (fails >= (P.t1FailLimit || 2)) { r.judgment = '降阶'; r.nextStage = def.next; r.nextFail = 0; }
+          else { r.judgment = '建议降阶'; r.nextFail = fails; }
+        }
+      }
+    } else if (s.tier === 'T2') {
+      var done = e.v === '完成';
+      var actual = done ? def.sets * def.reps : (e.reps !== undefined && e.reps !== null && e.reps !== '' ? Number(e.reps) : def.sets * def.reps - 2);
+      r.volume = fix(w * actual);
+      r.actualReps = actual;
+      // =IF(F="完成","加重","退阶") / 下次阶段 3×10→3×8→3×6→3×10 / =IF(OR(F="完成",D="3×6"),E+步幅,E)
+      if (done) { r.judgment = '加重'; r.nextStage = '3×10'; r.nextWeight = fix(w + step); }
+      else if (st.stage === '3×6') { r.judgment = mode === 'excel' ? '退阶' : '重置'; r.nextStage = '3×10'; r.nextWeight = fix(w + step); }
+      else { r.judgment = '退阶'; r.nextStage = def.next; r.nextWeight = w; }
+    } else {
+      var t = Number(e.v);
+      r.volume = fix(w * ((def.sets - 1) * def.reps + t));
+      // =IF(F>=阈值,"加重","保持") / 上肢：ROUND((E+步幅)/2.5)*2.5
+      if (t >= P.t3Threshold) { r.judgment = '加重'; r.nextWeight = s.roundProg ? roundTo(w + step, P.rounding) : fix(w + step); }
+      else { r.judgment = '保持'; r.nextWeight = s.roundProg ? roundTo(w, P.rounding) : w; }
+    }
+    r.delta = fix(r.nextWeight - w);
+    return r;
+  }
+
+  // ---------- 回放 ----------
+  function sortRecords(recs) {
+    return recs.slice().sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return (a.createdAt || 0) - (b.createdAt || 0);
+    });
+  }
+  function dayById(db, id) { for (var i = 0; i < db.days.length; i++) if (db.days[i].id === id) return db.days[i]; return null; }
+  function initialStates(db) {
+    var st = {};
+    db.days.forEach(function (d) {
+      d.slots.forEach(function (s) { st[s.id] = { stage: FIRST_STAGE[s.tier], weight: initWeight(s, db.params), fail: 0 }; });
+    });
+    return st;
+  }
+  /** 某训练日第 week 次时，槽位实际执行的动作（考虑“从某周起更换”） */
+  function effectiveSlot(db, s, week) {
+    var ch = null;
+    (s.changes || []).forEach(function (c) { if (c.fromWeek <= week && (!ch || c.fromWeek >= ch.fromWeek)) ch = c; });
+    if (!ch) return { slot: s, change: null, resetNow: false };
+    var lib = libFindIn(db, ch.name);
+    return { slot: Object.assign({}, s, { name: ch.name, equip: ch.equip || (lib ? lib.equip : '') }), change: ch, resetNow: ch.fromWeek === week };
+  }
+  /** 执行一个槽位：处理“更换起始周重置”和“仅本次替换” */
+  function runSlot(db, s, st, e, week, deload) {
+    var ef = effectiveSlot(db, s, week);
+    if (ef.resetNow) st = { stage: FIRST_STAGE[s.tier], weight: ef.change.weight, fail: 0 };
+    var res;
+    if (e && e.ex && e.ex !== ef.slot.name) {
+      var lib = libFindIn(db, e.ex);
+      res = evaluate(Object.assign({}, ef.slot, { name: e.ex, equip: lib ? lib.equip : '' }), st, e, db.params, deload);
+      // 仅本次替换：记录容量，但不推进原动作的阶段与重量
+      if (!res.deload && res.judgment !== '跳过') { res.judgment = '替换'; res.e1rm = null; }
+      res.nextStage = st.stage; res.nextWeight = st.weight; res.nextFail = st.fail || 0; res.delta = 0;
+      res.sub = true; res.origName = ef.slot.name;
+    } else {
+      res = evaluate(ef.slot, st, e, db.params, deload);
+    }
+    res.changed = !!ef.change;
+    return { res: res, st: st, eff: ef };
+  }
+  // ---------- 多轮循环（每 N 周为一轮，完成一轮后进入下一轮） ----------
+  function cycleLen(P) { return Math.max(1, P.weeksPerCycle || P.totalWeeks || 8); }
+  function cycleOf(week, P) {
+    var N = cycleLen(P);
+    return { cycle: Math.floor((week - 1) / N) + 1, wc: ((week - 1) % N) + 1, N: N };
+  }
+  // 绝对周 → 该轮的第 1 个绝对周
+  function cycleStartWeek(cycle, P) { return (cycle - 1) * cycleLen(P) + 1; }
+  function weekText(week, P) {
+    var c = cycleOf(week, P);
+    return c.cycle > 1 ? '第 ' + c.cycle + ' 轮 · 第 ' + c.wc + ' 周' : '第 ' + c.wc + ' 周';
+  }
+  // 减载按「每轮内的周序」判断：如每轮第 6 周减载（默认 deloadEvery=6）
+  function isDeloadWeek(week, P) {
+    if (!P.deloadEnabled || !(P.deloadEvery > 0)) return false;
+    var wc = cycleOf(week, P).wc;
+    return wc % P.deloadEvery === 0;
+  }
+
+  /** opts.untilId：回放到某条记录之前（用于编辑历史记录） */
+  function replay(db, opts) {
+    opts = opts || {};
+    var states = initialStates(db), counts = {}, sessions = [];
+    DAY_ORDER.forEach(function (d) { counts[d] = 0; });
+    db.days.forEach(function (d) { counts[d.id] = 0; });
+    var recs = sortRecords(db.records), before = null;
+    for (var i = 0; i < recs.length; i++) {
+      var rec = recs[i];
+      if (opts.untilId && rec.id === opts.untilId) {
+        before = { states: JSON.parse(JSON.stringify(states)), week: counts[rec.day] + 1 };
+        continue;
+      }
+      var day = dayById(db, rec.day);
+      if (!day) continue;
+      counts[rec.day] += 1;
+      var week = counts[rec.day], items = [], vol = { T1: 0, T2: 0, T3: 0 };
+      day.slots.forEach(function (s) {
+        var res = runSlot(db, s, states[s.id], rec.entries ? rec.entries[s.id] : null, week, rec.deload).res;
+        items.push(res);
+        vol[s.tier] += res.volume;
+        states[s.id] = { stage: res.nextStage, weight: res.nextWeight, fail: res.nextFail };
+      });
+      sessions.push({ rec: rec, week: week, dayName: day.name, items: items, volume: fix(vol.T1 + vol.T2 + vol.T3), vol: vol, index: sessions.length });
+    }
+    return { states: states, counts: counts, sessions: sessions, before: before };
+  }
+
+  /**
+   * 周轮次：当前周 = 四个训练日中完成次数最少者 + 1
+   * 本周 A1/B1/A2/B2 全部完成后，才整体进入下一周（避免本周与下周内容混在同一时间线）
+   */
+  function roundInfo(db, rp) {
+    rp = rp || replay(db);
+    var ids = db.days.map(function (d) { return d.id; });
+    var minC = Math.min.apply(null, ids.map(function (id) { return rp.counts[id] || 0; }));
+    var week = minC + 1;
+    var days = db.days.map(function (d) {
+      var done = (rp.counts[d.id] || 0) >= week, sess = null;
+      if (done) rp.sessions.forEach(function (x) { if (x.rec.day === d.id && x.week === week) sess = x; });
+      return { id: d.id, name: d.name, done: done, recordId: sess ? sess.rec.id : null, date: sess ? sess.rec.date : '' };
+    });
+    var left = days.filter(function (d) { return !d.done; });
+    return { week: week, done: days.length - left.length, total: days.length, days: days,
+      next: (left[0] || days[0]).id, left: left.map(function (d) { return d.id; }), leftText: left.map(function (d) { return d.id; }).join('、') };
+  }
+  function recommend(db, rp) {
+    var r = roundInfo(db, rp);
+    return { day: r.next, week: r.week };
+  }
+  function lastWeights(rp) {
+    var m = {};
+    rp.sessions.forEach(function (x) { x.items.forEach(function (it) { if (!it.deload && it.judgment !== '跳过') m[it.name] = it.weight; }); });
+    return m;
+  }
+  function logView(s) {
+    return { id: s.rec.id, date: s.rec.date, dateText: dateLabel(s.rec.date), day: s.rec.day, dayName: s.dayName, week: s.week, note: s.rec.note || '', bw: s.rec.bw || '',
+      deload: !!s.rec.deload, vol: Math.round(s.volume),
+      items: s.items.map(function (it) {
+        return { tier: it.tier, tierColor: TIER_COLORS[it.tier], name: it.name, stage: it.stage, sub: !!it.sub, origName: it.origName || '',
+          w: fmtW(it.deload ? it.dWeight : it.weight), manual: !!it.manual && !it.sub, planned: fmtW(it.planned), input: it.input === null ? '—' : it.input,
+          j: it.judgment, color: JUDGE_COLORS[it.judgment] || '#8E8E93', next: it.deload || it.judgment === '跳过' ? '' : it.sub ? '替代 ' + it.origName + '，不影响进阶' : '下次 ' + fmtW(it.nextWeight) + ' kg · ' + it.nextStage };
+      }) };
+  }
+
+  // ---------- 视图模型：训练页 ----------
+  function blankDraft(db, dayId) {
+    var d = dayById(db, dayId), entries = {};
+    d.slots.forEach(function (s) { entries[s.id] = { v: null, done: 0 }; });
+    return entries;
+  }
+
+  function buildTrain(db, opts) {
+    var P = db.params, rp = replay(db, { untilId: opts.recordId || null });
+    var full = opts.recordId ? replay(db) : rp, round = roundInfo(db, full), rec = { day: round.next, week: round.week };
+    var dayId = opts.day || rec.day, day = dayById(db, dayId);
+    var states = rp.before ? rp.before.states : rp.states;
+    var week = rp.before ? rp.before.week : rp.counts[dayId] + 1;
+    // 本周已完成的训练日：锁定，只能查看 / 修改，不能提前开练下一周
+    var rd = round.days.filter(function (d) { return d.id === dayId; })[0];
+    var locked = !opts.recordId && rd && rd.done;
+    var lockedInfo = null;
+    if (locked) {
+      week = round.week;
+      var ls = full.sessions.filter(function (x) { return x.rec.id === rd.recordId; })[0];
+      lockedInfo = ls ? logView(ls) : null;
+    }
+    var deloadSuggest = isDeloadWeek(week, P);
+    var deload = opts.deload === undefined ? deloadSuggest : !!opts.deload;
+    var draft = opts.draft || blankDraft(db, dayId);
+    var filled = 0, total = 0, lastW = lastWeights(full);
+    var items = day.slots.map(function (s0) {
+      var e = draft[s0.id] || (draft[s0.id] = { v: null, done: 0 });
+      // 仅本次替换：起始重量默认取该动作上次做过的重量，没有则沿用原计划重量
+      var subDefault = null;
+      if (e.ex) {
+        var ef0 = effectiveSlot(db, s0, week), st0 = ef0.resetNow ? { weight: ef0.change.weight } : states[s0.id];
+        if (e.ex === ef0.slot.name) { delete e.ex; }
+        else {
+          subDefault = lastW[e.ex] !== undefined ? lastW[e.ex] : st0.weight;
+          if (manualW(e) === null) e.w = subDefault;
+        }
+      }
+      var run = runSlot(db, s0, states[s0.id], e, week, deload), res = run.res, st = run.st, s = run.eff.slot;
+      var def = stageDef(s.tier, st.stage);
+      var showW = deload ? res.dWeight : res.weight;
+      if (res.sub && !deload) showW = res.weight;
+      var showSets = deload ? res.dSets : def.sets;
+      total += 1; if (hasValue(e) || e.skip) filled += 1;
+      var dots = [];
+      for (var k = 0; k < showSets; k++) dots.push({ i: k, on: k < (e.done || 0), amrap: !deload && s.tier !== 'T2' && k === showSets - 1 });
+      return {
+        slotId: s.id, tier: s.tier, tierColor: TIER_COLORS[s.tier], name: res.name, equip: res.equip,
+        planName: s.name, sub: !!res.sub, changed: !!run.eff.change, changeNew: !!run.eff.resetNow,
+        stage: st.stage, sets: showSets, reps: def.reps, weight: showW, weightText: fmtW(showW),
+        plates: platesFor(showW, P, res.equip), fail: res.sub ? 0 : (st.fail || 0),
+        restText: fmtRest(REST[s.tier]),
+        manual: res.sub ? manualW(e) !== subDefault : res.manual, autoWeight: res.sub ? subDefault : res.autoWeight, autoText: fmtW(res.sub ? subDefault : res.autoWeight), wStep: P.rounding || 2.5, editW: !!e.editW,
+        repsText: showSets + '×' + def.reps + (s.tier !== 'T2' && !deload ? '+' : ''),
+        inputType: deload ? 'deload' : s.tier === 'T2' ? 'done' : 'amrap',
+        amrapHint: s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + ' 加重') : '',
+        value: e.v, reps2: e.reps, skip: !!e.skip, new5RM: e.new5RM || '', done: e.done || 0, dots: dots,
+        need5RM: s.tier === 'T1' && P.ruleMode !== 'excel' && st.stage === '10×1+',
+        rest: REST[s.tier],
+        preview: (hasValue(e) || deload) ? {
+          judgment: res.judgment, color: JUDGE_COLORS[res.judgment] || '#8E8E93', icon: JUDGE_ICON[res.judgment] || '',
+          nextStage: res.nextStage, nextWeight: fmtW(res.nextWeight), stageChanged: res.nextStage !== st.stage,
+          delta: res.delta > 0 ? '+' + fmtW(res.delta) : res.delta < 0 ? fmtW(res.delta) : '±0',
+          e1rm: res.e1rm ? fmtW(Math.round(res.e1rm * 10) / 10) : '', volume: Math.round(res.volume), sub: !!res.sub, origName: res.origName || ''
+        } : null
+      };
+    });
+    var cyc = cycleOf(week, P);
+    return {
+      day: dayId, dayName: day.name, week: week, totalWeeks: P.totalWeeks, recommended: rec.day,
+      cycle: cyc.cycle, weekInCycle: cyc.wc, weeksPerCycle: cyc.N, weekText: weekText(week, P),
+      deload: deload, deloadSuggest: deloadSuggest, items: items, filled: filled, total: total,
+      days: round.days.map(function (d) { return { id: d.id, name: d.name, done: d.done, rec: !d.done && d.id === rec.day }; }),
+      round: { week: round.week, done: round.done, total: round.total, leftText: round.leftText, left: round.left.length, nextWeek: round.week + 1, nextWeekText: weekText(round.week + 1, P), pct: Math.round(round.done / round.total * 100) },
+      locked: !!locked, lockedInfo: lockedInfo,
+      ruleMode: P.ruleMode, editing: !!opts.recordId
+    };
+  }
+
+  // ---------- 视图模型：计划页（按轮显示，每轮 N 周 × 4 日） ----------
+  function buildPlan(db, opts) {
+    opts = opts || {};
+    var P = db.params, rp = replay(db), rec = recommend(db, rp), N = cycleLen(P);
+    var byDayWeek = {};
+    rp.sessions.forEach(function (s) { byDayWeek[s.rec.day + '_' + s.week] = s; });
+    // 已产生数据的最大绝对周 & 当前进行到的轮
+    var maxDoneWeek = Math.max.apply(null, [0].concat(db.days.map(function (d) { return rp.counts[d.id] || 0; })));
+    var curCycle = cycleOf(rec.week, P).cycle;
+    var dataCycle = cycleOf(Math.max(maxDoneWeek, 1), P).cycle;
+    var maxCycle = Math.max(curCycle, dataCycle) + 1; // 允许向后预览一轮
+    var cycle = Math.min(Math.max(opts.cycle || curCycle, 1), maxCycle);
+    var base = cycleStartWeek(cycle, P);
+    var rows = [];
+    for (var i = 0; i < N; i++) {
+      var w = base + i;
+      var cells = db.days.map(function (d) {
+        var key = d.id + '_' + w, s = byDayWeek[key], t1 = d.slots[0];
+        if (s) {
+          var it = s.items[0];
+          return { day: d.id, week: w, status: 'done', date: s.rec.date.slice(5), recordId: s.rec.id,
+            w: fmtW(it.deload ? it.dWeight : it.weight), j: it.judgment, color: JUDGE_COLORS[it.judgment] || '#8E8E93', deload: !!s.rec.deload };
+        }
+        var cnt = rp.counts[d.id] || 0, ahead = w - cnt - 1; // 0 = 下一次
+        var st = rp.states[t1.id];
+        // 理想推演：每次正常训练都加重；减载周不推进
+        var adds = 0;
+        for (var k = cnt + 1; k < w; k++) if (!isDeloadWeek(k, P)) adds++;
+        var proj = st.weight + (P.steps[t1.step] || 0) * adds;
+        if (isDeloadWeek(w, P)) proj = roundTo(proj * 0.5, P.rounding);
+        return { day: d.id, week: w, status: (d.id === rec.day && ahead === 0) ? 'next' : (ahead === 0 && w === rec.week ? 'ready' : 'todo'),
+          w: fmtW(fix(proj)), j: ahead === 0 ? '计划' : '理想', color: '#8E8E93', deload: isDeloadWeek(w, P) };
+      });
+      rows.push({ week: w, wc: i + 1, deload: isDeloadWeek(w, P), cells: cells });
+    }
+    var overview = db.days.map(function (d) {
+      var nw = (rp.counts[d.id] || 0) + 1;
+      return { day: d.id, name: d.name, slots: d.slots.map(function (s0) {
+        var ef = effectiveSlot(db, s0, nw), s = ef.slot;
+        var st = ef.resetNow ? { stage: FIRST_STAGE[s.tier], weight: ef.change.weight, fail: 0 } : rp.states[s0.id], last = null;
+        for (var i = rp.sessions.length - 1; i >= 0; i--) {
+          if (rp.sessions[i].rec.day === d.id) {
+            var f = rp.sessions[i].items.filter(function (x) { return x.slotId === s.id; })[0];
+            if (f && f.judgment !== '跳过' && !f.sub && f.name === s.name) { last = f; break; }
+          }
+        }
+        var start = ef.change ? ef.change.weight : initWeight(s, P);
+        return { id: s.id, changed: !!ef.change, tier: s.tier, tierColor: TIER_COLORS[s.tier], name: s.name, stage: st.stage, weight: fmtW(st.weight),
+          gain: st.weight - start > 0 ? '+' + fmtW(fix(st.weight - start)) : '', fail: st.fail,
+          last: last ? last.judgment : '—', lastColor: last ? JUDGE_COLORS[last.judgment] : '#C7C7CC' };
+      }) };
+    });
+    var done = rp.sessions.length, nd = db.days.length;
+    // 本轮进度：始终统计「当前进行中那一轮」的训练次数（不随浏览的轮次变化）
+    var curBase = cycleStartWeek(curCycle, P);
+    var cycDone = rp.sessions.filter(function (s) { return s.week >= curBase && s.week < curBase + N; }).length;
+    var cycPlanned = N * nd;
+    var recCyc = cycleOf(rec.week, P);
+    return { rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
+      done: done, planned: P.totalWeeks * nd, progress: Math.min(100, Math.round(done / (P.totalWeeks * nd) * 100)),
+      cycle: cycle, curCycle: curCycle, maxCycle: maxCycle, weeksPerCycle: N,
+      cycleText: '第 ' + cycle + ' 轮', isCurCycle: cycle === curCycle, isFuture: cycle > curCycle,
+      canPrev: cycle > 1, canNext: cycle < maxCycle,
+      cycleDone: cycDone, cyclePlanned: cycPlanned, cycleProgress: Math.min(100, Math.round(cycDone / cycPlanned * 100)),
+      next: { day: rec.day, week: rec.week, name: dayById(db, rec.day).name, deload: isDeloadWeek(rec.week, P),
+        cycle: recCyc.cycle, weekInCycle: recCyc.wc, weekText: weekText(rec.week, P) } };
+  }
+
+  // ---------- 视图模型：数据统计 ----------
+  function liftSlots(db) {
+    var map = {};
+    var rp = replay(db);
+    db.days.forEach(function (d) { d.slots.forEach(function (s) {
+      if (s.tier === 'T1') map[s.lift || s.id] = { slot: s, day: d, name: effectiveSlot(db, s, (rp.counts[d.id] || 0) + 1).slot.name };
+    }); });
+    return map;
+  }
+
+  function buildStats(db) {
+    var P = db.params, rp = replay(db), S = rp.sessions;
+    var judged = { '加重': 0, '保持': 0, '建议降阶': 0, '降阶': 0, '退阶': 0, '重置': 0 };
+    var t1n = 0, t1ok = 0, t2n = 0, t2ok = 0, t3n = 0, t3add = 0, totalVol = 0, reps = 0;
+    S.forEach(function (s) {
+      totalVol += s.volume;
+      s.items.forEach(function (it) {
+        if (judged[it.judgment] !== undefined) judged[it.judgment] += 1;
+        if (it.deload || it.judgment === '跳过') return;
+        if (it.tier === 'T1') { t1n++; if (it.judgment === '加重' || it.judgment === '保持') t1ok++; reps += (it.sets - 1) * it.reps + Number(it.input); }
+        if (it.tier === 'T2') { t2n++; if (it.input === '完成') t2ok++; reps += it.actualReps || 0; }
+        if (it.tier === 'T3') { t3n++; if (it.judgment === '加重') t3add++; reps += (it.sets - 1) * it.reps + Number(it.input); }
+      });
+    });
+    var pieSum = Object.keys(judged).reduce(function (a, k) { return a + judged[k]; }, 0);
+    var pie = Object.keys(judged).filter(function (k) { return judged[k] > 0; }).map(function (k) { return { label: k, value: judged[k], color: JUDGE_COLORS[k], pct: Math.round(judged[k] / pieSum * 100) }; });
+
+    // 每周容量（按循环周）
+    var maxWeek = 0; S.forEach(function (s) { maxWeek = Math.max(maxWeek, s.week); });
+    var weeks = Math.max(maxWeek, 1), labels = [], v1 = [], v2 = [], v3 = [];
+    for (var w = 1; w <= Math.max(weeks, P.totalWeeks); w++) {
+      labels.push('W' + w); var a = 0, b = 0, c = 0;
+      S.forEach(function (s) { if (s.week === w) { a += s.vol.T1; b += s.vol.T2; c += s.vol.T3; } });
+      v1.push(Math.round(a)); v2.push(Math.round(b)); v3.push(Math.round(c));
+    }
+
+    // e1RM + 回归（每个 T1 主项）
+    var lifts = liftSlots(db), e1 = [];
+    Object.keys(lifts).forEach(function (k) {
+      var info = lifts[k], pts = [], wts = [];
+      S.forEach(function (s) {
+        s.items.forEach(function (it) {
+          if (it.slotId === info.slot.id && !it.deload && it.judgment !== '跳过' && !it.sub && it.name === info.name) {
+            if (it.e1rm) pts.push([s.week, it.e1rm, s.rec.date]);
+            wts.push([s.week, it.weight]);
+          }
+        });
+      });
+      var reg = linreg(pts.map(function (p) { return [p[0], p[1]]; }));
+      var best = null; pts.forEach(function (p) { if (!best || p[1] > best[1]) best = p; });
+      var series = [], regLine = [];
+      for (var i = 1; i <= Math.max(P.totalWeeks, weeks); i++) {
+        var hit = pts.filter(function (p) { return p[0] === i; })[0];
+        series.push(hit ? fix(hit[1]) : null);
+        regLine.push(reg ? fix(reg.predict(i)) : null);
+      }
+      var oneRM = k in P.oneRM ? P.oneRM[k] : null;
+      e1.push({
+        key: k, name: info.name, day: info.day.id, series: series, regLine: regLine, n: pts.length,
+        best: best ? fmtW(Math.round(best[1] * 10) / 10) : '—', bestDate: best ? best[2] : '',
+        slope: reg ? (reg.slope >= 0 ? '+' : '') + reg.slope.toFixed(2) : '—',
+        r2: reg ? reg.r2.toFixed(2) : '—',
+        predict: reg ? fmtW(Math.round(reg.predict(P.totalWeeks) * 10) / 10) : '—',
+        oneRM: oneRM, vs1RM: best && oneRM ? Math.round((best[1] / oneRM - 1) * 1000) / 10 : null,
+        sampleTip: pts.length < 2 ? '至少 2 次 AMRAP 记录才能回归' : pts.length < 4 ? '样本较少，趋势仅供参考' : ''
+      });
+    });
+
+    // 每个训练日各动作的每周重量（复刻 Excel 折线图 K:O 列）
+    var weightTrend = db.days.map(function (d) {
+      var cols = d.slots.map(function (s, si) {
+        var arr = [];
+        for (var w = 1; w <= Math.max(P.totalWeeks, weeks); w++) arr.push(null);
+        S.forEach(function (s2) {
+          if (s2.rec.day === d.id) { var it = s2.items[si]; if (!it.sub && it.judgment !== '跳过') arr[s2.week - 1] = it.weight; }
+        });
+        var cnt = rp.counts[d.id] || 0, ef = effectiveSlot(db, s, cnt + 1);
+        if (cnt < arr.length) arr[cnt] = ef.resetNow ? ef.change.weight : rp.states[s.id].weight; // 下一次计划重量
+        return { name: ef.slot.name, tier: s.tier, data: arr };
+      });
+      return { day: d.id, name: d.name, cols: cols, nextIdx: rp.counts[d.id] || 0 };
+    });
+
+    // 体重
+    var bw = S.filter(function (s) { return s.rec.bw; }).map(function (s) { return { date: s.rec.date, v: Number(s.rec.bw) }; });
+
+    // 个人纪录
+    // 个人纪录：按实际做过的动作统计（含替换、更换后的动作）
+    var prMap = {}, prs = [];
+    S.forEach(function (s2) { s2.items.forEach(function (it) {
+      if (it.deload || it.judgment === '跳过') return;
+      var cur = prMap[it.name];
+      if (!cur || it.weight > cur.weight) prMap[it.name] = { weight: it.weight, tier: it.tier, day: s2.rec.day, date: s2.rec.date };
+    }); });
+    Object.keys(prMap).forEach(function (n) { var x = prMap[n]; prs.push({ day: x.day, tier: x.tier, tierColor: TIER_COLORS[x.tier], name: n, w: fmtW(x.weight), wn: x.weight, date: x.date.slice(5) }); });
+    prs.sort(function (a, b) { return a.tier === b.tier ? b.wn - a.wn : (a.tier < b.tier ? -1 : 1); });
+
+    return {
+      kpi: {
+        sessions: S.length, planned: P.totalWeeks * db.days.length,
+        progress: Math.min(100, Math.round(S.length / (P.totalWeeks * db.days.length) * 100)),
+        volume: totalVol >= 1000 ? (totalVol / 1000).toFixed(1) + ' t' : Math.round(totalVol) + ' kg',
+        reps: reps, adds: judged['加重'],
+        t1Rate: t1n ? Math.round(t1ok / t1n * 100) : null, t2Rate: t2n ? Math.round(t2ok / t2n * 100) : null,
+        t3Add: t3add, warns: judged['建议降阶'] + judged['降阶'] + judged['退阶'] + judged['重置']
+      },
+      pie: pie, pieTotal: pie.reduce(function (a, b) { return a + b.value; }, 0),
+      volume: { labels: labels, stacks: [
+        { name: 'T1', color: TIER_COLORS.T1, data: v1 }, { name: 'T2', color: TIER_COLORS.T2, data: v2 }, { name: 'T3', color: TIER_COLORS.T3, data: v3 }] },
+      e1rm: e1, weightTrend: weightTrend, bw: bw, prs: prs, totalWeeks: Math.max(P.totalWeeks, weeks)
+    };
+  }
+
+  // ---------- 视图模型：回顾 & 总结 ----------
+  function buildReview(db) {
+    var P = db.params, rp = replay(db), S = rp.sessions, stats = buildStats(db);
+    var maxWeek = 0; S.forEach(function (s) { maxWeek = Math.max(maxWeek, s.week); });
+    var weekCards = [], prevVol = null;
+    for (var w = 1; w <= maxWeek; w++) {
+      var ss = S.filter(function (s) { return s.week === w; });
+      var vol = ss.reduce(function (a, b) { return a + b.volume; }, 0);
+      var adds = 0, warns = 0, lines = [];
+      ss.forEach(function (s) {
+        s.items.forEach(function (it) {
+          if (it.judgment === '加重') adds++;
+          if (['建议降阶', '降阶', '退阶', '重置'].indexOf(it.judgment) >= 0) warns++;
+        });
+      });
+      var t1 = ss.map(function (s) {
+        var it = s.items[0];
+        return { day: s.rec.day, name: it.name, manual: !!it.manual, w: fmtW(it.deload ? it.dWeight : it.weight), input: it.input, j: it.judgment, color: JUDGE_COLORS[it.judgment] };
+      });
+      var dayFlags = db.days.map(function (d) { return { id: d.id, on: ss.some(function (s) { return s.rec.day === d.id; }) }; });
+      var dv = prevVol && ss.length >= db.days.length ? Math.round((vol - prevVol) / prevVol * 100) : null;
+      weekCards.push({ week: w, sessions: ss.length, total: db.days.length, vol: Math.round(vol), volText: (vol / 1000).toFixed(2) + ' t',
+        dv: dv === null ? '' : (dv >= 0 ? '+' + dv : '' + dv) + '%', dvUp: dv !== null && dv >= 0,
+        adds: adds, warns: warns, t1: t1, days: dayFlags, deload: isDeloadWeek(w, P) });
+      prevVol = vol || prevVol;
+    }
+
+    // 总结洞察（教练口吻）
+    var insights = [];
+    var k = stats.kpi;
+    if (!S.length) insights.push({ type: 'info', text: '还没有训练记录。去「训练」页完成第一次 A1，数据会自动长出来。' });
+    else {
+      insights.push({ type: 'info', text: '已完成 ' + k.sessions + '/' + k.planned + ' 次训练（' + k.progress + '%），累计容量 ' + k.volume + '，共 ' + k.adds + ' 次加重。' });
+      var lifts = liftSlots(db);
+      Object.keys(lifts).forEach(function (key) {
+        var info = lifts[key], hist = [];
+        S.forEach(function (s) { s.items.forEach(function (it) { if (it.slotId === info.slot.id && it.judgment !== '跳过' && !it.deload && !it.sub && it.name === info.name) hist.push(it); }); });
+        if (!hist.length) return;
+        var first = hist[0], lastIt = hist[hist.length - 1], streak = 0;
+        for (var i = hist.length - 1; i >= 0 && hist[i].judgment === '加重'; i--) streak++;
+        var gain = fix(lastIt.nextWeight - first.weight);
+        if (streak >= 2) insights.push({ type: 'up', text: info.name + ' 连续 ' + streak + ' 次加重，' + fmtW(first.weight) + '→' + fmtW(lastIt.nextWeight) + 'kg，节奏在线。' });
+        else if (lastIt.judgment === '加重') insights.push({ type: 'up', text: info.name + ' 上次 AMRAP ' + lastIt.input + ' 次，下次上 ' + fmtW(lastIt.nextWeight) + 'kg' + (gain > 0 ? '（累计 +' + fmtW(gain) + '）' : '') + '。' });
+        if (lastIt.judgment === '建议降阶') insights.push({ type: 'warn', text: info.name + ' 末组没到 ' + stageDef('T1', lastIt.stage).hold + ' 次。下次同重量再冲，连续两次未达标才降阶，先睡好吃好。' });
+        if (lastIt.judgment === '降阶') insights.push({ type: 'warn', text: info.name + ' 已切到 ' + lastIt.nextStage + '，重量保持 ' + fmtW(lastIt.nextWeight) + 'kg，用更少次数顶住强度。' });
+        if (lastIt.judgment === '重置') insights.push({ type: 'warn', text: info.name + ' 完成一轮三阶，已重置回 5×3+ @ ' + fmtW(lastIt.nextWeight) + 'kg。' });
+      });
+      // T2 退阶 / T3 接近阈值
+      var lastBySlot = {};
+      S.forEach(function (s) { s.items.forEach(function (it) { if (it.judgment !== '跳过' && !it.deload && !it.sub) lastBySlot[it.slotId] = it; }); });
+      Object.keys(lastBySlot).forEach(function (id) {
+        var it = lastBySlot[id], dn = id.split('_')[0] + ' ';
+        if (it.tier === 'T2' && it.judgment === '退阶') insights.push({ type: 'warn', text: dn + it.name + ' 没吃下 ' + it.stage + '，下次降到 ' + it.nextStage + '，重量不变。' });
+        if (it.tier === 'T3' && it.judgment === '保持' && Number(it.input) >= P.t3Threshold - 4) insights.push({ type: 'tip', text: dn + it.name + ' 末组 ' + it.input + ' 次，距离 ' + P.t3Threshold + ' 次加重只差 ' + (P.t3Threshold - it.input) + ' 次，下次冲一把。' });
+      });
+      stats.e1rm.forEach(function (e) {
+        if (e.n >= 2 && e.slope !== '—') insights.push({ type: 'trend', text: e.name + ' e1RM 回归斜率 ' + e.slope + ' kg/周，按此趋势第 ' + P.totalWeeks + ' 周约 ' + e.predict + 'kg' + (e.n < 4 ? '（样本少，参考）' : '') + '。' });
+      });
+      if (weekCards.length >= 2) {
+        var lw = weekCards[weekCards.length - 1];
+        if (lw.dv) insights.push({ type: lw.dvUp ? 'up' : 'tip', text: '第 ' + lw.week + ' 周容量 ' + lw.volText + '，环比 ' + lw.dv + '。' });
+      }
+      var rec = recommend(db, rp);
+      if (isDeloadWeek(rec.week, P)) insights.push({ type: 'tip', text: '下一轮是第 ' + rec.week + ' 周减载周：T1 -50%、T2 -40%、T3 少 1 组，不影响进阶链。' });
+    }
+
+    var logs = S.slice().reverse().map(logView);
+    insights.forEach(function (i) { i.icon = INS_ICON[i.type] || 'i'; });
+    return { insights: insights, weeks: weekCards.reverse(), logs: logs, kpi: k };
+  }
+
+  // ---------- 动作库 / 更换动作 ----------
+  /**
+   * 从某训练日的“下一次”起永久更换动作。
+   * - 该训练日还没练过：直接改首周方案（保留 TM% 配置，除非改了起始重量）
+   * - 已练过：记一条更换（fromWeek），历史记录保持原动作名，新动作从 weight 重新开始进阶
+   */
+  function swapSlot(db, dayId, slotId, name, weight) {
+    var d = dayById(db, dayId), s = null;
+    d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
+    if (!s) return null;
+    var rp = replay(db), fromWeek = (rp.counts[dayId] || 0) + 1, lib = libFindIn(db, name);
+    var w = weight === null || weight === undefined || weight === '' || isNaN(Number(weight)) ? null : fix(Number(weight));
+    s.changes = (s.changes || []).filter(function (c) { return c.fromWeek < fromWeek; });
+    if (fromWeek === 1) {
+      s.name = name; s.equip = lib ? lib.equip : '';
+      if (w !== null && w !== initWeight(s, db.params)) s.init = { type: 'fixed', value: w };
+      return { fromWeek: 1, base: true };
+    }
+    var cur = effectiveSlot(db, s, fromWeek).slot;
+    if (cur.name === name && w === null) return { fromWeek: fromWeek, noop: true };
+    if (w === null) w = rp.states[s.id].weight;
+    s.changes.push({ fromWeek: fromWeek, name: name, equip: lib ? lib.equip : '', weight: w });
+    return { fromWeek: fromWeek };
+  }
+  /** 动作库列表（更换弹层 / 动作库页面共用） */
+  function buildLibrary(db, opts) {
+    opts = opts || {};
+    var tier = opts.tier || 'T1', q = String(opts.q || '').trim(), cur = opts.current || '', lastW = lastWeights(replay(db));
+    var counts = { T1: 0, T2: 0, T3: 0 };
+    var all = libAll(db);
+    all.forEach(function (x) { counts[x.tier] = (counts[x.tier] || 0) + 1; });
+    var list = all.filter(function (x) {
+      if (q) return x.name.indexOf(q) >= 0 || (x.part || '').indexOf(q) >= 0 || (x.equip || '').indexOf(q) >= 0;
+      return x.tier === tier;
+    }).map(function (x) {
+      return { name: x.name, tier: x.tier, part: x.part, equip: x.equip, desc: x.desc, custom: !!x.custom, current: x.name === cur,
+        last: lastW[x.name] !== undefined ? fmtW(lastW[x.name]) : '' };
+    });
+    return { tier: tier, q: q, list: list, counts: counts, tiers: ['T1', 'T2', 'T3'].map(function (t) { return { id: t, n: counts[t] }; }),
+      customCount: ((db && db.customLib) || []).length };
+  }
+  /** 某槽位“下一次”的更换上下文（弹层用） */
+  function swapContext(db, dayId, slotId) {
+    var d = dayById(db, dayId), s = null;
+    d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
+    var rp = replay(db), wk = (rp.counts[dayId] || 0) + 1, ef = effectiveSlot(db, s, wk), lastW = lastWeights(rp);
+    var curW = ef.resetNow ? ef.change.weight : rp.states[s.id].weight;
+    return { dayId: dayId, slotId: slotId, tier: s.tier, name: ef.slot.name, week: wk, weight: curW, weightText: fmtW(curW), lastW: lastW, base: wk === 1 };
+  }
+
+  // ---------- 记录操作 ----------
+  function uid() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function today() {
+    var d = new Date(), m = d.getMonth() + 1, dd = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (dd < 10 ? '0' : '') + dd;
+  }
+  function saveRecord(db, rec) {
+    var entries = {};
+    Object.keys(rec.entries).forEach(function (k) {
+      var e = rec.entries[k];
+      entries[k] = { v: e.v === undefined ? null : e.v };
+      if (e.skip) entries[k].skip = true;
+      if (e.reps !== undefined && e.reps !== null && e.reps !== '') entries[k].reps = Number(e.reps);
+      if (e.new5RM) entries[k].new5RM = Number(e.new5RM);
+      if (manualW(e) !== null) entries[k].w = manualW(e);
+      if (e.ex) entries[k].ex = String(e.ex);
+    });
+    var r = { id: rec.id || uid(), date: rec.date || today(), day: rec.day, deload: !!rec.deload, note: rec.note || '', bw: rec.bw || null,
+      entries: entries, createdAt: rec.createdAt || Date.now() };
+    var idx = -1;
+    db.records.forEach(function (x, i) { if (x.id === r.id) idx = i; });
+    if (idx >= 0) db.records[idx] = r; else db.records.push(r);
+    return r;
+  }
+  function deleteRecord(db, id) { db.records = db.records.filter(function (r) { return r.id !== id; }); }
+  function getRecord(db, id) { return db.records.filter(function (r) { return r.id === id; })[0] || null; }
+
+  // 结算：保存后返回该次训练的判定结果
+  function sessionResult(db, id) {
+    var rp = replay(db);
+    return rp.sessions.filter(function (s) { return s.rec.id === id; })[0] || null;
+  }
+
+  var RULES = [
+    { title: 'T1 主项 · 三阶进阶', rows: [
+      ['5×3+', '末组 AMRAP ≥ 6', '加重，继续 5×3+'], ['5×3+', '3 ≤ AMRAP < 6', '重量不变，巩固'], ['5×3+', '连续 2 次 AMRAP < 3', '进入 6×2+，重量不变'],
+      ['6×2+', '末组 AMRAP ≥ 4', '加重，继续 6×2+'], ['6×2+', '2 ≤ AMRAP < 4', '重量不变，巩固'], ['6×2+', '连续 2 次 AMRAP < 2', '进入 10×1+，重量不变'],
+      ['10×1+', '末组 AMRAP ≥ 2', '加重，继续 10×1+'], ['10×1+', 'AMRAP < 2', '测新 5RM，取 90% 为新 TM，重置 5×3+']] },
+    { title: 'T2 次主项 · 退阶重置', rows: [
+      ['3×10', '全部完成', '加重，继续 3×10'], ['3×10', '无法完成', '降为 3×8，重量不变'],
+      ['3×8', '全部完成', '加重，回到 3×10（表格公式）'], ['3×8', '无法完成', '降为 3×6，重量不变'], ['3×6', '完成 / 未完成', '加重，重置回 3×10']] },
+    { title: 'T3 辅助项', rows: [['3×15+', '末组 AMRAP ≥ 阈值(25)', '加重，回到 3×15+'], ['3×15+', '末组 AMRAP < 阈值', '重量不变']] }
+  ];
+  var GENERAL_RULES = [
+    '循环顺序：A1 → B1 → A2 → B2 依次滚动，不固定星期几',
+    '组间休息：T1 3~5 分钟，T2 2~3 分钟，T3 60~90 秒',
+    '减载：每 6 周 1 次，T1 -50%，T2 -40%，T3 减 1 组（不改变进阶链）',
+    'T1 降阶：需连续 2 次未达标，单次失败只预警',
+    '首周重量 = ROUND(TM × 系数 / 2.5) × 2.5，TM = 1RM × 90%',
+    '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
+  ];
+
+  return {
+    VERSION: VERSION, LIFTS: LIFTS, LIFT_ORDER: LIFT_ORDER, STEP_KEYS: STEP_KEYS, STAGES: STAGES, FIRST_STAGE: FIRST_STAGE,
+    REST: REST, LIB: LIB, JUDGE_COLORS: JUDGE_COLORS, JUDGE_ICON: JUDGE_ICON, dateLabel: dateLabel, backupLabel: backupLabel, TIER_COLORS: TIER_COLORS, RULES: RULES, GENERAL_RULES: GENERAL_RULES,
+    defaults: defaults, defaultDays: defaultDays, defaultParams: defaultParams, excelSeedRecords: excelSeedRecords, normalize: normalize,
+    roundTo: roundTo, tm: tm, initWeight: initWeight, fmtW: fmtW, platesFor: platesFor, linreg: linreg,
+    evaluate: evaluate, replay: replay, recommend: recommend, isDeloadWeek: isDeloadWeek, dayById: dayById,
+    blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
+    saveRecord: saveRecord, deleteRecord: deleteRecord, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
+    libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
+    cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText
+  };
+});
+</script>
+<script>/**
+ * 极简 Canvas2D 图表（小程序 canvas type="2d" 与 H5 canvas 共用）· Apple 浅色风格
+ * 基础：line / bars(堆叠，圆角) / donut
+ * 预设：e1rm / weight / volume / pie / bw —— 两端调用同一份配置，保证视觉一致
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.GZChart = api;
+})(typeof window !== 'undefined' ? window : this, function () {
+  'use strict';
+  var FONT = '-apple-system, "SF Pro Text", "PingFang SC", sans-serif';
+  var THEME = {
+    grid: 'rgba(60,60,67,0.10)', axis: '#8E8E93', text: '#3A3A3C', label: '#1C1C1E',
+    hole: '#FFFFFF', track: 'rgba(118,118,128,0.12)', font: '10px ' + FONT
+  };
+  var ACCENT = '#FF6B1A', BLUE = '#0A84FF';
+  var PALETTE = ['#FF6B1A', '#0A84FF', '#34C759', '#AF52DE', '#8E8E93'];
+
+  function niceRange(min, max, ticks) {
+    if (min === max) { min -= 5; max += 5; }
+    var span = max - min, step = Math.pow(10, Math.floor(Math.log(span / ticks) / Math.LN10));
+    var err = span / ticks / step;
+    if (err >= 7.5) step *= 10; else if (err >= 3.5) step *= 5; else if (err >= 1.5) step *= 2;
+    return { lo: Math.floor(min / step) * step, hi: Math.ceil(max / step) * step, step: step };
+  }
+  function fmt(v) {
+    if (Math.abs(v) >= 10000) return (v / 1000).toFixed(0) + 'k';
+    if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + 'k';
+    return Math.round(v * 10) / 10 + '';
+  }
+  function clear(ctx, W, H) { ctx.clearRect(0, 0, W, H); }
+  function empty(ctx, W, H, text) {
+    ctx.fillStyle = THEME.axis; ctx.font = '13px ' + FONT;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text || '暂无数据', W / 2, H / 2);
+  }
+  function dash(ctx, d) { if (ctx.setLineDash) ctx.setLineDash(d); }
+
+  // 网格在左，数值标签在右（Apple Health 风格）
+  function axes(ctx, W, H, pad, r, labels, xAt) {
+    ctx.font = THEME.font; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    for (var v = r.lo; v <= r.hi + 1e-9; v += r.step) {
+      var y = pad.t + (H - pad.t - pad.b) * (1 - (v - r.lo) / (r.hi - r.lo));
+      ctx.strokeStyle = THEME.grid; ctx.lineWidth = 0.5; dash(ctx, v === r.lo ? [] : [2, 3]);
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+      ctx.fillStyle = THEME.axis; ctx.fillText(fmt(v), W - pad.r + 6, y);
+    }
+    dash(ctx, []);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    var every = labels.length > 10 ? Math.ceil(labels.length / 8) : 1;
+    labels.forEach(function (lb, i) { if (i % every === 0) { ctx.fillStyle = THEME.axis; ctx.fillText(lb, xAt(i), H - pad.b + 7); } });
+  }
+
+  function line(ctx, W, H, o) {
+    clear(ctx, W, H);
+    var vals = [];
+    o.series.forEach(function (s) { s.data.forEach(function (v) { if (v !== null && v !== undefined && !isNaN(v)) vals.push(v); }); });
+    if (!vals.length) return empty(ctx, W, H, o.emptyText);
+    var pad = { l: 6, r: 34, t: 14, b: 22 };
+    var r = niceRange(Math.min.apply(null, vals), Math.max.apply(null, vals), 3);
+    var n = o.labels.length, cw = (W - pad.l - pad.r - 12);
+    var xAt = function (i) { return pad.l + 6 + (n <= 1 ? cw / 2 : cw * i / (n - 1)); };
+    var yAt = function (v) { return pad.t + (H - pad.t - pad.b) * (1 - (v - r.lo) / (r.hi - r.lo)); };
+    axes(ctx, W, H, pad, r, o.labels, xAt);
+    o.series.forEach(function (s) {
+      var pts = [];
+      s.data.forEach(function (v, i) { if (v !== null && v !== undefined && !isNaN(v)) pts.push([xAt(i), yAt(v), i]); });
+      if (s.fill && pts.length > 1) {
+        var g = ctx.createLinearGradient(0, pad.t, 0, H - pad.b);
+        g.addColorStop(0, s.fill); g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.beginPath(); ctx.moveTo(pts[0][0], H - pad.b);
+        pts.forEach(function (p) { ctx.lineTo(p[0], p[1]); });
+        ctx.lineTo(pts[pts.length - 1][0], H - pad.b); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+      }
+      ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      dash(ctx, s.dashed ? [4, 4] : []);
+      ctx.beginPath(); var prev = -2;
+      pts.forEach(function (p) {
+        if (prev === -2 || (!s.connect && p[2] !== prev + 1)) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+        prev = p[2];
+      });
+      ctx.stroke(); dash(ctx, []);
+      if (s.dots !== false) {
+        pts.forEach(function (p) {
+          var hollow = s.hollowFrom !== undefined && p[2] >= s.hollowFrom;
+          ctx.beginPath(); ctx.arc(p[0], p[1], hollow ? 3.4 : 3.2, 0, Math.PI * 2);
+          ctx.fillStyle = hollow ? THEME.hole : s.color; ctx.fill();
+          ctx.strokeStyle = hollow ? s.color : THEME.hole; ctx.lineWidth = hollow ? 1.6 : 1.4; ctx.stroke();
+        });
+      }
+      if (s.labelLast && pts.length) {
+        var lp = pts[pts.length - 1];
+        ctx.fillStyle = s.color; ctx.font = '600 10px ' + FONT; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+        ctx.fillText(s.labelLast, lp[0], lp[1] - 6);
+      }
+    });
+  }
+
+  function topRound(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h);
+    ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
+  }
+  function bars(ctx, W, H, o) {
+    clear(ctx, W, H);
+    var n = o.labels.length, sums = [];
+    for (var i = 0; i < n; i++) sums.push(o.stacks.reduce(function (a, s) { return a + (s.data[i] || 0); }, 0));
+    var mx = Math.max.apply(null, sums.concat([0]));
+    if (mx <= 0) return empty(ctx, W, H, o.emptyText);
+    var pad = { l: 6, r: 34, t: 16, b: 22 };
+    var r = niceRange(0, mx, 3); r.lo = 0;
+    var cw = (W - pad.l - pad.r) / n, bw = Math.min(18, cw * 0.5);
+    var xAt = function (k) { return pad.l + cw * k + cw / 2; };
+    var hAt = function (v) { return (H - pad.t - pad.b) * v / (r.hi - r.lo); };
+    axes(ctx, W, H, pad, r, o.labels, xAt);
+    for (var k = 0; k < n; k++) {
+      var y = H - pad.b, top = -1;
+      o.stacks.forEach(function (s, si) { if ((s.data[k] || 0) > 0) top = si; });
+      o.stacks.forEach(function (s, si) {
+        var h = hAt(s.data[k] || 0); if (h <= 0) return;
+        ctx.fillStyle = s.color;
+        if (si === top) topRound(ctx, xAt(k) - bw / 2, y - h, bw, h, 4); else ctx.fillRect(xAt(k) - bw / 2, y - h, bw, h);
+        y -= h;
+      });
+      if (sums[k] > 0 && o.showTotal !== false) {
+        ctx.fillStyle = THEME.text; ctx.font = '500 10px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(fmt(sums[k]), xAt(k), y - 3);
+      }
+    }
+  }
+
+  function donut(ctx, W, H, o) {
+    clear(ctx, W, H);
+    var total = o.items.reduce(function (a, b) { return a + b.value; }, 0);
+    var cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 4, lw = R * 0.26, rr = R - lw / 2;
+    ctx.lineWidth = lw; ctx.lineCap = 'butt';
+    ctx.strokeStyle = THEME.track; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
+    if (total) {
+      var a = -Math.PI / 2, gap = o.items.length > 1 ? 0.04 : 0;
+      o.items.forEach(function (it) {
+        var sweep = Math.PI * 2 * it.value / total;
+        ctx.strokeStyle = it.color; ctx.beginPath(); ctx.arc(cx, cy, rr, a + gap / 2, a + sweep - gap / 2); ctx.stroke(); a += sweep;
+      });
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = THEME.label; ctx.font = '700 24px ' + FONT;
+    ctx.fillText(total ? (o.center || String(total)) : '0', cx, cy - 6);
+    ctx.fillStyle = THEME.axis; ctx.font = '11px ' + FONT; ctx.fillText(o.sub || '', cx, cy + 15);
+  }
+
+  // ---------- 预设 ----------
+  function weekLabels(n) { var a = []; for (var i = 1; i <= n; i++) a.push('W' + i); return a; }
+  var presets = {
+    e1rm: function (ctx, W, H, e, weeks) {
+      var series = [];
+      if (e.oneRM) series.push({ color: '#C7C7CC', data: e.series.map(function () { return e.oneRM; }), dashed: true, width: 1, dots: false });
+      if (e.n >= 2) series.push({ color: BLUE, data: e.regLine, dashed: true, width: 1.5, dots: false, labelLast: e.predict });
+      series.push({ color: ACCENT, data: e.series, width: 2.5, fill: 'rgba(255,107,26,0.22)' });
+      line(ctx, W, H, { labels: weekLabels(weeks), series: series, emptyText: '完成 T1 AMRAP 后生成' });
+    },
+    weight: function (ctx, W, H, d, weeks) {
+      line(ctx, W, H, { labels: weekLabels(weeks), series: d.cols.map(function (col, i) {
+        return { color: PALETTE[i], data: col.data, width: i === 0 ? 2.5 : 1.6, hollowFrom: d.nextIdx, connect: true };
+      }) });
+    },
+    volume: function (ctx, W, H, v) { bars(ctx, W, H, { labels: v.labels, stacks: v.stacks, emptyText: '还没有容量数据' }); },
+    pie: function (ctx, W, H, s) { donut(ctx, W, H, { items: s.pie, center: String(s.pieTotal), sub: '次判定' }); },
+    bw: function (ctx, W, H, bw) { line(ctx, W, H, { labels: bw.map(function (b) { return b.date.slice(5); }), series: [{ color: '#34C759', data: bw.map(function (b) { return b.v; }), width: 2, fill: 'rgba(52,199,89,0.18)' }] }); }
+  };
+
+  return { line: line, bars: bars, donut: donut, presets: presets, THEME: THEME, PALETTE: PALETTE };
+});
+</script>
+<script>/* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
+(function () {
+  'use strict';
+  var GZ = window.GZ, Chart = window.GZChart;
+  var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup';
+  var TABS = [
+    { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
+    { id: 'review', title: '回顾' }, { id: 'settings', title: '设置' }
+  ];
+  var TIER_TIP = {
+    T1: 'T1 主项：大重量复合动作，按 5×3+ → 6×2+ → 10×1+ 进阶',
+    T2: 'T2 次主项：中等重量，按 3×10 → 3×8 → 3×6 退阶',
+    T3: 'T3 辅助项：小重量高次数，末组达阈值加重'
+  };
+  function libNames(db) {
+    var m = { T1: [], T2: [], T3: [] };
+    GZ.libAll(db).forEach(function (x) { if (m[x.tier].indexOf(x.name) < 0) m[x.tier].push(x.name); });
+    return m;
+  }
+  function libRows(lib, opts) {
+    if (!lib.list.length) return '<div class="empty-tip">' + (opts.empty || '没有找到相关动作') + '</div>';
+    return lib.list.map(function (x) {
+      var tierTag = (opts.showTier || (opts.slotTier && x.tier !== opts.slotTier)) ? '<span class="tier t-' + x.tier + ' lib-t">' + x.tier + '</span>' : '';
+      var right = opts.pick
+        ? (x.current ? '<span class="lib-cur">当前</span>' : '') + (opts.sel === x.name ? '<span class="lib-ck">✓</span>' : '')
+        : (x.custom ? '<span class="lib-del" data-act="libdel" data-name="' + esc(x.name) + '">删除</span>' : '');
+      return '<div class="cell ' + (opts.pick ? 'tap ' : '') + 'lib-row ' + (opts.sel === x.name ? 'sel' : '') + '"' + (opts.pick ? ' data-act="swappick" data-name="' + esc(x.name) + '"' : '') + '>' +
+        '<div class="flex1"><div class="lib-n">' + esc(x.name) + tierTag + (x.custom ? '<span class="lib-c">自定义</span>' : '') + '</div>' +
+        '<div class="lib-s">' + esc(x.part) + ' · ' + esc(x.equip) + (x.last ? ' · ' + (opts.pick ? '上次 ' : '最近 ') + x.last + ' kg' : '') + '</div>' +
+        (opts.pick ? '' : '<div class="lib-d">' + esc(x.desc || '') + '</div>') + '</div>' + right + '</div>';
+    }).join('');
+  }
+
+  function load() { var db = null; try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) {} if (!db) { db = GZ.defaults(true); save(db); } return GZ.normalize(db); }
+  function save(db) { localStorage.setItem(KEY, JSON.stringify(db)); }
+  function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function fmtSec(s) { s = Math.max(0, s); var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+  function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove('show'); }, 1800); }
+  function confirmBox(title, content, ok) { if (window.confirm(title + '\n\n' + content)) ok(); }
+  function tier(t) { return '<span class="tier t-' + t + '">' + t + '</span>'; }
+  function seg(items, cur, act, cls) {
+    return '<div class="seg ' + (cls || '') + '">' + items.map(function (it, i) {
+      return '<div class="seg-i ' + (it.on !== undefined ? (it.on ? 'on' : '') : (cur === i ? 'on' : '')) + '" data-act="' + act + '" data-i="' + i + '"' + (it.data || '') + '>' + it.html + '</div>';
+    }).join('') + '</div>';
+  }
+
+  var S = {
+    tab: 'train',
+    train: { day: null, draft: null, recordId: null, deload: undefined, date: GZ.today(), bw: '', note: '', result: null, createdAt: null },
+    plan: { ov: 0, detail: null, cycle: 0 }, stats: { lift: 0, day: 0 }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', tier: 'T1', q: '', add: null }
+  };
+  var rest = { show: false, left: 0, total: 0, name: '', timer: null };
+
+  // ================= 训练 =================
+  function trainVM() {
+    var db = load(), t = S.train;
+    if (!t.day || !GZ.dayById(db, t.day)) t.day = GZ.recommend(db).day;
+    if (!t.draft) t.draft = GZ.blankDraft(db, t.day);
+    return GZ.buildTrain(db, { day: t.day, recordId: t.recordId, draft: t.draft, deload: t.deload });
+  }
+  function entry(slot) { var d = S.train.draft; return d[slot] || (d[slot] = { v: null, done: 0 }); }
+
+  function renderTrain() {
+    var vm = trainVM(), t = S.train, h = '';
+    h += '<div class="head"><div class="row between"><label class="date-pick"><span class="head-sub">' + (vm.editing ? '编辑记录 · ' : '') + vm.weekText + (vm.locked ? ' · 已完成' : ' · ' + GZ.dateLabel(t.date)) + '</span>' +
+      (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '">') + '</label>' + (vm.editing ? '<span class="link" data-act="cancelEdit">取消</span>' : '') + '</div>' +
+      '<div class="large-title"><span class="num">' + vm.day + '</span> ' + vm.dayName + '</div></div>';
+    if (!vm.editing) {
+      h += '<div class="seg day-seg">' + vm.days.map(function (d) {
+        return '<div class="seg-i ' + (d.id === vm.day ? 'on ' : '') + (d.done ? 'is-done' : '') + '" data-act="day" data-day="' + d.id + '">' + (d.done ? '<span class="ds-ck">✓</span>' : '') +
+          '<span class="num">' + d.id + '</span>' + (d.rec ? '<div class="rec-dot"></div>' : '') + '</div>';
+      }).join('') + '</div>';
+      var rd = vm.round;
+      h += '<div class="wk-prog"><div class="wk-bar"><div class="wk-in" style="width:' + rd.pct + '%"></div></div><span class="wk-t">本周 <span class="num strong">' + rd.done + '/' + rd.total + '</span>' +
+        (rd.left ? ' · 完成 ' + rd.leftText + ' 后进入' + rd.nextWeekText : '') + '</span></div>';
+    }
+    if (vm.locked && vm.lockedInfo) {
+      var L = vm.lockedInfo;
+      h += '<div class="card locked"><div class="lk-head"><div class="lk-ic">✓</div><div class="flex1"><div class="lk-t">本周 ' + vm.day + ' 已完成</div><div class="lk-s">' + L.dateText + ' · 容量 ' + L.vol + ' kg</div></div></div>' +
+        L.items.map(function (it) { return '<div class="lk-row">' + tier(it.tier) + '<span class="lk-n">' + it.name + '</span><span class="lk-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag lk-j" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
+        '<div class="lk-tip">下周的 ' + vm.day + ' 会在本周 ' + vm.round.leftText + ' 完成后开放</div>' +
+        '<div class="sheet-btns"><div class="btn-ghost" data-act="editLocked" data-id="' + L.id + '">修改这次</div><div class="btn-ghost solid" data-act="day" data-day="' + vm.recommended + '">去练 ' + vm.recommended + '</div></div></div>';
+    }
+    if (!vm.locked) {
+    if (vm.deloadSuggest || vm.deload) {
+      h += '<div class="card deload"><div class="dl-ic">↓</div><div class="flex1"><div class="dl-t">减载周</div><div class="dl-s">T1 −50% · T2 −40% · T3 少 1 组</div></div>' +
+        '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
+    }
+    vm.items.forEach(function (it) {
+      h += '<div class="card ex ' + (it.skip ? 'skipped' : '') + '">';
+      h += '<div class="ex-head">' + tier(it.tier) + '<div class="ex-title"><span class="ex-name">' + esc(it.name) + '</span>' +
+        (it.sub ? '<span class="ex-tag sub">替换 ' + esc(it.planName) + '</span>' : it.changeNew ? '<span class="ex-tag new">新动作</span>' : '') + '</div>' +
+        '<span class="ex-act" data-act="openswap" data-slot="' + it.slotId + '">更换</span>' +
+        '<span class="ex-skip" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</span></div>';
+      h += '<div class="ex-main"><div class="wbox ' + (it.editW ? 'editing' : '') + '" data-act="editW" data-slot="' + it.slotId + '"><span class="w-num num ' + (it.manual ? 'manual' : '') + '">' + it.weightText + '</span><span class="w-unit">kg</span>' +
+        '<span class="w-edit">' + (it.editW ? '完成' : '调整') + '</span></div><span class="reps num">' + it.repsText + '</span></div>';
+      if (it.manual || it.plates || it.fail > 0) h += '<div class="ex-sub">' + (it.manual ? '<span class="accent">已手动调整 · 建议 ' + it.autoText + ' kg' + (it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.plates || '') + (it.fail > 0 ? '<span class="amber">' + (it.plates ? ' · ' : '') + '已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
+      if (it.editW) {
+        h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
+          '<input class="st-val wide num" inputmode="decimal" data-act="winput" data-slot="' + it.slotId + '" value="' + it.weightText + '">' +
+          '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">每次 ' + it.wStep + ' kg</span>' +
+          (it.manual ? '<span class="link we-reset" data-act="wreset" data-slot="' + it.slotId + '">恢复 ' + it.autoText + '</span>' : '') + '</div>';
+      }
+      if (!it.skip) {
+        h += '<div class="dots">' + it.dots.map(function (d) {
+          return '<div class="dot ' + (d.on ? 'on ' : '') + (d.amrap ? 'amrap' : '') + '" data-act="dot" data-slot="' + it.slotId + '" data-i="' + d.i + '" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">' + (d.amrap ? '+' : d.i + 1) + '</div>';
+        }).join('') + '<div class="rest-btn" data-act="rest" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">休息 ' + it.restText + '</div></div>';
+        if (it.inputType === 'amrap') {
+          h += '<div class="inrow"><div class="flex1"><div class="in-label">末组次数</div><div class="in-hint">' + it.amrapHint + '</div></div><div class="stepper">' +
+            '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null ? '' : it.value) + '" placeholder="—">' +
+            '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="1">+</div></div></div>';
+        }
+        if (it.need5RM) h += '<div class="inrow"><div class="flex1"><div class="in-label">新 5RM</div><div class="in-hint">10×1+ 未达标时填写，用于重置</div></div><input class="mini-in num" inputmode="decimal" data-act="5rm" data-slot="' + it.slotId + '" value="' + esc(it.new5RM) + '" placeholder="kg"></div>';
+        if (it.inputType === 'done') {
+          h += '<div class="inrow col"><div class="seg seg-done"><div class="seg-i ' + (it.value === '完成' ? 'on ok' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="完成">全部完成</div>' +
+            '<div class="seg-i ' + (it.value === '未完成' ? 'on bad' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="未完成">未完成</div></div>';
+          if (it.value === '未完成') h += '<div class="subrow"><span class="in-hint">实际总次数（可选，用于容量）</span><input class="mini-in num" inputmode="numeric" data-act="reps" data-slot="' + it.slotId + '" value="' + esc(it.reps2) + '" placeholder="' + (it.sets * it.reps - 2) + '"></div>';
+          h += '</div>';
+        }
+        if (it.preview) {
+          var p = it.preview;
+          h += '<div class="verdict"><div class="v-ic" style="background:' + p.color + '">' + p.icon + '</div><span class="v-j" style="color:' + p.color + '">' + p.judgment + '</span>' +
+            (p.sub ? '<span class="v-l">不影响 ' + esc(p.origName) + ' 的进阶</span>' : p.judgment !== '减载' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + p.nextWeight + '</span><span class="v-u">kg</span>' + (p.stageChanged ? '<span class="v-stage">· ' + p.nextStage + '</span>' : '') + '</div>' : '<span class="v-l">按减载重量完成</span>') + '</div>';
+        }
+      }
+      h += '</div>';
+    });
+    h += '<div class="list"><div class="cell"><span class="flex1">体重</span><input class="cell-in num" inputmode="decimal" data-act="bw" value="' + esc(t.bw) + '" placeholder="可选"><span class="unit">kg</span></div>' +
+      '<div class="cell"><textarea class="note" data-act="note" rows="2" placeholder="备注：状态、睡眠、技术要点">' + esc(t.note) + '</textarea></div></div>';
+    h += '<button class="btn-primary submit" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '<span class="btn-count num">' + vm.filled + '/' + vm.total + '</span></button>';
+    }
+    if (t.swap && t.swap.show) h += renderSwap();
+    if (t.result) {
+      var r = t.result;
+      h += '<div class="mask" data-act="closeResult"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + r.day + ' ' + r.dayName + ' · ' + r.weekText + '</span><div class="sheet-title">' + (r.cycleDone ? '第 ' + r.cycle + ' 轮完成' : r.weekDone ? '本周完成' : '训练完成') + '</div>' +
+        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>'
+          : r.weekDone ? '<div class="wk-done">A1 · B1 · A2 · B2 全部完成，已进入' + r.nextWeekText + (r.nextDeload ? '（减载周）' : '') + '</div>'
+          : (r.leftText ? '<div class="wk-left">本周还剩 ' + r.leftText + '</div>' : '')) +
+        '<div class="res-kpi"><div class="rk"><span class="num rk-v">' + r.volume + '</span><span class="rk-l">容量 kg</span></div><div class="rk"><span class="num rk-v accent">' + r.adds + '</span><span class="rk-l">项加重</span></div></div>' +
+        '<div class="list">' + r.items.map(function (x) { return '<div class="cell res-row">' + tier(x.tier) + '<span class="res-name flex1">' + x.name + '</span><div class="res-r"><span class="jtag" style="color:' + x.color + '">' + x.j + '</span><span class="res-next num">' + x.next + '</span></div></div>'; }).join('') + '</div>' +
+        '<div class="sheet-btns"><div class="btn-ghost" data-act="gotoStats">查看数据</div><div class="btn-ghost solid" data-act="closeResult">好</div></div></div></div>';
+    }
+    return h;
+  }
+
+  function trainAct(act, ds, el) {
+    var t = S.train, en, vm;
+    switch (act) {
+      case 'date': if (el.value) t.date = el.value; return true;
+      case 'editLocked': startEdit(ds.id); return true;
+      case 'openswap': openSwap(ds.slot); return true;
+      case 'closeswap': t.swap.show = false; return true;
+      case 'swaptier': t.swap.tier = ds.t; return true;
+      case 'swapq': t.swap.q = el.value; updateSwapList(); return false;
+      case 'swappick':
+        var sw = t.swap;
+        if (ds.name === sw.curName) { sw.show = false; return true; }
+        sw.sel = ds.name; sw.weight = sw.lastW[ds.name] !== undefined ? String(sw.lastW[ds.name]) : GZ.fmtW(sw.ctxW); return true;
+      case 'swapscope': t.swap.scope = ds.s; return true;
+      case 'swapw': t.swap.weight = el.value; return false;
+      case 'swaprestore': en = entry(t.swap.slotId); delete en.ex; en.w = null; t.swap.show = false; return true;
+      case 'swapok': return swapConfirm();
+      case 'day': if (t.recordId) return; t.day = ds.day; t.deload = undefined; t.draft = GZ.blankDraft(load(), ds.day); return true;
+      case 'deload': t.deload = el.checked; return true;
+      case 'step':
+        en = entry(ds.slot); vm = trainVM();
+        var it = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
+        var v = en.v === null || en.v === '' || en.v === undefined ? (Number(ds.d) > 0 ? it.reps : 0) : Number(en.v) + Number(ds.d);
+        en.v = Math.max(0, Math.min(60, v)); if (navigator.vibrate) navigator.vibrate(8); return true;
+      case 'amrap': en = entry(ds.slot); en.v = el.value === '' ? null : Math.max(0, Math.min(60, parseInt(el.value, 10) || 0)); return true;
+      case '5rm': entry(ds.slot).new5RM = el.value; return true;
+      case 'done': en = entry(ds.slot); en.v = en.v === ds.v ? null : ds.v; return true;
+      case 'reps': entry(ds.slot).reps = el.value; return true;
+      case 'skip': en = entry(ds.slot); en.skip = !en.skip; return true;
+      case 'editW': en = entry(ds.slot); en.editW = !en.editW; return true;
+      case 'wstep':
+        en = entry(ds.slot); vm = trainVM();
+        var iw = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
+        var nw = Math.max(0, Math.round((Number(iw.weight) + Number(ds.d) * iw.wStep) * 100) / 100);
+        en.w = nw === iw.autoWeight ? null : nw; if (navigator.vibrate) navigator.vibrate(8); return true;
+      case 'winput':
+        en = entry(ds.slot); vm = trainVM();
+        var iw2 = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0], n = parseFloat(el.value);
+        en.w = el.value === '' || isNaN(n) || n === iw2.autoWeight ? null : n; return true;
+      case 'wreset': entry(ds.slot).w = null; return true;
+      case 'bw': t.bw = el.value; return false;
+      case 'note': t.note = el.value; return false;
+      case 'dot':
+        en = entry(ds.slot); vm = trainVM();
+        var it2 = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0], i = Number(ds.i);
+        en.done = en.done === i + 1 ? i : i + 1;
+        if (en.done === i + 1 && en.done < it2.sets) beginRest(Number(ds.rest), ds.name);
+        return true;
+      case 'rest': beginRest(Number(ds.rest), ds.name); return false;
+      case 'cancelEdit': t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; return true;
+      case 'submit': submit(); return false;
+      case 'closeResult': t.result = null; return true;
+      case 'gotoStats': t.result = null; S.tab = 'stats'; return true;
+    }
+  }
+  function submit() {
+    var vm = trainVM(), t = S.train;
+    if (vm.locked) return;
+    var missing = vm.deload ? [] : vm.items.filter(function (it) { return !it.skip && (it.value === null || it.value === undefined || it.value === ''); });
+    if (missing.length === vm.items.length) return toast('至少填写一个动作');
+    var go = function () {
+      missing.forEach(function (it) { entry(it.slotId).skip = true; });
+      var db = load();
+      var rec = GZ.saveRecord(db, { id: t.recordId, date: t.date, day: t.day, deload: vm.deload, note: t.note, bw: t.bw ? Number(t.bw) : null, entries: t.draft, createdAt: t.recordId ? t.createdAt : Date.now() });
+      save(db);
+      var s = GZ.sessionResult(db, rec.id), rdn = GZ.roundInfo(db), wDone = !t.recordId && s && rdn.week > s.week;
+      var dCyc = s ? GZ.cycleOf(s.week, db.params).cycle : 1, nCyc = GZ.cycleOf(rdn.week, db.params).cycle, cDone = wDone && nCyc > dCyc;
+      t.result = s ? { day: s.rec.day, dayName: s.dayName, week: s.week, weekText: GZ.weekText(s.week, db.params),
+        cycle: dCyc, weeksPerCycle: GZ.cycleLen(db.params), cycleDone: cDone, nextWeekText: GZ.weekText(rdn.week, db.params), volume: Math.round(s.volume),
+        weekDone: wDone, leftText: t.recordId ? '' : rdn.leftText, nextDeload: wDone && GZ.isDeloadWeek(rdn.week, db.params), adds: s.items.filter(function (x) { return x.judgment === '加重'; }).length,
+        items: s.items.map(function (it) { return { tier: it.tier, name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment], next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : GZ.fmtW(it.nextWeight) + ' kg · ' + it.nextStage }; }) } : null;
+      t.recordId = null; t.deload = undefined; t.day = GZ.recommend(db).day; t.draft = GZ.blankDraft(db, t.day); t.bw = ''; t.note = ''; t.date = GZ.today();
+      render();
+    };
+    if (missing.length) confirmBox('还有未填写的动作', missing.map(function (m) { return m.name; }).join('、') + ' 将按“跳过”保存，状态保持不变。', go); else go();
+  }
+  function openSwap(slot) {
+    var t = S.train, vm = trainVM(), it = vm.items.filter(function (x) { return x.slotId === slot; })[0];
+    var ctx = GZ.swapContext(load(), t.day, slot);
+    t.swap = { show: true, slotId: slot, dayId: t.day, slotTier: it.tier, tier: it.tier, q: '', sel: '', scope: 'once', curName: it.name, planName: it.planName,
+      isSub: it.sub, editing: !!t.recordId, week: ctx.week, weight: ctx.weightText, ctxW: ctx.weight, lastW: ctx.lastW };
+  }
+  function swapLib() { var sw = S.train.swap; return GZ.buildLibrary(load(), { tier: sw.tier, q: sw.q, current: sw.curName }); }
+  function updateSwapList() {
+    var el = document.getElementById('swapList'), sw = S.train.swap; if (!el) return;
+    el.innerHTML = '<div class="list">' + libRows(swapLib(), { pick: true, sel: sw.sel, slotTier: sw.slotTier, showTier: !!sw.q, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div>';
+    var sg = document.getElementById('swapSeg'); if (sg) sg.style.display = sw.q ? 'none' : '';
+  }
+  function renderSwap() {
+    var sw = S.train.swap, lib = swapLib(), h = '';
+    h += '<div class="mask" data-act="closeswap"><div class="sheet swap-sheet" data-stop="1"><div class="grabber"></div>' +
+      '<span class="sheet-cap">' + sw.slotTier + ' · 当前 ' + esc(sw.curName) + (sw.planName !== sw.curName ? '（原 ' + esc(sw.planName) + '）' : '') + '</span>' +
+      '<div class="row between"><div class="sheet-title">更换动作</div>' + (sw.isSub ? '<span class="link" data-act="swaprestore">恢复 ' + esc(sw.planName) + '</span>' : '') + '</div>' +
+      '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="swapq" value="' + esc(sw.q) + '" placeholder="搜索动作、部位或器械"></div>' +
+      '<div id="swapSeg"' + (sw.q ? ' style="display:none"' : '') + '>' + seg(lib.tiers.map(function (x) { return { html: x.id + '<span class="seg-n">' + x.n + '</span>', on: sw.tier === x.id, data: ' data-t="' + x.id + '"' }; }), -1, 'swaptier') + '</div>' +
+      '<div class="lib-list" id="swapList"><div class="list">' + libRows(lib, { pick: true, sel: sw.sel, slotTier: sw.slotTier, showTier: !!sw.q, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div></div>';
+    if (sw.sel) {
+      if (!sw.editing) h += seg([{ html: '仅本次', on: sw.scope === 'once', data: ' data-s="once"' }, { html: '以后都用', on: sw.scope === 'perm', data: ' data-s="perm"' }], -1, 'swapscope', 'swap-scope');
+      if (sw.scope === 'perm' && !sw.editing) h += '<div class="list"><div class="cell"><span class="flex1">起始重量</span><input class="cell-in num" inputmode="decimal" data-act="swapw" value="' + esc(sw.weight) + '"><span class="unit">kg</span></div></div>';
+      h += '<div class="sec-f">' + (sw.scope === 'once' || sw.editing
+        ? '本次用「' + esc(sw.sel) + '」代替，记录容量，不改变「' + esc(sw.planName) + '」的阶段和重量。'
+        : '从第 ' + sw.week + ' 周起，' + sw.dayId + ' 的这个位置改为「' + esc(sw.sel) + '」，按 ' + sw.slotTier + ' 规则从起始重量重新进阶；历史记录保持不变。') + '</div>' +
+        '<button class="btn-primary swap-ok" data-act="swapok">确认更换</button>';
+    }
+    return h + '</div></div>';
+  }
+  function swapConfirm() {
+    var t = S.train, sw = t.swap, en = entry(sw.slotId);
+    var wEl = document.querySelector('[data-act=swapw]'); if (wEl) sw.weight = wEl.value;
+    if (sw.scope === 'once' || sw.editing) { en.ex = sw.sel; en.w = null; toast('本次改为 ' + sw.sel); }
+    else {
+      var w = parseFloat(sw.weight);
+      if (isNaN(w) || w < 0) { toast('请填写起始重量'); return false; }
+      var db = load(), r = GZ.swapSlot(db, sw.dayId, sw.slotId, sw.sel, w); save(db);
+      delete en.ex; en.w = null; en.editW = false;
+      toast(r && r.base ? '已更换为 ' + sw.sel : '第 ' + r.fromWeek + ' 周起改为 ' + sw.sel);
+    }
+    sw.show = false; return true;
+  }
+  function startEdit(id) {
+    var db = load(), rec = GZ.getRecord(db, id), t = S.train; if (!rec) return;
+    var draft = GZ.blankDraft(db, rec.day);
+    Object.keys(draft).forEach(function (k) { if (rec.entries[k]) draft[k] = Object.assign({ done: 0 }, rec.entries[k]); });
+    t.recordId = id; t.day = rec.day; t.deload = !!rec.deload; t.draft = draft; t.date = rec.date; t.bw = rec.bw || ''; t.note = rec.note || ''; t.createdAt = rec.createdAt;
+    S.tab = 'train';
+  }
+  function beginRest(sec, name) {
+    clearInterval(rest.timer); rest.show = true; rest.left = sec; rest.total = sec; rest.name = name; renderRest();
+    rest.timer = setInterval(function () {
+      rest.left -= 1;
+      if (rest.left <= 0) { clearInterval(rest.timer); rest.show = false; renderRest(); toast('休息结束，开始下一组'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); return; }
+      renderRest();
+    }, 1000);
+  }
+  function renderRest() {
+    var el = document.getElementById('rest');
+    if (!rest.show) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="pg-train"><div class="mask center rest-mask"><div class="rest-box"><span class="rest-name">' + esc(rest.name) + ' · 组间休息</span><span class="rest-num num">' + fmtSec(rest.left) + '</span>' +
+      '<div class="rest-bar"><div class="rest-in" style="width:' + (rest.left / rest.total * 100) + '%"></div></div>' +
+      '<div class="rest-btns"><div class="rb" data-rest-adj="-30">−30</div><div class="rb main" data-rest-stop="1">跳过休息</div><div class="rb" data-rest-adj="30">+30</div></div></div></div></div>';
+  }
+
+  // ================= 计划 =================
+  function renderPlan() {
+    var db = load(), vm = GZ.buildPlan(db, { cycle: S.plan.cycle }), p = S.plan, h = '';
+    h += '<div class="card next-card"><div class="row"><div class="flex1"><span class="cap">下一次训练</span><div class="next-t"><span class="num accent">' + vm.next.day + '</span> ' + vm.next.name + '</div>' +
+      '<span class="cap">' + vm.next.weekText + (vm.next.deload ? ' · 减载周' : '') + '</span></div><div class="go-btn" data-act="go" data-day="' + vm.next.day + '">开始</div></div>' +
+      '<div class="prog"><div class="row between"><span class="cap">本轮进度（' + vm.weeksPerCycle + ' 周 / 轮）</span><span class="cap"><span class="num strong">' + vm.cycleDone + '</span> / ' + vm.cyclePlanned + ' 次 · ' + vm.cycleProgress + '%</span></div>' +
+      '<div class="bar"><div class="bar-in" style="width:' + vm.cycleProgress + '%"></div></div><span class="cap total-cap">累计已完成 ' + vm.done + ' 次训练</span></div></div>';
+    h += '<div class="card"><div class="card-title"><div class="cyc-nav"><span class="cyc-btn ' + (vm.canPrev ? '' : 'off') + '" data-act="cycle" data-d="-1">‹</span>' +
+      '<span class="t cyc-label">' + vm.cycleText + (vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : '') + '</span>' +
+      '<span class="cyc-btn ' + (vm.canNext ? '' : 'off') + '" data-act="cycle" data-d="1">›</span></div><span class="s">T1 重量 kg</span></div><div class="grid-head"><span class="gw"></span>' +
+      vm.days.map(function (d) { return '<span class="gh num">' + d.id + '</span>'; }).join('') + '</div>';
+    vm.rows.forEach(function (row) {
+      h += '<div class="grid-row"><div class="gw"><span class="num">W' + row.wc + '</span>' + (row.deload ? '<span class="dltag">减载</span>' : '') + '</div>' +
+        row.cells.map(function (c) {
+          return '<div class="gcell ' + c.status + '" data-act="cell" data-day="' + c.day + '" data-status="' + c.status + '" data-id="' + (c.recordId || '') + '"><span class="cw num">' + c.w + '</span>' +
+            (c.status === 'done' ? '<div class="cdot" style="background:' + c.color + '"></div>' : '') + '</div>';
+        }).join('') + '</div>';
+    });
+    h += '<div class="legend"><div class="lg"><div class="sw" style="background:#FF6B1A"></div>已完成 · 圆点为判定</div><div class="lg"><div class="sw" style="box-shadow:inset 0 0 0 2px #FF6B1A"></div>下一次</div><div class="lg"><div class="sw" style="background:#E5E5EA"></div>每次加重的推演</div></div></div>';
+    var ov = vm.overview[p.ov];
+    h += '<div class="card"><div class="card-title"><span class="t">当前状态</span><span class="s">自动更新</span></div>' +
+      seg(vm.overview.map(function (o) { return { html: '<span class="num">' + o.day + '</span>' }; }), p.ov, 'ov') +
+      ov.slots.map(function (s) {
+        return '<div class="ov-row">' + tier(s.tier) + '<div class="ov-main"><span class="ovn">' + s.name + '</span><span class="ov-sub">' + s.stage + (s.fail > 0 ? '<span class="amber"> · 预警 ' + s.fail + '</span>' : '') + '</span></div>' +
+          '<div class="ov-right"><span class="num ov-w">' + s.weight + '<span class="ov-u"> kg</span></span><span class="ov-last"><span style="color:' + s.lastColor + '">' + s.last + '</span>' + (s.gain ? '<span class="green"> ' + s.gain + '</span>' : '') + '</span></div></div>';
+      }).join('') + '</div>';
+    if (p.detail) {
+      var d = p.detail;
+      h += '<div class="mask" data-act="closeDetail"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + d.dateText + ' · 第 ' + d.week + ' 次 · 容量 ' + d.vol + ' kg</span><div class="sheet-title">' + d.day + ' ' + d.dayName + '</div>' +
+        '<div class="list">' + d.items.map(function (it) { return '<div class="cell d-row">' + tier(it.tier) + '<div class="d-main"><span>' + it.name + '</span><span class="d-sub">' + it.w + ' kg × ' + it.input + (it.manual ? '<span class="accent"> · 手动</span>' : '') + '</span></div><div class="d-right"><span class="jtag" style="color:' + it.color + '">' + it.j + '</span><span class="d-sub">' + it.next + '</span></div></div>'; }).join('') + '</div>' +
+        (d.note ? '<div class="note-box">' + esc(d.note) + '</div>' : '') +
+        '<div class="sheet-btns"><div class="btn-ghost" data-act="edit" data-id="' + d.id + '">修改这次</div><div class="btn-ghost solid" data-act="closeDetail">完成</div></div></div></div>';
+    }
+    return h;
+  }
+  function goTrain(day) { var t = S.train; if (!t.recordId) { t.day = day; t.draft = GZ.blankDraft(load(), day); t.deload = undefined; } S.tab = 'train'; }
+  function planAct(act, ds) {
+    var p = S.plan;
+    if (act === 'ov') { p.ov = Number(ds.i); return true; }
+    if (act === 'cycle') {
+      var vm = GZ.buildPlan(load(), { cycle: p.cycle });
+      var next = vm.cycle + Number(ds.d);
+      if (next < 1 || next > vm.maxCycle) return false;
+      p.cycle = next; return true;
+    }
+    if (act === 'go') { goTrain(ds.day); return true; }
+    if (act === 'cell') {
+      if (ds.status === 'done') { p.detail = GZ.buildReview(load()).logs.filter(function (l) { return l.id === ds.id; })[0]; return true; }
+      if (ds.status === 'next' || ds.status === 'ready') { goTrain(ds.day); return true; }
+      toast('推演值：假设每次都加重'); return false;
+    }
+    if (act === 'closeDetail') { p.detail = null; return true; }
+    if (act === 'edit') { p.detail = null; startEdit(ds.id); return true; }
+  }
+
+  // ================= 数据 =================
+  function renderStats() {
+    var s = GZ.buildStats(load()), st = S.stats, k = s.kpi, cur = s.e1rm[st.lift], h = '';
+    S._stats = s;
+    h += '<div class="kpis"><div class="kpi"><span class="k-l">训练次数</span><div><span class="num kv">' + k.sessions + '</span><span class="ku">/ ' + k.planned + '</span></div><div class="kbar"><div class="kin" style="width:' + k.progress + '%"></div></div></div>' +
+      '<div class="kpi"><span class="k-l">累计容量</span><span class="num kv">' + k.volume + '</span><span class="ks">' + k.reps + ' 次</span></div>' +
+      '<div class="kpi"><span class="k-l">加重</span><div><span class="num kv accent">' + k.adds + '</span><span class="ku">次</span></div><span class="ks">预警 ' + k.warns + '</span></div>' +
+      '<div class="kpi"><span class="k-l">T1 达标率</span><span class="num kv">' + (k.t1Rate === null ? '—' : k.t1Rate + '%') + '</span><span class="ks">T2 完成 ' + (k.t2Rate === null ? '—' : k.t2Rate + '%') + '</span></div></div>';
+    h += '<div class="card">' + seg(s.e1rm.map(function (e) { return { html: e.name }; }), st.lift, 'lift');
+    if (cur) {
+      h += '<span class="cap">最佳 e1RM</span><div class="hero"><span class="num hero-v">' + cur.best + '</span><span class="hero-u">kg</span><span class="cap hero-d">' + cur.bestDate + '</span></div>' +
+        '<canvas id="c_e1" class="cv"></canvas>' +
+        '<div class="mini"><div class="mi"><span class="num mi-v">' + cur.slope + '</span><span class="mi-l">kg / 周</span></div><div class="mi"><span class="num mi-v">' + cur.r2 + '</span><span class="mi-l">R²</span></div><div class="mi"><span class="num mi-v accent">' + cur.predict + '</span><span class="mi-l">W' + s.totalWeeks + ' 预测</span></div></div>';
+      if (cur.sampleTip) h += '<div class="tip">' + cur.sampleTip + '</div>';
+      else if (cur.vs1RM !== null && cur.vs1RM > 3) h += '<div class="tip">已超过录入 1RM ' + cur.vs1RM + '%，可以在设置里更新 1RM</div>';
+    }
+    h += '<div class="legend"><div class="lg"><div class="sw" style="background:#FF6B1A"></div>e1RM</div><div class="lg"><div class="sw dash" style="border-color:#0A84FF"></div>回归趋势</div><div class="lg"><div class="sw dash" style="border-color:#C7C7CC"></div>录入 1RM</div></div></div>';
+    var wt = s.weightTrend[st.day];
+    h += '<div class="card"><div class="card-title"><span class="t">重量走势</span><span class="s">空心点为下次计划</span></div>' +
+      seg(s.weightTrend.map(function (d) { return { html: '<span class="num">' + d.day + '</span>' }; }), st.day, 'wday') +
+      '<canvas id="c_w" class="cv"></canvas><div class="legend">' + wt.cols.map(function (c, i) { return '<div class="lg"><div class="sw" style="background:' + Chart.PALETTE[i] + '"></div>' + c.name + '</div>'; }).join('') + '</div></div>';
+    h += '<div class="card"><div class="card-title"><span class="t">每周容量</span><span class="s">重量 × 组 × 次</span></div><canvas id="c_v" class="cv"></canvas><div class="legend">' +
+      s.volume.stacks.map(function (x) { return '<div class="lg"><div class="sw" style="background:' + x.color + '"></div>' + x.name + '</div>'; }).join('') + '</div></div>';
+    h += '<div class="card"><div class="card-title"><span class="t">判定分布</span><span class="s">全部训练日</span></div><div class="row"><canvas id="c_p" class="cv-sq"></canvas><div class="pie-list">' +
+      (s.pie.length ? s.pie.map(function (x) { return '<div class="pl"><div class="sw" style="background:' + x.color + '"></div><span class="pl-l">' + x.label + '</span><span class="num pl-v">' + x.value + '</span><span class="pl-p num">' + x.pct + '%</span></div>'; }).join('') : '<div class="cap">暂无判定</div>') + '</div></div></div>';
+    h += '<div class="sec-h">最高重量</div><div class="list">' +
+      (s.prs.length ? s.prs.map(function (x) { return '<div class="cell pr">' + tier(x.tier) + '<div class="pr-main"><span>' + x.name + '</span><span class="pr-sub">' + x.day + ' · ' + x.date + '</span></div><span class="num pr-w">' + x.w + '<span class="pr-u"> kg</span></span></div>'; }).join('') : '<div class="empty-tip">完成训练后显示</div>') + '</div>';
+    if (s.bw.length >= 2) h += '<div class="sec-h">体重</div><div class="card"><canvas id="c_bw" class="cv short"></canvas></div>';
+    return h;
+  }
+  function ctxOf(id) {
+    var c = document.getElementById(id); if (!c) return null;
+    var r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 2;
+    c.width = r.width * dpr; c.height = r.height * dpr;
+    var ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx: ctx, w: r.width, h: r.height };
+  }
+  function drawStats() {
+    var s = S._stats, st = S.stats, P = Chart.presets, c;
+    if ((c = ctxOf('c_e1')) && s.e1rm[st.lift]) P.e1rm(c.ctx, c.w, c.h, s.e1rm[st.lift], s.totalWeeks);
+    if ((c = ctxOf('c_w'))) P.weight(c.ctx, c.w, c.h, s.weightTrend[st.day], s.totalWeeks);
+    if ((c = ctxOf('c_v'))) P.volume(c.ctx, c.w, c.h, s.volume);
+    if ((c = ctxOf('c_p'))) P.pie(c.ctx, c.w, c.h, s);
+    if ((c = ctxOf('c_bw'))) P.bw(c.ctx, c.w, c.h, s.bw);
+  }
+  function statsAct(act, ds) {
+    if (act === 'lift') { S.stats.lift = Number(ds.i); return true; }
+    if (act === 'wday') { S.stats.day = Number(ds.i); return true; }
+  }
+
+  // ================= 回顾 =================
+  function renderReview() {
+    var vm = GZ.buildReview(load()), r = S.review, h = '';
+    S._review = vm;
+    h += seg([{ html: '总结' }, { html: '周报' }, { html: '日志' }], r.tab, 'rtab');
+    if (r.tab === 0) {
+      h += '<div class="card"><div class="card-title"><span class="t">训练小结</span><span class="link" data-act="copy">复制</span></div>' +
+        vm.insights.map(function (i) { return '<div class="ins"><div class="ins-ic ' + i.type + '">' + i.icon + '</div><span class="ins-t">' + esc(i.text) + '</span></div>'; }).join('') + '</div>';
+      h += '<div class="card"><div class="card-title rules-h" data-act="rules"><span class="t">规则速查</span><span class="link">' + (r.rules ? '收起' : '展开') + '</span></div>';
+      if (r.rules) {
+        h += GZ.RULES.map(function (g) { return '<div class="rg"><div class="rg-t">' + g.title + '</div>' + g.rows.map(function (x) { return '<div class="rr"><span class="r1 num">' + x[0] + '</span><span class="r2">' + x[1] + '</span><span class="r3">' + x[2] + '</span></div>'; }).join('') + '</div>'; }).join('') +
+          GZ.GENERAL_RULES.map(function (g) { return '<div class="gen">' + g + '</div>'; }).join('');
+      } else h += '<span class="cap">T1 三阶进阶、T2 退阶重置、T3 阈值加重与通用规则</span>';
+      h += '</div>';
+    } else if (r.tab === 1) {
+      if (!vm.weeks.length) h += '<div class="empty-tip">完成第一次训练后生成周报</div>';
+      vm.weeks.forEach(function (w) {
+        h += '<div class="card wk"><div class="row between"><div class="row"><span class="wk-n">第 ' + w.week + ' 周</span>' + (w.deload ? '<span class="dltag">减载</span>' : '') + '</div><div class="row dflags">' +
+          w.days.map(function (d) { return '<span class="dflag num ' + (d.on ? 'on' : '') + '">' + d.id + '</span>'; }).join('') + '</div></div>' +
+          '<div class="wk-k"><div class="wkk"><span class="num kv">' + w.volText + '</span><span class="ks">容量' + (w.dv ? '<span class="' + (w.dvUp ? 'dv-up' : 'dv-down') + '"> ' + w.dv + '</span>' : '') + '</span></div>' +
+          '<div class="wkk"><span class="num kv">' + w.sessions + '/' + w.total + '</span><span class="ks">完成</span></div><div class="wkk"><span class="num kv accent">' + w.adds + '</span><span class="ks">加重</span></div>' +
+          '<div class="wkk"><span class="num kv ' + (w.warns ? 'amber' : '') + '">' + w.warns + '</span><span class="ks">预警</span></div></div>' +
+          w.t1.map(function (t) { return '<div class="t1row"><span class="num t1d">' + t.day + '</span><span class="t1n">' + t.name + '</span><span class="num t1w">' + t.w + ' kg × ' + (t.input === null ? '—' : t.input) + '</span><span class="jtag" style="color:' + t.color + '">' + t.j + '</span></div>'; }).join('') + '</div>';
+      });
+    } else {
+      if (!vm.logs.length) h += '<div class="empty-tip">暂无记录</div>';
+      else {
+        h += '<div class="list">';
+        vm.logs.forEach(function (l) {
+          var op = !!r.open[l.id];
+          h += '<div class="log"><div class="cell tap" data-act="toggle" data-id="' + l.id + '"><span class="num log-day">' + l.day + '</span><div class="log-meta"><span>' + l.dayName + ' · 第 ' + l.week + ' 次</span><span class="log-d">' + l.dateText + (l.deload ? ' · 减载' : '') + (l.bw ? ' · ' + l.bw + ' kg' : '') + '</span></div>' +
+            '<span class="num log-v">' + l.vol + '<span class="log-u"> kg</span></span><span class="chev">' + (op ? '⌃' : '›') + '</span></div>';
+          if (op) {
+            h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
+              (l.note ? '<div class="note-box">' + esc(l.note) + '</div>' : '') +
+              '<div class="log-act"><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
+          }
+          h += '</div>';
+        });
+        h += '</div>';
+      }
+      h += '<div class="sec-f" style="text-align:center">修改或删除任意一次记录，之后的重量与阶段会自动重算</div>';
+    }
+    return h;
+  }
+  function reviewAct(act, ds) {
+    var r = S.review;
+    if (act === 'rtab') { r.tab = Number(ds.i); return true; }
+    if (act === 'rules') { r.rules = !r.rules; return true; }
+    if (act === 'toggle') { r.open[ds.id] = !r.open[ds.id]; return true; }
+    if (act === 'edit') { startEdit(ds.id); return true; }
+    if (act === 'del') { confirmBox('删除这次训练？', '删除后，之后所有训练的重量与阶段会按规则重新推算。', function () { var db = load(); GZ.deleteRecord(db, ds.id); save(db); render(true); toast('已删除'); }); return false; }
+    if (act === 'copy') {
+      var v = S._review, lines = ['【GZCLP 训练小结】'].concat(v.insights.map(function (i) { return '· ' + i.text; }));
+      v.weeks.slice().reverse().forEach(function (w) { lines.push('W' + w.week + '：' + w.sessions + '/' + w.total + ' 次，容量 ' + w.volText + (w.dv ? '（' + w.dv + '）' : '') + '，加重 ' + w.adds + ' 项'); });
+      copyText(lines.join('\n'), '已复制');
+      return false;
+    }
+  }
+  function copyText(txt, ok) {
+    var done = function () { toast(ok); };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { toast('复制失败'); } document.body.removeChild(ta);
+    }
+  }
+
+  // ================= 设置 =================
+  function lastBackup() { return Number(localStorage.getItem(BK) || 0); }
+  function renderLibrary() {
+    var db = load(), st = S.settings, lib = GZ.buildLibrary(db, { tier: st.tier, q: st.q }), h = '';
+    h += '<div class="lib-back" data-act="libback">‹ 设置</div>';
+    h += '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="libq" value="' + esc(st.q) + '" placeholder="搜索动作、部位或器械"></div>';
+    h += '<div id="libSeg"' + (st.q ? ' style="display:none"' : '') + '>' + seg(lib.tiers.map(function (x) { return { html: x.id + '<span class="seg-n">' + x.n + '</span>', on: st.tier === x.id, data: ' data-t="' + x.id + '"' }; }), -1, 'libtier') +
+      '<div class="sec-f tier-tip">' + TIER_TIP[st.tier] + '</div></div>';
+    h += '<div id="libList"><div class="list">' + libRows(lib, { showTier: !!st.q }) + '</div></div>';
+    h += '<button class="btn-primary add-btn" data-act="libadd">添加自定义动作</button><div class="sec-f" style="text-align:center">在训练页点动作卡片上的「更换」，即可从动作库选择替换</div>';
+    if (st.add) {
+      var a = st.add;
+      h += '<div class="mask" data-act="addclose"><div class="sheet" data-stop="1"><div class="grabber"></div><div class="sheet-title">添加动作</div><div class="list">' +
+        '<div class="cell"><span class="f-l">名称</span><input class="f-v" data-act="addname" maxlength="16" value="' + esc(a.name) + '" placeholder="例如：史密斯卧推"></div>' +
+        '<label class="cell tap pick-cell"><span class="f-l">部位</span><span class="f-v val">' + esc(a.part) + '</span><span class="chev">›</span><select data-act="addpart">' + GZ.PARTS.map(function (x) { return '<option ' + (x === a.part ? 'selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
+        '<label class="cell tap pick-cell"><span class="f-l">器械</span><span class="f-v val">' + esc(a.equip) + '</span><span class="chev">›</span><select data-act="addequip">' + GZ.EQUIPS.map(function (x) { return '<option ' + (x === a.equip ? 'selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
+        '<div class="cell"><span class="f-l">说明</span><input class="f-v" data-act="adddesc" maxlength="30" value="' + esc(a.desc) + '" placeholder="可选"></div></div>' +
+        '<div class="sec-h">层级</div>' + seg(['T1', 'T2', 'T3'].map(function (x) { return { html: x, on: a.tier === x, data: ' data-t="' + x + '"' }; }), -1, 'addtier') +
+        '<div class="sec-f">' + TIER_TIP[a.tier] + '</div>' +
+        '<div class="sheet-btns"><div class="btn-ghost" data-act="addclose">取消</div><div class="btn-ghost solid" data-act="adddo">添加</div></div></div></div>';
+    }
+    return h;
+  }
+  function renderSettings() {
+    if (S.settings.view === 'lib') return renderLibrary();
+    var db = load(), P = db.params, st = S.settings, h = '', tmPct = Math.round(P.tmRatio * 100), rp = GZ.replay(db), names = libNames(db);
+    var inp = function (k, v, unit, extra) { return '<input class="f-in num" inputmode="decimal" data-act="param" data-k="' + k + '" ' + (extra || '') + ' value="' + v + '"><span class="f-u">' + unit + '</span>'; };
+    h += '<div class="sec-h">基础 1RM</div><div class="list">' +
+      GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
+      '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div></div>' +
+      '<div class="sec-f">训练最大值 TM = 1RM × ' + tmPct + '%，首周重量 = TM × 系数，按 ' + P.rounding + ' kg 取整</div>';
+    h += '<div class="sec-h">加重步幅</div><div class="list">' +
+      GZ.STEP_KEYS.map(function (s) { return '<div class="cell"><span class="flex1">' + s.label + '</span>' + inp('steps.' + s.key, P.steps[s.key], 'kg') + '</div>'; }).join('') +
+      '<div class="cell"><span class="flex1">T3 加重阈值</span>' + inp('t3Threshold', P.t3Threshold, '次') + '</div>' +
+      '<div class="cell"><span class="flex1">取整档位</span>' + inp('rounding', P.rounding, 'kg') + '</div>' +
+      '<div class="cell"><span class="flex1">杠铃杆重</span>' + inp('barWeight', P.barWeight, 'kg') + '</div></div>';
+    h += '<div class="sec-h">判定规则</div>' + seg([{ html: '完整三阶', on: P.ruleMode === 'full', data: ' data-v="full"' }, { html: '严格按表格', on: P.ruleMode === 'excel', data: ' data-v="excel"' }], -1, 'mode', 'mode-seg') +
+      '<div class="sec-f">' + (P.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换。') + '</div>';
+    h += '<div class="sec-h">周期</div><div class="list"><div class="cell"><span class="flex1">每轮周数</span>' + inp('totalWeeks', P.totalWeeks, '周 / 轮') + '</div>' +
+      '<div class="cell"><span class="flex1">减载周</span><label class="ios-sw green"><input type="checkbox" data-act="dlen" ' + (P.deloadEnabled ? 'checked' : '') + '><i></i></label></div>' +
+      (P.deloadEnabled ? '<div class="cell"><span class="flex1">每轮第</span>' + inp('deloadEvery', P.deloadEvery, '周减载') + '</div>' : '') + '</div>' +
+      '<div class="sec-f">完成一轮（' + P.totalWeeks + ' 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内周序计算' + (P.deloadEnabled ? '（每轮第 ' + P.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : '') + '。</div>';
+    var d = db.days[st.d];
+    h += '<div class="sec-h">动作</div><div class="list"><div class="cell tap" data-act="openlib"><span class="flex1">动作库</span><span class="val">' + GZ.libAll(db).length + ' 个' +
+      (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div></div>';
+    h += '<div class="sec-h">训练日动作</div>' + seg(db.days.map(function (x) { return { html: '<span class="num">' + x.id + '</span>' }; }), st.d, 'sday') + '<div class="list">';
+    d.slots.forEach(function (s, si) {
+      var ef = GZ.effectiveSlot(db, s, (rp.counts[d.id] || 0) + 1), cur = ef.slot.name;
+      var opts = names[s.tier].indexOf(cur) < 0 ? [cur].concat(names[s.tier]) : names[s.tier];
+      h += '<div class="cell slot"><div class="slot-top">' + tier(s.tier) + '<label class="flex1 ex-pick">' + esc(cur) + '<span class="chev">⌄</span><select data-act="ex" data-si="' + si + '">' +
+        opts.map(function (n) { return '<option ' + (n === cur ? 'selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '</select></label>' +
+        '<span class="init-step">每次 +' + (P.steps[s.step] || 0) + ' kg' + (s.roundProg ? ' · 取整' : '') + '</span>' +
+        '<span class="init num">' + GZ.fmtW(GZ.initWeight(s, P)) + '<span class="f-u"> kg</span></span></div>' +
+        (ef.change ? '<div class="slot-chg">第 ' + ef.change.fromWeek + ' 周起更换 · 原 ' + esc(s.name) + '</div>' : '') +
+        '<div class="slot-cfg"><span class="cfg-l">首周</span><div class="mini-seg"><div class="ms ' + (s.init.type === 'pct' ? 'on' : '') + '" data-act="itype" data-si="' + si + '" data-v="pct">TM%</div><div class="ms ' + (s.init.type === 'fixed' ? 'on' : '') + '" data-act="itype" data-si="' + si + '" data-v="fixed">固定</div></div>';
+      if (s.init.type === 'pct') {
+        h += '<label class="base-pick">' + GZ.LIFTS[s.init.base] + '<span class="chev">⌄</span><select data-act="base" data-si="' + si + '">' + GZ.LIFT_ORDER.map(function (k) { return '<option value="' + k + '" ' + (k === s.init.base ? 'selected' : '') + '>' + GZ.LIFTS[k] + '</option>'; }).join('') + '</select></label>' +
+          '<span class="cap">×</span><input class="f-in sm num" inputmode="decimal" data-act="pctv" data-si="' + si + '" value="' + Math.round(s.init.pct * 100) + '"><span class="cap">%</span>';
+      } else h += '<input class="f-in sm num" inputmode="decimal" data-act="fixv" data-si="' + si + '" value="' + s.init.value + '"><span class="cap">kg</span>';
+      h += '</div></div>';
+    });
+    h += '</div>';
+    var bk = lastBackup(), stale = !bk || Date.now() - bk > 7 * 86400000;
+    h += '<div class="sec-h">数据</div><div class="list">' +
+      '<div class="cell tap" data-act="export"><span class="flex1 accent">导出备份文件</span><span class="val ' + (stale ? 'amber' : '') + '">' + GZ.backupLabel(bk) + '</span></div>' +
+      '<div class="cell tap" data-act="copyjson"><span class="flex1 accent">复制备份文本</span><span class="chev">›</span></div>' +
+      '<label class="cell tap"><span class="flex1 accent">从文件恢复</span><span class="chev">›</span><input type="file" accept=".json,application/json" data-act="impfile" style="display:none"></label>' +
+      '<div class="cell tap" data-act="imp"><span class="flex1 accent">粘贴文本恢复</span><span class="chev">' + (st.imp ? '⌃' : '›') + '</span></div>' +
+      (st.imp ? '<div class="cell"><div class="flex1"><textarea class="imp" id="impText" placeholder="粘贴导出的 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="doImp">确认恢复（覆盖当前数据）</span></div></div>' : '') +
+      '</div><div class="sec-f">共 ' + db.records.length + ' 条训练记录。数据只存在这台设备的浏览器里，建议每周导出一次，发到微信「文件传输助手」保存。</div>';
+    h += '<div class="list" style="margin-top:20px"><div class="cell tap" data-act="clear"><span class="flex1 red">清空训练记录</span></div><div class="cell tap" data-act="restore"><span class="flex1 red">恢复 Excel 默认</span></div></div>' +
+      '<div class="sec-f">修改参数后，所有历史判定与重量会按新参数重新推算</div>';
+    return h;
+  }
+  function setPath(o, p, v) { var ks = p.split('.'); for (var i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks[ks.length - 1]] = v; }
+  function mutate(fn, tip) { var db = load(); fn(db); save(db); if (tip !== false) toast(tip || '已更新，数据已重算'); return true; }
+  function markBackup() { localStorage.setItem(BK, String(Date.now())); }
+  function exportFile() {
+    var txt = JSON.stringify(load()), name = 'GZCLP备份_' + GZ.today() + '.json';
+    var blob = new Blob([txt], { type: 'application/json' });
+    try {
+      var file = new File([blob], name, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: name }).then(function () { markBackup(); render(true); toast('已导出'); }, function () {});
+        return;
+      }
+    } catch (e) {}
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    markBackup(); render(true); toast('已下载备份文件');
+  }
+  function importText(txt) {
+    try { save(GZ.normalize(JSON.parse(txt))); S.settings.imp = false; S.train.draft = null; S.train.day = null; toast('恢复成功'); render(true); }
+    catch (e) { toast('文件内容不正确'); }
+  }
+  function syncAddInputs() {
+    var a = S.settings.add; if (!a) return;
+    var n = document.querySelector('[data-act=addname]'), d = document.querySelector('[data-act=adddesc]');
+    if (n) a.name = n.value; if (d) a.desc = d.value;
+  }
+  function settingsAct(act, ds, el) {
+    var st = S.settings, si = Number(ds.si);
+    var slotMut = function (fn) { return mutate(function (db) { fn(db.days[st.d].slots[si], db); }); };
+    switch (act) {
+      case 'param': var v = parseFloat(el.value); if (isNaN(v) || v < 0) return true; if (ds.pct) v = v / 100; return mutate(function (db) { setPath(db.params, ds.k, v); });
+      case 'mode': return mutate(function (db) { db.params.ruleMode = ds.v; }, ds.v === 'full' ? '已切换：完整三阶规则' : '已切换：严格按表格公式');
+      case 'dlen': return mutate(function (db) { db.params.deloadEnabled = el.checked; });
+      case 'sday': st.d = Number(ds.i); return true;
+      case 'ex':
+        var dbx = load(), dd = dbx.days[st.d], rx = GZ.swapSlot(dbx, dd.id, dd.slots[si].id, el.value, null); save(dbx);
+        toast(rx && rx.base ? '已更换为 ' + el.value : '第 ' + rx.fromWeek + ' 周起改为 ' + el.value); return true;
+      case 'openlib': st.view = 'lib'; st.q = ''; render(); return false;
+      case 'libback': st.view = ''; st.add = null; render(); return false;
+      case 'libtier': st.tier = ds.t; return true;
+      case 'libq':
+        st.q = el.value;
+        var ll = document.getElementById('libList'); if (ll) ll.innerHTML = '<div class="list">' + libRows(GZ.buildLibrary(load(), { tier: st.tier, q: st.q }), { showTier: !!st.q }) + '</div>';
+        var lsg = document.getElementById('libSeg'); if (lsg) lsg.style.display = st.q ? 'none' : '';
+        return false;
+      case 'libdel':
+        confirmBox('删除「' + ds.name + '」？', '已经练过的记录会保留；正在使用它的训练位置仍按原名显示。', function () { var dbd = load(); GZ.removeCustomEx(dbd, ds.name); save(dbd); render(true); });
+        return false;
+      case 'libadd': st.add = { name: '', desc: '', tier: st.q ? 'T3' : st.tier, part: '其他', equip: '杠铃' }; return true;
+      case 'addclose': st.add = null; return true;
+      case 'addname': st.add.name = el.value; return false;
+      case 'adddesc': st.add.desc = el.value; return false;
+      case 'addpart': st.add.part = el.value; return true;
+      case 'addequip': st.add.equip = el.value; return true;
+      case 'addtier': syncAddInputs(); st.add.tier = ds.t; return true;
+      case 'adddo':
+        syncAddInputs();
+        var dba = load(), err = GZ.addCustomEx(dba, st.add);
+        if (err) { toast(err); return false; }
+        save(dba); st.tier = st.add.tier; st.q = ''; st.add = null; render(); toast('已添加'); return false;
+      case 'itype': return slotMut(function (s, db) { if (s.init.type === ds.v) return; var w = GZ.initWeight(s, db.params); s.init = ds.v === 'fixed' ? { type: 'fixed', value: w } : { type: 'pct', base: s.lift || 'bench', pct: 0.5 }; });
+      case 'base': return slotMut(function (s) { s.init.base = el.value; });
+      case 'pctv': var pv = parseFloat(el.value); if (isNaN(pv)) return true; return slotMut(function (s) { s.init.pct = pv / 100; });
+      case 'fixv': var fv = parseFloat(el.value); if (isNaN(fv)) return true; return slotMut(function (s) { s.init.value = fv; });
+      case 'export': exportFile(); return false;
+      case 'copyjson': copyText(JSON.stringify(load()), '已复制，粘贴到文件传输助手保存'); markBackup(); setTimeout(function () { render(true); }, 50); return false;
+      case 'impfile':
+        var f = el.files && el.files[0]; if (!f) return false;
+        var rd = new FileReader(); rd.onload = function () { confirmBox('从文件恢复？', '当前设备上的数据会被备份文件覆盖。', function () { importText(rd.result); }); }; rd.readAsText(f); el.value = ''; return false;
+      case 'imp': st.imp = !st.imp; return true;
+      case 'doImp': importText(document.getElementById('impText').value); return false;
+      case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { db.records = []; }, '已清空'); S.train.draft = null; S.train.day = null; render(true); }); return false;
+      case 'restore': confirmBox('恢复 Excel 默认？', '参数、动作配置与记录将恢复为表格初始状态（含第 1 周 A1/B1 记录）。', function () { save(GZ.defaults(true)); S.train = { day: null, draft: null, recordId: null, date: GZ.today(), bw: '', note: '', result: null }; render(true); toast('已恢复'); }); return false;
+    }
+  }
+
+  // ================= 框架 =================
+  var RENDER = { train: renderTrain, plan: renderPlan, stats: renderStats, review: renderReview, settings: renderSettings };
+  var ACT = { train: trainAct, plan: planAct, stats: statsAct, review: reviewAct, settings: settingsAct };
+  function render(keepScroll) {
+    var body = document.getElementById('body'), y = body.scrollTop;
+    document.getElementById('navTitle').textContent = S.tab === 'settings' && S.settings.view === 'lib' ? '动作库' : TABS.filter(function (t) { return t.id === S.tab; })[0].title;
+    body.innerHTML = '<div class="pg-' + S.tab + '"><div class="page">' + RENDER[S.tab]() + '</div></div>';
+    body.scrollTop = keepScroll ? y : 0;
+    document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === S.tab); });
+    if (S.tab === 'stats') requestAnimationFrame(drawStats);
+  }
+  function handle(e, type) {
+    var el = e.target.closest('[data-act]');
+    if (!el) return;
+    var tag = el.tagName, isField = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+    if (type === 'click' && isField) return;
+    if (type === 'change' && !isField) return;
+    if (type === 'input' && ['note', 'bw', 'swapq', 'libq'].indexOf(el.dataset.act) < 0) return;
+    if (type === 'change' && (el.dataset.act === 'swapq' || el.dataset.act === 'libq')) return;
+    if (el.classList.contains('mask') && e.target.closest('[data-stop]')) return;
+    var prevTab = S.tab;
+    var res = ACT[S.tab](el.dataset.act, el.dataset, el);
+    if (res) render(prevTab === S.tab);
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    var body = document.getElementById('body');
+    body.addEventListener('click', function (e) { handle(e, 'click'); });
+    body.addEventListener('change', function (e) { handle(e, 'change'); });
+    body.addEventListener('input', function (e) { handle(e, 'input'); });
+    document.getElementById('tabbar').addEventListener('click', function (e) {
+      var it = e.target.closest('.tb-item'); if (!it) return;
+      if (S.tab === it.dataset.tab) { body.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      S.tab = it.dataset.tab; render();
+    });
+    document.getElementById('rest').addEventListener('click', function (e) {
+      var a = e.target.closest('[data-rest-adj]'), s = e.target.closest('[data-rest-stop]');
+      if (a) { rest.left = Math.max(5, rest.left + Number(a.dataset.restAdj)); rest.total = Math.max(rest.total, rest.left); renderRest(); }
+      if (s) { clearInterval(rest.timer); rest.show = false; renderRest(); }
+    });
+    var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); }, 120); });
+    render();
+  });
+})();
+</script>
+</body></html>

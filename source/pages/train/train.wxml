@@ -1,0 +1,236 @@
+<view class="page">
+  <!-- 大标题 -->
+  <view class="head">
+    <view class="row between">
+      <picker mode="date" value="{{date}}" bindchange="onDate" disabled="{{vm.locked}}">
+        <text class="head-sub">{{vm.editing ? '编辑记录 · ' : ''}}{{vm.weekText}}{{vm.locked ? ' · 已完成' : ' · ' + dateText}}</text>
+      </picker>
+      <text class="link" wx:if="{{vm.editing}}" bindtap="cancelEdit">取消</text>
+    </view>
+    <view class="large-title"><text class="num">{{vm.day}}</text> {{vm.dayName}}</view>
+  </view>
+
+  <block wx:if="{{!vm.editing}}">
+    <view class="seg day-seg">
+      <view wx:for="{{vm.days}}" wx:key="id" class="seg-i {{item.id === vm.day ? 'on' : ''}} {{item.done ? 'is-done' : ''}}" data-day="{{item.id}}" bindtap="onDay">
+        <text class="ds-ck" wx:if="{{item.done}}">✓</text><text class="num">{{item.id}}</text><view class="rec-dot" wx:if="{{item.rec}}"></view>
+      </view>
+    </view>
+    <view class="wk-prog">
+      <view class="wk-bar"><view class="wk-in" style="width: {{vm.round.pct}}%"></view></view>
+      <text class="wk-t">本周 <text class="num strong">{{vm.round.done}}/{{vm.round.total}}</text>{{vm.round.left ? ' · 完成 ' + vm.round.leftText + ' 后进入' + vm.round.nextWeekText : ''}}</text>
+    </view>
+  </block>
+
+  <!-- 本周已完成：锁定 -->
+  <view class="card locked" wx:if="{{vm.locked && vm.lockedInfo}}">
+    <view class="lk-head">
+      <view class="lk-ic">✓</view>
+      <view class="flex1">
+        <view class="lk-t">本周 {{vm.day}} 已完成</view>
+        <view class="lk-s">{{vm.lockedInfo.dateText}} · 容量 {{vm.lockedInfo.vol}} kg</view>
+      </view>
+    </view>
+    <view class="lk-row" wx:for="{{vm.lockedInfo.items}}" wx:key="name">
+      <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+      <text class="lk-n">{{item.name}}</text>
+      <text class="lk-w num"><text class="accent" wx:if="{{item.manual}}">手动 </text>{{item.w}} × {{item.input}}</text>
+      <text class="jtag lk-j" style="color: {{item.color}}">{{item.j}}</text>
+    </view>
+    <view class="lk-tip">下周的 {{vm.day}} 会在本周 {{vm.round.leftText}} 完成后开放</view>
+    <view class="sheet-btns">
+      <view class="btn-ghost" data-id="{{vm.lockedInfo.id}}" bindtap="onEditLocked">修改这次</view>
+      <view class="btn-ghost solid" data-day="{{vm.recommended}}" bindtap="onDay">去练 {{vm.recommended}}</view>
+    </view>
+  </view>
+
+  <block wx:if="{{!vm.locked}}">
+
+  <view class="card deload" wx:if="{{vm.deloadSuggest || vm.deload}}">
+    <view class="dl-ic">↓</view>
+    <view class="flex1">
+      <view class="dl-t">减载周</view>
+      <view class="dl-s">T1 −50% · T2 −40% · T3 少 1 组</view>
+    </view>
+    <switch checked="{{vm.deload}}" color="#FF6B1A" bindchange="onDeload" />
+  </view>
+
+  <!-- 动作 -->
+  <view wx:for="{{vm.items}}" wx:key="slotId" class="card ex {{item.skip ? 'skipped' : ''}}">
+    <view class="ex-head">
+      <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+      <view class="ex-title">
+        <text class="ex-name">{{item.name}}</text>
+        <text class="ex-tag sub" wx:if="{{item.sub}}">替换 {{item.planName}}</text>
+        <text class="ex-tag new" wx:elif="{{item.changeNew}}">新动作</text>
+      </view>
+      <text class="ex-act" data-slot="{{item.slotId}}" bindtap="openSwap">更换</text>
+      <text class="ex-skip" data-slot="{{item.slotId}}" bindtap="onSkip">{{item.skip ? '恢复' : '跳过'}}</text>
+    </view>
+
+    <view class="ex-main">
+      <view class="wbox {{item.editW ? 'editing' : ''}}" data-slot="{{item.slotId}}" bindtap="onEditW">
+        <text class="w-num num {{item.manual ? 'manual' : ''}}">{{item.weightText}}</text><text class="w-unit">kg</text>
+        <text class="w-edit">{{item.editW ? '完成' : '调整'}}</text>
+      </view>
+      <text class="reps num">{{item.repsText}}</text>
+    </view>
+    <view class="ex-sub" wx:if="{{item.manual || item.plates || item.fail > 0}}">
+      <text class="accent" wx:if="{{item.manual}}">已手动调整 · 建议 {{item.autoText}} kg{{item.plates || item.fail > 0 ? ' · ' : ''}}</text>
+      <text wx:if="{{item.plates}}">{{item.plates}}</text>
+      <text class="amber" wx:if="{{item.fail > 0}}">{{item.plates ? ' · ' : ''}}已预警 {{item.fail}} 次</text>
+    </view>
+
+    <view class="wedit" wx:if="{{item.editW}}">
+      <view class="stepper">
+        <view class="st-btn" data-slot="{{item.slotId}}" data-d="-1" bindtap="onWStep">−</view>
+        <input class="st-val wide num" type="digit" value="{{item.weightText}}" data-slot="{{item.slotId}}" bindblur="onWInput" bindconfirm="onWInput" />
+        <view class="st-btn" data-slot="{{item.slotId}}" data-d="1" bindtap="onWStep">+</view>
+      </view>
+      <text class="we-step">每次 {{item.wStep}} kg</text>
+      <text class="link we-reset" wx:if="{{item.manual}}" data-slot="{{item.slotId}}" bindtap="onWReset">恢复 {{item.autoText}}</text>
+    </view>
+
+    <block wx:if="{{!item.skip}}">
+      <view class="dots">
+        <view wx:for="{{item.dots}}" wx:for-item="d" wx:key="i" class="dot {{d.on ? 'on' : ''}} {{d.amrap ? 'amrap' : ''}}"
+          data-slot="{{item.slotId}}" data-i="{{d.i}}" data-rest="{{item.rest}}" data-name="{{item.name}}" bindtap="onDot">{{d.amrap ? '+' : d.i + 1}}</view>
+        <view class="rest-btn" data-rest="{{item.rest}}" data-name="{{item.name}}" bindtap="startRest">休息 {{item.restText}}</view>
+      </view>
+
+      <view class="inrow" wx:if="{{item.inputType === 'amrap'}}">
+        <view class="flex1">
+          <view class="in-label">末组次数</view>
+          <view class="in-hint">{{item.amrapHint}}</view>
+        </view>
+        <view class="stepper">
+          <view class="st-btn" data-slot="{{item.slotId}}" data-d="-1" bindtap="onStep">−</view>
+          <input class="st-val num" type="number" value="{{item.value === null ? '' : item.value}}" placeholder="—" placeholder-class="ph" data-slot="{{item.slotId}}" bindinput="onAmrap" />
+          <view class="st-btn" data-slot="{{item.slotId}}" data-d="1" bindtap="onStep">+</view>
+        </view>
+      </view>
+      <view class="inrow" wx:if="{{item.need5RM}}">
+        <view class="flex1"><view class="in-label">新 5RM</view><view class="in-hint">10×1+ 未达标时填写，用于重置</view></view>
+        <input class="mini-in num" type="digit" value="{{item.new5RM}}" placeholder="kg" placeholder-class="ph" data-slot="{{item.slotId}}" bindinput="on5RM" />
+      </view>
+
+      <view class="inrow col" wx:if="{{item.inputType === 'done'}}">
+        <view class="seg seg-done">
+          <view class="seg-i {{item.value === '完成' ? 'on ok' : ''}}" data-slot="{{item.slotId}}" data-v="完成" bindtap="onDone">全部完成</view>
+          <view class="seg-i {{item.value === '未完成' ? 'on bad' : ''}}" data-slot="{{item.slotId}}" data-v="未完成" bindtap="onDone">未完成</view>
+        </view>
+        <view class="subrow" wx:if="{{item.value === '未完成'}}">
+          <text class="in-hint">实际总次数（可选，用于容量）</text>
+          <input class="mini-in num" type="number" value="{{item.reps2}}" placeholder="{{item.sets * item.reps - 2}}" placeholder-class="ph" data-slot="{{item.slotId}}" bindinput="onReps" />
+        </view>
+      </view>
+
+      <view class="verdict" wx:if="{{item.preview}}">
+        <view class="v-ic" style="background: {{item.preview.color}}">{{item.preview.icon}}</view>
+        <text class="v-j" style="color: {{item.preview.color}}">{{item.preview.judgment}}</text>
+        <text class="v-l" wx:if="{{item.preview.sub}}">不影响 {{item.preview.origName}} 的进阶</text>
+        <view class="v-next" wx:elif="{{item.preview.judgment !== '减载'}}">
+          <text class="v-l">下次</text>
+          <text class="num v-w">{{item.preview.nextWeight}}</text><text class="v-u">kg</text>
+          <text class="v-stage" wx:if="{{item.preview.stageChanged}}">· {{item.preview.nextStage}}</text>
+        </view>
+        <text class="v-l" wx:else>按减载重量完成</text>
+      </view>
+    </block>
+  </view>
+
+  <view class="list">
+    <view class="cell">
+      <text class="flex1">体重</text>
+      <input class="cell-in num" type="digit" value="{{bw}}" placeholder="可选" placeholder-class="ph" bindinput="onBw" />
+      <text class="unit">kg</text>
+    </view>
+    <view class="cell">
+      <textarea class="note" value="{{note}}" placeholder="备注：状态、睡眠、技术要点" placeholder-class="ph" auto-height maxlength="200" bindinput="onNote" />
+    </view>
+  </view>
+
+  <button class="btn-primary submit" bindtap="onSubmit">{{vm.editing ? '保存修改' : '完成训练'}}<text class="btn-count num">{{vm.filled}}/{{vm.total}}</text></button>
+  </block>
+
+  <!-- 更换动作 -->
+  <view class="mask" wx:if="{{swap.show}}" bindtap="closeSwap">
+    <view class="sheet swap-sheet" catchtap="noop">
+      <view class="grabber"></view>
+      <text class="sheet-cap">{{swap.slotTier}} · 当前 {{swap.curName}}{{swap.planName !== swap.curName ? '（原 ' + swap.planName + '）' : ''}}</text>
+      <view class="row between"><view class="sheet-title">更换动作</view><text class="link" wx:if="{{swap.isSub}}" bindtap="swapRestore">恢复 {{swap.planName}}</text></view>
+      <view class="search"><text class="search-ic">⌕</text><input class="search-in" value="{{swap.q}}" placeholder="搜索动作、部位或器械" placeholder-class="ph" bindinput="swapQ" /></view>
+      <view class="seg" wx:if="{{!swap.q}}">
+        <view wx:for="{{swap.lib.tiers}}" wx:key="id" class="seg-i {{swap.tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="swapTier">{{item.id}}<text class="seg-n">{{item.n}}</text></view>
+      </view>
+      <scroll-view scroll-y class="lib-list">
+        <view class="list">
+          <view wx:for="{{swap.lib.list}}" wx:key="name" class="cell tap lib-row {{swap.sel === item.name ? 'sel' : ''}}" data-name="{{item.name}}" bindtap="swapPick">
+            <view class="flex1">
+              <view class="lib-n">{{item.name}}<text class="tier t-{{item.tier}} lib-t" wx:if="{{swap.q || item.tier !== swap.slotTier}}">{{item.tier}}</text><text class="lib-c" wx:if="{{item.custom}}">自定义</text></view>
+              <view class="lib-s">{{item.part}} · {{item.equip}}{{item.last ? ' · 上次 ' + item.last + ' kg' : ''}}</view>
+            </view>
+            <text class="lib-cur" wx:if="{{item.current}}">当前</text>
+            <text class="lib-ck" wx:if="{{swap.sel === item.name}}">✓</text>
+          </view>
+          <view class="empty-tip" wx:if="{{!swap.lib.list.length}}">没有找到，可在「设置 → 动作库」添加自定义动作</view>
+        </view>
+      </scroll-view>
+      <block wx:if="{{swap.sel}}">
+        <view class="seg swap-scope" wx:if="{{!swap.editing}}">
+          <view class="seg-i {{swap.scope === 'once' ? 'on' : ''}}" data-s="once" bindtap="swapScope">仅本次</view>
+          <view class="seg-i {{swap.scope === 'perm' ? 'on' : ''}}" data-s="perm" bindtap="swapScope">以后都用</view>
+        </view>
+        <view class="list" wx:if="{{swap.scope === 'perm'}}">
+          <view class="cell"><text class="flex1">起始重量</text><input class="cell-in num" type="digit" value="{{swap.weight}}" bindinput="swapWeight" /><text class="unit">kg</text></view>
+        </view>
+        <view class="sec-f">{{swap.scope === 'once' ? '本次用「' + swap.sel + '」代替，记录容量，不改变「' + swap.planName + '」的阶段和重量。' : '从第 ' + swap.week + ' 周起，' + swap.dayId + ' 的这个位置改为「' + swap.sel + '」，按 ' + swap.slotTier + ' 规则从起始重量重新进阶；历史记录保持不变。'}}</view>
+        <button class="btn-primary swap-ok" bindtap="swapConfirm">确认更换</button>
+      </block>
+    </view>
+  </view>
+
+  <!-- 组间休息 -->
+  <view class="mask center rest-mask" wx:if="{{rest.show}}">
+    <view class="rest-box">
+      <text class="rest-name">{{rest.name}} · 组间休息</text>
+      <text class="rest-num num">{{rest.text}}</text>
+      <view class="rest-bar"><view class="rest-in" style="width: {{rest.pct}}%"></view></view>
+      <view class="rest-btns">
+        <view class="rb" data-d="-30" bindtap="adjRest">−30</view>
+        <view class="rb main" bindtap="stopRest">跳过休息</view>
+        <view class="rb" data-d="30" bindtap="adjRest">+30</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 结算 -->
+  <view class="mask" wx:if="{{result}}" bindtap="closeResult">
+    <view class="sheet" catchtap="noop">
+      <view class="grabber"></view>
+      <text class="sheet-cap">{{result.day}} {{result.dayName}} · {{result.weekText}}</text>
+      <view class="sheet-title">{{result.cycleDone ? '第 ' + result.cycle + ' 轮完成' : result.weekDone ? '本周完成' : '训练完成'}}</view>
+      <view class="wk-done" wx:if="{{result.cycleDone}}">第 {{result.cycle}} 轮 {{result.weeksPerCycle}} 周全部完成，进入第 {{result.cycle + 1}} 轮{{result.nextDeload ? '（含减载周）' : ''}}</view>
+      <view class="wk-done" wx:elif="{{result.weekDone}}">A1 · B1 · A2 · B2 全部完成，已进入{{result.nextWeekText}}{{result.nextDeload ? '（减载周）' : ''}}</view>
+      <view class="wk-left" wx:elif="{{result.leftText}}">本周还剩 {{result.leftText}}</view>
+      <view class="res-kpi">
+        <view class="rk"><text class="num rk-v">{{result.volume}}</text><text class="rk-l">容量 kg</text></view>
+        <view class="rk"><text class="num rk-v accent">{{result.adds}}</text><text class="rk-l">项加重</text></view>
+      </view>
+      <view class="list">
+        <view class="cell res-row" wx:for="{{result.items}}" wx:key="name">
+          <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+          <text class="res-name flex1">{{item.name}}</text>
+          <view class="res-r">
+            <text class="jtag" style="color: {{item.color}}">{{item.j}}</text>
+            <text class="res-next num">{{item.next}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="sheet-btns">
+        <view class="btn-ghost" bindtap="gotoStats">查看数据</view>
+        <view class="btn-ghost solid" bindtap="closeResult">好</view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,101 @@
+<view class="page">
+  <view class="sec-h">基础 1RM</view>
+  <view class="list">
+    <view class="cell" wx:for="{{lifts}}" wx:key="key">
+      <text class="flex1">{{item.name}}</text>
+      <text class="tm">TM {{item.tm}}</text>
+      <input class="f-in num" type="digit" value="{{item.oneRM}}" data-k="oneRM.{{item.key}}" bindblur="onParam" />
+      <text class="f-u">kg</text>
+    </view>
+    <view class="cell">
+      <text class="flex1">TM 比例</text>
+      <input class="f-in num" type="digit" value="{{tmPct}}" data-k="tmRatio" data-pct="1" bindblur="onParam" />
+      <text class="f-u">%</text>
+    </view>
+  </view>
+  <view class="sec-f">训练最大值 TM = 1RM × {{tmPct}}%，首周重量 = TM × 系数，按 {{p.rounding}} kg 取整</view>
+
+  <view class="sec-h">加重步幅</view>
+  <view class="list">
+    <view class="cell" wx:for="{{steps}}" wx:key="key">
+      <text class="flex1">{{item.label}}</text>
+      <input class="f-in num" type="digit" value="{{item.v}}" data-k="steps.{{item.key}}" bindblur="onParam" />
+      <text class="f-u">kg</text>
+    </view>
+    <view class="cell"><text class="flex1">T3 加重阈值</text><input class="f-in num" type="number" value="{{p.t3Threshold}}" data-k="t3Threshold" bindblur="onParam" /><text class="f-u">次</text></view>
+    <view class="cell"><text class="flex1">取整档位</text><input class="f-in num" type="digit" value="{{p.rounding}}" data-k="rounding" bindblur="onParam" /><text class="f-u">kg</text></view>
+    <view class="cell"><text class="flex1">杠铃杆重</text><input class="f-in num" type="digit" value="{{p.barWeight}}" data-k="barWeight" bindblur="onParam" /><text class="f-u">kg</text></view>
+  </view>
+
+  <view class="sec-h">判定规则</view>
+  <view class="seg mode-seg">
+    <view class="seg-i {{p.ruleMode === 'full' ? 'on' : ''}}" data-v="full" bindtap="onMode">完整三阶</view>
+    <view class="seg-i {{p.ruleMode === 'excel' ? 'on' : ''}}" data-v="excel" bindtap="onMode">严格按表格</view>
+  </view>
+  <view class="sec-f">{{p.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换。'}}</view>
+
+  <view class="sec-h">周期</view>
+  <view class="list">
+    <view class="cell"><text class="flex1">每轮周数</text><input class="f-in num" type="number" value="{{p.totalWeeks}}" data-k="totalWeeks" bindblur="onParam" /><text class="f-u">周 / 轮</text></view>
+    <view class="cell"><text class="flex1">减载周</text><switch checked="{{p.deloadEnabled}}" color="#34C759" bindchange="onDeload" /></view>
+    <view class="cell" wx:if="{{p.deloadEnabled}}"><text class="flex1">每轮第</text><input class="f-in num" type="number" value="{{p.deloadEvery}}" data-k="deloadEvery" bindblur="onParam" /><text class="f-u">周减载</text></view>
+  </view>
+  <view class="sec-f">完成一轮（{{p.totalWeeks}} 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内的周序计算{{p.deloadEnabled ? '（每轮第 ' + p.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : ''}}。</view>
+
+  <view class="sec-h">动作</view>
+  <view class="list">
+    <view class="cell tap" bindtap="openLib"><text class="flex1">动作库</text><text class="val">{{libCount}} 个{{customCount ? ' · 自定义 ' + customCount : ''}}</text><text class="chev">›</text></view>
+  </view>
+
+  <view class="sec-h">训练日动作</view>
+  <view class="seg">
+    <view wx:for="{{days}}" wx:key="id" class="seg-i {{dIdx === index ? 'on' : ''}}" data-i="{{index}}" bindtap="onDayTab"><text class="num">{{item.id}}</text></view>
+  </view>
+  <view class="list">
+    <view class="cell slot" wx:for="{{days[dIdx].slots}}" wx:key="id" wx:for-item="s" wx:for-index="si">
+      <view class="slot-top">
+        <text class="tier t-{{s.tier}}">{{s.tier}}</text>
+        <picker class="flex1" range="{{s.opts}}" value="{{s.optIdx}}" data-si="{{si}}" bindchange="onEx">
+          <view class="ex-pick">{{s.name}}<text class="chev">⌄</text></view>
+        </picker>
+        <text class="init-step">每次 +{{s.stepText}}</text>
+        <text class="init num">{{s.initW}}<text class="f-u"> kg</text></text>
+      </view>
+      <view class="slot-chg" wx:if="{{s.changeText}}">{{s.changeText}}</view>
+      <view class="slot-cfg">
+        <text class="cfg-l">首周</text>
+        <view class="mini-seg">
+          <view class="ms {{s.init.type === 'pct' ? 'on' : ''}}" data-si="{{si}}" data-v="pct" bindtap="onInitType">TM%</view>
+          <view class="ms {{s.init.type === 'fixed' ? 'on' : ''}}" data-si="{{si}}" data-v="fixed" bindtap="onInitType">固定</view>
+        </view>
+        <block wx:if="{{s.init.type === 'pct'}}">
+          <picker range="{{liftNames}}" value="{{s.baseIdx}}" data-si="{{si}}" bindchange="onBase"><view class="base-pick">{{s.baseName}}<text class="chev">⌄</text></view></picker>
+          <text class="cap">×</text>
+          <input class="f-in sm num" type="digit" value="{{s.pctText}}" data-si="{{si}}" bindblur="onPct" /><text class="cap">%</text>
+        </block>
+        <block wx:else>
+          <input class="f-in sm num" type="digit" value="{{s.init.value}}" data-si="{{si}}" bindblur="onFixed" /><text class="cap">kg</text>
+        </block>
+      </view>
+    </view>
+  </view>
+
+  <view class="sec-h">数据</view>
+  <view class="list">
+    <view class="cell tap" bindtap="exportData"><text class="flex1 accent">导出备份</text><text class="val">{{backupText}}</text></view>
+    <view class="cell tap" bindtap="toggleImport"><text class="flex1 accent">导入备份</text><text class="chev">›</text></view>
+    <view class="cell" wx:if="{{showImport}}">
+      <view class="flex1">
+        <textarea class="imp" maxlength="-1" placeholder="粘贴导出的 JSON" placeholder-class="ph" bindinput="onImportText" />
+        <view class="btn-small rust" style="margin-top: 16rpx" bindtap="doImport">确认导入（覆盖当前数据）</view>
+      </view>
+    </view>
+  </view>
+  <view class="sec-f">共 {{recordCount}} 条训练记录，数据只存在本机，建议每周备份一次</view>
+
+  <view class="list" style="margin-top: 40rpx">
+    <view class="cell tap" bindtap="clearRecords"><text class="flex1 red">清空训练记录</text></view>
+    <view class="cell tap" bindtap="restore"><text class="flex1 red">恢复 Excel 默认</text></view>
+  </view>
+  <view class="sec-f">修改参数后，所有历史判定与重量会按新参数重新推算</view>
+</view>

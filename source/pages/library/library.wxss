@@ -1,0 +1,16 @@
+.search { display: flex; align-items: center; background: var(--fill); border-radius: 20rpx; padding: 0 20rpx; height: 72rpx; margin-bottom: 20rpx; }
+.search-ic { color: var(--label2); font-size: 32rpx; margin-right: 10rpx; }
+.search-in { flex: 1; font-size: 30rpx; color: var(--label); }
+.seg-n { font-size: 20rpx; color: var(--label2); margin-left: 6rpx; font-weight: 500; }
+.tier-tip { padding-top: 0; margin-top: -8rpx; margin-bottom: 12rpx; }
+.lib-row { align-items: flex-start; padding-top: 22rpx; padding-bottom: 22rpx; }
+.lib-n { font-size: 30rpx; font-weight: 500; display: flex; align-items: center; gap: 10rpx; }
+.lib-t { height: 30rpx; font-size: 18rpx; padding: 0 8rpx; }
+.lib-c { font-size: 20rpx; color: var(--blue); }
+.lib-s { font-size: 24rpx; color: var(--label2); margin-top: 2rpx; }
+.lib-d { font-size: 24rpx; color: var(--label3); margin-top: 2rpx; }
+.lib-del { font-size: 26rpx; color: var(--red); padding: 4rpx 0 4rpx 24rpx; }
+.add-btn { margin-top: 32rpx; }
+.f-l { width: 120rpx; color: var(--label); }
+.f-v { flex: 1; text-align: right; font-size: 30rpx; color: var(--label); }
+.f-v.val { color: var(--label2); }

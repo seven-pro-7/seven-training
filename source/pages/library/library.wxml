@@ -1,0 +1,44 @@
+<view class="page">
+  <view class="search"><text class="search-ic">⌕</text><input class="search-in" value="{{q}}" placeholder="搜索动作、部位或器械" placeholder-class="ph" bindinput="onQ" /></view>
+  <view class="seg" wx:if="{{!q}}">
+    <view wx:for="{{lib.tiers}}" wx:key="id" class="seg-i {{tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="onTier">{{item.id}}<text class="seg-n">{{item.n}}</text></view>
+  </view>
+  <view class="sec-f tier-tip" wx:if="{{!q}}">{{tierTip[tier]}}</view>
+
+  <view class="list">
+    <view wx:for="{{lib.list}}" wx:key="name" class="cell lib-row">
+      <view class="flex1">
+        <view class="lib-n">{{item.name}}<text class="tier t-{{item.tier}} lib-t" wx:if="{{q}}">{{item.tier}}</text><text class="lib-c" wx:if="{{item.custom}}">自定义</text></view>
+        <view class="lib-s">{{item.part}} · {{item.equip}}{{item.last ? ' · 最近 ' + item.last + ' kg' : ''}}</view>
+        <view class="lib-d">{{item.desc}}</view>
+      </view>
+      <text class="lib-del" wx:if="{{item.custom}}" data-name="{{item.name}}" bindtap="onDel">删除</text>
+    </view>
+    <view class="empty-tip" wx:if="{{!lib.list.length}}">没有找到相关动作</view>
+  </view>
+
+  <button class="btn-primary add-btn" bindtap="openAdd">添加自定义动作</button>
+  <view class="sec-f" style="text-align: center">在训练页点动作卡片上的「更换」，即可从动作库选择替换</view>
+
+  <view class="mask" wx:if="{{add.show}}" bindtap="closeAdd">
+    <view class="sheet" catchtap="noop">
+      <view class="grabber"></view>
+      <view class="sheet-title">添加动作</view>
+      <view class="list">
+        <view class="cell"><text class="f-l">名称</text><input class="f-v" value="{{add.name}}" maxlength="16" placeholder="例如：史密斯卧推" placeholder-class="ph" bindinput="addName" /></view>
+        <picker range="{{parts}}" value="{{add.partIdx}}" bindchange="addPart"><view class="cell tap"><text class="f-l">部位</text><text class="f-v val">{{parts[add.partIdx]}}</text><text class="chev">›</text></view></picker>
+        <picker range="{{equips}}" value="{{add.equipIdx}}" bindchange="addEquip"><view class="cell tap"><text class="f-l">器械</text><text class="f-v val">{{equips[add.equipIdx]}}</text><text class="chev">›</text></view></picker>
+        <view class="cell"><text class="f-l">说明</text><input class="f-v" value="{{add.desc}}" maxlength="30" placeholder="可选" placeholder-class="ph" bindinput="addDesc" /></view>
+      </view>
+      <view class="sec-h">层级</view>
+      <view class="seg">
+        <view wx:for="{{['T1','T2','T3']}}" wx:key="*this" class="seg-i {{add.tier === item ? 'on' : ''}}" data-t="{{item}}" bindtap="addTier">{{item}}</view>
+      </view>
+      <view class="sec-f">{{tierTip[add.tier]}}</view>
+      <view class="sheet-btns">
+        <view class="btn-ghost" bindtap="closeAdd">取消</view>
+        <view class="btn-ghost solid" bindtap="doAdd">添加</view>
+      </view>
+    </view>
+  </view>
+</view>

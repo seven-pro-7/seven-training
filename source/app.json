@@ -1,0 +1,58 @@
+{
+  "pages": [
+    "pages/train/train",
+    "pages/plan/plan",
+    "pages/stats/stats",
+    "pages/review/review",
+    "pages/settings/settings",
+    "pages/library/library"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#F2F2F7",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "GZCLP",
+    "backgroundColor": "#F2F2F7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#8E8E93",
+    "selectedColor": "#FF6B1A",
+    "backgroundColor": "#F9F9F9",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/train/train",
+        "text": "训练",
+        "iconPath": "assets/tab-train.png",
+        "selectedIconPath": "assets/tab-train-on.png"
+      },
+      {
+        "pagePath": "pages/plan/plan",
+        "text": "计划",
+        "iconPath": "assets/tab-plan.png",
+        "selectedIconPath": "assets/tab-plan-on.png"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "数据",
+        "iconPath": "assets/tab-stats.png",
+        "selectedIconPath": "assets/tab-stats-on.png"
+      },
+      {
+        "pagePath": "pages/review/review",
+        "text": "回顾",
+        "iconPath": "assets/tab-review.png",
+        "selectedIconPath": "assets/tab-review-on.png"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "text": "设置",
+        "iconPath": "assets/tab-me.png",
+        "selectedIconPath": "assets/tab-me-on.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}
