@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var GZ = window.GZ, Chart = window.GZChart;
-  var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup';
+  var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', BK_DISMISS = 'gzclp_bk_dismiss';
   var TABS = [
     { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
     { id: 'review', title: '回顾' }, { id: 'settings', title: '设置' }
@@ -32,8 +32,130 @@
     }).join('');
   }
 
-  function load() { var db = null; try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) {} if (!db) { db = GZ.defaults(true); save(db); } return GZ.normalize(db); }
-  function save(db) { localStorage.setItem(KEY, JSON.stringify(db)); }
+  function rawLoad() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
+  function load() { var db = rawLoad(); if (!db) { db = GZ.defaults(true); save(db, { fromSync: true }); } return GZ.normalize(db); }
+  /** 保存到本机；用户操作产生的保存会记下配置修改时间，并在 2 秒后自动同步到云端 */
+  function save(db, opt) {
+    var fromSync = opt && opt.fromSync;
+    if (!fromSync) { var prev = rawLoad(); if (prev) GZ.stampConfig(GZ.normalize(prev), db); }
+    localStorage.setItem(KEY, JSON.stringify(db));
+    if (!fromSync) Sync.schedule();
+  }
+
+  // ================= 云同步（GitHub 私有仓库） =================
+  /**
+   * 离线优先：所有读写都先落本机 localStorage，同步只是在后台把本机与云端合并。
+   * 云端是私有仓库里的一个 JSON 文件，通过 GitHub Contents API 读写（带 sha 防覆盖，冲突时重新合并再写）。
+   * 令牌只存在本机 gzclp_sync_v1，不进入备份文件，也不会被同步到云端。
+   */
+  var Sync = (function () {
+    var API = 'https://api.github.com', busy = false, again = false, timer = null;
+    function cfg() { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || null; } catch (e) { return null; } }
+    function setCfg(c) { if (c) localStorage.setItem(SYNC_KEY, JSON.stringify(c)); else localStorage.removeItem(SYNC_KEY); }
+    function on() { var c = cfg(); return !!(c && c.token && c.owner && c.repo); }
+    function b64enc(str) { var b = new TextEncoder().encode(str), bin = ''; for (var i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); }
+    function b64dec(x) { var bin = atob(String(x).replace(/\s/g, '')), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
+    function filePath(c) { return '/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo) + '/contents/' + (c.path || 'gzclp-data.json').split('/').map(encodeURIComponent).join('/'); }
+    function req(c, method, path, body) {
+      var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, t = ctl ? setTimeout(function () { ctl.abort(); }, 15000) : 0;
+      var headers = { 'Authorization': 'Bearer ' + c.token, 'Accept': 'application/vnd.github+json' };
+      if (body) headers['Content-Type'] = 'application/json';
+      return fetch(API + path, { method: method, cache: 'no-store', headers: headers, body: body ? JSON.stringify(body) : undefined, signal: ctl ? ctl.signal : undefined })
+        .then(function (r) { clearTimeout(t); return r.text().then(function (tx) { var j = null; try { j = tx ? JSON.parse(tx) : null; } catch (e) {} return { status: r.status, json: j }; }); },
+          function () { clearTimeout(t); return { status: 0, json: null }; });
+    }
+    function errMsg(st) {
+      if (st === 0) return '网络不通（GitHub 在当前网络下可能不稳定），数据已保存在本机，稍后自动重试';
+      if (st === 401) return '令牌无效或已过期，请在设置里更换';
+      if (st === 403) return '令牌权限不足（需要该仓库的 Contents 读写），或请求过于频繁';
+      if (st === 404) return '找不到这个仓库，或令牌没有这个仓库的权限';
+      if (st === 'public') return '这是公开仓库，训练数据会被所有人看到。为了安全只支持私有仓库';
+      if (st === 'bad') return '云端文件内容损坏，已停止同步以免覆盖，请联系开发者';
+      return 'GitHub 返回错误 ' + st;
+    }
+    /** 一次完整同步：拉取 → 合并 → 写回本机（有变化时）→ 推送（云端不同时） */
+    function run(manual) {
+      var c = cfg(); if (!on()) return Promise.resolve(false);
+      if (busy) { again = true; return Promise.resolve(false); }
+      busy = true; c.state = 'syncing'; setCfg(c); refresh();
+      var attempt = function (n) {
+        return req(c, 'GET', filePath(c)).then(function (g) {
+          if (g.status !== 200 && g.status !== 404) throw g.status;
+          var remote = null, sha = null;
+          if (g.status === 200) { sha = g.json.sha; try { remote = GZ.normalize(JSON.parse(b64dec(g.json.content))); } catch (e) { throw 'bad'; } }
+          var raw = rawLoad(), local = GZ.normalize(raw || GZ.defaults(true)), merged = GZ.mergeDb(local, remote);
+          var pulled = !GZ.sameDb(merged, local);
+          if (pulled || !raw) save(merged, { fromSync: true });
+          if (remote && GZ.sameDb(merged, remote)) return { pulled: pulled, pushed: false, n: merged.records.length };
+          var body = { message: '同步训练数据 · ' + GZ.today() + ' · ' + merged.records.length + ' 条记录', content: b64enc(JSON.stringify(merged)) };
+          if (sha) body.sha = sha;
+          return req(c, 'PUT', filePath(c), body).then(function (pr) {
+            if ((pr.status === 409 || pr.status === 422) && n < 2) return attempt(n + 1); // 云端刚被别的设备改过：重新拉取合并
+            if (pr.status !== 200 && pr.status !== 201) throw pr.status;
+            return { pulled: pulled, pushed: true, n: merged.records.length };
+          });
+        });
+      };
+      return attempt(0).then(function (res) {
+        c = cfg(); if (!c) { busy = false; return false; }
+        c.state = 'ok'; c.lastAt = Date.now(); c.lastErr = ''; c.count = res.n; setCfg(c); busy = false;
+        if (manual) toast(res.pulled ? '已同步，合并了其他设备的更新' : '已同步');
+        refresh(res.pulled);
+        if (again) { again = false; run(); }
+        return true;
+      }, function (st) {
+        busy = false; c = cfg(); if (!c) return false;
+        c.state = 'err'; c.lastErr = errMsg(st); c.errAt = Date.now(); setCfg(c);
+        if (manual) toast(c.lastErr);
+        refresh(false);
+        return false;
+      });
+    }
+    function schedule() { if (!on()) return; clearTimeout(timer); timer = setTimeout(function () { run(); }, 2000); }
+    /** 同步完成后刷新界面：拉到新数据就重算当前页；用户正在输入时不打断 */
+    function refresh(pulled) {
+      var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
+      if (pulled) {
+        // 拉到其他设备的训练后，若本机还没开始填当天的训练，重新定位到「下一次该练的训练日」
+        var t = S.train, d = t.draft, touched = !!t.recordId || !!t.result || (t.swap && t.swap.show);
+        if (d) Object.keys(d).forEach(function (k) { var e = d[k]; if (e && (e.v !== null && e.v !== undefined || e.done || e.w !== undefined || e.ex)) touched = true; });
+        if (!touched) { t.day = null; t.draft = null; t.deload = undefined; }
+      }
+      if (typing) return;
+      if (pulled || (S.tab === 'settings' && S.settings.view !== 'lib')) render(true);
+    }
+    /** 首次连接：先确认仓库存在且是私有的，再做第一次同步 */
+    function connect(owner, repo, token) {
+      var c = { owner: owner, repo: repo, token: token, path: 'gzclp-data.json' };
+      return req(c, 'GET', '/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo)).then(function (r) {
+        if (r.status !== 200) return errMsg(r.status);
+        if (!r.json || r.json.private !== true) return errMsg('public');
+        setCfg(c);
+        return run(true).then(function (ok) { return ok ? '' : (cfg() || {}).lastErr || '同步失败'; });
+      });
+    }
+    function disconnect() { clearTimeout(timer); setCfg(null); }
+    return { cfg: cfg, on: on, run: run, schedule: schedule, connect: connect, disconnect: disconnect };
+  })();
+  function ago(ts) {
+    if (!ts) return '从未';
+    var s = Math.floor((Date.now() - ts) / 1000);
+    return s < 60 ? '刚刚' : s < 3600 ? Math.floor(s / 60) + ' 分钟前' : s < 86400 ? Math.floor(s / 3600) + ' 小时前' : Math.floor(s / 86400) + ' 天前';
+  }
+  /** 训练页顶部的备份提醒：周日提醒导出到 iCloud；没开云同步且超过 7 天没备份时每天提醒 */
+  function backupNag() {
+    var bk = Number(localStorage.getItem(BK) || 0), days = bk ? (Date.now() - bk) / 86400000 : 999;
+    if (localStorage.getItem(BK_DISMISS) === GZ.today()) return '';
+    var c = Sync.cfg(), synced = Sync.on() && c.lastAt && Date.now() - c.lastAt < 3 * 86400000;
+    var sunday = new Date().getDay() === 0 && days > 6, longNo = !synced && days > 7;
+    var syncErr = Sync.on() && c.state === 'err' && (!c.lastAt || Date.now() - c.lastAt > 86400000);
+    if (!sunday && !longNo && !syncErr) return '';
+    var msg = syncErr ? '云同步已超过 1 天没有成功：' + c.lastErr
+      : sunday ? '今天周日，导出一份备份存到 iCloud「文件」作为第二重保险'
+      : (bk ? Math.floor(days) + ' 天' : '一直') + '没有备份了，数据只存在这台设备上';
+    return '<div class="bk-nag"><div class="flex1"><div class="bk-t">' + (syncErr ? '同步提醒' : '备份提醒') + '</div><div class="bk-s">' + esc(msg) + '</div></div>' +
+      '<span class="bk-go" data-act="' + (syncErr ? 'bkset' : 'bkexport') + '">' + (syncErr ? '去设置' : '导出') + '</span><span class="bk-x" data-act="bkdismiss">×</span></div>';
+  }
   function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function fmtSec(s) { s = Math.max(0, s); var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
   function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove('show'); }, 1800); }
@@ -70,6 +192,7 @@
     h += '<div class="head"><div class="row between"><label class="date-pick"><span class="head-sub">' + (vm.editing ? '编辑记录 · ' : '') + vm.weekText + (vm.locked ? ' · 已完成' : ' · ' + GZ.dateLabel(t.date)) + '</span>' +
       (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '">') + '</label>' + (vm.editing ? '<span class="link" data-act="cancelEdit">取消</span>' : '') + '</div>' +
       '<div class="large-title"><span class="num">' + vm.day + '</span> ' + vm.dayName + '</div></div>';
+    if (!vm.editing) h += backupNag();
     if (!vm.editing) {
       h += '<div class="seg day-seg">' + vm.days.map(function (d) {
         return '<div class="seg-i ' + (d.id === vm.day ? 'on ' : '') + (d.done ? 'is-done' : '') + '" data-act="day" data-day="' + d.id + '">' + (d.done ? '<span class="ds-ck">✓</span>' : '') +
@@ -153,6 +276,9 @@
     var t = S.train, en, vm;
     switch (act) {
       case 'date': if (el.value) t.date = el.value; return true;
+      case 'bkexport': exportFile(); return false;
+      case 'bkdismiss': localStorage.setItem(BK_DISMISS, GZ.today()); return true;
+      case 'bkset': S.tab = 'settings'; S.settings.view = ''; render(); setTimeout(function () { var x = document.getElementById('syncSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false;
       case 'editLocked': startEdit(ds.id); return true;
       case 'openswap': openSwap(ds.slot); return true;
       case 'closeswap': t.swap.show = false; return true;
@@ -564,6 +690,26 @@
       h += '</div></div>';
     });
     h += '</div>';
+    var sc = Sync.cfg();
+    h += '<div class="sec-h" id="syncSec">云同步</div>';
+    if (Sync.on()) {
+      var stTxt = sc.state === 'syncing' ? '同步中…' : sc.state === 'err' ? '<span class="red">同步失败</span>' : '<span class="green">✓ 已同步</span> · ' + ago(sc.lastAt);
+      h += '<div class="list"><div class="cell"><span class="flex1">状态</span><span class="val">' + stTxt + '</span></div>' +
+        (sc.state === 'err' ? '<div class="cell"><span class="flex1 sync-err">' + esc(sc.lastErr) + (sc.lastAt ? '（上次成功 ' + ago(sc.lastAt) + '）' : '') + '</span></div>' : '') +
+        '<div class="cell"><span class="flex1">私有仓库</span><span class="val">' + esc(sc.owner + '/' + sc.repo) + '</span></div>' +
+        '<div class="cell tap" data-act="syncnow"><span class="flex1 accent">立即同步</span><span class="chev">›</span></div>' +
+        '<div class="cell tap" data-act="synctoken"><span class="flex1 accent">更换令牌</span><span class="chev">' + (st.tok ? '⌃' : '›') + '</span></div>' +
+        (st.tok ? '<div class="cell"><input class="f-v sync-in" id="syncToken2" type="password" autocomplete="off" placeholder="粘贴新的令牌 github_pat_…"><span class="btn-small" data-act="synctokdo">保存</span></div>' : '') +
+        '<div class="cell tap" data-act="syncoff"><span class="flex1 red">断开云同步</span></div></div>' +
+        '<div class="sec-f">打开网页、完成训练、修改设置后会自动同步；在多台设备上用，训练记录会自动合并。断开后本机数据保留。</div>';
+    } else {
+      h += '<div class="list">' +
+        '<div class="cell"><span class="f-l sync-l">GitHub 用户名</span><input class="f-v sync-in" id="syncOwner" autocomplete="off" autocapitalize="off" value="' + esc((sc && sc.owner) || 'seven-pro-7') + '"></div>' +
+        '<div class="cell"><span class="f-l sync-l">私有仓库</span><input class="f-v sync-in" id="syncRepo" autocomplete="off" autocapitalize="off" value="' + esc((sc && sc.repo) || 'seven-training-data') + '"></div>' +
+        '<div class="cell"><span class="f-l sync-l">令牌</span><input class="f-v sync-in" id="syncToken" type="password" autocomplete="off" placeholder="github_pat_…"></div></div>' +
+        '<button class="btn-primary add-btn" data-act="syncconnect">' + (st.connecting ? '连接中…' : '连接并同步') + '</button>' +
+        '<div class="sec-f">数据存在你自己的 GitHub 私有仓库里。令牌只保存在这台设备上，只需要「这一个仓库的 Contents 读写」权限，不会进入备份文件。</div>';
+    }
     var bk = lastBackup(), stale = !bk || Date.now() - bk > 7 * 86400000;
     h += '<div class="sec-h">数据</div><div class="list">' +
       '<div class="cell tap" data-act="export"><span class="flex1 accent">导出备份文件</span><span class="val ' + (stale ? 'amber' : '') + '">' + GZ.backupLabel(bk) + '</span></div>' +
@@ -571,7 +717,7 @@
       '<label class="cell tap"><span class="flex1 accent">从文件恢复</span><span class="chev">›</span><input type="file" accept=".json,application/json" data-act="impfile" style="display:none"></label>' +
       '<div class="cell tap" data-act="imp"><span class="flex1 accent">粘贴文本恢复</span><span class="chev">' + (st.imp ? '⌃' : '›') + '</span></div>' +
       (st.imp ? '<div class="cell"><div class="flex1"><textarea class="imp" id="impText" placeholder="粘贴导出的 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="doImp">确认恢复（覆盖当前数据）</span></div></div>' : '') +
-      '</div><div class="sec-f">共 ' + db.records.length + ' 条训练记录。数据只存在这台设备的浏览器里，建议每周导出一次，发到微信「文件传输助手」保存。</div>';
+      '</div><div class="sec-f">共 ' + db.records.length + ' 条训练记录。' + (Sync.on() ? '已开启云同步；仍建议每周导出一次存到 iCloud「文件」，作为第二重备份。' : '数据只存在这台设备的浏览器里，建议开启云同步，或每周导出一次存到 iCloud「文件」。') + '</div>';
     h += '<div class="list" style="margin-top:20px"><div class="cell tap" data-act="clear"><span class="flex1 red">清空训练记录</span></div><div class="cell tap" data-act="restore"><span class="flex1 red">恢复 Excel 默认</span></div></div>' +
       '<div class="sec-f">修改参数后，所有历史判定与重量会按新参数重新推算</div>';
     return h;
@@ -594,7 +740,7 @@
     markBackup(); render(true); toast('已下载备份文件');
   }
   function importText(txt) {
-    try { save(GZ.normalize(JSON.parse(txt))); S.settings.imp = false; S.train.draft = null; S.train.day = null; toast('恢复成功'); render(true); }
+    try { var inc = JSON.parse(txt); if (!inc || !inc.params || !inc.days) throw 0; save(GZ.replaceDb(load(), inc)); S.settings.imp = false; S.train.draft = null; S.train.day = null; toast('恢复成功'); render(true); }
     catch (e) { toast('文件内容不正确'); }
   }
   function syncAddInputs() {
@@ -650,14 +796,30 @@
         if (efr.change) GZ.swapSlot(dbr, dyr.id, sr0.id, efr.slot.name, rr.weight); else sr0.init = { type: 'fixed', value: rr.weight };
         save(dbr); toast('已采用推荐 ' + rr.text + (rr.unit === '自重' ? '' : ' ' + rr.unit)); return true;
       case 'export': exportFile(); return false;
+      case 'syncconnect':
+        if (st.connecting) return false;
+        var ow = (document.getElementById('syncOwner').value || '').trim(), rp2 = (document.getElementById('syncRepo').value || '').trim(), tk = (document.getElementById('syncToken').value || '').trim();
+        if (!ow || !rp2) { toast('请填写用户名和仓库名'); return false; }
+        if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(tk)) { toast('令牌格式不对：应以 github_pat_ 开头，请整串复制一次'); return false; }
+        st.connecting = true; render(true);
+        Sync.connect(ow, rp2, tk).then(function (err) { st.connecting = false; if (err) { Sync.disconnect(); toast(err); } else toast('云同步已开启'); render(true); });
+        return false;
+      case 'syncnow': Sync.run(true); return false;
+      case 'synctoken': st.tok = !st.tok; return true;
+      case 'synctokdo':
+        var nt = (document.getElementById('syncToken2').value || '').trim();
+        if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(nt)) { toast('令牌格式不对'); return false; }
+        var cc = Sync.cfg(); Sync.connect(cc.owner, cc.repo, nt).then(function (err) { if (err) { var c0 = cc; localStorage.setItem(SYNC_KEY, JSON.stringify(c0)); toast(err); } else { st.tok = false; toast('令牌已更换'); } render(true); });
+        return false;
+      case 'syncoff': confirmBox('断开云同步？', '本机数据保留，云端仓库里的数据也不会删除。之后可以随时重新连接。', function () { Sync.disconnect(); render(true); toast('已断开'); }); return false;
       case 'copyjson': copyText(JSON.stringify(load()), '已复制，粘贴到文件传输助手保存'); markBackup(); setTimeout(function () { render(true); }, 50); return false;
       case 'impfile':
         var f = el.files && el.files[0]; if (!f) return false;
         var rd = new FileReader(); rd.onload = function () { confirmBox('从文件恢复？', '当前设备上的数据会被备份文件覆盖。', function () { importText(rd.result); }); }; rd.readAsText(f); el.value = ''; return false;
       case 'imp': st.imp = !st.imp; return true;
       case 'doImp': importText(document.getElementById('impText').value); return false;
-      case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { db.records = []; }, '已清空'); S.train.draft = null; S.train.day = null; render(true); }); return false;
-      case 'restore': confirmBox('恢复 Excel 默认？', '参数、动作配置与记录将恢复为表格初始状态（含第 1 周 A1/B1 记录）。', function () { save(GZ.defaults(true)); S.train = { day: null, draft: null, recordId: null, date: GZ.today(), bw: '', note: '', result: null }; render(true); toast('已恢复'); }); return false;
+      case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { GZ.clearRecords(db); }, '已清空'); S.train.draft = null; S.train.day = null; render(true); }); return false;
+      case 'restore': confirmBox('恢复 Excel 默认？', '参数、动作配置与记录将恢复为表格初始状态（含第 1 周 A1/B1 记录）。', function () { save(GZ.replaceDb(load(), GZ.defaults(true))); S.train = { day: null, draft: null, recordId: null, date: GZ.today(), bw: '', note: '', result: null }; render(true); toast('已恢复'); }); return false;
     }
   }
 
@@ -700,7 +862,10 @@
       if (a) { rest.left = Math.max(5, rest.left + Number(a.dataset.restAdj)); rest.total = Math.max(rest.total, rest.left); renderRest(); }
       if (s) { clearInterval(rest.timer); rest.show = false; renderRest(); }
     });
+    document.addEventListener('visibilitychange', function () { var c = Sync.cfg(); if (document.visibilityState === 'visible' && Sync.on() && (!c.lastAt || Date.now() - c.lastAt > 30000)) Sync.run(); });
+    window.addEventListener('online', function () { if (Sync.on()) Sync.run(); });
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); }, 120); });
     render();
+    if (Sync.on()) Sync.run();
   });
 })();

@@ -1241,13 +1241,70 @@
       if (e.ex) entries[k].ex = String(e.ex);
     });
     var r = { id: rec.id || uid(), date: rec.date || today(), day: rec.day, deload: !!rec.deload, note: rec.note || '', bw: rec.bw || null,
-      entries: entries, createdAt: rec.createdAt || Date.now() };
+      entries: entries, createdAt: rec.createdAt || Date.now(), updatedAt: Date.now() };
     var idx = -1;
     db.records.forEach(function (x, i) { if (x.id === r.id) idx = i; });
     if (idx >= 0) db.records[idx] = r; else db.records.push(r);
     return r;
   }
-  function deleteRecord(db, id) { db.records = db.records.filter(function (r) { return r.id !== id; }); }
+  // 删除会留下「删除标记」（tomb），多设备同步时另一台设备据此删除，而不是把记录同步回来
+  function deleteRecord(db, id) {
+    db.tomb = db.tomb || {}; db.tomb[id] = Date.now();
+    db.records = db.records.filter(function (r) { return r.id !== id; });
+  }
+  function clearRecords(db) { (db.records || []).slice().forEach(function (r) { deleteRecord(db, r.id); }); }
+  /** 整体替换（恢复备份 / 恢复默认）：旧数据里有、新数据里没有的记录记为删除，配置以新数据为准 */
+  function replaceDb(oldDb, newDb) {
+    var nd = normalize(newDb), keep = {}, tomb = Object.assign({}, (oldDb && oldDb.tomb) || {}, nd.tomb || {}), now = Date.now();
+    nd.records.forEach(function (r) { keep[r.id] = 1; r.updatedAt = Math.max(r.updatedAt || r.createdAt || 0, now); delete tomb[r.id]; });
+    ((oldDb && oldDb.records) || []).forEach(function (r) { if (!keep[r.id]) tomb[r.id] = now; });
+    nd.tomb = tomb; nd.cfgAt = now;
+    return nd;
+  }
+
+  // ================= 多设备同步：合并 =================
+  /** 配置部分（参数、四天动作、自定义动作库）——任何一项变化都会刷新 cfgAt */
+  function cfgPart(db) { return JSON.stringify([db.params, db.days, db.customLib || [], db.daysVersion]); }
+  /** 保存前调用：配置有变化就记下修改时间，同步时据此判断以哪台设备的配置为准 */
+  function stampConfig(prevDb, db) {
+    if (!prevDb || cfgPart(prevDb) !== cfgPart(db)) db.cfgAt = Date.now();
+    return db;
+  }
+  function recTime(r) { return r.updatedAt || r.createdAt || 0; }
+  /**
+   * 合并两份数据（本机 local，云端 remote），纯函数：
+   *  - 训练记录：按 id 取并集；同一条两边都有，取最后修改的那份；
+   *  - 删除标记：并集；记录的修改时间早于删除时间就丢弃（删除优先于旧记录，晚于删除的重新保存会保留）；
+   *  - 配置：取 cfgAt 较新的一方；相同时以云端为准（新设备首次连接时，用云端已有的配置）。
+   */
+  function mergeDb(local, remote) {
+    if (!remote) return normalize(JSON.parse(JSON.stringify(local)));
+    if (!local) return normalize(JSON.parse(JSON.stringify(remote)));
+    var a = JSON.parse(JSON.stringify(local)), b = JSON.parse(JSON.stringify(remote));
+    var tomb = Object.assign({}, a.tomb || {});
+    Object.keys(b.tomb || {}).forEach(function (id) { tomb[id] = Math.max(tomb[id] || 0, b.tomb[id]); });
+    var byId = {};
+    (a.records || []).concat(b.records || []).forEach(function (r) {
+      var cur = byId[r.id];
+      if (!cur || recTime(r) > recTime(cur)) byId[r.id] = r;
+    });
+    var records = Object.keys(byId).map(function (id) { return byId[id]; }).filter(function (r) { return !(tomb[r.id] && tomb[r.id] >= recTime(r)); });
+    records.sort(function (x, y) { return (x.createdAt || 0) - (y.createdAt || 0) || (x.id < y.id ? -1 : 1); });
+    var cfgSrc = (a.cfgAt || 0) > (b.cfgAt || 0) ? a : b;
+    var out = { version: cfgSrc.version || a.version, daysVersion: cfgSrc.daysVersion, params: cfgSrc.params, days: cfgSrc.days, customLib: cfgSrc.customLib || [],
+      cfgAt: Math.max(a.cfgAt || 0, b.cfgAt || 0), records: records, tomb: tomb };
+    return normalize(out);
+  }
+  /** 两份数据内容是否一致（忽略记录顺序），用于决定要不要写回本机 / 推送云端 */
+  function sameDb(x, y) {
+    if (!x || !y) return false;
+    var k = function (d) {
+      var rs = (d.records || []).slice().sort(function (p, q) { return p.id < q.id ? -1 : 1; });
+      var tb = Object.keys(d.tomb || {}).sort().map(function (id) { return id + ':' + d.tomb[id]; });
+      return JSON.stringify([cfgPart(d), d.cfgAt || 0, rs, tb]);
+    };
+    return k(x) === k(y);
+  }
   function getRecord(db, id) { return db.records.filter(function (r) { return r.id === id; })[0] || null; }
 
   // 结算：保存后返回该次训练的判定结果
@@ -1284,7 +1341,7 @@
     roundTo: roundTo, tm: tm, recommendWeight: recommendWeight, equipOf: equipOf, unitOf: unitOf, incOf: incOf, stepOf: stepOf, EQUIP_NOTE: EQUIP_NOTE, EQUIP_RULE: EQUIP_RULE, normEquip: normEquip, initWeight: initWeight, fmtW: fmtW, platesFor: platesFor, linreg: linreg,
     evaluate: evaluate, replay: replay, recommend: recommend, isDeloadWeek: isDeloadWeek, dayById: dayById,
     blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
-    saveRecord: saveRecord, deleteRecord: deleteRecord, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
+    saveRecord: saveRecord, deleteRecord: deleteRecord, clearRecords: clearRecords, replaceDb: replaceDb, mergeDb: mergeDb, sameDb: sameDb, stampConfig: stampConfig, cfgPart: cfgPart, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
     libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,

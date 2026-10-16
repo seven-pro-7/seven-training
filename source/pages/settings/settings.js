@@ -105,7 +105,7 @@ Page({
   },
   clearRecords() {
     wx.showModal({ title: '清空全部训练记录？', content: '参数与动作配置保留，记录无法恢复。建议先导出备份。', confirmColor: '#FF3B30',
-      success: (r) => { if (r.confirm) this.mutate((db) => { db.records = []; }, '已清空'); } });
+      success: (r) => { if (r.confirm) this.mutate((db) => { GZ.clearRecords(db); }, '已清空'); } });
   },
   restore() {
     wx.showModal({ title: '恢复 Excel 默认？', content: '参数、动作配置与记录将恢复为表格初始状态（含第 1 周 A1/B1 记录）。', confirmColor: '#FF3B30',

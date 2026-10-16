@@ -72,6 +72,15 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .app .mask { position: absolute; }
 .app #body .mask { bottom: calc(54px + env(safe-area-inset-bottom)); }
 #rest .mask { z-index: 200; bottom: 0; }
+.bk-nag { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 12px 12px 12px 14px; border-radius: 14px; background: rgba(255,159,10,0.10); }
+.bk-t { font-size: 14px; font-weight: 600; color: #C77700; }
+.bk-s { font-size: 12.5px; color: var(--label2); margin-top: 2px; line-height: 1.45; }
+.bk-go { flex-shrink: 0; font-size: 13px; font-weight: 600; color: #fff; background: #FF9F0A; border-radius: 999px; padding: 6px 14px; }
+.bk-x { flex-shrink: 0; font-size: 18px; color: var(--label3, #AEAEB2); padding: 0 4px; line-height: 1; }
+.sync-in { text-align: right; min-width: 0; flex: 1; font-size: 15px; }
+.sync-l { white-space: nowrap; flex-shrink: 0; margin-right: 12px; }
+.sync-err { font-size: 13px; color: var(--red); line-height: 1.45; }
+
 input, textarea, select, button { font: inherit; color: inherit; outline: none; }
 input, textarea { border: none; background: transparent; -webkit-appearance: none; appearance: none; }
 .app input::placeholder, .app textarea::placeholder { color: #C7C7CC; }
