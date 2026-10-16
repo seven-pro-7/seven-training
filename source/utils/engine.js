@@ -221,16 +221,19 @@
     };
   }
 
-  // Excel 中已填写的第 1 周数据（A1、B1），作为初始记录导入
+  // 第 1 周（A1/B1/A2/B2 各一次）用户实际训练数据，由 App「设置 → 导出备份」回灌
   function excelSeedRecords() {
     return [
-      { id: 'xls_A1_w1', date: '2026-10-13', day: 'A1', deload: false, note: '从 Excel 导入（日期可编辑）', bw: null, createdAt: 1,
-        entries: { A1_1: { v: 10 }, A1_2: { v: '完成' }, A1_3: { v: '完成' }, A1_4: { v: 15 }, A1_5: { v: 19 } } },
-      { id: 'xls_B1_w1', date: '2026-10-14', day: 'B1', deload: false, note: '从 Excel 导入（日期可编辑）', bw: null, createdAt: 2,
-        entries: { B1_1: { v: 12 }, B1_2: { v: '完成' }, B1_3: { v: '完成' }, B1_4: { v: 17 }, B1_5: { v: 18 } } }
+      { id: "xls_A1_w1", date: "2026-10-13", day: "A1", deload: false, note: "从 Excel 导入（日期可编辑）", bw: null, createdAt: 1,
+        entries: {"A1_1": {"v": 10}, "A1_2": {"v": "完成", "w": 42.5, "ex": "泽奇深蹲"}, "A1_3": {"v": "完成", "w": 17.5, "ex": "坐姿哑铃推肩"}, "A1_4": {"v": 15, "w": 50}, "A1_5": {"v": 19, "w": 10}} },
+      { id: "xls_B1_w1", date: "2026-10-14", day: "B1", deload: false, note: "从 Excel 导入（日期可编辑）", bw: null, createdAt: 2,
+        entries: {"B1_1": {"v": 12}, "B1_2": {"v": "完成", "w": 17.5}, "B1_3": {"v": "完成"}, "B1_4": {"v": 17, "w": 45, "ex": "俯身划船"}, "B1_5": {"v": 18, "w": 10, "ex": "反向飞鸟"}} },
+      { id: "rmvahlea74du2", date: "2026-10-16", day: "A2", deload: false, note: "", bw: null, createdAt: 3,
+        entries: {"A2_1": {"v": 17}, "A2_2": {"v": "完成"}, "A2_3": {"v": "完成"}, "A2_4": {"v": 17, "w": 50, "ex": "高位下拉"}, "A2_5": {"v": 16, "w": 10}} },
+      { id: "rmvaj5j6l5hq3", date: "2026-10-16", day: "B2", deload: false, note: "", bw: null, createdAt: 4,
+        entries: {"B2_1": {"v": 11}, "B2_2": {"v": "完成"}, "B2_3": {"v": "完成", "w": 35, "ex": "上斜哑铃卧推"}, "B2_4": {"v": 25}, "B2_5": {"v": 25, "w": 6}} }
     ];
   }
-
   function defaults(withSeed) {
     return { version: VERSION, daysVersion: DAYS_VERSION, params: defaultParams(), days: defaultDays(), records: withSeed === false ? [] : excelSeedRecords() };
   }
