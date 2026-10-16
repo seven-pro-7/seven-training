@@ -63,6 +63,7 @@
         <text class="ex-name">{{item.name}}</text>
         <text class="equip-tag eq-{{item.equip}}">{{item.equip}}{{item.equip === '哑铃' ? '·单只' : item.equip === '负重' ? '·外加' : ''}}</text>
         <text class="ex-tag sub" wx:if="{{item.sub}}">替换 {{item.planName}}</text>
+        <text class="ex-tag rot" wx:elif="{{item.autoNew}}">本轮轮换 · 原 {{item.autoPrev}}</text>
         <text class="ex-tag new" wx:elif="{{item.changeNew}}">新动作</text>
       </view>
       <text class="ex-act" data-slot="{{item.slotId}}" bindtap="openSwap">更换</text>
@@ -189,7 +190,7 @@
         <view class="list" wx:if="{{swap.scope === 'perm' && swap.selEquip !== '自重'}}">
           <view class="cell"><text class="flex1">起始重量</text><input class="cell-in num" type="digit" value="{{swap.weight}}" bindinput="swapWeight" /><text class="unit">{{swap.recUnit}}</text></view>
         </view>
-        <view class="sec-f">{{swap.scope === 'once' ? '本次用推荐重量练「' + swap.sel + '」，记录容量，不改变「' + swap.planName + '」的阶段和重量。' : '从第 ' + swap.week + ' 周起，' + swap.dayId + ' 的这个位置改为「' + swap.sel + '」，按 ' + swap.slotTier + ' 规则从起始重量重新进阶；历史记录保持不变。'}}</view>
+        <view class="sec-f">{{swap.scope === 'once' ? '本次用推荐重量练「' + swap.sel + '」，记录容量，不改变「' + swap.planName + '」的阶段和重量。' : '从第 ' + swap.week + ' 周起，' + swap.dayId + ' 的这个位置改为「' + swap.sel + '」，按 ' + swap.slotTier + ' 规则从起始重量重新进阶；历史记录保持不变。' + (swap.rotates ? '下一轮仍按轮换计划自动编排（可在设置里锁定这个位置）。' : '')}}</view>
         <button class="btn-primary swap-ok" bindtap="swapConfirm">确认更换</button>
       </block>
     </view>
@@ -216,6 +217,7 @@
       <text class="sheet-cap">{{result.day}} {{result.dayName}} · {{result.weekText}}</text>
       <view class="sheet-title">{{result.cycleDone ? '第 ' + result.cycle + ' 轮完成' : result.weekDone ? '本周完成' : '训练完成'}}</view>
       <view class="wk-done" wx:if="{{result.cycleDone}}">第 {{result.cycle}} 轮 {{result.weeksPerCycle}} 周全部完成，进入第 {{result.cycle + 1}} 轮{{result.nextDeload ? '（含减载周）' : ''}}</view>
+      <view class="wk-left" wx:if="{{result.cycleDone && result.rotated}}">已按轮换计划更换 {{result.rotated}} 个 T2/T3 动作，T1 四大项不变。可在「计划」查看本轮编排与依据</view>
       <view class="wk-done" wx:elif="{{result.weekDone}}">A1 · B1 · A2 · B2 全部完成，已进入{{result.nextWeekText}}{{result.nextDeload ? '（减载周）' : ''}}</view>
       <view class="wk-left" wx:elif="{{result.leftText}}">本周还剩 {{result.leftText}}</view>
       <view class="res-kpi">

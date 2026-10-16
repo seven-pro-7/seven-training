@@ -85,7 +85,7 @@ Page({
     const db = this.db(), ctx = GZ.swapContext(db, this.day, slot);
     this.swapState = {
       show: true, slotId: slot, dayId: this.day, slotTier: it.tier, tier: it.tier, q: '', sel: '', scope: 'once',
-      curName: it.name, planName: it.planName, isSub: it.sub, editing: !!this.recordId, week: ctx.week, weight: ctx.weightText, ctxW: ctx.weight, lastW: ctx.lastW
+      curName: it.name, planName: it.planName, isSub: it.sub, editing: !!this.recordId, rotates: ctx.rotates, week: ctx.week, weight: ctx.weightText, ctxW: ctx.weight, lastW: ctx.lastW
     };
     this.renderSwap();
   },
@@ -210,10 +210,11 @@ Page({
     const doneCyc = s ? GZ.cycleOf(s.week, db.params).cycle : 1;
     const nextCyc = GZ.cycleOf(rd.week, db.params).cycle;
     const cycleDone = weekDone && nextCyc > doneCyc;
+    const rotated = cycleDone ? GZ.buildRotation(db, nextCyc).changed : 0;
     const result = s ? {
       day: s.rec.day, dayName: s.dayName, week: s.week, weekText: GZ.weekText(s.week, db.params),
       cycle: doneCyc, weeksPerCycle: GZ.cycleLen(db.params), volume: Math.round(s.volume),
-      weekDone, cycleDone, nextWeekText: GZ.weekText(rd.week, db.params),
+      weekDone, cycleDone, rotated, nextWeekText: GZ.weekText(rd.week, db.params),
       leftText: this.recordId ? '' : rd.leftText, nextDeload: weekDone && GZ.isDeloadWeek(rd.week, db.params),
       adds: s.items.filter((x) => x.judgment === '加重').length,
       items: s.items.map((it) => ({

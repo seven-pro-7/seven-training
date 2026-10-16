@@ -3,7 +3,7 @@ const store = require('../../utils/store.js');
 const app = getApp();
 
 Page({
-  data: { vm: null, ovIdx: 0, detail: null },
+  data: { vm: null, ovIdx: 0, detail: null, showWhy: false },
   onShow() { this.refresh(); },
   refresh() {
     const db = store.load();
@@ -18,6 +18,7 @@ Page({
     this.setData({ vm: GZ.buildPlan(store.load(), { cycle: next }) });
   },
   goNext(e) { app.globalData.gotoDay = e.currentTarget.dataset.day; wx.switchTab({ url: '/pages/train/train' }); },
+  toggleWhy() { this.setData({ showWhy: !this.data.showWhy }); },
   onOv(e) { this.setData({ ovIdx: Number(e.currentTarget.dataset.i) }); },
   onCell(e) {
     const c = e.currentTarget.dataset.c;

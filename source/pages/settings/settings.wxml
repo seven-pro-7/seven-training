@@ -44,8 +44,9 @@
     <view class="cell"><text class="flex1">每轮周数</text><input class="f-in num" type="number" value="{{p.totalWeeks}}" data-k="totalWeeks" bindblur="onParam" /><text class="f-u">周 / 轮</text></view>
     <view class="cell"><text class="flex1">减载周</text><switch checked="{{p.deloadEnabled}}" color="#34C759" bindchange="onDeload" /></view>
     <view class="cell" wx:if="{{p.deloadEnabled}}"><text class="flex1">每轮第</text><input class="f-in num" type="number" value="{{p.deloadEvery}}" data-k="deloadEvery" bindblur="onParam" /><text class="f-u">周减载</text></view>
+    <view class="cell"><text class="flex1">每轮自动轮换 T2/T3</text><switch checked="{{p.autoRotate !== false}}" color="#34C759" bindchange="onRotate" /></view>
   </view>
-  <view class="sec-f">完成一轮（{{p.totalWeeks}} 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内的周序计算{{p.deloadEnabled ? '（每轮第 ' + p.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : ''}}。</view>
+  <view class="sec-f">{{p.autoRotate !== false ? '每进入新一轮，T2/T3 会在同一动作模式内自动换成上一轮没练过的动作，T1 四大项不变。' : ''}}完成一轮（{{p.totalWeeks}} 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内的周序计算{{p.deloadEnabled ? '（每轮第 ' + p.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : ''}}。</view>
 
   <view class="sec-h">动作</view>
   <view class="list">
@@ -67,6 +68,7 @@
         <text class="init num">{{s.initW}}<text class="f-u"> kg</text></text>
       </view>
       <view class="slot-chg" wx:if="{{s.changeText}}">{{s.changeText}}</view>
+      <view class="slot-rot" wx:if="{{s.rotTier}}"><text class="flex1">{{p.autoRotate === false || s.locked ? '不参与轮换' : '第 ' + s.nextCycle + ' 轮将换成「' + s.nextName + '」'}}</text><text class="rot-lock-btn {{s.locked ? 'on' : ''}}" data-si="{{si}}" bindtap="onLock">{{s.locked ? '已锁定' : '锁定'}}</text></view>
       <view class="slot-rec"><text class="flex1">系统推荐 {{s.recText}} · {{s.recNote}}</text><text class="rec-apply" data-si="{{si}}" bindtap="onApplyRec">采用</text></view>
       <view class="slot-cfg">
         <text class="cfg-l">首周</text>

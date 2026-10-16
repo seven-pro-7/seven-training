@@ -43,6 +43,7 @@
 .ex-tag { font-size: 20rpx; font-weight: 600; padding: 2rpx 12rpx; border-radius: 8rpx; }
 .ex-tag.sub { color: #5856D6; background: rgba(88,86,214,0.12); }
 .ex-tag.new { color: var(--green); background: rgba(52,199,89,0.12); }
+.ex-tag.rot { color: #0A84FF; background: rgba(10,132,255,0.10); }
 .ex-act { font-size: 26rpx; color: var(--accent); font-weight: 500; padding: 8rpx 0 8rpx 24rpx; }
 
 .swap-sheet { max-height: 90vh; display: flex; flex-direction: column; }

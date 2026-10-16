@@ -88,6 +88,7 @@
     ['T2', '泽奇深蹲', '下肢·蹲', '杠铃', '肘托杠深蹲，躯干承重更强；约为深蹲的 80%', 'squat', 0.8, 2.5],
     ['T2', '罗马尼亚硬拉', '下肢·髋铰链', '杠铃', '腘绳肌主导；约为硬拉的 75%', 'deadlift', 0.75, 2.5],
     ['T2', '赤字硬拉', '下肢·髋铰链', '杠铃', '站垫高平台拉，强化起拉段；约为硬拉的 90%', 'deadlift', 0.9, 2.5],
+    ['T2', '杠铃早安式', '下肢·髋铰链', '杠铃', '髋铰链，腘绳肌与竖脊肌；约为硬拉的 45%', 'deadlift', 0.45, 2.5],
     ['T2', '臀推', '下肢·髋伸', '杠铃', '臀大肌主导；可达硬拉的 100%', 'deadlift', 1, 2.5],
     ['T2', '暂停卧推', '上肢·水平推', '杠铃', '触胸停顿1秒，消除反弹借力；约为卧推的 92%', 'bench', 0.92, 2.5],
     ['T2', '窄距卧推', '上肢·水平推', '杠铃', '三头侧重；约为卧推的 85%', 'bench', 0.85, 2.5],
@@ -97,6 +98,7 @@
     ['T2', '杠铃划船', '上肢·水平拉', '杠铃', '俯身杠铃划船，约为卧推的 95%', 'bench', 0.95, 2.5],
     ['T2', 'T杠划船', '上肢·水平拉', '杠铃', '背部厚度，约为卧推的 80%', 'bench', 0.8, 2.5],
     ['T2', '坐姿哑铃推肩', '上肢·垂直推', '哑铃', '肩部容量；单只≈卧推的 32%', 'bench', 0.32, 2],
+    ['T2', '阿诺德推举', '上肢·垂直推', '哑铃', '旋转推举，三角肌前中束；单只≈卧推的 26%', 'bench', 0.26, 2],
     ['T2', '哑铃卧推', '上肢·水平推', '哑铃', '活动范围大；单只≈卧推的 38%', 'bench', 0.38, 2],
     ['T2', '上斜哑铃卧推', '上肢·水平推', '哑铃', '上胸容量；单只≈卧推的 30%', 'bench', 0.3, 2],
     ['T2', '单臂哑铃划船', '上肢·水平拉', '哑铃', '单侧背阔；单只≈卧推的 35%', 'bench', 0.35, 2],
@@ -109,22 +111,29 @@
     ['T2', '坐姿划船', '上肢·水平拉', '器械', '背部厚度；配重约为卧推的 70%', 'bench', 0.7, 2.5],
     // ---- T3：辅助孤立动作，按 15RM（≈65% 以下）取重 ----
     ['T3', '高位下拉', '上肢·垂直拉', '器械', '背阔肌容量；配重约为卧推的 85%', 'bench', 0.85, 2.5],
+    ['T3', '对握高位下拉', '上肢·垂直拉', '器械', '中立握，肘部更舒适；配重约为卧推的 80%', 'bench', 0.8, 2.5],
     ['T3', '直臂下压', '上肢·垂直拉', '器械', '背阔孤立；配重约为卧推的 25%', 'bench', 0.25, 2.5],
+    ['T3', '反握引体向上', '上肢·垂直拉', '自重', '掌心朝内，二头参与更多；以体重做次数', 'bench', 0, 0],
     ['T3', '绳索下压', '上肢·伸肘', '器械', '三头主项；配重约为卧推的 30%', 'bench', 0.3, 2.5],
     ['T3', '绳索三头屈伸', '上肢·伸肘', '器械', '三头容量；配重约为卧推的 25%', 'bench', 0.25, 2.5],
+    ['T3', '过头绳索臂屈伸', '上肢·伸肘', '器械', '拉长位练三头长头，增肌优于下压（Maeo 2023）；配重约为卧推的 22%', 'bench', 0.22, 2.5],
+    ['T3', '仰卧臂屈伸', '上肢·伸肘', '杠铃', 'EZ 杆仰卧臂屈伸，三头长头；约为卧推的 30%', 'bench', 0.3, 1.25],
     ['T3', '面拉', '肩·后束', '器械', '肩袖与后束；配重约为卧推的 22%', 'bench', 0.22, 2.5],
     ['T3', '绳索夹胸', '上肢·水平内收', '器械', '胸大肌孤立；单侧配重约为卧推的 15%', 'bench', 0.15, 2.5],
     ['T3', '俯卧腿弯举', '下肢·屈膝', '器械', '腘绳肌容量；配重约为深蹲的 30%', 'squat', 0.3, 2.5],
+    ['T3', '坐姿腿弯举', '下肢·屈膝', '器械', '屈髋位拉长腘绳肌，增肌优于俯卧位（Maeo 2021）；配重约为深蹲的 35%', 'squat', 0.35, 2.5],
     ['T3', '坐姿腿屈伸', '下肢·伸膝', '器械', '股四头肌容量；配重约为深蹲的 40%', 'squat', 0.4, 2.5],
     ['T3', '腿外展', '下肢·髋外展', '器械', '臀中肌；配重约为深蹲的 40%', 'squat', 0.4, 5],
     ['T3', '山羊挺身', '下背·伸髋', '器械', '竖脊肌；以体重做次数，需要时再手动加重', 'deadlift', 0, 0],
     ['T3', '提踵', '下肢·踝', '器械', '小腿容量；配重约为深蹲的 60%', 'squat', 0.6, 5],
     ['T3', '杠铃弯举', '上肢·屈肘', '杠铃', '二头主项；约为卧推的 40%', 'bench', 0.4, 1.25],
-    ['T3', '杠铃二头弯举', '上肢·屈肘', '杠铃', '二头容量；约为卧推的 35%', 'bench', 0.35, 1.25],
+    ['T3', 'EZ杆弯举', '上肢·屈肘', '杠铃', 'EZ 杆半旋握，腕部压力更小；约为卧推的 38%', 'bench', 0.38, 1.25],
     ['T3', '俯身划船', '上肢·水平拉', '杠铃', '背部容量；约为卧推的 85%', 'bench', 0.85, 2.5],
     ['T3', '哑铃弯举', '上肢·屈肘', '哑铃', '二头容量；单只≈卧推的 15%', 'bench', 0.15, 1],
     ['T3', '锤式弯举', '上肢·屈肘', '哑铃', '肱桡肌与二头；单只≈卧推的 17%', 'bench', 0.17, 1],
+    ['T3', '上斜哑铃弯举', '上肢·屈肘', '哑铃', '肩伸位拉长二头长头；单只≈卧推的 12%', 'bench', 0.12, 1],
     ['T3', '哑铃侧平举', '肩·中束', '哑铃', '三角肌中束；单只≈卧推的 14%', 'bench', 0.14, 1],
+    ['T3', '绳索侧平举', '肩·中束', '器械', '底部仍有张力；单侧配重约为卧推的 7%', 'bench', 0.07, 1.25],
     ['T3', '反向飞鸟', '肩·后束', '哑铃', '三角肌后束；单只≈卧推的 12%', 'bench', 0.12, 1],
     ['T3', '哑铃耸肩', '肩·斜方', '哑铃', '斜方肌容量；单只≈硬拉的 30%', 'deadlift', 0.3, 2],
     ['T3', '高脚杯深蹲', '下肢·蹲', '哑铃', '深蹲模式容量；单只≈深蹲的 25%', 'squat', 0.25, 2],
@@ -255,7 +264,8 @@
       totalWeeks: 8,
       deloadEnabled: true,
       deloadEvery: 6,
-      t1FailLimit: 2
+      t1FailLimit: 2,
+      autoRotate: true // 每轮（8 周）自动轮换 T2/T3 动作
     };
   }
 
@@ -419,27 +429,37 @@
    * 优先级：用户上次实际用过的重量 > 按 1RM×系数×档位比例推算。
    * @return { weight, unit, text, note, source, inc, equip }
    */
+  /**
+   * 纯模型推算（不读训练历史）：1RM × 动作系数 × 档位比例，再按器械档位取整。
+   * e1rm（可选）：训练中由 T1 末组 AMRAP 估算出的 1RM（Epley）。只取其 90% 参与，抵消高次数 AMRAP 的高估；
+   * 且只在高于设置里填的 1RM 时才采用——体现「随训练变强，换入的新动作起点跟着变高」。
+   */
+  function modelWeight(P, lb, tier, e1rm) {
+    var tierKey = tier || (lb && lb.tier) || 'T3', equip = lb ? lb.equip : '杠铃', base = (lb && lb.base) || 'bench';
+    var inc = (lb && lb.inc) || (EQUIP_RULE[equip] ? EQUIP_RULE[equip].inc : 2.5);
+    if (equip === '自重' || !lb || !lb.ratio) return { weight: 0, base: base, oneRM: P.oneRM[base], inc: 0, equip: equip, bw: true };
+    var rm = P.oneRM[base], est = e1rm && e1rm[base] ? fix(e1rm[base] * 0.9) : 0, fromE = est > rm;
+    if (fromE) rm = est;
+    var w = rm * lb.ratio * TIER_PCT[tierKey];
+    if (equip === '负重') w = Math.max(w, (Number(P.bodyWeight) || 70) * 0.05); // 起步至少加体重 5%
+    if (equip === '杠铃') w = Math.max(w, P.barWeight || 20); // 杠铃动作不低于空杆
+    return { weight: alignTo(w, inc) || 0, base: base, oneRM: fix(rm), fromE1rm: fromE, ratio: lb.ratio, pct: TIER_PCT[tierKey], inc: inc, equip: equip };
+  }
   function recommendWeight(db, name, tier, opts) {
     opts = opts || {};
-    var P = db.params, lb = libFindIn(db, name), tierKey = tier || (lb && lb.tier) || 'T3';
+    var P = db.params, lb = libFindIn(db, name);
     var equip = (lb && lb.equip) || normEquip(opts.equip);
-    var base = (lb && lb.base) || 'bench', inc = (lb && lb.inc) || (EQUIP_RULE[equip] ? EQUIP_RULE[equip].inc : 2.5);
-    var last = lastWeights(replay(db))[name];
-    if (opts.preferLast !== false && last !== undefined && last !== null) {
-      return { weight: fix(last), unit: unitOf(equip), text: fmtW(last), source: 'last', equip: equip, inc: inc,
-        note: '沿用上次 ' + fmtW(last) + ' kg' };
+    if (opts.preferLast !== false) {
+      var last = lastWeights(opts.rp || replay(db))[name];
+      if (last !== undefined && last !== null && equip !== '自重') {
+        return { weight: fix(last), unit: unitOf(equip), text: fmtW(last), source: 'last', equip: equip, inc: (lb && lb.inc) || 0,
+          note: '沿用上次 ' + fmtW(last) + ' kg' };
+      }
     }
-    var BW = Number(P.bodyWeight) || 70;
-    if (equip === '自重' || !base || !(lb && lb.ratio)) {
-      return { weight: 0, unit: unitOf(equip), text: '自重', source: 'bodyweight', equip: equip, inc: 0,
-        note: '以体重做次数，达到次数上限后再加重' };
-    }
-    var w = P.oneRM[base] * lb.ratio * TIER_PCT[tierKey];
-    if (equip === '负重') w = Math.max(w, BW * 0.05); // 起步至少加体重 5%
-    if (equip === '杠铃') w = Math.max(w, P.barWeight || 20); // 杠铃动作不低于空杆
-    w = alignTo(w, inc) || 0;
-    return { weight: w, unit: unitOf(equip), text: fmtW(w), source: 'model', equip: equip, inc: inc,
-      note: LIFTS[base] + ' 1RM ' + fmtW(P.oneRM[base]) + ' × ' + Math.round(lb.ratio * 100) + '% × ' + Math.round(TIER_PCT[tierKey] * 100) + '%' };
+    var m = modelWeight(P, lb, tier, opts.e1rm);
+    if (m.bw) return { weight: 0, unit: unitOf(equip), text: '自重', source: 'bodyweight', equip: equip, inc: 0, note: '以体重做次数，达到次数上限后再加重' };
+    return { weight: m.weight, unit: unitOf(equip), text: fmtW(m.weight), source: 'model', equip: equip, inc: m.inc,
+      note: LIFTS[m.base] + (m.fromE1rm ? ' 估算 1RM ' : ' 1RM ') + fmtW(m.oneRM) + ' × ' + Math.round(m.ratio * 100) + '% × ' + Math.round(m.pct * 100) + '%' };
   }
   /** 重量单位：哑铃按单只，负重按外加，自重无重量 */
   function unitOf(equip) {
@@ -562,17 +582,127 @@
     });
     return st;
   }
+  // ================= 周期动作轮换（每 N 周一轮，自动编排 T2/T3） =================
+  /**
+   * 科学依据（已在说明页列出出处）：
+   *  1. T1 四大项永不轮换——力量具有高度专项性（SAID 原则），主项需要持续重复才能进步。
+   *  2. T2/T3 以「中周期」为单位系统性轮换：Kassiano 等 2022 年系统综述（JSCR 36:1753）指出，有计划的动作变化
+   *     有利于肌肉各区域均衡增长与最大力量，而随意、过于频繁的轮换反而有害；Fonseca 2014（JSCR 28:3085）
+   *     显示轮换动作组股四头肌四个头都增长、且深蹲 1RM 提升最大。所以：一轮内固定，换轮才换，不做每次随机。
+   *  3. 同一位置只在「同一动作模式 / 同一目标肌群」的候选池里轮换，保证每周推、拉、蹲、髋铰链的比例与训练量不变。
+   *  4. 不与上一轮重复；优先选最久没练过的动作（最近最少使用），同一轮内每个动作只出现一次。
+   *  5. 候选池优先纳入「拉长位」动作（坐姿腿弯举 Maeo 2021、过头臂屈伸 Maeo 2023），其增肌效果有直接 MRI 证据。
+   */
+  var ROTATION = {
+    A1_2: { role: '深蹲变式', why: '保持「蹲」模式，变换杠位与躯干角度，补强 T1 深蹲的薄弱环节', pool: ['前蹲', '泽奇深蹲', '箱式深蹲'] },
+    A2_3: { role: '深蹲（次主项）', why: 'GZCLP 原版此位就是深蹲；只在迁移度最高的杠铃深蹲变式间切换', pool: ['杠铃深蹲', '箱式深蹲', '前蹲', '泽奇深蹲'] },
+    A1_3: { role: '上斜推', why: '上胸与三角肌前束；杠铃与哑铃交替，兼顾负荷与活动范围', pool: ['上斜卧推', '上斜哑铃卧推', '哑铃卧推'] },
+    A2_2: { role: '卧推变式', why: '针对卧推锁定段（窄距/臂屈伸练三头）与触胸段（暂停）', pool: ['窄距卧推', '暂停卧推', '负重双杠臂屈伸', '哑铃卧推'] },
+    B1_2: { role: '垂直推', why: '支援站姿实力推；哑铃与杠铃交替改善左右力量平衡', pool: ['坐姿哑铃推肩', '杠铃推举', '阿诺德推举'] },
+    B1_3: { role: '髋铰链', why: '支援硬拉的后链：腘绳肌、臀大肌、竖脊肌', pool: ['罗马尼亚硬拉', '赤字硬拉', '杠铃早安式', '臀推'] },
+    B2_2: { role: '水平拉', why: '背部厚度，平衡卧推带来的推拉比例', pool: ['潘德雷划船', '杠铃划船', 'T杠划船'] },
+    B2_3: { role: '背部容量', why: '水平拉与垂直拉交替，覆盖背阔不同纤维走向', pool: ['坐姿划船', '单臂哑铃划船', '负重引体向上', 'T杠划船'] },
+    A1_4: { role: '垂直拉', why: '背阔宽度；改变握法以分散肘关节负担', pool: ['高位下拉', '对握高位下拉', '直臂下压'] },
+    B1_4: { role: '垂直拉（自重）', why: '自重拉力；正握、反握与器械下拉交替', pool: ['引体向上', '反握引体向上', '对握高位下拉', '高位下拉'] },
+    A1_5: { role: '腘绳肌', why: '屈膝动作在俯卧与坐姿间交替；坐姿（拉长位）增肌更优（Maeo 2021）', pool: ['俯卧腿弯举', '坐姿腿弯举', '山羊挺身'] },
+    B1_5: { role: '三角肌中束', why: '哑铃与绳索交替：绳索在动作底部仍保持张力', pool: ['哑铃侧平举', '绳索侧平举'] },
+    A2_4: { role: '肱二头', why: '改变握法与肩位：锤式练肱桡肌，上斜位拉长二头长头', pool: ['杠铃弯举', 'EZ杆弯举', '锤式弯举', '上斜哑铃弯举'] },
+    B2_5: { role: '肱二头', why: '与 A2 的二头动作错开，每轮两种不同刺激', pool: ['哑铃弯举', '上斜哑铃弯举', '锤式弯举', 'EZ杆弯举'] },
+    A2_5: { role: '肱三头', why: '过头位拉长三头长头，增肌优于下压（Maeo 2023）', pool: ['绳索三头屈伸', '过头绳索臂屈伸', '仰卧臂屈伸'] }, // 绳索下压与绳索三头屈伸同属下压，刺激重复，不入池,
+    B2_4: { role: '后束 / 肩袖', why: '平衡大量推类动作，维护肩关节健康', pool: ['面拉', '反向飞鸟'] }
+  };
+  var ROTATION_PRINCIPLES = [
+    { t: 'T1 四大项不轮换', d: '力量具有专项性（SAID 原则），深蹲、卧推、硬拉、实力推需要持续重复练习才能进步。' },
+    { t: 'T2/T3 每轮换一次，一轮内固定', d: '系统综述显示：有计划的动作变化有利于肌肉均衡增长和最大力量，随意、过于频繁地换动作反而有害（Kassiano 等 2022，JSCR）。轮换动作组股四头肌四个头都增长、深蹲 1RM 提升最大（Fonseca 2014，JSCR）。' },
+    { t: '同一位置只在同一动作模式内轮换', d: '每个位置都有固定的「角色」（如深蹲变式、髋铰链、垂直拉），保证每周推/拉/蹲/髋铰链的比例与训练量不变。' },
+    { t: '不重复上一轮，优先最久没练的', d: '同一位置不会连续两轮用同一个动作；同一轮内每个动作只出现一次；候选里优先选最久没练过的。' },
+    { t: '优先纳入拉长位动作', d: '坐姿腿弯举比俯卧腿弯举、过头臂屈伸比下压有更多肌肉增长（Maeo 2021 MSSE；Maeo 2023 EJSS，MRI 测量）。' },
+    { t: '新动作重新进阶', d: 'T2 从 3×10、T3 从 3×15+ 开始；起始重量取「按当前估算 1RM 推算」与「该动作上次重量 × 90%」中较大者。' }
+  ];
+  function rotationOn(P, s) { return P.autoRotate !== false && s.tier !== 'T1' && !s.noRotate; }
+  /** 某个位置的候选池：预设池 + 同层级、同部位的自定义动作 */
+  function rotationPool(db, s) {
+    var def = ROTATION[s.id], pool = def ? def.pool.slice() : [];
+    var first = libFindIn(db, pool[0] || s.name), part = first ? first.part : '';
+    if (!def && part) libAll(db).forEach(function (x) { if (x.tier === s.tier && x.part === part && pool.indexOf(x.name) < 0) pool.push(x.name); });
+    ((db && db.customLib) || []).forEach(function (x) { if (x.tier === s.tier && part && x.part === part && pool.indexOf(x.name) < 0) pool.push(x.name); });
+    return pool.filter(function (n) { return !!libFindIn(db, n); });
+  }
+  // 槽位编排顺序：先 T2 后 T3（T2 候选少、约束多，先排），同层按训练日顺序
+  function rotationSlots(db) {
+    var out = [];
+    ['T2', 'T3'].forEach(function (t) { db.days.forEach(function (d) { d.slots.forEach(function (s) { if (s.tier === t) out.push(s); }); }); });
+    return out;
+  }
+  function latestChange(s, from, to) {
+    var ch = null;
+    (s.changes || []).forEach(function (c) { if (c.fromWeek >= from && c.fromWeek <= to && (!ch || c.fromWeek >= ch.fromWeek)) ch = c; });
+    return ch;
+  }
+  /**
+   * 推演 1..upto 轮每个位置的动作。
+   * planned[k][id]：第 k 轮开始时系统自动安排的动作；actual[k][id]：考虑用户本轮手动更换后的实际动作。
+   * 纯函数（只看动作配置，不看训练记录），所以未来任意一轮都能提前预览。
+   */
+  function planCycles(db, upto) {
+    var P = db.params, N = cycleLen(P), slots = rotationSlots(db), lastUse = {}, planned = [null], actual = [null];
+    for (var k = 1; k <= upto; k++) {
+      var start = cycleStartWeek(k, P), end = start + N - 1, pl = {}, act = {}, used = {}, prev = actual[k - 1], prevSet = {};
+      if (prev) Object.keys(prev).forEach(function (id) { prevSet[prev[id]] = 1; });
+      slots.forEach(function (s) {
+        var name;
+        if (k === 1 || !rotationOn(P, s)) {
+          var c0 = latestChange(s, 1, k === 1 ? end : start - 1);
+          name = c0 ? c0.name : s.name;
+        } else {
+          var pool = rotationPool(db, s), prevName = prev[s.id];
+          var cands = pool.filter(function (n) { return n !== prevName && !used[n]; });
+          var fresh = cands.filter(function (n) { return !prevSet[n]; });
+          var list = fresh.length ? fresh : cands;
+          list.sort(function (x, y) { return ((lastUse[x] || 0) - (lastUse[y] || 0)) || (pool.indexOf(x) - pool.indexOf(y)); });
+          name = list.length ? list[0] : prevName;
+        }
+        pl[s.id] = name;
+        var inCyc = latestChange(s, k === 1 ? 1 : start, end);
+        act[s.id] = inCyc ? inCyc.name : name;
+        used[act[s.id]] = 1;
+      });
+      Object.keys(act).forEach(function (id) { lastUse[act[id]] = k; });
+      planned.push(pl); actual.push(act);
+    }
+    return { planned: planned, actual: actual };
+  }
+  /** 换入新动作的起始重量：max(按当前估算 1RM 推算, 该动作上次重量 × 90%) */
+  function autoStartWeight(db, s, name, hist) {
+    var lb = libFindIn(db, name), m = modelWeight(db.params, lb, s.tier, hist && hist.e1rm);
+    if (m.bw) return 0;
+    var last = hist && hist.lastW ? hist.lastW[name] : undefined;
+    if (last > 0) return Math.max(m.weight, alignTo(last * 0.9, m.inc));
+    return m.weight;
+  }
+  /** 第 cycle 轮该位置的自动轮换信息（不轮换返回 null） */
+  function autoChange(db, s, cycle, hist) {
+    if (cycle < 2 || !rotationOn(db.params, s)) return null;
+    var plan = planCycles(db, cycle), name = plan.planned[cycle][s.id], prev = plan.actual[cycle - 1][s.id];
+    if (!name || name === prev) return null;
+    var lib = libFindIn(db, name);
+    return { fromWeek: cycleStartWeek(cycle, db.params), name: name, equip: lib ? lib.equip : '', weight: autoStartWeight(db, s, name, hist), auto: true, cycle: cycle, prev: prev };
+  }
+
   /** 某训练日第 week 次时，槽位实际执行的动作（考虑“从某周起更换”） */
-  function effectiveSlot(db, s, week) {
+  function effectiveSlot(db, s, week, hist) {
     var ch = null;
     (s.changes || []).forEach(function (c) { if (c.fromWeek <= week && (!ch || c.fromWeek >= ch.fromWeek)) ch = c; });
+    // 自动轮换：本轮开始后用户没有手动换过，就用编排好的动作
+    var auto = autoChange(db, s, cycleOf(week, db.params).cycle, hist);
+    if (auto && (!ch || ch.fromWeek < auto.fromWeek)) ch = auto;
     if (!ch) return { slot: s, change: null, resetNow: false };
     var lib = libFindIn(db, ch.name);
-    return { slot: Object.assign({}, s, { name: ch.name, equip: ch.equip || (lib ? lib.equip : '') }), change: ch, resetNow: ch.fromWeek === week };
+    return { slot: Object.assign({}, s, { name: ch.name, equip: ch.equip || (lib ? lib.equip : '') }), change: ch, resetNow: ch.fromWeek === week, auto: !!ch.auto };
   }
   /** 执行一个槽位：处理“更换起始周重置”和“仅本次替换” */
-  function runSlot(db, s, st, e, week, deload) {
-    var ef = effectiveSlot(db, s, week);
+  function runSlot(db, s, st, e, week, deload, hist) {
+    var ef = effectiveSlot(db, s, week, hist);
     if (ef.resetNow) st = { stage: FIRST_STAGE[s.tier], weight: ef.change.weight, fail: 0 };
     var res;
     if (e && e.ex && e.ex !== ef.slot.name) {
@@ -610,14 +740,14 @@
   /** opts.untilId：回放到某条记录之前（用于编辑历史记录） */
   function replay(db, opts) {
     opts = opts || {};
-    var states = initialStates(db), counts = {}, sessions = [];
+    var states = initialStates(db), counts = {}, sessions = [], hist = { lastW: {}, e1rm: {} };
     DAY_ORDER.forEach(function (d) { counts[d] = 0; });
     db.days.forEach(function (d) { counts[d.id] = 0; });
     var recs = sortRecords(db.records), before = null;
     for (var i = 0; i < recs.length; i++) {
       var rec = recs[i];
       if (opts.untilId && rec.id === opts.untilId) {
-        before = { states: JSON.parse(JSON.stringify(states)), week: counts[rec.day] + 1 };
+        before = { states: JSON.parse(JSON.stringify(states)), week: counts[rec.day] + 1, hist: JSON.parse(JSON.stringify(hist)) };
         continue;
       }
       var day = dayById(db, rec.day);
@@ -625,14 +755,19 @@
       counts[rec.day] += 1;
       var week = counts[rec.day], items = [], vol = { T1: 0, T2: 0, T3: 0 };
       day.slots.forEach(function (s) {
-        var res = runSlot(db, s, states[s.id], rec.entries ? rec.entries[s.id] : null, week, rec.deload).res;
+        var res = runSlot(db, s, states[s.id], rec.entries ? rec.entries[s.id] : null, week, rec.deload, hist).res;
         items.push(res);
         vol[s.tier] += res.volume;
         states[s.id] = { stage: res.nextStage, weight: res.nextWeight, fail: res.nextFail };
       });
+      items.forEach(function (it) {
+        if (it.deload || it.judgment === '跳过') return;
+        if (it.weight > 0) hist.lastW[it.name] = it.weight;
+        if (it.tier === 'T1' && it.lift && it.e1rm) hist.e1rm[it.lift] = it.e1rm;
+      });
       sessions.push({ rec: rec, week: week, dayName: day.name, items: items, volume: fix(vol.T1 + vol.T2 + vol.T3), vol: vol, index: sessions.length });
     }
-    return { states: states, counts: counts, sessions: sessions, before: before };
+    return { states: states, counts: counts, sessions: sessions, before: before, hist: hist };
   }
 
   /**
@@ -683,7 +818,7 @@
     var P = db.params, rp = replay(db, { untilId: opts.recordId || null });
     var full = opts.recordId ? replay(db) : rp, round = roundInfo(db, full), rec = { day: round.next, week: round.week };
     var dayId = opts.day || rec.day, day = dayById(db, dayId);
-    var states = rp.before ? rp.before.states : rp.states;
+    var states = rp.before ? rp.before.states : rp.states, hist = rp.before ? rp.before.hist : rp.hist;
     var week = rp.before ? rp.before.week : rp.counts[dayId] + 1;
     // 本周已完成的训练日：锁定，只能查看 / 修改，不能提前开练下一周
     var rd = round.days.filter(function (d) { return d.id === dayId; })[0];
@@ -703,14 +838,14 @@
       // 仅本次替换：起始重量默认取该动作上次做过的重量，没有则沿用原计划重量
       var subDefault = null;
       if (e.ex) {
-        var ef0 = effectiveSlot(db, s0, week), st0 = ef0.resetNow ? { weight: ef0.change.weight } : states[s0.id];
+        var ef0 = effectiveSlot(db, s0, week, hist), st0 = ef0.resetNow ? { weight: ef0.change.weight } : states[s0.id];
         if (e.ex === ef0.slot.name) { delete e.ex; }
         else {
           subDefault = lastW[e.ex] !== undefined ? lastW[e.ex] : st0.weight;
           if (manualW(e) === null) e.w = subDefault;
         }
       }
-      var run = runSlot(db, s0, states[s0.id], e, week, deload), res = run.res, st = run.st, s = run.eff.slot;
+      var run = runSlot(db, s0, states[s0.id], e, week, deload, hist), res = run.res, st = run.st, s = run.eff.slot;
       var def = stageDef(s.tier, st.stage);
       var showW = deload ? res.dWeight : res.weight;
       if (res.sub && !deload) showW = res.weight;
@@ -722,6 +857,7 @@
         slotId: s.id, tier: s.tier, tierColor: TIER_COLORS[s.tier], name: res.name, equip: equipOf(res.name, res.equip), equipNote: EQUIP_NOTE[equipOf(res.name, res.equip)] || '',
         unitText: unitOf(equipOf(res.name, res.equip)), isBW: equipOf(res.name, res.equip) === '自重',
         planName: s.name, sub: !!res.sub, changed: !!run.eff.change, changeNew: !!run.eff.resetNow,
+        autoNew: !!(run.eff.auto && run.eff.resetNow), autoPrev: run.eff.auto && run.eff.change ? run.eff.change.prev : '',
         stage: st.stage, sets: showSets, reps: def.reps, weight: showW,
         weightText: equipOf(res.name, res.equip) === '自重' ? '自重' : fmtW(showW),
         canAdjust: equipOf(res.name, res.equip) !== '自重',
@@ -792,7 +928,7 @@
     var overview = db.days.map(function (d) {
       var nw = (rp.counts[d.id] || 0) + 1;
       return { day: d.id, name: d.name, slots: d.slots.map(function (s0) {
-        var ef = effectiveSlot(db, s0, nw), s = ef.slot;
+        var ef = effectiveSlot(db, s0, nw, rp.hist), s = ef.slot;
         var st = ef.resetNow ? { stage: FIRST_STAGE[s.tier], weight: ef.change.weight, fail: 0 } : rp.states[s0.id], last = null;
         for (var i = rp.sessions.length - 1; i >= 0; i--) {
           if (rp.sessions[i].rec.day === d.id) {
@@ -812,7 +948,7 @@
     var cycDone = rp.sessions.filter(function (s) { return s.week >= curBase && s.week < curBase + N; }).length;
     var cycPlanned = N * nd;
     var recCyc = cycleOf(rec.week, P);
-    return { rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
+    return { rotation: buildRotation(db, cycle, rp), rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
       done: done, planned: P.totalWeeks * nd, progress: Math.min(100, Math.round(done / (P.totalWeeks * nd) * 100)),
       cycle: cycle, curCycle: curCycle, maxCycle: maxCycle, weeksPerCycle: N,
       cycleText: '第 ' + cycle + ' 轮', isCurCycle: cycle === curCycle, isFuture: cycle > curCycle,
@@ -820,6 +956,29 @@
       cycleDone: cycDone, cyclePlanned: cycPlanned, cycleProgress: Math.min(100, Math.round(cycDone / cycPlanned * 100)),
       next: { day: rec.day, week: rec.week, name: dayById(db, rec.day).name, deload: isDeloadWeek(rec.week, P),
         cycle: recCyc.cycle, weekInCycle: recCyc.wc, weekText: weekText(rec.week, P) } };
+  }
+
+  // ---------- 视图模型：某一轮的动作编排（计划页展示 / 结算提示 / 设置页预览共用） ----------
+  function buildRotation(db, cycle, rp) {
+    var P = db.params; rp = rp || replay(db);
+    var cur = cycleOf(recommend(db, rp).week, P).cycle;
+    cycle = Math.max(1, cycle || cur);
+    var plan = planCycles(db, cycle), act = plan.actual[cycle], prev = cycle > 1 ? plan.actual[cycle - 1] : null, changed = 0;
+    var days = db.days.map(function (d) {
+      return { id: d.id, name: d.name, slots: d.slots.filter(function (s) { return s.tier !== 'T1'; }).map(function (s) {
+        var name = act[s.id], pv = prev ? prev[s.id] : '', isNew = !!prev && name !== pv, eq = equipOf(name, '');
+        if (isNew) changed++;
+        var def = ROTATION[s.id], startW = '';
+        if (isNew && cycle >= cur) {
+          var w = autoStartWeight(db, s, name, rp.hist);
+          startW = eq === '自重' ? '自重' : fmtW(w) + ' ' + unitOf(eq);
+        }
+        return { id: s.id, tier: s.tier, name: name, equip: eq, prev: pv, isNew: isNew, locked: !rotationOn(P, s),
+          role: def ? def.role : '', why: def ? def.why : '', startW: startW };
+      }) };
+    });
+    return { cycle: cycle, curCycle: cur, enabled: P.autoRotate !== false, changed: changed, total: rotationSlots(db).length,
+      isFuture: cycle > cur, days: days, principles: ROTATION_PRINCIPLES };
   }
 
   // ---------- 视图模型：数据统计 ----------
@@ -898,7 +1057,7 @@
         S.forEach(function (s2) {
           if (s2.rec.day === d.id) { var it = s2.items[si]; if (!it.sub && it.judgment !== '跳过') arr[s2.week - 1] = it.weight; }
         });
-        var cnt = rp.counts[d.id] || 0, ef = effectiveSlot(db, s, cnt + 1);
+        var cnt = rp.counts[d.id] || 0, ef = effectiveSlot(db, s, cnt + 1, rp.hist);
         if (cnt < arr.length) arr[cnt] = ef.resetNow ? ef.change.weight : rp.states[s.id].weight; // 下一次计划重量
         return { name: ef.slot.name, tier: s.tier, data: arr };
       });
@@ -1026,7 +1185,7 @@
       if (w !== null && w !== initWeight(s, db.params)) s.init = { type: 'fixed', value: w };
       return { fromWeek: 1, base: true };
     }
-    var cur = effectiveSlot(db, s, fromWeek).slot;
+    var cur = effectiveSlot(db, s, fromWeek, rp.hist).slot;
     if (cur.name === name && w === null) return { fromWeek: fromWeek, noop: true };
     if (w === null) w = rp.states[s.id].weight;
     s.changes.push({ fromWeek: fromWeek, name: name, equip: lib ? lib.equip : '', weight: w });
@@ -1059,9 +1218,9 @@
   function swapContext(db, dayId, slotId) {
     var d = dayById(db, dayId), s = null;
     d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
-    var rp = replay(db), wk = (rp.counts[dayId] || 0) + 1, ef = effectiveSlot(db, s, wk), lastW = lastWeights(rp);
+    var rp = replay(db), wk = (rp.counts[dayId] || 0) + 1, ef = effectiveSlot(db, s, wk, rp.hist), lastW = lastWeights(rp);
     var curW = ef.resetNow ? ef.change.weight : rp.states[s.id].weight;
-    return { dayId: dayId, slotId: slotId, tier: s.tier, name: ef.slot.name, week: wk, weight: curW, weightText: fmtW(curW), lastW: lastW, base: wk === 1 };
+    return { rotates: rotationOn(db.params, s), dayId: dayId, slotId: slotId, tier: s.tier, name: ef.slot.name, week: wk, weight: curW, weightText: fmtW(curW), lastW: lastW, base: wk === 1 };
   }
 
   // ---------- 记录操作 ----------
@@ -1114,6 +1273,7 @@
     'T1 降阶：需连续 2 次未达标，单次失败只预警',
     '推荐重量：T1=1RM×76.5%；T2≈1RM×动作系数×65%；T3≈1RM×动作系数×50%',
     '器械取整：杠铃按 2.5kg；哑铃按单只 1~2kg；负重按外加重量；自重只记次数；固定器械按配重档',
+    '动作轮换：T1 四大项固定；T2/T3 每轮（8 周）在同一动作模式内自动换一次，不与上一轮重复，一轮内保持不变',
     '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
   ];
 
@@ -1126,6 +1286,8 @@
     blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
     saveRecord: saveRecord, deleteRecord: deleteRecord, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
     libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
-    cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText
+    cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
+    planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
+    ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight
   };
 });

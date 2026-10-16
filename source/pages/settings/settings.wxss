@@ -26,3 +26,7 @@
 .cfg-l { font-size: 22rpx; color: var(--label2); margin-right: 12rpx; }
 .init-step { font-size: 22rpx; color: var(--label2); margin-right: 16rpx; white-space: nowrap; }
 .cfg-l, .mini-seg, .ms, .base-pick { white-space: nowrap; flex-shrink: 0; }
+
+.slot-rot { display: flex; align-items: center; gap: 12rpx; font-size: 22rpx; color: #0A84FF; margin-top: 8rpx; }
+.rot-lock-btn { flex-shrink: 0; font-size: 23rpx; font-weight: 600; padding: 4rpx 14rpx; border-radius: 999rpx; color: var(--label2); background: var(--fill); }
+.rot-lock-btn.on { color: #fff; background: #8E8E93; }

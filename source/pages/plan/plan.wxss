@@ -42,3 +42,21 @@
 .d-right { display: flex; flex-direction: column; align-items: flex-end; }
 .d-sub { font-size: 24rpx; color: var(--label2); }
 .note-box { margin-top: 20rpx; padding: 24rpx 28rpx; background: var(--card); border-radius: 24rpx; color: var(--label2); font-size: 28rpx; }
+
+.rot-tip { font-size: 24rpx; color: var(--label2); line-height: 1.5; margin: -8rpx 0 12rpx; }
+.rot-day { padding: 16rpx 0 6rpx; }
+.rot-day + .rot-day { border-top: 1rpx solid var(--sep); }
+.rot-dh { display: flex; align-items: baseline; gap: 12rpx; margin-bottom: 4rpx; }
+.rot-did { font-size: 28rpx; font-weight: 700; color: var(--accent); }
+.rot-dn { font-size: 24rpx; color: var(--label2); }
+.rot-row { display: flex; align-items: flex-start; padding: 12rpx 0; }
+.rot-main { flex: 1; margin-left: 16rpx; min-width: 0; }
+.rot-n { font-size: 29rpx; font-weight: 500; display: flex; align-items: center; flex-wrap: wrap; gap: 8rpx; }
+.rot-s { font-size: 22rpx; color: var(--label2); margin-top: 2rpx; line-height: 1.45; }
+.rot-new { font-size: 19rpx; font-weight: 700; color: #fff; background: #0A84FF; border-radius: 8rpx; padding: 0 8rpx; line-height: 30rpx; }
+.rot-lock { font-size: 19rpx; font-weight: 600; color: var(--label2); background: var(--fill); border-radius: 8rpx; padding: 0 8rpx; line-height: 30rpx; }
+.rot-why-btn { display: flex; align-items: center; justify-content: space-between; margin-top: 16rpx; padding-top: 20rpx; border-top: 1rpx solid var(--sep); font-size: 28rpx; color: var(--accent); font-weight: 500; }
+.rot-why { margin-top: 12rpx; }
+.rw { display: flex; flex-direction: column; padding: 12rpx 0; }
+.rw-t { font-size: 26rpx; font-weight: 600; }
+.rw-d { font-size: 23rpx; color: var(--label2); line-height: 1.55; margin-top: 4rpx; }

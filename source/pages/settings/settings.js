@@ -20,6 +20,7 @@ Page({
 
   refresh() {
     const db = store.load(), P = db.params, rp = GZ.replay(db), names = libNames(db);
+    const curCyc = GZ.cycleOf(GZ.recommend(db, rp).week, P).cycle, nextPlan = GZ.planCycles(db, curCyc + 1);
     const days = db.days.map((d) => ({
       id: d.id, name: d.name,
       slots: d.slots.map((s) => {
@@ -30,7 +31,9 @@ Page({
         id: s.id, tier: s.tier, name: ef.slot.name, equip: eq, equipLabel: eq + (eq === '哑铃' ? '·单只' : eq === '负重' ? '·外加' : ''),
         recText: rec.text + (rec.unit === '自重' ? '' : ' ' + rec.unit), recNote: rec.note, recWeight: rec.weight,
         init: s.init, opts: list, optIdx: list.indexOf(ef.slot.name),
-        changeText: ef.change ? '第 ' + ef.change.fromWeek + ' 周起更换 · 原 ' + s.name : '',
+        changeText: ef.auto ? '第 ' + ef.change.cycle + ' 轮自动轮换 · 上一轮 ' + ef.change.prev : ef.change ? '第 ' + ef.change.fromWeek + ' 周起更换 · 原 ' + s.name : '',
+        rotTier: s.tier !== 'T1', locked: !!s.noRotate,
+        nextName: s.tier === 'T1' ? '' : nextPlan.actual[curCyc + 1][s.id], nextCycle: curCyc + 1,
         initW: GZ.fmtW(GZ.initWeight(s, P)),
         baseIdx: s.init.type === 'pct' ? GZ.LIFT_ORDER.indexOf(s.init.base) : 0,
         baseName: s.init.type === 'pct' ? GZ.LIFTS[s.init.base] : '',
@@ -54,9 +57,11 @@ Page({
   },
   onMode(e) { const v = e.currentTarget.dataset.v; this.mutate((db) => { db.params.ruleMode = v; }, v === 'full' ? '已切换：完整三阶规则' : '已切换：严格表格公式'); },
   onDeload(e) { this.mutate((db) => { db.params.deloadEnabled = e.detail.value; }); },
+  onRotate(e) { this.mutate((db) => { db.params.autoRotate = e.detail.value; }, e.detail.value ? '已开启：每轮自动轮换 T2/T3' : '已关闭自动轮换'); },
+  onLock(e) { const si = Number(e.currentTarget.dataset.si); this.slotMut(si, (s) => { s.noRotate = !s.noRotate; }, false); },
   onDayTab(e) { this.setData({ dIdx: Number(e.currentTarget.dataset.i) }); },
 
-  slotMut(si, fn) { const di = this.data.dIdx; this.mutate((db) => fn(db.days[di].slots[si], db)); },
+  slotMut(si, fn, tip) { const di = this.data.dIdx; this.mutate((db) => fn(db.days[di].slots[si], db), tip); },
   onEx(e) {
     const si = Number(e.currentTarget.dataset.si), slot = this.data.days[this.data.dIdx].slots[si];
     const name = slot.opts[Number(e.detail.value)];
