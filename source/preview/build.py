@@ -1,3 +1,4 @@
+import pathlib
 """把小程序 WXSS + engine/chart + H5 逻辑打包为单文件网页
 输出：
   preview/index.html            本地预览（桌面带手机外框，手机端全屏）
@@ -362,39 +363,17 @@ css.append("""
 .app .share-entry-title { font-size: 22px; font-weight: 700; color: var(--label); margin: 10px 0; letter-spacing: -.5px; }
 .app .share-entry-meta { font-size: 13px; color: var(--label2); margin-bottom: 16px; }
 .app .share-entry .btn-primary { width: 100%; font-size: 15px; height: 48px; }
-.app .share-sheet { padding: 12px 16px 16px; }
-.app .share-toolbar { display: flex; align-items: center; justify-content: space-between; }
-.app .share-toolbar .sheet-title { margin: 6px 0 10px; }
 .app .share-sheet button { border: 0; font-family: inherit; cursor: pointer; }
-.app .share-close { width: 44px; height: 44px; border-radius: 50%; background: var(--fill); font-size: 22px; color: var(--label2); }
-.app .share-options { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; font-size: 13px; color: var(--label2); gap: 8px; }
-.app .share-options label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; white-space: nowrap; }
-.app .share-quotebar { display: flex; gap: 8px; margin: 10px 0; }
-.app .share-quotebar .btn-again { flex: 1; min-height: 48px; font-size: var(--font-headline); font-weight: 600; color: var(--label); background: var(--fill); border: 0; border-radius: 14px; transition: transform .12s ease; }
-.app .share-quotebar .btn-again:active { transform: scale(.97); }
-.app .share-quotebar .quote-browse { min-height: 48px; flex-shrink: 0; }
-.app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); flex: 1; min-width: 0; width: 100%; text-overflow: ellipsis; }
-.app .share-options button { color: var(--label2); font-size: 13px; background: transparent; padding: 8px 0; }
-.app .share-pills { display: flex; gap: 6px; margin: 10px 0; }
-.app .share-pills button { background: var(--fill); border-radius: 999px; color: var(--label2); padding: 10px 13px; font-size: 13px; min-height: 44px; }
-.app .share-pills button.on { color: #304129; background: #DFE8D7; font-weight: 600; }
-.app .quote-selector { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--label2); margin: 14px 0; }
-.app .quote-selector select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 0; border-radius: 12px; background: #FFFFFF; color: var(--label); font-size: 15px; text-overflow: ellipsis; }
 .app .quote-source { border-radius: 14px; padding: 12px; background: var(--fill); color: var(--label2); font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
 .app .quote-source summary { cursor: pointer; font-weight: 500; }
 .app .quote-source p { margin: 10px 0; }
 .app .quote-source a { color: #385530; display: inline-block; padding: 10px 0; }
-.app .share-art { border-radius: 20px; overflow: hidden; background: #F5F6F3; min-height: 200px; }
-.app .share-art img { width: 100%; height: auto; display: block; -webkit-touch-callout: default; user-select: auto; }
-.app .share-art span { display: block; padding: 80px 12px; color: var(--label2); text-align: center; }
-.app .share-hint { font-size: 11px; line-height: 1.5; margin: 12px 4px; color: var(--label2); }
-.app .share-actions { display: flex; gap: 7px; position: sticky; bottom: -16px; padding: 12px 0 16px; background: #F5F5F8; z-index: 2; }
-.app .share-actions button { flex: 1; min-width: 0; height: 48px; border-radius: 999px; background: var(--fill); color: var(--label); font-size: 13px; font-weight: 600; }
-.app .share-actions button.main { background: var(--accent); color: #FFF; }
-.app .share-actions button:disabled { opacity: .45; }
 """)
 
 css = [type_scale(c) for c in css]
+_v4 = pathlib.Path(__file__).with_name("share-v4.css")
+if _v4.exists():
+    css.append(type_scale(_v4.read_text(encoding="utf-8")))
 # Final semantic design layer: same typography / 44px tap targets across the five pages and share UI.
 css.append(r"""
 .app { --font-caption: 11px; --font-footnote: 13px; --font-body: 15px; --font-headline: 17px; --font-title: 22px; --font-heading: 28px; --font-display: 34px; --font-input: 16px; }
@@ -410,22 +389,7 @@ css.append(r"""
 .app .link, .app .btn-small { font-size: var(--font-body); }
 .app .btn-primary, .app .btn-ghost { font-size: var(--font-headline); font-weight: 600; min-height: 48px; }
 .app .profile-list .profile-in, .app .sync-in, .app .search-in, .app .note, .app .imp { font-size: var(--font-input); }
-.app .share-sheet .share-toolbar { gap: 12px; }
-.app .share-sheet .share-options { font-size: var(--font-footnote); }
-.app .share-sheet .share-options button { min-height: 44px; font-size: var(--font-body); }
-.app .share-sheet .share-options select { font-family: inherit; font-size: var(--font-input); min-height: 44px; }
-.app .share-sheet .share-pills { gap: 6px; }
-.app .share-sheet .share-pills button { font-size: var(--font-body); font-weight: 500; min-height: 44px; flex: 1; padding: 10px 8px; }
-.app .share-sheet .share-pills button.on { background: #DEE7D6; color: #35482E; font-weight: 600; }
-.app .share-sheet .quote-selector { font-size: var(--font-footnote); }
-.app .share-sheet .quote-selector select { font-family: inherit; font-size: var(--font-input); padding: 12px; border-radius: 16px; }
-.app .share-sheet .quote-source { font-size: var(--font-footnote); line-height: 1.55; background: #ECEEE8; }
-.app .share-sheet .share-hint { font-size: var(--font-footnote); line-height: 1.55; }
-.app .share-sheet .share-actions { bottom: -16px; padding-top: 10px; }
-.app .share-sheet .share-actions button { font-size: var(--font-body); font-weight: 600; min-height: 48px; }
 .app .share-profile-tip { display:block; width:100%; text-align:left; margin:4px 0 12px; padding:12px 14px; border-radius:14px; background:#FFF4E5; color:#8A5A12; font-size:var(--font-footnote); line-height:1.5; min-height:44px; }
-.app .quote-browse { display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; width:100%; padding:12px; margin:0 0 12px; border-radius:16px; background:#FFFFFF; color:var(--label); font-size:var(--font-body); min-height:48px; }
-.app .quote-browse span { color:var(--label2); font-size:var(--font-footnote); }
 .app .quote-back { background:transparent; color:var(--label); font-size:var(--font-body); min-height:44px; padding:4px 0; }
 .app .quote-total { font-size:var(--font-footnote); color:var(--label2); }
 .app .quote-catalog .search { margin:14px 0; }
@@ -433,7 +397,6 @@ css.append(r"""
 .app .quote-card-text { font-size:var(--font-headline); font-weight:600; line-height:1.5; }
 .app .quote-card-credit { margin-top:8px; font-size:var(--font-footnote); line-height:1.45; color:var(--label2); }
 .app .quote-card:active { background:#E8EFDF; }
-.app .share-sheet .share-close { min-width:44px; min-height:44px; }
 @media (prefers-reduced-motion: reduce) { .app * { scroll-behavior:auto !important; } }
 """)
 

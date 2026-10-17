@@ -382,7 +382,8 @@ function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0]
   function chooseFun(date, opts, d) {
     opts=opts || {};
     var seed=Array.from(String(date)).reduce(function(n,c){return n+c.charCodeAt(0)*3;},7);
-    var v=Number(opts.variant)||0; v=Number.isFinite(v)?Math.trunc(v):0;
+    var raw = opts.funVariant != null ? opts.funVariant : opts.variant; // variant 为旧调用兼容
+    var v=Number(raw)||0; v=Number.isFinite(v)?Math.trunc(v):0;
     var pool=FUN.filter(function(f,ix){ return d.volume>0 || ix>=14; });
     var out=pool[((seed+v)%pool.length+pool.length)%pool.length](d);
     out.note='趣味说法由累计训练容量或次数换算，不是一次举起的重量，也不是热量。';
@@ -489,94 +490,106 @@ function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0]
   }
   function loadImage(src) { return new Promise(function (resolve) { if (!src || typeof Image === 'undefined') return resolve(null); var i = new Image(); i.onload = function () { resolve(i); }; i.onerror = function () { resolve(null); }; i.src = src; }); }
   // 输出的是实际 PNG，预览与保存始终同源；高度按动作数量变化，不能截掉训练内容。
+  // 画布字号 = 网页规范字号 × 2：22/26/30/34/44/56/68，展示数字 100
+  function secLabel(ctx, y, txt, muted) {
+    rounded(ctx, 64, y + 4, 6, 30, 3, '#C55A32');
+    text(ctx, txt, 84, y, 26, muted, 650);
+  }
   async function draw(canvas, data, theme) {
     var avatar = await loadImage(data.profile.avatar), ctx = canvas.getContext('2d');
-    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F';
+    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F', card = '#FFFFFF', fill = warm ? '#FFE8D3' : '#E6EDDF';
     var W = 1080;
-    // ---- 预量：名片 / 小结 / 名句（名句在卡片底部） ----
-    var pf = data.profile, nameSize = fit(ctx, data.name, 700, 52, 36);
+    var q = data.quote;
+    // ---- 预量 ----
+    var pf = data.profile, nameSize = fit(ctx, data.name, 700, 44, 36);
     font(ctx, 26, 400); var sigLines = pf.signature ? wrap(ctx, pf.signature, 720).slice(0, 2) : [];
     var subLine = [pf.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join('  ·  ');
-    var profileH = Math.max(152, 12 + nameSize + 14 + (subLine ? 36 : 0) + sigLines.length * 38 + 10);
-    font(ctx, 29, 500); var summaryLines = wrap(ctx, data.copy, 880);
-    var q = data.quote, qs = 40, qLines;
-    do { font(ctx, qs, 600); qLines = wrap(ctx, q.text, 952); if (qLines.length <= 3) break; qs -= 3; } while (qs > 28);
-    font(ctx, 24, 500); var originLines = q.original ? wrap(ctx, q.original, 952) : [];
-    font(ctx, 23, 500); var creditLines = wrap(ctx, data.attribution, 952);
-    var funSize = fit(ctx, data.fun, 880, 36, 24);
-    // ---- 版面（自上而下）：页眉 → 名片 → 训练信息 → 容量 → 指标 → 趣味数字 → 清单 → 小结 → 名句 → 页脚 ----
-    var infoY = 150 + profileH + 24;
-    var heroTop = infoY + 78, metricsTop = heroTop + 256 + 44, funTop = metricsTop + 128;
-    var listHead = funTop + 148, listTop = listHead + 62, listH = data.rows.length * 110;
-    var sumTop = listTop + listH + 30;
-    var sumH = 40 + summaryLines.length * 42;
-    var quoteTop = sumTop + sumH + 54;
-    var quoteH = qLines.length * (qs + 20) + 10 + originLines.length * 32 + creditLines.length * 32 + 34;
-    var H = quoteTop + quoteH + 150;
+    var profileH = Math.max(136, 10 + nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36 + 8);
+    var qs = 44, qLines;
+    do { font(ctx, qs, 600); qLines = wrap(ctx, q.text, 872); if (qLines.length <= 3) break; qs -= 4; } while (qs > 32);
+    font(ctx, 26, 400); var originLines = q.original ? wrap(ctx, q.original, 872) : [];
+    font(ctx, 26, 500); var creditLines = wrap(ctx, data.attribution, 872);
+    var quoteH = 40 + qLines.length * (qs + 16) + originLines.length * 34 + creditLines.length * 34 + 30;
+    font(ctx, 34, 500); var summaryLines = wrap(ctx, data.copy, 880);
+    var funSize = fit(ctx, data.fun, 880, 44, 30);
+    // ---- 纵向坐标（四段）----
+    // 一、个人名片 + 训练阶段 + 日期 + 名句
+    var s1Div = 150 + profileH + 26;
+    var s1Stage = s1Div + 20, s1Quote = s1Stage + 66, s2Top = s1Quote + quoteH + 24;
+    // 二、纵览：标签 + 容量卡 + 指标 + 趣味
+    var vLbl = s2Top + 52, vTop = vLbl + 48, mTop = vTop + 250 + 30, fTop = mTop + 96 + 34;
+    // 三、训练清单
+    var lLbl = fTop + 148 + 48, lTop = lLbl + 54;
+    font(ctx, 34, 650);
+    var lH = data.rows.reduce(function (a, r) { return a + Math.max(Math.min(2, wrap(ctx, r.name, 400).length) * 38 + 6 + 34, 96) + 30; }, 0);
+    // 四、小结
+    var smLbl = lTop + lH + 40, smTop = smLbl + 54;
+    var H = smTop + summaryLines.length * 46 + 42 + 130;
     canvas.width = W; canvas.height = H; ctx.textBaseline = 'top';
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     var glow = ctx.createRadialGradient(1010, 50, 10, 880, 70, 720); glow.addColorStop(0, warm ? '#FCD7B7' : '#E0E9D9'); glow.addColorStop(1, bg);
     ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 700);
-    // ---- 页眉 ----
+    // ==== 一、个人名片 · 阶段 · 日期 · 名句 ====
     text(ctx, '训练手记', 64, 68, 22, muted, 650);
-    ctx.textAlign = 'right'; text(ctx, data.date.replace(/-/g, '.'), 1016, 68, 22, muted, 500); ctx.textAlign = 'left';
-    // ---- 个人名片 ----
-    var AV = 136, ax = 64, ay = 150, cy0 = ay + Math.max(0, (profileH - AV) / 2);
+    ctx.textAlign = 'right'; text(ctx, data.date.replace(/-/g, '.'), 1016, 64, 26, muted, 500); ctx.textAlign = 'left';
+    var AV = 132, ax = 64, ay = 150, cy0 = ay + Math.max(0, (profileH - AV) / 2);
     ctx.save(); ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
     ctx.fillStyle = warm ? '#F6DCC6' : '#DCE5D3'; ctx.fillRect(ax, cy0, AV, AV);
     if (avatar) { var side = Math.min(avatar.width, avatar.height); ctx.drawImage(avatar, (avatar.width - side) / 2, (avatar.height - side) / 2, side, side, ax, cy0, AV, AV); }
-    else { font(ctx, 60, 700); ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.fillText(Array.from(data.name)[0], ax + AV / 2, cy0 + AV / 2 - 36); ctx.textAlign = 'left'; }
+    else { font(ctx, 58, 700); ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.fillText(Array.from(data.name)[0], ax + AV / 2, cy0 + AV / 2 - 34); ctx.textAlign = 'left'; }
     ctx.restore();
     ctx.lineWidth = 4; ctx.strokeStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2 - 2, 0, Math.PI * 2); ctx.stroke();
-    var tx = ax + AV + 32, ty = ay + Math.max(0, (profileH - (nameSize + 14 + (subLine ? 36 : 0) + sigLines.length * 38)) / 2);
-    text(ctx, data.name, tx, ty, nameSize, ink, 700); ty += nameSize + 14;
-    if (subLine) { text(ctx, subLine, tx, ty, 24, muted, 500); ty += 36; }
-    sigLines.forEach(function (l) { text(ctx, l, tx, ty, 26, ink, 400); ty += 38; });
-    // ---- 本次训练信息 ----
-    ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, infoY); ctx.lineTo(1016, infoY); ctx.stroke();
-    text(ctx, data.day + ' ' + data.dayName + '  ·  ' + data.weekText + '  ·  第 ' + data.seq + ' 次训练', 64, infoY + 22, 24, ink, 600);
-    // ---- 容量主数字 ----
-    rounded(ctx, 64, heroTop, 952, 256, 38, '#FFFFFF');
-    text(ctx, data.estimated ? '估算训练容量' : '累计训练容量', 100, heroTop + 34, 25, muted, 500);
-    text(ctx, data.volumeText, 92, heroTop + 76, 108, ink, 750);
-    font(ctx, 108, 750); var numWidth = ctx.measureText(data.volumeText).width;
-    text(ctx, 't', 106 + numWidth, heroTop + 126, 35, muted, 550);
-    text(ctx, data.volume.toLocaleString('zh-CN') + ' kg · 重量 × 次数之和', 100, heroTop + 177, 22, muted, 400);
-    // ---- 指标 ----
+    var tx = ax + AV + 30, ty = ay + Math.max(0, (profileH - (nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36)) / 2);
+    text(ctx, data.name, tx, ty, nameSize, ink, 700); ty += nameSize + 12;
+    if (subLine) { text(ctx, subLine, tx, ty, 26, muted, 500); ty += 34; }
+    sigLines.forEach(function (l) { text(ctx, l, tx, ty, 26, ink, 400); ty += 36; });
+    ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, s1Div); ctx.lineTo(1016, s1Div); ctx.stroke();
+    text(ctx, data.day + ' ' + data.dayName, 64, s1Stage, 34, ink, 700);
+    ctx.textAlign = 'right'; text(ctx, data.weekText + ' · 第 ' + data.seq + ' 次训练', 1016, s1Stage + 6, 26, muted, 500); ctx.textAlign = 'left';
+    rounded(ctx, 64, s1Quote, 952, quoteH, 34, card);
+    var qy = s1Quote + 36;
+    qLines.forEach(function (l, k) { text(ctx, l, 104, qy + k * (qs + 16), qs, ink, 600); });
+    qy += qLines.length * (qs + 16) + 12;
+    originLines.forEach(function (l, k) { text(ctx, l, 104, qy + k * 34, 26, muted, 400); });
+    qy += originLines.length * 34;
+    creditLines.forEach(function (l, k) { text(ctx, l, 104, qy + k * 34, 26, muted, 500); });
+    // ==== 二、纵览数据 + 趣味包装 ====
+    secLabel(ctx, s2Top, '纵览数据', muted);
+    rounded(ctx, 64, vTop, 952, 250, 36, card);
+    text(ctx, data.estimated ? '估算训练容量' : '累计训练容量', 100, vTop + 32, 26, muted, 500);
+    text(ctx, data.volumeText, 92, vTop + 74, 100, ink, 750);
+    font(ctx, 100, 750); var numWidth = ctx.measureText(data.volumeText).width;
+    text(ctx, 't', 100 + numWidth, vTop + 122, 34, muted, 550);
+    text(ctx, data.volume.toLocaleString('zh-CN') + ' kg · 重量 × 次数之和', 100, vTop + 172, 26, muted, 400);
     var metrics = [[data.rows.length, '训练动作'], [data.reps, (data.estimated ? '估算' : '累计') + '次数'], [data.adds, '达到加重条件']];
-    metrics.forEach(function (m, i) { var x = 70 + i * 322; text(ctx, m[0], x, metricsTop, 54, ink, 700); text(ctx, m[1], x, metricsTop + 64, 23, muted, 400); });
-    // ---- 趣味数字（emoji 模板，随机轮换） ----
-    rounded(ctx, 64, funTop, 952, 148, 30, warm ? '#FFE8D3' : '#E6EDDF');
-    text(ctx, data.fun, 92, funTop + 40, funSize, ink, 650);
-    text(ctx, data.funNote, 92, funTop + 104, 20, muted, 400);
-    // ---- 训练清单 ----
-    text(ctx, '本次训练清单', 64, listHead, 29, ink, 650);
-    ctx.textAlign = 'right'; text(ctx, data.rows.length + ' 项动作', 1016, listHead + 6, 22, muted, 500); ctx.textAlign = 'left';
-    var y = listTop;
-    data.rows.forEach(function (r) {
-      ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, y - 14); ctx.lineTo(1016, y - 14); ctx.stroke();
-      text(ctx, r.tier, 64, y + 2, 23, muted, 650);
-      font(ctx, 30, 650); var names = wrap(ctx, r.name, 390);
-      names.slice(0, 2).forEach(function (l, k) { text(ctx, l, 144, y + k * 33, 30, ink, 650); });
-      text(ctx, r.result, 144, y + 72, 21, muted, 400);
-      font(ctx, 27, 650); ctx.textAlign = 'right'; text(ctx, r.load, 1016, y + 2, 27, ink, 650); text(ctx, r.stage + ' · ' + r.reps + ' 次', 1016, y + 44, 22, muted, 400); ctx.textAlign = 'left';
-      y += 110;
+    metrics.forEach(function (m, k) { var x = 70 + k * 322; text(ctx, m[0], x, mTop, 56, ink, 700); text(ctx, m[1], x, mTop + 66, 26, muted, 400); });
+    rounded(ctx, 64, fTop, 952, 148, 30, fill);
+    text(ctx, data.fun, 92, fTop + 38, funSize, ink, 650);
+    text(ctx, data.funNote, 92, fTop + 102, 22, muted, 400);
+    // ==== 三、训练内容明细 ====
+    secLabel(ctx, lLbl, '训练内容', muted);
+    ctx.textAlign = 'right'; text(ctx, data.rows.length + ' 项动作', 1016, lLbl + 2, 26, muted, 500); ctx.textAlign = 'left';
+    var y = lTop;
+    // 行高按名字折行数测量：名字区 + 结果行 + 行间留白，避免下一行压到上一行
+    var rowHs = data.rows.map(function (r) { font(ctx, 34, 650); return Math.min(2, wrap(ctx, r.name, 400).length) * 38; });
+    data.rows.forEach(function (r, idx) {
+      ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, y - 18); ctx.lineTo(1016, y - 18); ctx.stroke();
+      text(ctx, r.tier, 64, y + 4, 26, muted, 650);
+      font(ctx, 34, 650); var names = wrap(ctx, r.name, 400);
+      names.slice(0, 2).forEach(function (l, k) { text(ctx, l, 148, y + k * 38, 34, ink, 650); });
+      var resY = y + rowHs[idx] + 6;
+      text(ctx, r.result, 148, resY, 26, muted, 400);
+      font(ctx, 34, 650); ctx.textAlign = 'right';
+      text(ctx, r.load, 1016, y + 2, 34, ink, 650);
+      text(ctx, r.stage + ' · ' + r.reps + ' 次', 1016, y + 44, 26, muted, 400);
+      ctx.textAlign = 'left';
+      y += Math.max(rowHs[idx] + 6 + 34, 96) + 30;
     });
-    // ---- 小结 ----
-    y += 26; ctx.strokeStyle = '#DCE1D6'; ctx.beginPath(); ctx.moveTo(64, y); ctx.lineTo(1016, y); ctx.stroke();
-    text(ctx, '训练小结 · 本应用生成', 64, y + 26, 22, muted, 500);
-    summaryLines.forEach(function (l, i) { text(ctx, l, 64, y + 66 + i * 42, 29, ink, 500); });
-    // ---- 名句（卡片底部） ----
-    var qy = quoteTop;
-    text(ctx, '「', 64, qy - 26, 40, muted, 700);
-    qLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * (qs + 20), qs, ink, 600); });
-    qy += qLines.length * (qs + 20) + 10;
-    originLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * 32, 24, muted, 400); });
-    qy += originLines.length * 32;
-    creditLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * 32, 23, muted, 500); });
-    // ---- 页脚 ----
-    text(ctx, '认真练习，也认真恢复。', 64, H - 100, 22, muted, 500);
-    text(ctx, '容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。', 64, H - 60, 18, muted, 400);
+    // ==== 四、训练小结 ====
+    secLabel(ctx, smLbl, '训练小结 · 本应用生成', muted);
+    summaryLines.forEach(function (l, k) { text(ctx, l, 84, smTop + k * 46, 34, ink, 500); });
+    text(ctx, '认真练习，也认真恢复。', 64, H - 96, 26, muted, 500);
+    text(ctx, '容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。', 64, H - 58, 22, muted, 400);
     return canvas;
   }
   return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, QUOTES: QUOTES, quoteById: quoteById, chooseQuote: chooseQuote, chooseFun: chooseFun, FUN: FUN, attribution: attribution };

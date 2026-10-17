@@ -738,7 +738,7 @@
   }
   function reviewAct(act, ds, el) {
     var r = S.review;
-    if (act === 'shareopen') { r.share = {id:ds.id,variant:0,theme:'sage',image:null,blob:null}; return true; }
+    if (act === 'shareopen') { r.share = {id:ds.id,variant:0,funVariant:0,theme:'sage',image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
     if (act === 'sharerec') { r.share.id=el.value; r.share.variant=0; delete r.share.quoteId; return true; }
     if (act === 'quotelibrary') { r.share.library=true; r.share.q=''; return true; }
@@ -750,10 +750,12 @@
     }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'shareagain') { r.share.variant=(r.share.variant||0)+1; delete r.share.quoteId; return true; }
+    if (act === 'funagain') { r.share.funVariant=(r.share.funVariant||0)+1; return true; }
     if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
-    if (act === 'shareprofile') { r.share=null; S.tab='settings'; render(); return false; }
+    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, variant: r.share.variant, funVariant: r.share.funVariant, theme: r.share.theme }; r.share=null; S.tab='settings'; render(); return false; }
+    if (act === 'sharetrain') { r.share=null; S.tab='train'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
     if (act === 'toggle') { r.open[ds.id] = !r.open[ds.id]; return true; }
@@ -782,17 +784,42 @@
     if(!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">这一天没有可分享的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
     var list=Share.sessionList(load());
     if(sh.library) return renderQuoteCatalog();
-    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
-      '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
-      '<div class="share-options"><label>分享哪次训练 <select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
-      (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没设置名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') +
-      '<div class="share-quotebar"><button class="btn-again" data-act="shareagain">🎲 换一句 · 换个说法</button><button class="quote-browse" data-act="quotelibrary">全部 '+Share.QUOTES.length+' 句 ›</button></div>' +
-      
-      '<details class="quote-source"><summary>'+esc(data.attribution)+' · 核对出处</summary><p>'+esc(data.quote.context)+'</p>'+(data.quote.original?'<p>核验英文文本：'+esc(data.quote.original)+'<br>中文：本应用自译，非引用现成译本。</p>':'')+'<p>'+esc(data.quote.note)+'。简体字、标点按核验文本展示；仅作心态表达，不是训练指导。</p><a href="'+esc(data.quote.source)+'" target="_blank" rel="noopener noreferrer">打开原文来源 ↗</a></details>' +
-      '<div class="share-pills" role="group" aria-label="卡片配色">'+[['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>' +
-      '<div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span>正在整理你的训练成果…</span></div>' +
-      '<div class="share-hint">卡片按所选的那次训练生成；名句和趣味说法在卡片下方，点「换一句」一起换。趣味说法为容量换算，不是一次举起的重量。预览即最终图片，可长按保存。</div>' +
-      '<div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div></div>';
+    var ava = data.profile.avatar
+      ? '<img class="ss-ava" src="' + esc(data.profile.avatar) + '" alt="' + esc(data.name) + ' 的头像">'
+      : '<span class="ss-ava ss-ava-t" aria-hidden="true">' + esc(Array.from(data.name || '我')[0]) + '</span>';
+    var who = [data.profile.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join(' · ') || (data.profile.signature ? '' : '未设置社媒 ID');
+    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1">' +
+      '<div class="share-head"><div class="grabber"></div>' +
+        '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
+        '<div class="ss-theme" role="group" aria-label="卡片配色">' + [['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'" aria-pressed="'+(sh.theme===t[0])+'">'+t[1]+'</button>';}).join('') + '</div>' +
+      '</div>' +
+      '<div class="ss-body">' +
+      // 一、个人名片
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">01 · 个人名片</span><button class="ss-act" data-act="shareprofile">编辑名片 ›</button></div>' +
+        '<div class="ss-row">' + ava + '<div class="ss-who"><span class="ss-name">' + esc(data.name) + '</span><span class="ss-sub">' + esc(who) + '</span></div></div>' +
+        (data.profile.signature ? '<p class="ss-sig">' + esc(data.profile.signature) + '</p>' : '') +
+        (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
+      // 二、名句
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 名句</span><span class="ss-acts"><button class="ss-act dice" data-act="shareagain">🎲 换一句</button><button class="ss-act" data-act="quotelibrary">全部 ' + Share.QUOTES.length + ' 句 ›</button></span></div>' +
+        '<blockquote class="ss-quote"><p>' + esc(data.quote.text) + '</p><cite>' + esc(data.attribution) + '</cite></blockquote>' +
+        '<details class="quote-source"><summary>出处与核验</summary><p>' + esc(data.quote.context) + '</p>' + (data.quote.original ? '<p>核验文本：' + esc(data.quote.original) + '<br>中文：本应用自译，非引用现成译本。</p>' : '') + '<p>' + esc(data.quote.note) + '。仅作心态表达，不是训练指导。</p><a href="' + esc(data.quote.source) + '" target="_blank" rel="noopener noreferrer">打开原文来源 ↗</a></details></div>' +
+      // 三、纵览与趣味
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 纵览与趣味说法</span><button class="ss-act dice" data-act="funagain">🎲 换个说法</button></div>' +
+        '<div class="ss-metrics"><span><b class="num">' + esc(String(data.rows.length)) + '</b>项动作</span><span><b class="num">' + esc(String(data.reps)) + '</b>次动作</span><span><b class="num">' + esc(String(data.adds)) + '</b>项加重</span></div>' +
+        '<div class="ss-fun">' + esc(data.fun) + '<span class="ss-fun-note">' + esc(data.funNote) + '</span></div></div>' +
+      // 四、训练内容
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">04 · 训练内容</span><button class="ss-act" data-act="sharetrain">查看训练 ›</button></div>' +
+        '<label class="ss-pick"><span class="ss-pick-l">哪次训练</span><select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label>' +
+        '<div class="ss-cells">' + data.rows.map(function(r){return '<span class="ss-cell"><i class="ss-tier">' + esc(r.tier) + '</i>' + esc(r.name) + '<b class="num">' + esc(r.load) + '</b></span>';}).join('') + '</div>' +
+        '<p class="ss-load">累计 ' + esc(data.volumeText) + ' t · ' + esc(data.volume.toLocaleString('zh-CN')) + ' kg</p></div>' +
+      // 五、小结
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">05 · 训练小结</span></div>' +
+        '<div class="ss-sum">' + esc(data.copy) + '</div></div>' +
+      '<div class="share-art-wrap"><div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span class="share-loading">正在整理你的训练成果…</span></div></div>' +
+      '<div class="share-hint">预览即最终图片，可长按保存；名句与趣味说法都可以单独换。</div>' +
+      '</div>' +
+      '<div class="share-foot"><div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div>' +
+      '</div></div>';
   }
   function quoteCatalogRows(sh) {
     var q=String(sh.q||'').trim();
@@ -1079,7 +1106,13 @@
     document.getElementById('tabbar').addEventListener('click', function (e) {
       var it = e.target.closest('.tb-item'); if (!it) return;
       if (S.tab === it.dataset.tab) { body.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      var prevTab = S.tab;
       S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
+      if (S.tab === 'review' && S.review.returnTo && prevTab === 'settings') {
+        var back = S.review.returnTo; S.review.returnTo = null;
+        S.review.share = { id: back.id, variant: back.variant || 0, funVariant: back.funVariant || 0, theme: back.theme || 'sage', image: null, blob: null };
+        render();
+      }
     });
     document.getElementById('rest').addEventListener('click', function (e) {
       var a = e.target.closest('[data-rest-adj]'), s = e.target.closest('[data-rest-stop]');

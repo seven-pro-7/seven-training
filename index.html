@@ -682,34 +682,141 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .share-entry-title { font-size: 22px; font-weight: 700; color: var(--label); margin: 10px 0; letter-spacing: -.5px; }
 .app .share-entry-meta { font-size: 13px; color: var(--label2); margin-bottom: 16px; }
 .app .share-entry .btn-primary { width: 100%; font-size: 15px; height: 48px; }
-.app .share-sheet { padding: 12px 16px 16px; }
-.app .share-toolbar { display: flex; align-items: center; justify-content: space-between; }
-.app .share-toolbar .sheet-title { margin: 6px 0 10px; }
 .app .share-sheet button { border: 0; font-family: inherit; cursor: pointer; }
-.app .share-close { width: 44px; height: 44px; border-radius: 50%; background: var(--fill); font-size: 22px; color: var(--label2); }
-.app .share-options { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; font-size: 13px; color: var(--label2); gap: 8px; }
-.app .share-options label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; white-space: nowrap; }
-.app .share-quotebar { display: flex; gap: 8px; margin: 10px 0; }
-.app .share-quotebar .btn-again { flex: 1; min-height: 48px; font-size: var(--font-headline); font-weight: 600; color: var(--label); background: var(--fill); border: 0; border-radius: 14px; transition: transform .12s ease; }
-.app .share-quotebar .btn-again:active { transform: scale(.97); }
-.app .share-quotebar .quote-browse { min-height: 48px; flex-shrink: 0; }
-.app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); flex: 1; min-width: 0; width: 100%; text-overflow: ellipsis; }
-.app .share-options button { color: var(--label2); font-size: 13px; background: transparent; padding: 8px 0; }
-.app .share-pills { display: flex; gap: 6px; margin: 10px 0; }
-.app .share-pills button { background: var(--fill); border-radius: 999px; color: var(--label2); padding: 10px 13px; font-size: 13px; min-height: 44px; }
-.app .share-pills button.on { color: #304129; background: #DFE8D7; font-weight: 600; }
-.app .quote-selector { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--label2); margin: 14px 0; }
-.app .quote-selector select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 0; border-radius: 12px; background: #FFFFFF; color: var(--label); font-size: 15px; text-overflow: ellipsis; }
 .app .quote-source { border-radius: 14px; padding: 12px; background: var(--fill); color: var(--label2); font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
 .app .quote-source summary { cursor: pointer; font-weight: 500; }
 .app .quote-source p { margin: 10px 0; }
 .app .quote-source a { color: #385530; display: inline-block; padding: 10px 0; }
-.app .share-art { border-radius: 20px; overflow: hidden; background: #F5F6F3; min-height: 200px; }
-.app .share-art img { width: 100%; height: auto; display: block; -webkit-touch-callout: default; user-select: auto; }
-.app .share-art span { display: block; padding: 80px 12px; color: var(--label2); text-align: center; }
-.app .share-hint { font-size: 11px; line-height: 1.5; margin: 12px 4px; color: var(--label2); }
-.app .share-actions { display: flex; gap: 7px; position: sticky; bottom: -16px; padding: 12px 0 16px; background: #F5F5F8; z-index: 2; }
-.app .share-actions button { flex: 1; min-width: 0; height: 48px; border-radius: 999px; background: var(--fill); color: var(--label); font-size: 13px; font-weight: 600; }
+
+/* ===== 分享面板 v4：三段式（固定头 / 滚动正文 / 固定底栏）+ 五分区 ===== */
+.app .share-sheet {
+  display: flex; flex-direction: column;
+  max-height: 88vh; overflow: hidden;
+  padding: 0; /* 内边距交给内部三段，避免 sticky 计算错位 */
+}
+.app .share-head {
+  flex: 0 0 auto; padding: 10px 16px 0;
+  background: var(--bg);
+  border-bottom: 1px solid rgba(60,60,67,0.08);
+}
+.app .share-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.app .share-toolbar .sheet-title { font-size: 22px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.2px; }
+.app .share-close {
+  width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 50%;
+  background: #E9EAE5; color: var(--label2);
+  font-size: 22px; line-height: 1; font-weight: 500;
+}
+.app .share-close:active { transform: scale(.94); }
+
+.app .ss-theme { display: flex; gap: 6px; padding: 0 0 10px; }
+.app .ss-theme button {
+  min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: #EDEEE9; color: var(--label2); font-size: 13px; font-weight: 500;
+}
+.app .ss-theme button.on { color: #35482E; background: #DFE8D7; font-weight: 600; }
+
+.app .ss-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 4px 16px 8px;
+}
+
+.app .ss-sec { margin: 10px 0; padding: 14px; border-radius: 20px; background: rgba(255,255,255,0.78); }
+.app .ss-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.app .ss-t { font-size: 13px; font-weight: 600; color: var(--label2); letter-spacing: .3px; white-space: nowrap; }
+.app .ss-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.app .ss-act {
+  min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: #EDEEE9; color: var(--label); font-size: 13px; font-weight: 500; white-space: nowrap;
+}
+.app .ss-act:active { transform: scale(.96); }
+.app .ss-act.dice { font-weight: 600; }
+
+.app .ss-row { display: flex; align-items: center; gap: 12px; }
+.app .ss-ava {
+  width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+  background: #E6EDDF; flex-shrink: 0;
+}
+.app .ss-ava-t {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: #35482E;
+}
+.app .ss-who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.app .ss-name { font-size: 17px; font-weight: 600; color: var(--label); }
+.app .ss-sub { font-size: 13px; color: var(--label2); }
+.app .ss-sig { margin: 10px 0 0; font-size: 13px; line-height: 1.55; color: var(--label2); }
+
+/* 名句：正文必须是主角，出处退到折叠区 */
+.app .ss-quote { margin: 0; padding: 0; }
+.app .ss-quote p {
+  margin: 0; font-size: 17px; line-height: 1.55; font-weight: 600;
+  color: var(--label); letter-spacing: -0.1px;
+}
+.app .ss-quote cite {
+  display: block; margin-top: 8px; font-style: normal;
+  font-size: 13px; color: var(--label2);
+}
+.app .quote-source { margin-top: 10px; }
+.app .quote-source summary {
+  min-height: 32px; display: flex; align-items: center;
+  font-size: 13px; color: var(--label2); cursor: pointer;
+}
+.app .quote-source p { margin: 6px 0 0; font-size: 13px; line-height: 1.6; color: var(--label2); }
+.app .quote-source a { display: inline-block; margin-top: 8px; font-size: 13px; color: #35482E; text-decoration: underline; }
+
+.app .ss-metrics { display: flex; gap: 8px; margin-bottom: 12px; }
+.app .ss-metrics span {
+  flex: 1; min-width: 0; padding: 10px 12px; border-radius: 14px; background: #F2F3EE;
+  font-size: 13px; color: var(--label2); display: flex; flex-direction: column; gap: 2px;
+}
+.app .ss-metrics b { font-size: 22px; font-weight: 700; color: var(--label); line-height: 1.1; }
+
+.app .ss-fun { font-size: 15px; line-height: 1.5; color: var(--label); }
+.app .ss-fun-note { display: block; margin-top: 6px; font-size: 11px; color: var(--label2); line-height: 1.5; }
+
+.app .ss-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.app .ss-pick-l { flex: 0 0 auto; font-size: 13px; color: var(--label2); }
+.app .ss-pick select {
+  flex: 1; min-width: 0; min-height: 36px; padding: 6px 10px;
+  border: 0; border-radius: 10px; background: #EDEEE9; color: var(--label);
+  font-size: 15px; text-overflow: ellipsis;
+}
+
+.app .ss-cells { display: flex; flex-wrap: wrap; gap: 8px; }
+.app .ss-cell {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px;
+  border-radius: 14px; background: #F2F3EE; font-size: 13px; color: var(--label);
+}
+.app .ss-cell b { font-weight: 600; }
+.app .ss-tier {
+  font-style: normal; font-size: 11px; font-weight: 700; color: #35482E;
+  background: #DFE8D7; border-radius: 6px; padding: 2px 5px;
+}
+.app .ss-load { margin: 10px 0 0; font-size: 13px; color: var(--label2); }
+
+.app .ss-sum { font-size: 15px; line-height: 1.62; color: var(--label); }
+
+.app .share-art-wrap { margin-top: 12px; }
+.app .share-art {
+  border-radius: 18px; overflow: hidden; background: #EDEEE9;
+  display: flex; align-items: center; justify-content: center; min-height: 120px;
+}
+.app .share-art img { display: block; width: 100%; height: auto; }
+.app .share-loading { font-size: 13px; color: var(--label2); padding: 40px 0; }
+.app .share-hint { font-size: 13px; line-height: 1.55; margin: 10px 4px 14px; color: var(--label2); }
+
+/* 底栏：在文档流里；分享面板是模态，盖住了底部导航，只需让出安全区 */
+.app .share-foot {
+  flex: 0 0 auto;
+  padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid rgba(60,60,67,0.08);
+}
+.app .share-actions { display: flex; gap: 8px; }
+.app .share-actions button {
+  flex: 1; min-width: 0; min-height: 48px; border: 0; border-radius: 999px;
+  background: #E9EAE5; color: var(--label); font-size: 15px; font-weight: 600;
+}
 .app .share-actions button.main { background: var(--accent); color: #FFF; }
 .app .share-actions button:disabled { opacity: .45; }
 
@@ -727,22 +834,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .link, .app .btn-small { font-size: var(--font-body); }
 .app .btn-primary, .app .btn-ghost { font-size: var(--font-headline); font-weight: 600; min-height: 48px; }
 .app .profile-list .profile-in, .app .sync-in, .app .search-in, .app .note, .app .imp { font-size: var(--font-input); }
-.app .share-sheet .share-toolbar { gap: 12px; }
-.app .share-sheet .share-options { font-size: var(--font-footnote); }
-.app .share-sheet .share-options button { min-height: 44px; font-size: var(--font-body); }
-.app .share-sheet .share-options select { font-family: inherit; font-size: var(--font-input); min-height: 44px; }
-.app .share-sheet .share-pills { gap: 6px; }
-.app .share-sheet .share-pills button { font-size: var(--font-body); font-weight: 500; min-height: 44px; flex: 1; padding: 10px 8px; }
-.app .share-sheet .share-pills button.on { background: #DEE7D6; color: #35482E; font-weight: 600; }
-.app .share-sheet .quote-selector { font-size: var(--font-footnote); }
-.app .share-sheet .quote-selector select { font-family: inherit; font-size: var(--font-input); padding: 12px; border-radius: 16px; }
-.app .share-sheet .quote-source { font-size: var(--font-footnote); line-height: 1.55; background: #ECEEE8; }
-.app .share-sheet .share-hint { font-size: var(--font-footnote); line-height: 1.55; }
-.app .share-sheet .share-actions { bottom: -16px; padding-top: 10px; }
-.app .share-sheet .share-actions button { font-size: var(--font-body); font-weight: 600; min-height: 48px; }
 .app .share-profile-tip { display:block; width:100%; text-align:left; margin:4px 0 12px; padding:12px 14px; border-radius:14px; background:#FFF4E5; color:#8A5A12; font-size:var(--font-footnote); line-height:1.5; min-height:44px; }
-.app .quote-browse { display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; width:100%; padding:12px; margin:0 0 12px; border-radius:16px; background:#FFFFFF; color:var(--label); font-size:var(--font-body); min-height:48px; }
-.app .quote-browse span { color:var(--label2); font-size:var(--font-footnote); }
 .app .quote-back { background:transparent; color:var(--label); font-size:var(--font-body); min-height:44px; padding:4px 0; }
 .app .quote-total { font-size:var(--font-footnote); color:var(--label2); }
 .app .quote-catalog .search { margin:14px 0; }
@@ -750,7 +842,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .quote-card-text { font-size:var(--font-headline); font-weight:600; line-height:1.5; }
 .app .quote-card-credit { margin-top:8px; font-size:var(--font-footnote); line-height:1.45; color:var(--label2); }
 .app .quote-card:active { background:#E8EFDF; }
-.app .share-sheet .share-close { min-width:44px; min-height:44px; }
 @media (prefers-reduced-motion: reduce) { .app * { scroll-behavior:auto !important; } }
 </style></head>
 <body>
@@ -2809,7 +2900,8 @@ function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0]
   function chooseFun(date, opts, d) {
     opts=opts || {};
     var seed=Array.from(String(date)).reduce(function(n,c){return n+c.charCodeAt(0)*3;},7);
-    var v=Number(opts.variant)||0; v=Number.isFinite(v)?Math.trunc(v):0;
+    var raw = opts.funVariant != null ? opts.funVariant : opts.variant; // variant 为旧调用兼容
+    var v=Number(raw)||0; v=Number.isFinite(v)?Math.trunc(v):0;
     var pool=FUN.filter(function(f,ix){ return d.volume>0 || ix>=14; });
     var out=pool[((seed+v)%pool.length+pool.length)%pool.length](d);
     out.note='趣味说法由累计训练容量或次数换算，不是一次举起的重量，也不是热量。';
@@ -2916,94 +3008,106 @@ function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0]
   }
   function loadImage(src) { return new Promise(function (resolve) { if (!src || typeof Image === 'undefined') return resolve(null); var i = new Image(); i.onload = function () { resolve(i); }; i.onerror = function () { resolve(null); }; i.src = src; }); }
   // 输出的是实际 PNG，预览与保存始终同源；高度按动作数量变化，不能截掉训练内容。
+  // 画布字号 = 网页规范字号 × 2：22/26/30/34/44/56/68，展示数字 100
+  function secLabel(ctx, y, txt, muted) {
+    rounded(ctx, 64, y + 4, 6, 30, 3, '#C55A32');
+    text(ctx, txt, 84, y, 26, muted, 650);
+  }
   async function draw(canvas, data, theme) {
     var avatar = await loadImage(data.profile.avatar), ctx = canvas.getContext('2d');
-    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F';
+    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F', card = '#FFFFFF', fill = warm ? '#FFE8D3' : '#E6EDDF';
     var W = 1080;
-    // ---- 预量：名片 / 小结 / 名句（名句在卡片底部） ----
-    var pf = data.profile, nameSize = fit(ctx, data.name, 700, 52, 36);
+    var q = data.quote;
+    // ---- 预量 ----
+    var pf = data.profile, nameSize = fit(ctx, data.name, 700, 44, 36);
     font(ctx, 26, 400); var sigLines = pf.signature ? wrap(ctx, pf.signature, 720).slice(0, 2) : [];
     var subLine = [pf.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join('  ·  ');
-    var profileH = Math.max(152, 12 + nameSize + 14 + (subLine ? 36 : 0) + sigLines.length * 38 + 10);
-    font(ctx, 29, 500); var summaryLines = wrap(ctx, data.copy, 880);
-    var q = data.quote, qs = 40, qLines;
-    do { font(ctx, qs, 600); qLines = wrap(ctx, q.text, 952); if (qLines.length <= 3) break; qs -= 3; } while (qs > 28);
-    font(ctx, 24, 500); var originLines = q.original ? wrap(ctx, q.original, 952) : [];
-    font(ctx, 23, 500); var creditLines = wrap(ctx, data.attribution, 952);
-    var funSize = fit(ctx, data.fun, 880, 36, 24);
-    // ---- 版面（自上而下）：页眉 → 名片 → 训练信息 → 容量 → 指标 → 趣味数字 → 清单 → 小结 → 名句 → 页脚 ----
-    var infoY = 150 + profileH + 24;
-    var heroTop = infoY + 78, metricsTop = heroTop + 256 + 44, funTop = metricsTop + 128;
-    var listHead = funTop + 148, listTop = listHead + 62, listH = data.rows.length * 110;
-    var sumTop = listTop + listH + 30;
-    var sumH = 40 + summaryLines.length * 42;
-    var quoteTop = sumTop + sumH + 54;
-    var quoteH = qLines.length * (qs + 20) + 10 + originLines.length * 32 + creditLines.length * 32 + 34;
-    var H = quoteTop + quoteH + 150;
+    var profileH = Math.max(136, 10 + nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36 + 8);
+    var qs = 44, qLines;
+    do { font(ctx, qs, 600); qLines = wrap(ctx, q.text, 872); if (qLines.length <= 3) break; qs -= 4; } while (qs > 32);
+    font(ctx, 26, 400); var originLines = q.original ? wrap(ctx, q.original, 872) : [];
+    font(ctx, 26, 500); var creditLines = wrap(ctx, data.attribution, 872);
+    var quoteH = 40 + qLines.length * (qs + 16) + originLines.length * 34 + creditLines.length * 34 + 30;
+    font(ctx, 34, 500); var summaryLines = wrap(ctx, data.copy, 880);
+    var funSize = fit(ctx, data.fun, 880, 44, 30);
+    // ---- 纵向坐标（四段）----
+    // 一、个人名片 + 训练阶段 + 日期 + 名句
+    var s1Div = 150 + profileH + 26;
+    var s1Stage = s1Div + 20, s1Quote = s1Stage + 66, s2Top = s1Quote + quoteH + 24;
+    // 二、纵览：标签 + 容量卡 + 指标 + 趣味
+    var vLbl = s2Top + 52, vTop = vLbl + 48, mTop = vTop + 250 + 30, fTop = mTop + 96 + 34;
+    // 三、训练清单
+    var lLbl = fTop + 148 + 48, lTop = lLbl + 54;
+    font(ctx, 34, 650);
+    var lH = data.rows.reduce(function (a, r) { return a + Math.max(Math.min(2, wrap(ctx, r.name, 400).length) * 38 + 6 + 34, 96) + 30; }, 0);
+    // 四、小结
+    var smLbl = lTop + lH + 40, smTop = smLbl + 54;
+    var H = smTop + summaryLines.length * 46 + 42 + 130;
     canvas.width = W; canvas.height = H; ctx.textBaseline = 'top';
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     var glow = ctx.createRadialGradient(1010, 50, 10, 880, 70, 720); glow.addColorStop(0, warm ? '#FCD7B7' : '#E0E9D9'); glow.addColorStop(1, bg);
     ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 700);
-    // ---- 页眉 ----
+    // ==== 一、个人名片 · 阶段 · 日期 · 名句 ====
     text(ctx, '训练手记', 64, 68, 22, muted, 650);
-    ctx.textAlign = 'right'; text(ctx, data.date.replace(/-/g, '.'), 1016, 68, 22, muted, 500); ctx.textAlign = 'left';
-    // ---- 个人名片 ----
-    var AV = 136, ax = 64, ay = 150, cy0 = ay + Math.max(0, (profileH - AV) / 2);
+    ctx.textAlign = 'right'; text(ctx, data.date.replace(/-/g, '.'), 1016, 64, 26, muted, 500); ctx.textAlign = 'left';
+    var AV = 132, ax = 64, ay = 150, cy0 = ay + Math.max(0, (profileH - AV) / 2);
     ctx.save(); ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
     ctx.fillStyle = warm ? '#F6DCC6' : '#DCE5D3'; ctx.fillRect(ax, cy0, AV, AV);
     if (avatar) { var side = Math.min(avatar.width, avatar.height); ctx.drawImage(avatar, (avatar.width - side) / 2, (avatar.height - side) / 2, side, side, ax, cy0, AV, AV); }
-    else { font(ctx, 60, 700); ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.fillText(Array.from(data.name)[0], ax + AV / 2, cy0 + AV / 2 - 36); ctx.textAlign = 'left'; }
+    else { font(ctx, 58, 700); ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.fillText(Array.from(data.name)[0], ax + AV / 2, cy0 + AV / 2 - 34); ctx.textAlign = 'left'; }
     ctx.restore();
     ctx.lineWidth = 4; ctx.strokeStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2 - 2, 0, Math.PI * 2); ctx.stroke();
-    var tx = ax + AV + 32, ty = ay + Math.max(0, (profileH - (nameSize + 14 + (subLine ? 36 : 0) + sigLines.length * 38)) / 2);
-    text(ctx, data.name, tx, ty, nameSize, ink, 700); ty += nameSize + 14;
-    if (subLine) { text(ctx, subLine, tx, ty, 24, muted, 500); ty += 36; }
-    sigLines.forEach(function (l) { text(ctx, l, tx, ty, 26, ink, 400); ty += 38; });
-    // ---- 本次训练信息 ----
-    ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, infoY); ctx.lineTo(1016, infoY); ctx.stroke();
-    text(ctx, data.day + ' ' + data.dayName + '  ·  ' + data.weekText + '  ·  第 ' + data.seq + ' 次训练', 64, infoY + 22, 24, ink, 600);
-    // ---- 容量主数字 ----
-    rounded(ctx, 64, heroTop, 952, 256, 38, '#FFFFFF');
-    text(ctx, data.estimated ? '估算训练容量' : '累计训练容量', 100, heroTop + 34, 25, muted, 500);
-    text(ctx, data.volumeText, 92, heroTop + 76, 108, ink, 750);
-    font(ctx, 108, 750); var numWidth = ctx.measureText(data.volumeText).width;
-    text(ctx, 't', 106 + numWidth, heroTop + 126, 35, muted, 550);
-    text(ctx, data.volume.toLocaleString('zh-CN') + ' kg · 重量 × 次数之和', 100, heroTop + 177, 22, muted, 400);
-    // ---- 指标 ----
+    var tx = ax + AV + 30, ty = ay + Math.max(0, (profileH - (nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36)) / 2);
+    text(ctx, data.name, tx, ty, nameSize, ink, 700); ty += nameSize + 12;
+    if (subLine) { text(ctx, subLine, tx, ty, 26, muted, 500); ty += 34; }
+    sigLines.forEach(function (l) { text(ctx, l, tx, ty, 26, ink, 400); ty += 36; });
+    ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, s1Div); ctx.lineTo(1016, s1Div); ctx.stroke();
+    text(ctx, data.day + ' ' + data.dayName, 64, s1Stage, 34, ink, 700);
+    ctx.textAlign = 'right'; text(ctx, data.weekText + ' · 第 ' + data.seq + ' 次训练', 1016, s1Stage + 6, 26, muted, 500); ctx.textAlign = 'left';
+    rounded(ctx, 64, s1Quote, 952, quoteH, 34, card);
+    var qy = s1Quote + 36;
+    qLines.forEach(function (l, k) { text(ctx, l, 104, qy + k * (qs + 16), qs, ink, 600); });
+    qy += qLines.length * (qs + 16) + 12;
+    originLines.forEach(function (l, k) { text(ctx, l, 104, qy + k * 34, 26, muted, 400); });
+    qy += originLines.length * 34;
+    creditLines.forEach(function (l, k) { text(ctx, l, 104, qy + k * 34, 26, muted, 500); });
+    // ==== 二、纵览数据 + 趣味包装 ====
+    secLabel(ctx, s2Top, '纵览数据', muted);
+    rounded(ctx, 64, vTop, 952, 250, 36, card);
+    text(ctx, data.estimated ? '估算训练容量' : '累计训练容量', 100, vTop + 32, 26, muted, 500);
+    text(ctx, data.volumeText, 92, vTop + 74, 100, ink, 750);
+    font(ctx, 100, 750); var numWidth = ctx.measureText(data.volumeText).width;
+    text(ctx, 't', 100 + numWidth, vTop + 122, 34, muted, 550);
+    text(ctx, data.volume.toLocaleString('zh-CN') + ' kg · 重量 × 次数之和', 100, vTop + 172, 26, muted, 400);
     var metrics = [[data.rows.length, '训练动作'], [data.reps, (data.estimated ? '估算' : '累计') + '次数'], [data.adds, '达到加重条件']];
-    metrics.forEach(function (m, i) { var x = 70 + i * 322; text(ctx, m[0], x, metricsTop, 54, ink, 700); text(ctx, m[1], x, metricsTop + 64, 23, muted, 400); });
-    // ---- 趣味数字（emoji 模板，随机轮换） ----
-    rounded(ctx, 64, funTop, 952, 148, 30, warm ? '#FFE8D3' : '#E6EDDF');
-    text(ctx, data.fun, 92, funTop + 40, funSize, ink, 650);
-    text(ctx, data.funNote, 92, funTop + 104, 20, muted, 400);
-    // ---- 训练清单 ----
-    text(ctx, '本次训练清单', 64, listHead, 29, ink, 650);
-    ctx.textAlign = 'right'; text(ctx, data.rows.length + ' 项动作', 1016, listHead + 6, 22, muted, 500); ctx.textAlign = 'left';
-    var y = listTop;
-    data.rows.forEach(function (r) {
-      ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, y - 14); ctx.lineTo(1016, y - 14); ctx.stroke();
-      text(ctx, r.tier, 64, y + 2, 23, muted, 650);
-      font(ctx, 30, 650); var names = wrap(ctx, r.name, 390);
-      names.slice(0, 2).forEach(function (l, k) { text(ctx, l, 144, y + k * 33, 30, ink, 650); });
-      text(ctx, r.result, 144, y + 72, 21, muted, 400);
-      font(ctx, 27, 650); ctx.textAlign = 'right'; text(ctx, r.load, 1016, y + 2, 27, ink, 650); text(ctx, r.stage + ' · ' + r.reps + ' 次', 1016, y + 44, 22, muted, 400); ctx.textAlign = 'left';
-      y += 110;
+    metrics.forEach(function (m, k) { var x = 70 + k * 322; text(ctx, m[0], x, mTop, 56, ink, 700); text(ctx, m[1], x, mTop + 66, 26, muted, 400); });
+    rounded(ctx, 64, fTop, 952, 148, 30, fill);
+    text(ctx, data.fun, 92, fTop + 38, funSize, ink, 650);
+    text(ctx, data.funNote, 92, fTop + 102, 22, muted, 400);
+    // ==== 三、训练内容明细 ====
+    secLabel(ctx, lLbl, '训练内容', muted);
+    ctx.textAlign = 'right'; text(ctx, data.rows.length + ' 项动作', 1016, lLbl + 2, 26, muted, 500); ctx.textAlign = 'left';
+    var y = lTop;
+    // 行高按名字折行数测量：名字区 + 结果行 + 行间留白，避免下一行压到上一行
+    var rowHs = data.rows.map(function (r) { font(ctx, 34, 650); return Math.min(2, wrap(ctx, r.name, 400).length) * 38; });
+    data.rows.forEach(function (r, idx) {
+      ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, y - 18); ctx.lineTo(1016, y - 18); ctx.stroke();
+      text(ctx, r.tier, 64, y + 4, 26, muted, 650);
+      font(ctx, 34, 650); var names = wrap(ctx, r.name, 400);
+      names.slice(0, 2).forEach(function (l, k) { text(ctx, l, 148, y + k * 38, 34, ink, 650); });
+      var resY = y + rowHs[idx] + 6;
+      text(ctx, r.result, 148, resY, 26, muted, 400);
+      font(ctx, 34, 650); ctx.textAlign = 'right';
+      text(ctx, r.load, 1016, y + 2, 34, ink, 650);
+      text(ctx, r.stage + ' · ' + r.reps + ' 次', 1016, y + 44, 26, muted, 400);
+      ctx.textAlign = 'left';
+      y += Math.max(rowHs[idx] + 6 + 34, 96) + 30;
     });
-    // ---- 小结 ----
-    y += 26; ctx.strokeStyle = '#DCE1D6'; ctx.beginPath(); ctx.moveTo(64, y); ctx.lineTo(1016, y); ctx.stroke();
-    text(ctx, '训练小结 · 本应用生成', 64, y + 26, 22, muted, 500);
-    summaryLines.forEach(function (l, i) { text(ctx, l, 64, y + 66 + i * 42, 29, ink, 500); });
-    // ---- 名句（卡片底部） ----
-    var qy = quoteTop;
-    text(ctx, '「', 64, qy - 26, 40, muted, 700);
-    qLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * (qs + 20), qs, ink, 600); });
-    qy += qLines.length * (qs + 20) + 10;
-    originLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * 32, 24, muted, 400); });
-    qy += originLines.length * 32;
-    creditLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * 32, 23, muted, 500); });
-    // ---- 页脚 ----
-    text(ctx, '认真练习，也认真恢复。', 64, H - 100, 22, muted, 500);
-    text(ctx, '容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。', 64, H - 60, 18, muted, 400);
+    // ==== 四、训练小结 ====
+    secLabel(ctx, smLbl, '训练小结 · 本应用生成', muted);
+    summaryLines.forEach(function (l, k) { text(ctx, l, 84, smTop + k * 46, 34, ink, 500); });
+    text(ctx, '认真练习，也认真恢复。', 64, H - 96, 26, muted, 500);
+    text(ctx, '容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。', 64, H - 58, 22, muted, 400);
     return canvas;
   }
   return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, QUOTES: QUOTES, quoteById: quoteById, chooseQuote: chooseQuote, chooseFun: chooseFun, FUN: FUN, attribution: attribution };
@@ -3749,7 +3853,7 @@ function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0]
   }
   function reviewAct(act, ds, el) {
     var r = S.review;
-    if (act === 'shareopen') { r.share = {id:ds.id,variant:0,theme:'sage',image:null,blob:null}; return true; }
+    if (act === 'shareopen') { r.share = {id:ds.id,variant:0,funVariant:0,theme:'sage',image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
     if (act === 'sharerec') { r.share.id=el.value; r.share.variant=0; delete r.share.quoteId; return true; }
     if (act === 'quotelibrary') { r.share.library=true; r.share.q=''; return true; }
@@ -3761,10 +3865,12 @@ function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0]
     }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'shareagain') { r.share.variant=(r.share.variant||0)+1; delete r.share.quoteId; return true; }
+    if (act === 'funagain') { r.share.funVariant=(r.share.funVariant||0)+1; return true; }
     if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
-    if (act === 'shareprofile') { r.share=null; S.tab='settings'; render(); return false; }
+    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, variant: r.share.variant, funVariant: r.share.funVariant, theme: r.share.theme }; r.share=null; S.tab='settings'; render(); return false; }
+    if (act === 'sharetrain') { r.share=null; S.tab='train'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
     if (act === 'toggle') { r.open[ds.id] = !r.open[ds.id]; return true; }
@@ -3793,17 +3899,42 @@ function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0]
     if(!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">这一天没有可分享的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
     var list=Share.sessionList(load());
     if(sh.library) return renderQuoteCatalog();
-    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
-      '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
-      '<div class="share-options"><label>分享哪次训练 <select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
-      (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没设置名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') +
-      '<div class="share-quotebar"><button class="btn-again" data-act="shareagain">🎲 换一句 · 换个说法</button><button class="quote-browse" data-act="quotelibrary">全部 '+Share.QUOTES.length+' 句 ›</button></div>' +
-      
-      '<details class="quote-source"><summary>'+esc(data.attribution)+' · 核对出处</summary><p>'+esc(data.quote.context)+'</p>'+(data.quote.original?'<p>核验英文文本：'+esc(data.quote.original)+'<br>中文：本应用自译，非引用现成译本。</p>':'')+'<p>'+esc(data.quote.note)+'。简体字、标点按核验文本展示；仅作心态表达，不是训练指导。</p><a href="'+esc(data.quote.source)+'" target="_blank" rel="noopener noreferrer">打开原文来源 ↗</a></details>' +
-      '<div class="share-pills" role="group" aria-label="卡片配色">'+[['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>' +
-      '<div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span>正在整理你的训练成果…</span></div>' +
-      '<div class="share-hint">卡片按所选的那次训练生成；名句和趣味说法在卡片下方，点「换一句」一起换。趣味说法为容量换算，不是一次举起的重量。预览即最终图片，可长按保存。</div>' +
-      '<div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div></div>';
+    var ava = data.profile.avatar
+      ? '<img class="ss-ava" src="' + esc(data.profile.avatar) + '" alt="' + esc(data.name) + ' 的头像">'
+      : '<span class="ss-ava ss-ava-t" aria-hidden="true">' + esc(Array.from(data.name || '我')[0]) + '</span>';
+    var who = [data.profile.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join(' · ') || (data.profile.signature ? '' : '未设置社媒 ID');
+    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1">' +
+      '<div class="share-head"><div class="grabber"></div>' +
+        '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
+        '<div class="ss-theme" role="group" aria-label="卡片配色">' + [['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'" aria-pressed="'+(sh.theme===t[0])+'">'+t[1]+'</button>';}).join('') + '</div>' +
+      '</div>' +
+      '<div class="ss-body">' +
+      // 一、个人名片
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">01 · 个人名片</span><button class="ss-act" data-act="shareprofile">编辑名片 ›</button></div>' +
+        '<div class="ss-row">' + ava + '<div class="ss-who"><span class="ss-name">' + esc(data.name) + '</span><span class="ss-sub">' + esc(who) + '</span></div></div>' +
+        (data.profile.signature ? '<p class="ss-sig">' + esc(data.profile.signature) + '</p>' : '') +
+        (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
+      // 二、名句
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 名句</span><span class="ss-acts"><button class="ss-act dice" data-act="shareagain">🎲 换一句</button><button class="ss-act" data-act="quotelibrary">全部 ' + Share.QUOTES.length + ' 句 ›</button></span></div>' +
+        '<blockquote class="ss-quote"><p>' + esc(data.quote.text) + '</p><cite>' + esc(data.attribution) + '</cite></blockquote>' +
+        '<details class="quote-source"><summary>出处与核验</summary><p>' + esc(data.quote.context) + '</p>' + (data.quote.original ? '<p>核验文本：' + esc(data.quote.original) + '<br>中文：本应用自译，非引用现成译本。</p>' : '') + '<p>' + esc(data.quote.note) + '。仅作心态表达，不是训练指导。</p><a href="' + esc(data.quote.source) + '" target="_blank" rel="noopener noreferrer">打开原文来源 ↗</a></details></div>' +
+      // 三、纵览与趣味
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 纵览与趣味说法</span><button class="ss-act dice" data-act="funagain">🎲 换个说法</button></div>' +
+        '<div class="ss-metrics"><span><b class="num">' + esc(String(data.rows.length)) + '</b>项动作</span><span><b class="num">' + esc(String(data.reps)) + '</b>次动作</span><span><b class="num">' + esc(String(data.adds)) + '</b>项加重</span></div>' +
+        '<div class="ss-fun">' + esc(data.fun) + '<span class="ss-fun-note">' + esc(data.funNote) + '</span></div></div>' +
+      // 四、训练内容
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">04 · 训练内容</span><button class="ss-act" data-act="sharetrain">查看训练 ›</button></div>' +
+        '<label class="ss-pick"><span class="ss-pick-l">哪次训练</span><select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label>' +
+        '<div class="ss-cells">' + data.rows.map(function(r){return '<span class="ss-cell"><i class="ss-tier">' + esc(r.tier) + '</i>' + esc(r.name) + '<b class="num">' + esc(r.load) + '</b></span>';}).join('') + '</div>' +
+        '<p class="ss-load">累计 ' + esc(data.volumeText) + ' t · ' + esc(data.volume.toLocaleString('zh-CN')) + ' kg</p></div>' +
+      // 五、小结
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">05 · 训练小结</span></div>' +
+        '<div class="ss-sum">' + esc(data.copy) + '</div></div>' +
+      '<div class="share-art-wrap"><div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span class="share-loading">正在整理你的训练成果…</span></div></div>' +
+      '<div class="share-hint">预览即最终图片，可长按保存；名句与趣味说法都可以单独换。</div>' +
+      '</div>' +
+      '<div class="share-foot"><div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div>' +
+      '</div></div>';
   }
   function quoteCatalogRows(sh) {
     var q=String(sh.q||'').trim();
@@ -4090,7 +4221,13 @@ function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0]
     document.getElementById('tabbar').addEventListener('click', function (e) {
       var it = e.target.closest('.tb-item'); if (!it) return;
       if (S.tab === it.dataset.tab) { body.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      var prevTab = S.tab;
       S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
+      if (S.tab === 'review' && S.review.returnTo && prevTab === 'settings') {
+        var back = S.review.returnTo; S.review.returnTo = null;
+        S.review.share = { id: back.id, variant: back.variant || 0, funVariant: back.funVariant || 0, theme: back.theme || 'sage', image: null, blob: null };
+        render();
+      }
     });
     document.getElementById('rest').addEventListener('click', function (e) {
       var a = e.target.closest('[data-rest-adj]'), s = e.target.closest('[data-rest-stop]');

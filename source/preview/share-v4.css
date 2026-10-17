@@ -1,0 +1,131 @@
+/* ===== 分享面板 v4：三段式（固定头 / 滚动正文 / 固定底栏）+ 五分区 ===== */
+.app .share-sheet {
+  display: flex; flex-direction: column;
+  max-height: 88vh; overflow: hidden;
+  padding: 0; /* 内边距交给内部三段，避免 sticky 计算错位 */
+}
+.app .share-head {
+  flex: 0 0 auto; padding: 10px 16px 0;
+  background: var(--bg);
+  border-bottom: 1px solid rgba(60,60,67,0.08);
+}
+.app .share-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.app .share-toolbar .sheet-title { font-size: 22px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.2px; }
+.app .share-close {
+  width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 50%;
+  background: #E9EAE5; color: var(--label2);
+  font-size: 20px; line-height: 1; font-weight: 500;
+}
+.app .share-close:active { transform: scale(.94); }
+
+.app .ss-theme { display: flex; gap: 6px; padding: 0 0 10px; }
+.app .ss-theme button {
+  min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: #EDEEE9; color: var(--label2); font-size: 13px; font-weight: 500;
+}
+.app .ss-theme button.on { color: #35482E; background: #DFE8D7; font-weight: 600; }
+
+.app .ss-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 4px 16px 8px;
+}
+
+.app .ss-sec { margin: 10px 0; padding: 14px; border-radius: 20px; background: rgba(255,255,255,0.78); }
+.app .ss-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.app .ss-t { font-size: 13px; font-weight: 600; color: var(--label2); letter-spacing: .3px; white-space: nowrap; }
+.app .ss-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.app .ss-act {
+  min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: #EDEEE9; color: var(--label); font-size: 13px; font-weight: 500; white-space: nowrap;
+}
+.app .ss-act:active { transform: scale(.96); }
+.app .ss-act.dice { font-weight: 600; }
+
+.app .ss-row { display: flex; align-items: center; gap: 12px; }
+.app .ss-ava {
+  width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+  background: #E6EDDF; flex-shrink: 0;
+}
+.app .ss-ava-t {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: #35482E;
+}
+.app .ss-who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.app .ss-name { font-size: 17px; font-weight: 600; color: var(--label); }
+.app .ss-sub { font-size: 13px; color: var(--label2); }
+.app .ss-sig { margin: 10px 0 0; font-size: 13px; line-height: 1.55; color: var(--label2); }
+
+/* 名句：正文必须是主角，出处退到折叠区 */
+.app .ss-quote { margin: 0; padding: 0; }
+.app .ss-quote p {
+  margin: 0; font-size: 17px; line-height: 1.55; font-weight: 600;
+  color: var(--label); letter-spacing: -0.1px;
+}
+.app .ss-quote cite {
+  display: block; margin-top: 8px; font-style: normal;
+  font-size: 13px; color: var(--label2);
+}
+.app .quote-source { margin-top: 10px; }
+.app .quote-source summary {
+  min-height: 32px; display: flex; align-items: center;
+  font-size: 13px; color: var(--label2); cursor: pointer;
+}
+.app .quote-source p { margin: 6px 0 0; font-size: 13px; line-height: 1.6; color: var(--label2); }
+.app .quote-source a { display: inline-block; margin-top: 8px; font-size: 13px; color: #35482E; text-decoration: underline; }
+
+.app .ss-metrics { display: flex; gap: 8px; margin-bottom: 12px; }
+.app .ss-metrics span {
+  flex: 1; min-width: 0; padding: 10px 12px; border-radius: 14px; background: #F2F3EE;
+  font-size: 13px; color: var(--label2); display: flex; flex-direction: column; gap: 2px;
+}
+.app .ss-metrics b { font-size: 22px; font-weight: 700; color: var(--label); line-height: 1.1; }
+
+.app .ss-fun { font-size: 15px; line-height: 1.5; color: var(--label); }
+.app .ss-fun-note { display: block; margin-top: 6px; font-size: 11px; color: var(--label2); line-height: 1.5; }
+
+.app .ss-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.app .ss-pick-l { flex: 0 0 auto; font-size: 13px; color: var(--label2); }
+.app .ss-pick select {
+  flex: 1; min-width: 0; min-height: 36px; padding: 6px 10px;
+  border: 0; border-radius: 10px; background: #EDEEE9; color: var(--label);
+  font-size: 15px; text-overflow: ellipsis;
+}
+
+.app .ss-cells { display: flex; flex-wrap: wrap; gap: 8px; }
+.app .ss-cell {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px;
+  border-radius: 14px; background: #F2F3EE; font-size: 13px; color: var(--label);
+}
+.app .ss-cell b { font-weight: 600; }
+.app .ss-tier {
+  font-style: normal; font-size: 11px; font-weight: 700; color: #35482E;
+  background: #DFE8D7; border-radius: 6px; padding: 2px 5px;
+}
+.app .ss-load { margin: 10px 0 0; font-size: 13px; color: var(--label2); }
+
+.app .ss-sum { font-size: 15px; line-height: 1.62; color: var(--label); }
+
+.app .share-art-wrap { margin-top: 12px; }
+.app .share-art {
+  border-radius: 18px; overflow: hidden; background: #EDEEE9;
+  display: flex; align-items: center; justify-content: center; min-height: 120px;
+}
+.app .share-art img { display: block; width: 100%; height: auto; }
+.app .share-loading { font-size: 13px; color: var(--label2); padding: 40px 0; }
+.app .share-hint { font-size: 13px; line-height: 1.55; margin: 10px 4px 14px; color: var(--label2); }
+
+/* 底栏：在文档流里；分享面板是模态，盖住了底部导航，只需让出安全区 */
+.app .share-foot {
+  flex: 0 0 auto;
+  padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid rgba(60,60,67,0.08);
+}
+.app .share-actions { display: flex; gap: 8px; }
+.app .share-actions button {
+  flex: 1; min-width: 0; min-height: 48px; border: 0; border-radius: 999px;
+  background: #E9EAE5; color: var(--label); font-size: 15px; font-weight: 600;
+}
+.app .share-actions button.main { background: var(--accent); color: #FFF; }
+.app .share-actions button:disabled { opacity: .45; }
