@@ -277,7 +277,7 @@
         entries: {"A1_1": {"v": 10}, "A1_2": {"v": "完成", "w": 42.5, "ex": "泽奇深蹲"}, "A1_3": {"v": "完成", "w": 17.5, "ex": "坐姿哑铃推肩"}, "A1_4": {"v": 15, "w": 50}, "A1_5": {"v": 19, "w": 10}} },
       { id: "xls_B1_w1", date: "2026-10-14", day: "B1", deload: false, note: "从 Excel 导入（日期可编辑）", bw: null, createdAt: 2,
         entries: {"B1_1": {"v": 12}, "B1_2": {"v": "完成", "w": 17.5}, "B1_3": {"v": "完成"}, "B1_4": {"v": 17, "w": 45, "ex": "俯身划船"}, "B1_5": {"v": 18, "w": 10, "ex": "反向飞鸟"}} },
-      { id: "rmvahlea74du2", date: "2026-10-16", day: "A2", deload: false, note: "", bw: null, createdAt: 3,
+      { id: "rmvahlea74du2", date: "2026-10-15", day: "A2", deload: false, note: "", bw: null, createdAt: 3,
         entries: {"A2_1": {"v": 17}, "A2_2": {"v": "完成"}, "A2_3": {"v": "完成"}, "A2_4": {"v": 17, "w": 50, "ex": "高位下拉"}, "A2_5": {"v": 16, "w": 10}} },
       { id: "rmvaj5j6l5hq3", date: "2026-10-16", day: "B2", deload: false, note: "", bw: null, createdAt: 4,
         entries: {"B2_1": {"v": 11}, "B2_2": {"v": "完成"}, "B2_3": {"v": "完成", "w": 35, "ex": "上斜哑铃卧推"}, "B2_4": {"v": 25}, "B2_5": {"v": 25, "w": 6}} }
@@ -295,6 +295,14 @@
     db.params.steps = Object.assign(defaultParams().steps, db.params.steps);
     db.records = db.records || [];
     db.customLib = db.customLib || [];
+    // 日期校正：A2 这条记录实际是 10-15 完成，早期误记为 10-16（与 B2 同日）。
+    // 只改这一条，重复执行无副作用；同步时以更新后的 updatedAt 为准，两台设备都会跟随。
+    (db.records || []).forEach(function (r) {
+      if (r.id === 'rmvahlea74du2' && r.date === '2026-10-16') {
+        r.date = '2026-10-15';
+        r.updatedAt = Math.max(r.updatedAt || r.createdAt || 0, Date.now());
+      }
+    });
     // 器械分类迁移：所有旧值统一到 杠铃/哑铃/自重/负重/器械；自定义 T1 降为 T2，避免污染 T1 四大项
     db.customLib.forEach(function (x) {
       x.equip = normEquip(x.equip);

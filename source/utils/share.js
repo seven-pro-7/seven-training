@@ -299,17 +299,94 @@
     "source": "https://poets.org/poem/song-myself-20",
     "note": "《草叶集》英文原作节选",
     "context": "肯定自身价值，不以表现换取自我认可。"
-  }
+  },
+    { id:'quyu', text:'路漫漫其修远兮，吾将上下而求索。', author:'屈原', work:'《离骚》',
+      source:'https://ctext.org/chuci/lisao/zh', note:'楚辞节选', context:'求索之路漫长，仍然要一直走下去。' },
+    { id:'kun', text:'地势坤，君子以厚德载物。', author:'《周易》', work:'坤卦·象传',
+      source:'https://zh.wikisource.org/zh-hans/周易/坤', note:'古典著作节选；不署给某一位作者。', context:'像大地一样宽厚承载，与乾卦自强不息互为表里。' },
+    { id:'mengzi-well', text:'掘井九轫而不及泉，犹为弃井也。', author:'孟子', work:'《孟子·尽心上》',
+      source:'https://zh.wikisource.org/zh-hans/孟子/尽心上', note:'古籍节选', context:'做事如掘井，没到泉水就停下，等于白挖。' },
+    { id:'zengzi', text:'士不可以不弘毅，任重而道远。', author:'曾子', work:'《论语·泰伯》',
+      source:'https://zh.wikisource.org/zh-hans/論語/泰伯', note:'论语节选', context:'志向要大、肩上要扛得住，因为路很长。' },
+    { id:'xunzi-qing', text:'青，取之于蓝，而青于蓝。', author:'荀子', work:'《荀子·劝学》',
+      source:'https://ctext.org/xunzi/encouraging-learning/zh', note:'劝学名句', context:'后来者可以超过前人，练习本身就是超越的过程。' },
+    { id:'libai-dapeng', text:'大鹏一日同风起，扶摇直上九万里。', author:'李白', work:'《上李邕》',
+      source:'https://zh.wikisource.org/zh-hans/上李邕', note:'唐诗节选', context:'借大鹏乘风，写年轻人应有的气象。' },
+    { id:'liuyuxi-boat', text:'沉舟侧畔千帆过，病树前头万木春。', author:'刘禹锡', work:'《酬乐天扬州初逢席上见赠》',
+      source:'https://zh.wikisource.org/zh-hans/酬乐天扬州初逢席上见赠', note:'唐诗节选', context:'旧的不必叹惋，新的正在成排驶过。' },
+    { id:'sushi-chao', text:'古之立大事者，不惟有超世之才，亦必有坚忍不拔之志。', author:'苏轼', work:'《晁错论》',
+      source:'https://zh.wikisource.org/zh-hans/晁错论', note:'宋文节选', context:'成大事，志比才更根本。' },
+    { id:'zhongyong', text:'人一能之，己百之；人十能之，己千之。', author:'《礼记》', work:'《中庸》',
+      source:'https://zh.wikisource.org/zh-hans/中庸', note:'古籍节选；不署给某一位作者。', context:'别人一遍能做到，我做一百遍。' },
+    { id:'tao-drink', text:'采菊东篱下，悠然见南山。', author:'陶渊明', work:'《饮酒·其五》',
+      source:'https://zh.wikisource.org/zh-hans/饮酒', note:'古诗节选', context:'不刻意的从容，是长期练习后的松弛。' },
+    { id:'bai-grass', text:'野火烧不尽，春风吹又生。', author:'白居易', work:'《赋得古原草送别》',
+      source:'https://zh.wikisource.org/zh-hans/赋得古原草送别', note:'唐诗节选', context:'草根的生命力，烧掉了也会再长。' },
+    { id:'duxiaohe', text:'时人不识凌云木，直待凌云始道高。', author:'杜荀鹤', work:'《小松》',
+      source:'https://zh.wikisource.org/zh-hans/小松', note:'唐诗节选', context:'小松还小的时候没人认识，长成大树不用自证。' },
+    { id:'changge', text:'少壮不努力，老大徒伤悲。', author:'汉乐府', work:'《长歌行》',
+      source:'https://zh.wikisource.org/zh-hans/长歌行', note:'汉乐府节选；不署给某一位作者。', context:'劝人趁早用功的老话，出自汉乐府。' },
+    { id:'jias', text:'博观而约取，厚积而薄发。', author:'苏轼', work:'《稼说送张琥》',
+      source:'https://zh.wikisource.org/zh-hans/稼说送张琥', note:'宋文节选', context:'广泛积累，少量取出；厚积是薄发的前提。' },
+    { id:'shakespeare-doubt', text:'疑虑是叛徒，它让我们因为害怕尝试，输掉本可赢得的收获。', author:'威廉·莎士比亚', work:'《一报还一报》（Measure for Measure）第一幕第四场',
+      original:'Our doubts are traitors, and make us lose the good we oft might win by fearing to attempt.',
+      translation:'本应用自译', source:'https://en.wikisource.org/wiki/The_Tragedy_of_Measure_for_Measure', note:'公版戏剧节选', context:'莎翁笔下的劝勉：先试，再谈输赢。' },
+    { id:'thoreau-elevate', text:'我所知道最振奋的事实，是人无疑能靠自觉的努力提升自己的生活。', author:'亨利·戴维·梭罗', work:'《瓦尔登湖》结语',
+      original:'I know of no more encouraging fact than the unquestionable ability of man to elevate his life by a conscious endeavor.',
+      translation:'本应用自译', source:'https://en.wikisource.org/wiki/Walden', note:'公版散文节选', context:'梭罗离开湖边时的结论。' },
+    { id:'epictetus-view', text:'扰乱人心的不是事物本身，而是人对事物的看法。', author:'爱比克泰德', work:'《手册》第5条',
+      original:'Men are disturbed not by things, but by the views which they take of them.',
+      translation:'本应用自译', source:'https://en.wikisource.org/wiki/Epictetus,_the_Discourses_as_reported_by_Arrian,_the_Manual,_and_Fragments/Manual', note:'公版译本（George Long 译）节选', context:'斯多葛学派的基础课：先管理看法。' },
+    { id:'kipling-if', text:'若你能用六十秒的奔跑，填满不可虚度的每一分钟。', author:'约瑟夫·鲁德亚德·吉卜林', work:'《如果》（If—）末节',
+      original:'If you can fill the unforgiving minute / With sixty seconds' + "'" + ' worth of distance run,',
+      translation:'本应用自译', source:'https://en.wikisource.org/wiki/If%E2%80%94', note:'公版诗歌节选', context:'写给儿子的诗，讲的是把一分钟用满。' },
+    { id:'whitman-multitudes', text:'我辽阔广大，我包罗万象。', author:'沃尔特·惠特曼', work:'《自我之歌》第51节',
+      original:'Do I contradict myself? Very well then I contradict myself, (I am large, I contain multitudes.)',
+      translation:'本应用自译', source:'https://en.wikisource.org/wiki/Song_of_Myself', note:'公版诗歌节选', context:'接纳自己的多面，不必只用一个身份定义自己。' },
+    { id:'longfellow-heights', text:'伟人所抵达的高度并非一蹴而就；当同伴安睡时，他们在夜里向上跋涉。', author:'亨利·沃兹沃思·朗费罗', work:'《人生颂》（A Psalm of Life）第五节',
+      original:'The heights by great men reached and kept / Were not attained by sudden flight, / But they, while their companions slept, / Were toiling upward in the night.',
+      translation:'本应用自译', source:'https://www.poetryfoundation.org/poems/44644/a-psalm-of-life', note:'公版诗歌节选', context:'高度是夜里一步步走上去的。' },
+    { id:'emerson-integrity', text:'到最后再神圣的，也莫过于你自己心灵的完整。', author:'拉尔夫·沃尔多·爱默生', work:'《自立》（Self-Reliance）',
+      original:'Nothing is at last sacred but the integrity of your own mind.',
+      translation:'本应用自译', source:'https://en.wikisource.org/wiki/Essays_(Emerson)/Self-Reliance', note:'公版散文节选', context:'爱默生论自立的核心句。' }
 ]);
-  var TONES = [{id:'fire',label:'奋进',desc:'把心气提起来'}, {id:'persist',label:'坚持',desc:'为每一步积累喝彩'}, {id:'calm',label:'从容',desc:'保持节奏，认真恢复'}];
-  function quoteList(tone) { return QUOTES.filter(function(q){return q.tone===tone;}); }
-  function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0] || null; }
+function quoteById(id) { return QUOTES.filter(function(q){return q.id===id;})[0] || null; }
+  /** 名句不再分心境：同一个训练固定种子，点「换一句」就切到下一句，同一池子内轮换不重复 */
   function chooseQuote(date, opts) {
     opts=opts || {}; var direct=quoteById(opts.quoteId); if(direct)return direct;
-    var tone=TONES.some(function(t){return t.id===opts.tone;})?opts.tone:'fire', pool=quoteList(tone);
     var seed=Array.from(String(date)).reduce(function(n,c){return n+c.charCodeAt(0);},0);
     var v=Number(opts.variant)||0;v=Number.isFinite(v)?Math.trunc(v):0;
-    return pool[((seed+v)%pool.length+pool.length)%pool.length];
+    return QUOTES[((seed+v)%QUOTES.length+QUOTES.length)%QUOTES.length];
+  }
+  // ---------- 趣味数字模板池（emoji + 累计容量/次数的诚实换算，随机轮换） ----------
+  var FUN = [
+    function(d){ return { text:'🧳 相当于搬起 20 kg 行李箱 × ' + Math.max(1,Math.round(d.volume/20)).toLocaleString('zh-CN') + ' 次' }; },
+    function(d){ return { text:'🐶 相当于举起 12 kg 柯基 × ' + Math.max(1,Math.round(d.volume/12)).toLocaleString('zh-CN') + ' 次' }; },
+    function(d){ return { text:'🚲 相当于扛上楼 15 kg 公路车 × ' + Math.max(1,Math.round(d.volume/15)).toLocaleString('zh-CN') + ' 趟' }; },
+    function(d){ return { text:'🎒 相当于背起 15 kg 登山包 × ' + Math.max(1,Math.round(d.volume/15)).toLocaleString('zh-CN') + ' 次' }; },
+    function(d){ return { text:'📦 相当于搬动 10 kg 纸箱 × ' + Math.max(1,Math.round(d.volume/10)).toLocaleString('zh-CN') + ' 箱' }; },
+    function(d){ return { text:'🥩 相当于拎起 500 g 牛排 × ' + Math.max(1,Math.round(d.volume*2)).toLocaleString('zh-CN') + ' 块' }; },
+    function(d){ return { text:'🍚 相当于端起 200 g 米饭 × ' + Math.max(1,Math.round(d.volume*5)).toLocaleString('zh-CN') + ' 碗' }; },
+    function(d){ return { text:'🐼 相当于抱起 100 kg 大熊猫 × ' + Math.max(1,Math.round(d.volume/100)).toLocaleString('zh-CN') + ' 次' }; },
+    function(d){ return { text:'🏍️ 相当于抬起 200 kg 摩托车 × ' + Math.max(1,Math.round(d.volume/200)).toLocaleString('zh-CN') + ' 次' }; },
+    function(d){ return { text:'🎹 相当于抬起 250 kg 三角钢琴 × ' + Math.max(1,Math.round(d.volume/250)).toLocaleString('zh-CN') + ' 次' }; },
+    function(d){ return { text:'🚗 约等于托举 0.9 t 小型车 × ' + (Math.max(1,Math.round(d.volume/90)/10)).toFixed(1) + ' 辆' }; },
+    function(d){ return { text:'🐘 约等于举起 4 t 小象 × ' + (Math.max(1,Math.round(d.volume/40)/100)).toFixed(1) + ' 头' }; },
+    function(d){ return { text:'🐋 相当于 150 t 蓝鲸体重的 ' + (Math.round(d.volume/150000*10000)/100).toFixed(2) + '%' }; },
+    function(d){ return { text:'🗼 相当于埃菲尔铁塔的 ' + (Math.round(d.volume/7300000*10000)/100).toFixed(2) + '%（约 7300 t）' }; },
+    function(d){ return { text:'💪 ' + Math.round(d.reps).toLocaleString('zh-CN') + ' 次发力，每一次都算数' }; },
+    function(d){ return { text:'🔁 ' + d.sets + ' 组 × ' + d.rows.length + ' 项动作，一组没落下' }; },
+    function(d){ return { text:'🔥 ' + d.adds + ' 个动作达到加重条件，进步都记录在案' }; }
+  ];
+  /** 与名句同一 variant 驱动：点「换一句」名句和趣味说法一起换 */
+  function chooseFun(date, opts, d) {
+    opts=opts || {};
+    var seed=Array.from(String(date)).reduce(function(n,c){return n+c.charCodeAt(0)*3;},7);
+    var v=Number(opts.variant)||0; v=Number.isFinite(v)?Math.trunc(v):0;
+    var pool=FUN.filter(function(f,ix){ return d.volume>0 || ix>=14; });
+    var out=pool[((seed+v)%pool.length+pool.length)%pool.length](d);
+    out.note='趣味说法由累计训练容量或次数换算，不是一次举起的重量，也不是热量。';
+    return out;
   }
   function attribution(q) { return (q.author==='《周易》'?q.author+'·'+q.work:q.author+' · '+q.work) + (q.translation?' · '+q.translation:' · 节选'); }
   function clean(v, n) { return String(v || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, n); }
@@ -375,23 +452,23 @@
       });
     });
     if (!rows.length) return null;
-    var q = chooseQuote(selected + pick.day, opts), tone = q.tone;
+    var q = chooseQuote(selected + pick.day, opts);
     var p = profile(db.params.shareProfile);
     var summary = '记录了 ' + rows.length + ' 项动作、' + Math.round(reps) + ' 次训练动作。' +
       (sessions.some(function(x){return x.rec.deload;}) ? '减载也是计划的一部分。认真练习，也认真恢复。' : adds > 0 ? adds + ' 个动作达到加重条件。把进步留在记录里，把恢复留给接下来的自己。' : '加重不是每次训练的唯一答案。保持节奏，每次认真练习都算数。');
 
-    var fun = volume > 0 ? '约等于搬动 20 kg 行李箱 ' + Math.round(volume / 20) + ' 次' : '不靠配重片，也完成了 ' + Math.round(reps) + ' 次动作';
-    var note = volume > 0 ? '趣味类比 = 累计训练容量 ÷ 20 kg，不是一次举起的重量。' : '自重动作按次数记录，不虚构重量。';
+    var fn = chooseFun(selected + pick.day, opts, { volume: volume, reps: reps, sets: sets, rows: rows, adds: adds });
+    var fun = fn.text, note = fn.note;
     var weekText = GZ.weekText(pick.week, db.params);
     return { recordId: pick.id, day: pick.day, dayName: pick.dayName, week: pick.week, weekText: weekText, seq: pick.seq, label: pick.label,
-      date: selected, isToday: selected === GZ.today(), profile: p, name: p.name || '训练者', hasName: !!p.name, tone: tone,
+      date: selected, isToday: selected === GZ.today(), profile: p, name: p.name || '训练者', hasName: !!p.name,
       title: q.text, quote: q, attribution: attribution(q), copy: summary, volume: Math.round(volume * 100) / 100, volumeText: (volume / 1000).toFixed(2),
       reps: Math.round(reps), sets: sets, adds: adds, estimated: estimated, rows: rows,
       sessions: 1, days: pick.day + ' ' + pick.dayName, trainingDays: pick.seq, weight: p.showWeight && bw !== null ? bw : null, fun: fun, funNote: note,
       caption: (p.name || '训练者') + (p.handle ? ' ' + p.handle : '') + ' · ' + selected + ' · ' + pick.day + ' ' + pick.dayName + ' · 第 ' + pick.seq + ' 次训练\n' + '“' + q.text + '”\n——' + attribution(q) + (q.original ? '\n原文：' + q.original : '') + '\n' + rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' + fun + '（累计容量的趣味类比）\n' + '训练小结（本应用生成）：' + summary + '\n#训练打卡 #认真练习' };
   }
 
-  function font(ctx, size, weight) { ctx.font = (weight || 400) + ' ' + size + 'px -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif'; }
+  function font(ctx, size, weight) { ctx.font = (weight || 400) + ' ' + size + 'px -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'; }
   function rounded(ctx, x, y, w, h, r, fill) {
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
   }
@@ -414,78 +491,93 @@
   // 输出的是实际 PNG，预览与保存始终同源；高度按动作数量变化，不能截掉训练内容。
   async function draw(canvas, data, theme) {
     var avatar = await loadImage(data.profile.avatar), ctx = canvas.getContext('2d');
-    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F', accent = '#C55A32';
-    var W = 1080, q = data.quote, titleSize = 64, titleLines;
-    var displayTitle = data.title.length > 14 ? data.title.replace(/，/g, '，\n') : data.title;
-    do { font(ctx,titleSize,750); titleLines=wrap(ctx,displayTitle,952); if(titleLines.length<=3)break;titleSize-=4; } while(titleSize>40);
-    var titleHeight=titleLines.length*(titleSize+18);
-    var pf=data.profile, nameSize=fit(ctx,data.name,700,52,36);
-    font(ctx,26,400); var sigLines=pf.signature?wrap(ctx,pf.signature,720).slice(0,2):[];
-    var subLine=[pf.handle, data.weight!==null?'体重 '+data.weight+' kg':''].filter(Boolean).join('  ·  ');
-    var profileH=Math.max(152, 12+nameSize+14+(subLine?36:0)+sigLines.length*38+10);
-    var top=150+profileH+86; // 名片区下方：分隔线 + 训练信息 + 留白
-    font(ctx,24,500); var originLines=q.original?wrap(ctx,q.original,952):[];
-    font(ctx,23,500); var creditLines=wrap(ctx,data.attribution,952);
-    var metadataY=top+titleHeight+22+originLines.length*32+creditLines.length*32;
-    var offset=metadataY-510;
-    font(ctx,29,500);var summaryLines=wrap(ctx,data.copy,880);
-    var H = 1560 + offset + data.rows.length * 110 + Math.max(0,summaryLines.length-2)*42;
+    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F';
+    var W = 1080;
+    // ---- 预量：名片 / 小结 / 名句（名句在卡片底部） ----
+    var pf = data.profile, nameSize = fit(ctx, data.name, 700, 52, 36);
+    font(ctx, 26, 400); var sigLines = pf.signature ? wrap(ctx, pf.signature, 720).slice(0, 2) : [];
+    var subLine = [pf.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join('  ·  ');
+    var profileH = Math.max(152, 12 + nameSize + 14 + (subLine ? 36 : 0) + sigLines.length * 38 + 10);
+    font(ctx, 29, 500); var summaryLines = wrap(ctx, data.copy, 880);
+    var q = data.quote, qs = 40, qLines;
+    do { font(ctx, qs, 600); qLines = wrap(ctx, q.text, 952); if (qLines.length <= 3) break; qs -= 3; } while (qs > 28);
+    font(ctx, 24, 500); var originLines = q.original ? wrap(ctx, q.original, 952) : [];
+    font(ctx, 23, 500); var creditLines = wrap(ctx, data.attribution, 952);
+    var funSize = fit(ctx, data.fun, 880, 36, 24);
+    // ---- 版面（自上而下）：页眉 → 名片 → 训练信息 → 容量 → 指标 → 趣味数字 → 清单 → 小结 → 名句 → 页脚 ----
+    var infoY = 150 + profileH + 24;
+    var heroTop = infoY + 78, metricsTop = heroTop + 256 + 44, funTop = metricsTop + 128;
+    var listHead = funTop + 148, listTop = listHead + 62, listH = data.rows.length * 110;
+    var sumTop = listTop + listH + 30;
+    var sumH = 40 + summaryLines.length * 42;
+    var quoteTop = sumTop + sumH + 54;
+    var quoteH = qLines.length * (qs + 20) + 10 + originLines.length * 32 + creditLines.length * 32 + 34;
+    var H = quoteTop + quoteH + 150;
     canvas.width = W; canvas.height = H; ctx.textBaseline = 'top';
-    ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
-    var glow = ctx.createRadialGradient(1010,50,10,880,70,720); glow.addColorStop(0,warm?'#FCD7B7':'#E0E9D9'); glow.addColorStop(1,bg);
-    ctx.fillStyle = glow; ctx.fillRect(0,0,W,700);
-    // ---- 顶部：日期 ----
-    text(ctx,'训练手记',64,68,22,muted,650);
-    ctx.textAlign='right';text(ctx,data.date.replace(/-/g,'.'),1016,68,22,muted,500);ctx.textAlign='left';
-    // ---- 个人名片：大头像 + 昵称 + ID/体重 + 签名 ----
-    var AV=136, ax=64, ay=150, cy0=ay+Math.max(0,(profileH-AV)/2);
-    ctx.save(); ctx.beginPath(); ctx.arc(ax+AV/2,cy0+AV/2,AV/2,0,Math.PI*2); ctx.closePath(); ctx.clip();
-    ctx.fillStyle=warm?'#F6DCC6':'#DCE5D3'; ctx.fillRect(ax,cy0,AV,AV);
-    if (avatar) { var side=Math.min(avatar.width,avatar.height);ctx.drawImage(avatar,(avatar.width-side)/2,(avatar.height-side)/2,side,side,ax,cy0,AV,AV); }
-    else { font(ctx,60,700); ctx.fillStyle=ink; ctx.textAlign='center'; ctx.fillText(Array.from(data.name)[0],ax+AV/2,cy0+AV/2-36); ctx.textAlign='left'; }
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    var glow = ctx.createRadialGradient(1010, 50, 10, 880, 70, 720); glow.addColorStop(0, warm ? '#FCD7B7' : '#E0E9D9'); glow.addColorStop(1, bg);
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 700);
+    // ---- 页眉 ----
+    text(ctx, '训练手记', 64, 68, 22, muted, 650);
+    ctx.textAlign = 'right'; text(ctx, data.date.replace(/-/g, '.'), 1016, 68, 22, muted, 500); ctx.textAlign = 'left';
+    // ---- 个人名片 ----
+    var AV = 136, ax = 64, ay = 150, cy0 = ay + Math.max(0, (profileH - AV) / 2);
+    ctx.save(); ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
+    ctx.fillStyle = warm ? '#F6DCC6' : '#DCE5D3'; ctx.fillRect(ax, cy0, AV, AV);
+    if (avatar) { var side = Math.min(avatar.width, avatar.height); ctx.drawImage(avatar, (avatar.width - side) / 2, (avatar.height - side) / 2, side, side, ax, cy0, AV, AV); }
+    else { font(ctx, 60, 700); ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.fillText(Array.from(data.name)[0], ax + AV / 2, cy0 + AV / 2 - 36); ctx.textAlign = 'left'; }
     ctx.restore();
-    ctx.lineWidth=4; ctx.strokeStyle='#FFFFFF'; ctx.beginPath(); ctx.arc(ax+AV/2,cy0+AV/2,AV/2-2,0,Math.PI*2); ctx.stroke();
-    var tx=ax+AV+32, ty=ay+Math.max(0,(profileH-(nameSize+14+(subLine?36:0)+sigLines.length*38))/2);
-    text(ctx,data.name,tx,ty,nameSize,ink,700); ty+=nameSize+14;
-    if (subLine) { text(ctx,subLine,tx,ty,24,muted,500); ty+=36; }
-    sigLines.forEach(function(l){ text(ctx,l,tx,ty,26,ink,400); ty+=38; });
-    // ---- 本次训练：哪一天 / 第几周 / 第几次 ----
-    var infoY=150+profileH+24;
-    ctx.strokeStyle='#DCE1D6'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(64,infoY); ctx.lineTo(1016,infoY); ctx.stroke();
-    text(ctx,data.day+' '+data.dayName+'  ·  '+data.weekText+'  ·  第 '+data.seq+' 次训练',64,infoY+22,24,ink,600);
-    titleLines.forEach(function(l,i){text(ctx,l,64,top+i*(titleSize+18),titleSize,ink,750);});
-    var creditY=top+titleHeight+4;
-    originLines.forEach(function(l,i){text(ctx,l,64,creditY+i*32,24,muted,400);});
-    creditY+=originLines.length*32;
-    creditLines.forEach(function(l,i){text(ctx,l,64,creditY+i*32,23,muted,500);});
-    rounded(ctx,64,566+offset,952,256,38,'#FFFFFF');
-    text(ctx,data.estimated ? '估算训练容量' : '累计训练容量',100,600+offset,25,muted,500);
-    text(ctx,data.volumeText,92,642+offset,108,ink,750);
-    font(ctx,108,750); var numWidth=ctx.measureText(data.volumeText).width;
-    text(ctx,'t',106+numWidth,692+offset,35,muted,550);
-    text(ctx,data.volume.toLocaleString('zh-CN')+' kg · 重量 × 次数之和',100,777+offset,22,muted,400);
-    var metrics = [[data.rows.length,'训练动作'],[data.reps,(data.estimated?'估算':'累计')+'次数'],[data.adds,'达到加重条件']];
-    metrics.forEach(function(m,i){var x=70+i*322;text(ctx,m[0],x,860+offset,54,ink,700);text(ctx,m[1],x,924+offset,23,muted,400);});
-    rounded(ctx,64,992+offset,952,126,28,warm?'#FFE8D3':'#E6EDDF');
-    text(ctx,data.fun,92,1018+offset,fit(ctx,data.fun,900,30,24),ink,650);
-    text(ctx,data.funNote,92,1065+offset,20,muted,400);
-    text(ctx,'本次训练清单',64,1160+offset,29,ink,650);ctx.textAlign='right';text(ctx,data.rows.length+' 项动作',1016,1166+offset,22,muted,500);ctx.textAlign='left';
-    var y = 1222+offset;
-    data.rows.forEach(function(r,i){
-      ctx.strokeStyle='#DCE1D6';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,y-14);ctx.lineTo(1016,y-14);ctx.stroke();
-      text(ctx,r.tier,64,y+2,23,muted,650);
-      var rowName=r.name; font(ctx,30,650); var names=wrap(ctx,rowName,390);
-      names.slice(0,2).forEach(function(l,j){text(ctx,l,144,y+j*33,30,ink,650);});
-      text(ctx,r.result,144,y+72,21,muted,400);
-      font(ctx,27,650);ctx.textAlign='right';text(ctx,r.load,1016,y+2,27,ink,650);text(ctx,r.stage+' · '+r.reps+' 次',1016,y+44,22,muted,400);ctx.textAlign='left';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2 - 2, 0, Math.PI * 2); ctx.stroke();
+    var tx = ax + AV + 32, ty = ay + Math.max(0, (profileH - (nameSize + 14 + (subLine ? 36 : 0) + sigLines.length * 38)) / 2);
+    text(ctx, data.name, tx, ty, nameSize, ink, 700); ty += nameSize + 14;
+    if (subLine) { text(ctx, subLine, tx, ty, 24, muted, 500); ty += 36; }
+    sigLines.forEach(function (l) { text(ctx, l, tx, ty, 26, ink, 400); ty += 38; });
+    // ---- 本次训练信息 ----
+    ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, infoY); ctx.lineTo(1016, infoY); ctx.stroke();
+    text(ctx, data.day + ' ' + data.dayName + '  ·  ' + data.weekText + '  ·  第 ' + data.seq + ' 次训练', 64, infoY + 22, 24, ink, 600);
+    // ---- 容量主数字 ----
+    rounded(ctx, 64, heroTop, 952, 256, 38, '#FFFFFF');
+    text(ctx, data.estimated ? '估算训练容量' : '累计训练容量', 100, heroTop + 34, 25, muted, 500);
+    text(ctx, data.volumeText, 92, heroTop + 76, 108, ink, 750);
+    font(ctx, 108, 750); var numWidth = ctx.measureText(data.volumeText).width;
+    text(ctx, 't', 106 + numWidth, heroTop + 126, 35, muted, 550);
+    text(ctx, data.volume.toLocaleString('zh-CN') + ' kg · 重量 × 次数之和', 100, heroTop + 177, 22, muted, 400);
+    // ---- 指标 ----
+    var metrics = [[data.rows.length, '训练动作'], [data.reps, (data.estimated ? '估算' : '累计') + '次数'], [data.adds, '达到加重条件']];
+    metrics.forEach(function (m, i) { var x = 70 + i * 322; text(ctx, m[0], x, metricsTop, 54, ink, 700); text(ctx, m[1], x, metricsTop + 64, 23, muted, 400); });
+    // ---- 趣味数字（emoji 模板，随机轮换） ----
+    rounded(ctx, 64, funTop, 952, 148, 30, warm ? '#FFE8D3' : '#E6EDDF');
+    text(ctx, data.fun, 92, funTop + 40, funSize, ink, 650);
+    text(ctx, data.funNote, 92, funTop + 104, 20, muted, 400);
+    // ---- 训练清单 ----
+    text(ctx, '本次训练清单', 64, listHead, 29, ink, 650);
+    ctx.textAlign = 'right'; text(ctx, data.rows.length + ' 项动作', 1016, listHead + 6, 22, muted, 500); ctx.textAlign = 'left';
+    var y = listTop;
+    data.rows.forEach(function (r) {
+      ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, y - 14); ctx.lineTo(1016, y - 14); ctx.stroke();
+      text(ctx, r.tier, 64, y + 2, 23, muted, 650);
+      font(ctx, 30, 650); var names = wrap(ctx, r.name, 390);
+      names.slice(0, 2).forEach(function (l, k) { text(ctx, l, 144, y + k * 33, 30, ink, 650); });
+      text(ctx, r.result, 144, y + 72, 21, muted, 400);
+      font(ctx, 27, 650); ctx.textAlign = 'right'; text(ctx, r.load, 1016, y + 2, 27, ink, 650); text(ctx, r.stage + ' · ' + r.reps + ' 次', 1016, y + 44, 22, muted, 400); ctx.textAlign = 'left';
       y += 110;
     });
-    y += 26;ctx.strokeStyle='#DCE1D6';ctx.beginPath();ctx.moveTo(64,y);ctx.lineTo(1016,y);ctx.stroke();
-    text(ctx,'训练小结 · 本应用生成',64,y+26,22,muted,500);
-    summaryLines.forEach(function(l,i){text(ctx,l,64,y+66+i*42,29,ink,500);});
-    text(ctx,'认真练习，也认真恢复。',64,H-103,22,muted,500);
-    text(ctx,'容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。',64,H-62,18,muted,400);
+    // ---- 小结 ----
+    y += 26; ctx.strokeStyle = '#DCE1D6'; ctx.beginPath(); ctx.moveTo(64, y); ctx.lineTo(1016, y); ctx.stroke();
+    text(ctx, '训练小结 · 本应用生成', 64, y + 26, 22, muted, 500);
+    summaryLines.forEach(function (l, i) { text(ctx, l, 64, y + 66 + i * 42, 29, ink, 500); });
+    // ---- 名句（卡片底部） ----
+    var qy = quoteTop;
+    text(ctx, '「', 64, qy - 26, 40, muted, 700);
+    qLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * (qs + 20), qs, ink, 600); });
+    qy += qLines.length * (qs + 20) + 10;
+    originLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * 32, 24, muted, 400); });
+    qy += originLines.length * 32;
+    creditLines.forEach(function (l, i) { text(ctx, l, 124, qy + i * 32, 23, muted, 500); });
+    // ---- 页脚 ----
+    text(ctx, '认真练习，也认真恢复。', 64, H - 100, 22, muted, 500);
+    text(ctx, '容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。', 64, H - 60, 18, muted, 400);
     return canvas;
   }
-  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, QUOTES: QUOTES, TONES: TONES, quoteList: quoteList, chooseQuote: chooseQuote, attribution: attribution };
+  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, QUOTES: QUOTES, quoteById: quoteById, chooseQuote: chooseQuote, chooseFun: chooseFun, FUN: FUN, attribution: attribution };
 });

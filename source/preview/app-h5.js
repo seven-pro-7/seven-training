@@ -738,24 +738,18 @@
   }
   function reviewAct(act, ds, el) {
     var r = S.review;
-    if (act === 'shareopen') { r.share = {id:ds.id,tone:'fire',variant:0,theme:'sage',image:null,blob:null}; return true; }
+    if (act === 'shareopen') { r.share = {id:ds.id,variant:0,theme:'sage',image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
     if (act === 'sharerec') { r.share.id=el.value; r.share.variant=0; delete r.share.quoteId; return true; }
-    if (act === 'sharetone') { r.share.tone=ds.tone; r.share.variant=0; delete r.share.quoteId; return true; }
-    if (act === 'sharequote') { r.share.quoteId=el.value; return true; }
     if (act === 'quotelibrary') { r.share.library=true; r.share.q=''; return true; }
     if (act === 'quoteback') { r.share.library=false; return true; }
     if (act === 'quotequery') { r.share.q=el.value; updateQuoteCatalog(); return false; }
-    if (act === 'quotecategory') { r.share.filter=ds.tone; updateQuoteCatalog(); return false; }
     if (act === 'quoteuse') {
       var chosen=Share.QUOTES.find(function(q){return q.id===ds.id;});
-      if(!chosen)return false;r.share.quoteId=chosen.id;r.share.tone=chosen.tone;r.share.library=false;return true;
+      if(!chosen)return false;r.share.quoteId=chosen.id;r.share.library=false;return true;
     }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
-    if (act === 'shareagain') {
-      var cq=Share.build(load(),r.share.id,r.share).quote, qp=Share.quoteList(cq.tone), qi=qp.findIndex(function(q){return q.id===cq.id;});
-      r.share.quoteId=qp[(qi+1)%qp.length].id; return true;
-    }
+    if (act === 'shareagain') { r.share.variant=(r.share.variant||0)+1; delete r.share.quoteId; return true; }
     if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
@@ -792,27 +786,26 @@
       '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
       '<div class="share-options"><label>分享哪次训练 <select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
       (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没设置名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') +
-      '<div class="share-pills" role="group" aria-label="名句心境">'+Share.TONES.map(function(t){return '<button class="'+(data.tone===t.id?'on':'')+'" data-act="sharetone" data-tone="'+t.id+'">'+t.label+'</button>';}).join('')+'<button data-act="shareagain">换一句</button></div>' +
-      '<label class="quote-selector">'+Share.quoteList(data.tone).length+' 句'+Share.TONES.find(function(t){return t.id===data.tone;}).label+'名句 <select data-act="sharequote" aria-label="选择经典名句">'+Share.quoteList(data.tone).map(function(q){return '<option value="'+q.id+'" '+(q.id===data.quote.id?'selected':'')+'>'+esc(q.text+' — '+q.author)+'</option>';}).join('')+'</select></label><button class="quote-browse" data-act="quotelibrary">浏览全部 '+Share.QUOTES.length+' 句 <span>按作者、作品搜索 ›</span></button>' +
+      '<div class="share-quotebar"><button class="btn-again" data-act="shareagain">🎲 换一句 · 换个说法</button><button class="quote-browse" data-act="quotelibrary">全部 '+Share.QUOTES.length+' 句 ›</button></div>' +
+      
       '<details class="quote-source"><summary>'+esc(data.attribution)+' · 核对出处</summary><p>'+esc(data.quote.context)+'</p>'+(data.quote.original?'<p>核验英文文本：'+esc(data.quote.original)+'<br>中文：本应用自译，非引用现成译本。</p>':'')+'<p>'+esc(data.quote.note)+'。简体字、标点按核验文本展示；仅作心态表达，不是训练指导。</p><a href="'+esc(data.quote.source)+'" target="_blank" rel="noopener noreferrer">打开原文来源 ↗</a></details>' +
       '<div class="share-pills" role="group" aria-label="卡片配色">'+[['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>' +
       '<div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span>正在整理你的训练成果…</span></div>' +
-      '<div class="share-hint">按所选日期汇总全部训练。趣味类比不是实际搬运或热量测算；预览即最终图片。可长按图片保存。</div>' +
+      '<div class="share-hint">卡片按所选的那次训练生成；名句和趣味说法在卡片下方，点「换一句」一起换。趣味说法为容量换算，不是一次举起的重量。预览即最终图片，可长按保存。</div>' +
       '<div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div></div>';
   }
   function quoteCatalogRows(sh) {
-    var q=String(sh.q||'').trim(), filter=sh.filter||'all';
-    var arr=Share.QUOTES.filter(function(x){return (filter==='all'||x.tone===filter)&&(!q||[x.text,x.author,x.work].join(' ').includes(q));});
+    var q=String(sh.q||'').trim();
+    var arr=Share.QUOTES.filter(function(x){return !q||[x.text,x.author,x.work].join(' ').includes(q);});
     return arr.length?arr.map(function(x){return '<button class="quote-card" data-act="quoteuse" data-id="'+x.id+'"><span class="quote-card-text">'+esc(x.text)+'</span><span class="quote-card-credit">'+esc(Share.attribution(x))+'</span></button>';}).join(''):'<div class="empty-tip">没有匹配的名句，试试作者或作品名。</div>';
   }
   function renderQuoteCatalog() {
     var sh=S.review.share;
-    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet quote-catalog" data-stop="1"><div class="grabber"></div><div class="share-toolbar"><button class="quote-back" data-act="quoteback">‹ 返回卡片</button><span class="quote-total">'+Share.QUOTES.length+' 句经典</span></div><div class="sheet-title">选一句，写下今天。</div><div class="search"><input type="search" class="search-in" data-act="quotequery" value="'+esc(sh.q||'')+'" placeholder="搜索名句、作者、作品" aria-label="搜索名句"></div><div class="share-pills quote-filter">'+[{id:'all',label:'全部'}].concat(Share.TONES).map(function(t){return '<button class="'+((sh.filter||'all')===t.id?'on':'')+'" data-act="quotecategory" data-tone="'+t.id+'">'+t.label+'</button>';}).join('')+'</div><div id="quoteCatalogRows">'+quoteCatalogRows(sh)+'</div><div class="share-hint">每句均带作品来源；外文中文为本应用自译。点击名句应用到分享卡片。</div></div></div>';
+    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet quote-catalog" data-stop="1"><div class="grabber"></div><div class="share-toolbar"><button class="quote-back" data-act="quoteback">‹ 返回卡片</button><span class="quote-total">'+Share.QUOTES.length+' 句经典</span></div><div class="sheet-title">选一句，写下今天。</div><div class="search"><input type="search" class="search-in" data-act="quotequery" value="'+esc(sh.q||'')+'" placeholder="搜索名句、作者、作品" aria-label="搜索名句"></div><div id="quoteCatalogRows">'+quoteCatalogRows(sh)+'</div><div class="share-hint">每句均带作品来源；外文中文为本应用自译。点击名句应用到分享卡片。</div></div></div>';
   }
   function updateQuoteCatalog() {
     var sh=S.review.share, el=document.getElementById('quoteCatalogRows');if(!el)return;
     el.innerHTML=quoteCatalogRows(sh);
-    document.querySelectorAll('[data-act="quotecategory"]').forEach(function(e){e.classList.toggle('on',e.dataset.tone===(sh.filter||'all'));});
   }
   async function paintSharePreview() {
     var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;

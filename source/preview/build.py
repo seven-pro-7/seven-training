@@ -369,6 +369,10 @@ css.append("""
 .app .share-close { width: 44px; height: 44px; border-radius: 50%; background: var(--fill); font-size: 22px; color: var(--label2); }
 .app .share-options { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; font-size: 13px; color: var(--label2); gap: 8px; }
 .app .share-options label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; white-space: nowrap; }
+.app .share-quotebar { display: flex; gap: 8px; margin: 10px 0; }
+.app .share-quotebar .btn-again { flex: 1; min-height: 48px; font-size: var(--font-headline); font-weight: 600; color: var(--label); background: var(--fill); border: 0; border-radius: 14px; transition: transform .12s ease; }
+.app .share-quotebar .btn-again:active { transform: scale(.97); }
+.app .share-quotebar .quote-browse { min-height: 48px; flex-shrink: 0; }
 .app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); flex: 1; min-width: 0; width: 100%; text-overflow: ellipsis; }
 .app .share-options button { color: var(--label2); font-size: 13px; background: transparent; padding: 8px 0; }
 .app .share-pills { display: flex; gap: 6px; margin: 10px 0; }
