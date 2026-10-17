@@ -901,6 +901,7 @@
         repsText: showSets + '×' + def.reps + (s.tier !== 'T2' && !deload ? '+' : ''),
         inputType: deload ? 'deload' : s.tier === 'T2' ? 'done' : 'amrap',
         amrapHint: s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + (equipOf(res.name, res.equip) === '自重' ? ' 建议切换负重版' : ' 加重')) : '',
+        amrapTarget: deload ? null : s.tier === 'T1' ? def.add : s.tier === 'T3' ? P.t3Threshold : null,
         value: e.v, reps2: e.reps, skip: !!e.skip, new5RM: e.new5RM || '', done: e.done || 0, dots: dots,
         need5RM: s.tier === 'T1' && P.ruleMode !== 'excel' && st.stage === '10×1+',
         rest: REST[s.tier],

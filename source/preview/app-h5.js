@@ -215,8 +215,30 @@
       h += '<div class="card deload"><div class="dl-ic">↓</div><div class="flex1"><div class="dl-t">减载周</div><div class="dl-s">T1 −50% · T2 −40% · T3 少 1 组</div></div>' +
         '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
     }
+    // 专注模式：只展开「当前动作」，其余收成一行。焦点只在换训练日 / 首次进入时自动定位到第一个未完成的动作，
+    // 之后由用户点「下一个动作」或点某一行切换，避免刚填完就被收起、看不到判定结果。
+    var finished = function (x) { return x.skip || !!x.preview; };
+    var fkey = vm.day + '|' + (t.recordId || '');
+    if (t.focusKey !== fkey || (t.focus && !vm.items.some(function (x) { return x.slotId === t.focus; }))) {
+      var f0 = vm.items.filter(function (x) { return !finished(x); })[0];
+      t.focus = f0 ? f0.slotId : null; t.focusKey = fkey;
+    }
+    var nextOpen = function (cur) {
+      var idx = vm.items.map(function (x) { return x.slotId; }).indexOf(cur), rest0 = vm.items.slice(idx + 1).concat(vm.items.slice(0, idx));
+      var n = rest0.filter(function (x) { return !finished(x); })[0]; return n ? n.slotId : null;
+    };
     vm.items.forEach(function (it) {
-      h += '<div class="card ex ' + (it.skip ? 'skipped' : '') + '">';
+      if (it.slotId !== t.focus) {
+        var p0 = it.preview, right;
+        if (it.skip) right = '<span class="exr-st">已跳过</span>';
+        else if (p0) right = '<span class="exr-st" style="color:' + p0.color + '">' + p0.icon + ' ' + p0.judgment + '</span>' + (p0.sub || p0.judgment === '减载' ? '' : '<span class="exr-nx num">下次 ' + p0.nextWeight + '</span>');
+        else right = '<span class="exr-w num">' + (it.canAdjust ? it.weightText + '<span class="exr-u"> ' + esc(it.unitText) + '</span>' : '自重') + '</span><span class="exr-r num">' + it.repsText + '</span>';
+        h += '<div class="card ex-row ' + (finished(it) ? 'is-fin ' : '') + (it.skip ? 'skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '">' + tier(it.tier) +
+          '<span class="exr-n">' + esc(it.name) + '</span><span class="exr-right">' + right + '</span><span class="exr-chev">›</span></div>';
+        return;
+      }
+      var nxt = nextOpen(it.slotId);
+      h += '<div class="card ex is-focus ' + (it.skip ? 'skipped' : '') + '">';
       h += '<div class="ex-head">' + tier(it.tier) + '<div class="ex-title"><span class="ex-name">' + esc(it.name) + '</span>' + equipTag(it.equip) +
         (it.sub ? '<span class="ex-tag sub">替换 ' + esc(it.planName) + '</span>' : it.autoNew ? '<span class="ex-tag rot">本轮轮换 · 原 ' + esc(it.autoPrev) + '</span>' : it.changeNew ? '<span class="ex-tag new">新动作</span>' : '') + '</div>' +
         '<span class="ex-act" data-act="openswap" data-slot="' + it.slotId + '">更换</span>' +
@@ -233,11 +255,11 @@
       }
       if (!it.skip) {
         h += '<div class="dots">' + it.dots.map(function (d) {
-          return '<div class="dot ' + (d.on ? 'on ' : '') + (d.amrap ? 'amrap' : '') + '" data-act="dot" data-slot="' + it.slotId + '" data-i="' + d.i + '" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">' + (d.amrap ? '+' : d.i + 1) + '</div>';
+          return '<div class="dot ' + (d.on ? 'on ' : '') + (d.amrap ? 'amrap' : '') + '" data-act="dot" data-slot="' + it.slotId + '" data-i="' + d.i + '" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">' + (d.amrap ? (d.i + 1) + '+' : d.i + 1) + '</div>';
         }).join('') + '<div class="rest-btn" data-act="rest" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">休息 ' + it.restText + '</div></div>';
         if (it.inputType === 'amrap') {
-          h += '<div class="inrow"><div class="flex1"><div class="in-label">末组次数</div><div class="in-hint">' + it.amrapHint + '</div></div><div class="stepper">' +
-            '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null ? '' : it.value) + '" placeholder="—">' +
+          h += '<div class="inrow"><div class="flex1"><div class="in-label">末组次数</div><div class="in-hint">目标 ' + it.amrapHint + '</div></div><div class="stepper">' +
+            '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null || it.value === undefined ? '' : it.value) + '" placeholder="' + (it.amrapTarget || '') + '">' +
             '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="1">+</div></div></div>';
         }
         if (it.need5RM) h += '<div class="inrow"><div class="flex1"><div class="in-label">新 5RM</div><div class="in-hint">10×1+ 未达标时填写，用于重置</div></div><input class="mini-in num" inputmode="decimal" data-act="5rm" data-slot="' + it.slotId + '" value="' + esc(it.new5RM) + '" placeholder="kg"></div>';
@@ -254,11 +276,12 @@
             (p.boost && p.adaptNote ? '<div class="v-adapt"><span class="v-adapt-t">多加一档</span>' + esc(p.adaptNote) + '</div>' : '');
         }
       }
+      if ((it.preview || it.skip) && nxt) h += '<div class="ex-next" data-act="focus" data-slot="' + nxt + '">下一个动作<span class="exr-chev">›</span></div>';
       h += '</div>';
     });
     h += '<div class="list"><div class="cell"><span class="flex1">体重</span><input class="cell-in num" inputmode="decimal" data-act="bw" value="' + esc(t.bw) + '" placeholder="可选"><span class="unit">kg</span></div>' +
       '<div class="cell"><textarea class="note" data-act="note" rows="2" placeholder="备注：状态、睡眠、技术要点">' + esc(t.note) + '</textarea></div></div>';
-    h += '<button class="btn-primary submit" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '<span class="btn-count num">' + vm.filled + '/' + vm.total + '</span></button>';
+    h += '<div class="submit-bar"><span class="sb-count num"><b>' + vm.filled + '</b> / ' + vm.total + '</span><button class="btn-primary sb-btn" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
     }
     if (t.swap && t.swap.show) h += renderSwap();
     if (t.result) {
@@ -299,10 +322,12 @@
       case 'swapok': return swapConfirm();
       case 'day': if (t.recordId) return; t.day = ds.day; t.deload = undefined; t.draft = GZ.blankDraft(load(), ds.day); return true;
       case 'deload': t.deload = el.checked; return true;
+      case 'focus': t.focus = ds.slot; render(true); setTimeout(function () { var c = document.querySelector('.ex.is-focus'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 20); return false;
       case 'step':
         en = entry(ds.slot); vm = trainVM();
         var it = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
-        var v = en.v === null || en.v === '' || en.v === undefined ? (Number(ds.d) > 0 ? it.reps : 0) : Number(en.v) + Number(ds.d);
+        var tg = it.amrapTarget || it.reps;
+        var v = en.v === null || en.v === '' || en.v === undefined ? (Number(ds.d) > 0 ? tg : tg - 1) : Number(en.v) + Number(ds.d);
         en.v = Math.max(0, Math.min(60, v)); if (navigator.vibrate) navigator.vibrate(8); return true;
       case 'amrap': en = entry(ds.slot); en.v = el.value === '' ? null : Math.max(0, Math.min(60, parseInt(el.value, 10) || 0)); return true;
       case '5rm': entry(ds.slot).new5RM = el.value; return true;
@@ -418,7 +443,7 @@
     S.tab = 'train';
   }
   function beginRest(sec, name) {
-    clearInterval(rest.timer); rest.show = true; rest.left = sec; rest.total = sec; rest.name = name; renderRest();
+    clearInterval(rest.timer); rest.show = true; rest.open = false; rest.left = sec; rest.total = sec; rest.name = name; renderRest();
     rest.timer = setInterval(function () {
       rest.left -= 1;
       if (rest.left <= 0) { clearInterval(rest.timer); rest.show = false; renderRest(); toast('休息结束，开始下一组'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); return; }
@@ -428,9 +453,11 @@
   function renderRest() {
     var el = document.getElementById('rest');
     if (!rest.show) { el.innerHTML = ''; return; }
-    el.innerHTML = '<div class="pg-train"><div class="mask center rest-mask"><div class="rest-box"><span class="rest-name">' + esc(rest.name) + ' · 组间休息</span><span class="rest-num num">' + fmtSec(rest.left) + '</span>' +
-      '<div class="rest-bar"><div class="rest-in" style="width:' + (rest.left / rest.total * 100) + '%"></div></div>' +
-      '<div class="rest-btns"><div class="rb" data-rest-adj="-30">−30</div><div class="rb main" data-rest-stop="1">跳过休息</div><div class="rb" data-rest-adj="30">+30</div></div></div></div></div>';
+    var pct = Math.max(0, Math.min(100, rest.left / rest.total * 100)), app = document.querySelector('.app'), tb = document.getElementById('tabbar');
+    var bottom = 12 + (app && tb ? app.getBoundingClientRect().bottom - tb.getBoundingClientRect().top : 60) + (S.tab === 'train' && !S.train.result ? 72 : 0);
+    el.innerHTML = '<div class="rest-float" style="bottom:' + Math.round(bottom) + 'px">' +
+      (rest.open ? '<div class="rest-pop"><div class="rp-n">' + esc(rest.name) + ' · 组间休息</div><div class="rp-btns"><div class="rp-b" data-rest-adj="-30">−30 秒</div><div class="rp-b main" data-rest-stop="1">结束休息</div><div class="rp-b" data-rest-adj="30">+30 秒</div></div></div>' : '') +
+      '<div class="rest-cap" data-rest-toggle="1"><span class="rc-ring" style="background:conic-gradient(#fff ' + pct + '%, rgba(255,255,255,0.25) 0)"><i></i></span><span class="rc-t num">' + fmtSec(rest.left) + '</span><span class="rc-l">休息</span></div></div>';
   }
 
   // ================= 计划 =================
@@ -859,12 +886,13 @@
     document.getElementById('tabbar').addEventListener('click', function (e) {
       var it = e.target.closest('.tb-item'); if (!it) return;
       if (S.tab === it.dataset.tab) { body.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-      S.tab = it.dataset.tab; render();
+      S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
     });
     document.getElementById('rest').addEventListener('click', function (e) {
       var a = e.target.closest('[data-rest-adj]'), s = e.target.closest('[data-rest-stop]');
       if (a) { rest.left = Math.max(5, rest.left + Number(a.dataset.restAdj)); rest.total = Math.max(rest.total, rest.left); renderRest(); }
       if (s) { clearInterval(rest.timer); rest.show = false; renderRest(); }
+      if (e.target.closest('[data-rest-toggle]')) { rest.open = !rest.open; renderRest(); }
     });
     document.addEventListener('visibilitychange', function () { var c = Sync.cfg(); if (document.visibilityState === 'visible' && Sync.on() && (!c.lastAt || Date.now() - c.lastAt > 30000)) Sync.run(); });
     window.addEventListener('online', function () { if (Sync.on()) Sync.run(); });
