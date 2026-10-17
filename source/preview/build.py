@@ -368,7 +368,8 @@ css.append("""
 .app .share-sheet button { border: 0; font-family: inherit; cursor: pointer; }
 .app .share-close { width: 44px; height: 44px; border-radius: 50%; background: var(--fill); font-size: 22px; color: var(--label2); }
 .app .share-options { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; font-size: 13px; color: var(--label2); gap: 8px; }
-.app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); max-width: 144px; }
+.app .share-options label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; white-space: nowrap; }
+.app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); flex: 1; min-width: 0; width: 100%; text-overflow: ellipsis; }
 .app .share-options button { color: var(--label2); font-size: 13px; background: transparent; padding: 8px 0; }
 .app .share-pills { display: flex; gap: 6px; margin: 10px 0; }
 .app .share-pills button { background: var(--fill); border-radius: 999px; color: var(--label2); padding: 10px 13px; font-size: 13px; min-height: 44px; }
@@ -418,6 +419,7 @@ css.append(r"""
 .app .share-sheet .share-hint { font-size: var(--font-footnote); line-height: 1.55; }
 .app .share-sheet .share-actions { bottom: -16px; padding-top: 10px; }
 .app .share-sheet .share-actions button { font-size: var(--font-body); font-weight: 600; min-height: 48px; }
+.app .share-profile-tip { display:block; width:100%; text-align:left; margin:4px 0 12px; padding:12px 14px; border-radius:14px; background:#FFF4E5; color:#8A5A12; font-size:var(--font-footnote); line-height:1.5; min-height:44px; }
 .app .quote-browse { display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; width:100%; padding:12px; margin:0 0 12px; border-radius:16px; background:#FFFFFF; color:var(--label); font-size:var(--font-body); min-height:48px; }
 .app .quote-browse span { color:var(--label2); font-size:var(--font-footnote); }
 .app .quote-back { background:transparent; color:var(--label); font-size:var(--font-body); min-height:44px; padding:4px 0; }

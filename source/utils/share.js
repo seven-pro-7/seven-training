@@ -327,10 +327,31 @@
     });
     return Object.keys(set).sort().reverse();
   }
-  function build(db, date, opts) {
+  /** 可分享的训练记录（每次训练一条），最新在前。同一天练两次 = 两条，不合并 */
+  function sessionList(db, rp) {
+    rp = rp || GZ.replay(db);
+    var out = [];
+    rp.sessions.forEach(function (s, i) {
+      var ok = s.items.some(function (it) { var e = (s.rec.entries || {})[it.slotId]; return hasEntry(e, s.rec.deload) && it.judgment !== '跳过'; });
+      if (!ok || !/^\d{4}-\d{2}-\d{2}$/.test(s.rec.date || '')) return;
+      out.push({ id: s.rec.id, date: s.rec.date, day: s.rec.day, dayName: s.dayName, week: s.week, order: i,
+        label: s.rec.date.slice(5).replace('-', '月') + '日 · ' + s.rec.day + ' ' + s.dayName });
+    });
+    out.forEach(function (x, i) { x.seq = i + 1; });
+    return out.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.order - a.order; });
+  }
+  /**
+   * key：训练记录 id（推荐）；兼容旧调用传日期——取那天最后一次训练。
+   * 不传：今天有训练取今天最后一次，否则取最近一次。
+   */
+  function build(db, key, opts) {
     opts = opts || {};
-    var list = dates(db), selected = date || (list.indexOf(GZ.today()) >= 0 ? GZ.today() : list[0]);
-    var sessions = GZ.replay(db).sessions.filter(function (s) { return s.rec.date === selected; });
+    var rp = GZ.replay(db), list = sessionList(db, rp), pick = null;
+    if (key) pick = list.filter(function (x) { return x.id === key; })[0] || list.filter(function (x) { return x.date === key; })[0] || null;
+    if (!pick) pick = list[0] || null;
+    if (!pick) return null;
+    var selected = pick.date;
+    var sessions = rp.sessions.filter(function (s) { return s.rec.id === pick.id; });
     var rows = [], volume = 0, reps = 0, sets = 0, adds = 0, estimated = false, bw = null, included = [];
     sessions.forEach(function (s) {
       if (Number(s.rec.bw) > 0) bw = Number(s.rec.bw);
@@ -354,21 +375,20 @@
       });
     });
     if (!rows.length) return null;
-    var q = chooseQuote(selected, opts), tone = q.tone;
+    var q = chooseQuote(selected + pick.day, opts), tone = q.tone;
     var p = profile(db.params.shareProfile);
     var summary = '记录了 ' + rows.length + ' 项动作、' + Math.round(reps) + ' 次训练动作。' +
       (sessions.some(function(x){return x.rec.deload;}) ? '减载也是计划的一部分。认真练习，也认真恢复。' : adds > 0 ? adds + ' 个动作达到加重条件。把进步留在记录里，把恢复留给接下来的自己。' : '加重不是每次训练的唯一答案。保持节奏，每次认真练习都算数。');
 
     var fun = volume > 0 ? '约等于搬动 20 kg 行李箱 ' + Math.round(volume / 20) + ' 次' : '不靠配重片，也完成了 ' + Math.round(reps) + ' 次动作';
     var note = volume > 0 ? '趣味类比 = 累计训练容量 ÷ 20 kg，不是一次举起的重量。' : '自重动作按次数记录，不虚构重量。';
-    var totalDates = dates({ records: db.records.filter(function (r) { return r.date <= selected; }) }).length;
-    return { date: selected, isToday: selected === GZ.today(), profile: p, name: p.name || '训练者', tone: tone,
+    var weekText = GZ.weekText(pick.week, db.params);
+    return { recordId: pick.id, day: pick.day, dayName: pick.dayName, week: pick.week, weekText: weekText, seq: pick.seq, label: pick.label,
+      date: selected, isToday: selected === GZ.today(), profile: p, name: p.name || '训练者', hasName: !!p.name, tone: tone,
       title: q.text, quote: q, attribution: attribution(q), copy: summary, volume: Math.round(volume * 100) / 100, volumeText: (volume / 1000).toFixed(2),
       reps: Math.round(reps), sets: sets, adds: adds, estimated: estimated, rows: rows,
-      sessions: included.length,
-      days: sessions.filter(function(s) { return included.indexOf(s.rec.id) >= 0; }).map(function (s) { return s.rec.day; }).filter(function (d, i, arr) { return arr.indexOf(d) === i; }).join(' / '),
-      trainingDays: totalDates, weight: p.showWeight && bw !== null ? bw : null, fun: fun, funNote: note,
-      caption: (p.name || '训练者') + ' · ' + selected + '\n' + '“' + q.text + '”\n——' + attribution(q) + (q.original ? '\n原文：' + q.original : '') + '\n' + rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' + fun + '（累计容量的趣味类比）\n' + '训练小结（本应用生成）：' + summary + '\n#训练打卡 #认真练习' };
+      sessions: 1, days: pick.day + ' ' + pick.dayName, trainingDays: pick.seq, weight: p.showWeight && bw !== null ? bw : null, fun: fun, funNote: note,
+      caption: (p.name || '训练者') + (p.handle ? ' ' + p.handle : '') + ' · ' + selected + ' · ' + pick.day + ' ' + pick.dayName + ' · 第 ' + pick.seq + ' 次训练\n' + '“' + q.text + '”\n——' + attribution(q) + (q.original ? '\n原文：' + q.original : '') + '\n' + rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' + fun + '（累计容量的趣味类比）\n' + '训练小结（本应用生成）：' + summary + '\n#训练打卡 #认真练习' };
   }
 
   function font(ctx, size, weight) { ctx.font = (weight || 400) + ' ' + size + 'px -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif'; }
@@ -379,7 +399,15 @@
   function fit(ctx, value, width, size, min) { for (var n = size; n > min; n -= 2) { font(ctx,n,600); if (ctx.measureText(value).width <= width) return n; } return min; }
   function wrap(ctx, str, width) {
     var out = [], line = '';
-    Array.from(str).forEach(function (c) { if (c === '\n') { out.push(line); line = ''; } else if (ctx.measureText(line+c).width > width && line) { out.push(line); line = c; } else line += c; });
+    var NOHEAD = /[。，、！？；：”’）》」』…,.!?;:)]/;
+    Array.from(str).forEach(function (c) {
+      if (c === '\n') { out.push(line); line = ''; }
+      else if (ctx.measureText(line+c).width > width && line) {
+        // 避头点：标点不能单独起行，把上一个字带到下一行
+        if (NOHEAD.test(c) && line.length > 1) { var arr = Array.from(line), last = arr.pop(); out.push(arr.join('')); line = last + c; }
+        else { out.push(line); line = c; }
+      } else line += c;
+    });
     if (line) out.push(line); return out;
   }
   function loadImage(src) { return new Promise(function (resolve) { if (!src || typeof Image === 'undefined') return resolve(null); var i = new Image(); i.onload = function () { resolve(i); }; i.onerror = function () { resolve(null); }; i.src = src; }); }
@@ -391,31 +419,45 @@
     var displayTitle = data.title.length > 14 ? data.title.replace(/，/g, '，\n') : data.title;
     do { font(ctx,titleSize,750); titleLines=wrap(ctx,displayTitle,952); if(titleLines.length<=3)break;titleSize-=4; } while(titleSize>40);
     var titleHeight=titleLines.length*(titleSize+18);
+    var pf=data.profile, nameSize=fit(ctx,data.name,700,52,36);
+    font(ctx,26,400); var sigLines=pf.signature?wrap(ctx,pf.signature,720).slice(0,2):[];
+    var subLine=[pf.handle, data.weight!==null?'体重 '+data.weight+' kg':''].filter(Boolean).join('  ·  ');
+    var profileH=Math.max(152, 12+nameSize+14+(subLine?36:0)+sigLines.length*38+10);
+    var top=150+profileH+86; // 名片区下方：分隔线 + 训练信息 + 留白
     font(ctx,24,500); var originLines=q.original?wrap(ctx,q.original,952):[];
     font(ctx,23,500); var creditLines=wrap(ctx,data.attribution,952);
-    var metadataY=312+titleHeight+22+originLines.length*32+creditLines.length*32;
+    var metadataY=top+titleHeight+22+originLines.length*32+creditLines.length*32;
     var offset=metadataY-510;
     font(ctx,29,500);var summaryLines=wrap(ctx,data.copy,880);
-    font(ctx,24,500);var signatureLines=data.profile.signature?wrap(ctx,data.profile.signature,952):[];
-    var H = 1620 + offset + data.rows.length * 110 + Math.max(0,summaryLines.length-2)*42 + Math.max(0,signatureLines.length-1)*32;
+    var H = 1560 + offset + data.rows.length * 110 + Math.max(0,summaryLines.length-2)*42;
     canvas.width = W; canvas.height = H; ctx.textBaseline = 'top';
     ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
     var glow = ctx.createRadialGradient(1010,50,10,880,70,720); glow.addColorStop(0,warm?'#FCD7B7':'#E0E9D9'); glow.addColorStop(1,bg);
     ctx.fillStyle = glow; ctx.fillRect(0,0,W,700);
-    rounded(ctx,64,64,230,52,26,'#FFFFFF'); text(ctx,'训练手记 / DAILY',82,80,22,muted,650);
-    text(ctx,data.date.replace(/-/g,'.'),790,80,24,muted,500);
-    ctx.save(); ctx.beginPath(); ctx.arc(112,210,48,0,Math.PI*2); ctx.clip(); ctx.fillStyle='#E0E6DA';ctx.fillRect(64,162,96,96);
-    if (avatar) { var side=Math.min(avatar.width,avatar.height);ctx.drawImage(avatar,(avatar.width-side)/2,(avatar.height-side)/2,side,side,64,162,96,96); }
-    else text(ctx,Array.from(data.name)[0],88,183,40,ink,650);
-    ctx.restore(); text(ctx,data.name,184,174,fit(ctx,data.name,580,34,26),ink,650);
-    text(ctx,data.profile.handle || '把计划，练成了已完成。',184,222,23,muted,400);
-    if (data.weight !== null) text(ctx,'体重 '+data.weight+' kg',816,222,22,muted,400);
-    titleLines.forEach(function(l,i){text(ctx,l,64,312+i*(titleSize+18),titleSize,ink,750);});
-    var creditY=312+titleHeight+4;
+    // ---- 顶部：日期 ----
+    text(ctx,'训练手记',64,68,22,muted,650);
+    ctx.textAlign='right';text(ctx,data.date.replace(/-/g,'.'),1016,68,22,muted,500);ctx.textAlign='left';
+    // ---- 个人名片：大头像 + 昵称 + ID/体重 + 签名 ----
+    var AV=136, ax=64, ay=150, cy0=ay+Math.max(0,(profileH-AV)/2);
+    ctx.save(); ctx.beginPath(); ctx.arc(ax+AV/2,cy0+AV/2,AV/2,0,Math.PI*2); ctx.closePath(); ctx.clip();
+    ctx.fillStyle=warm?'#F6DCC6':'#DCE5D3'; ctx.fillRect(ax,cy0,AV,AV);
+    if (avatar) { var side=Math.min(avatar.width,avatar.height);ctx.drawImage(avatar,(avatar.width-side)/2,(avatar.height-side)/2,side,side,ax,cy0,AV,AV); }
+    else { font(ctx,60,700); ctx.fillStyle=ink; ctx.textAlign='center'; ctx.fillText(Array.from(data.name)[0],ax+AV/2,cy0+AV/2-36); ctx.textAlign='left'; }
+    ctx.restore();
+    ctx.lineWidth=4; ctx.strokeStyle='#FFFFFF'; ctx.beginPath(); ctx.arc(ax+AV/2,cy0+AV/2,AV/2-2,0,Math.PI*2); ctx.stroke();
+    var tx=ax+AV+32, ty=ay+Math.max(0,(profileH-(nameSize+14+(subLine?36:0)+sigLines.length*38))/2);
+    text(ctx,data.name,tx,ty,nameSize,ink,700); ty+=nameSize+14;
+    if (subLine) { text(ctx,subLine,tx,ty,24,muted,500); ty+=36; }
+    sigLines.forEach(function(l){ text(ctx,l,tx,ty,26,ink,400); ty+=38; });
+    // ---- 本次训练：哪一天 / 第几周 / 第几次 ----
+    var infoY=150+profileH+24;
+    ctx.strokeStyle='#DCE1D6'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(64,infoY); ctx.lineTo(1016,infoY); ctx.stroke();
+    text(ctx,data.day+' '+data.dayName+'  ·  '+data.weekText+'  ·  第 '+data.seq+' 次训练',64,infoY+22,24,ink,600);
+    titleLines.forEach(function(l,i){text(ctx,l,64,top+i*(titleSize+18),titleSize,ink,750);});
+    var creditY=top+titleHeight+4;
     originLines.forEach(function(l,i){text(ctx,l,64,creditY+i*32,24,muted,400);});
     creditY+=originLines.length*32;
     creditLines.forEach(function(l,i){text(ctx,l,64,creditY+i*32,23,muted,500);});
-    text(ctx,data.days+'  ·  '+data.sessions+' 次训练',68,metadataY,24,muted,550);
     rounded(ctx,64,566+offset,952,256,38,'#FFFFFF');
     text(ctx,data.estimated ? '估算训练容量' : '累计训练容量',100,600+offset,25,muted,500);
     text(ctx,data.volumeText,92,642+offset,108,ink,750);
@@ -427,25 +469,23 @@
     rounded(ctx,64,992+offset,952,126,28,warm?'#FFE8D3':'#E6EDDF');
     text(ctx,data.fun,92,1018+offset,fit(ctx,data.fun,900,30,24),ink,650);
     text(ctx,data.funNote,92,1065+offset,20,muted,400);
-    text(ctx,'今日训练清单',64,1160+offset,29,ink,650);text(ctx,'第 '+data.trainingDays+' 个训练日',784,1166+offset,22,muted,500);
+    text(ctx,'本次训练清单',64,1160+offset,29,ink,650);ctx.textAlign='right';text(ctx,data.rows.length+' 项动作',1016,1166+offset,22,muted,500);ctx.textAlign='left';
     var y = 1222+offset;
     data.rows.forEach(function(r,i){
       ctx.strokeStyle='#DCE1D6';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,y-14);ctx.lineTo(1016,y-14);ctx.stroke();
       text(ctx,r.tier,64,y+2,23,muted,650);
       var rowName=r.name; font(ctx,30,650); var names=wrap(ctx,rowName,390);
       names.slice(0,2).forEach(function(l,j){text(ctx,l,144,y+j*33,30,ink,650);});
-      text(ctx,r.day+' · '+r.result,144,y+72,21,muted,400);
+      text(ctx,r.result,144,y+72,21,muted,400);
       font(ctx,27,650);ctx.textAlign='right';text(ctx,r.load,1016,y+2,27,ink,650);text(ctx,r.stage+' · '+r.reps+' 次',1016,y+44,22,muted,400);ctx.textAlign='left';
       y += 110;
     });
     y += 26;ctx.strokeStyle='#DCE1D6';ctx.beginPath();ctx.moveTo(64,y);ctx.lineTo(1016,y);ctx.stroke();
     text(ctx,'训练小结 · 本应用生成',64,y+26,22,muted,500);
     summaryLines.forEach(function(l,i){text(ctx,l,64,y+66+i*42,29,ink,500);});
-    var foot=y+88+summaryLines.length*42;
-    signatureLines.forEach(function(l,i){text(ctx,l,64,foot+i*32,24,muted,500);});
     text(ctx,'认真练习，也认真恢复。',64,H-103,22,muted,500);
     text(ctx,'容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。',64,H-62,18,muted,400);
     return canvas;
   }
-  return { PROFILE: PROFILE, profile: profile, dates: dates, build: build, draw: draw, QUOTES: QUOTES, TONES: TONES, quoteList: quoteList, chooseQuote: chooseQuote, attribution: attribution };
+  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, QUOTES: QUOTES, TONES: TONES, quoteList: quoteList, chooseQuote: chooseQuote, attribution: attribution };
 });

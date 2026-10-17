@@ -688,7 +688,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .share-sheet button { border: 0; font-family: inherit; cursor: pointer; }
 .app .share-close { width: 44px; height: 44px; border-radius: 50%; background: var(--fill); font-size: 22px; color: var(--label2); }
 .app .share-options { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; font-size: 13px; color: var(--label2); gap: 8px; }
-.app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); max-width: 144px; }
+.app .share-options label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; white-space: nowrap; }
+.app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); flex: 1; min-width: 0; width: 100%; text-overflow: ellipsis; }
 .app .share-options button { color: var(--label2); font-size: 13px; background: transparent; padding: 8px 0; }
 .app .share-pills { display: flex; gap: 6px; margin: 10px 0; }
 .app .share-pills button { background: var(--fill); border-radius: 999px; color: var(--label2); padding: 10px 13px; font-size: 13px; min-height: 44px; }
@@ -735,6 +736,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .share-sheet .share-hint { font-size: var(--font-footnote); line-height: 1.55; }
 .app .share-sheet .share-actions { bottom: -16px; padding-top: 10px; }
 .app .share-sheet .share-actions button { font-size: var(--font-body); font-weight: 600; min-height: 48px; }
+.app .share-profile-tip { display:block; width:100%; text-align:left; margin:4px 0 12px; padding:12px 14px; border-radius:14px; background:#FFF4E5; color:#8A5A12; font-size:var(--font-footnote); line-height:1.5; min-height:44px; }
 .app .quote-browse { display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; width:100%; padding:12px; margin:0 0 12px; border-radius:16px; background:#FFFFFF; color:var(--label); font-size:var(--font-body); min-height:48px; }
 .app .quote-browse span { color:var(--label2); font-size:var(--font-footnote); }
 .app .quote-back { background:transparent; color:var(--label); font-size:var(--font-body); min-height:44px; padding:4px 0; }
@@ -2740,10 +2742,31 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     });
     return Object.keys(set).sort().reverse();
   }
-  function build(db, date, opts) {
+  /** 可分享的训练记录（每次训练一条），最新在前。同一天练两次 = 两条，不合并 */
+  function sessionList(db, rp) {
+    rp = rp || GZ.replay(db);
+    var out = [];
+    rp.sessions.forEach(function (s, i) {
+      var ok = s.items.some(function (it) { var e = (s.rec.entries || {})[it.slotId]; return hasEntry(e, s.rec.deload) && it.judgment !== '跳过'; });
+      if (!ok || !/^\d{4}-\d{2}-\d{2}$/.test(s.rec.date || '')) return;
+      out.push({ id: s.rec.id, date: s.rec.date, day: s.rec.day, dayName: s.dayName, week: s.week, order: i,
+        label: s.rec.date.slice(5).replace('-', '月') + '日 · ' + s.rec.day + ' ' + s.dayName });
+    });
+    out.forEach(function (x, i) { x.seq = i + 1; });
+    return out.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.order - a.order; });
+  }
+  /**
+   * key：训练记录 id（推荐）；兼容旧调用传日期——取那天最后一次训练。
+   * 不传：今天有训练取今天最后一次，否则取最近一次。
+   */
+  function build(db, key, opts) {
     opts = opts || {};
-    var list = dates(db), selected = date || (list.indexOf(GZ.today()) >= 0 ? GZ.today() : list[0]);
-    var sessions = GZ.replay(db).sessions.filter(function (s) { return s.rec.date === selected; });
+    var rp = GZ.replay(db), list = sessionList(db, rp), pick = null;
+    if (key) pick = list.filter(function (x) { return x.id === key; })[0] || list.filter(function (x) { return x.date === key; })[0] || null;
+    if (!pick) pick = list[0] || null;
+    if (!pick) return null;
+    var selected = pick.date;
+    var sessions = rp.sessions.filter(function (s) { return s.rec.id === pick.id; });
     var rows = [], volume = 0, reps = 0, sets = 0, adds = 0, estimated = false, bw = null, included = [];
     sessions.forEach(function (s) {
       if (Number(s.rec.bw) > 0) bw = Number(s.rec.bw);
@@ -2767,21 +2790,20 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       });
     });
     if (!rows.length) return null;
-    var q = chooseQuote(selected, opts), tone = q.tone;
+    var q = chooseQuote(selected + pick.day, opts), tone = q.tone;
     var p = profile(db.params.shareProfile);
     var summary = '记录了 ' + rows.length + ' 项动作、' + Math.round(reps) + ' 次训练动作。' +
       (sessions.some(function(x){return x.rec.deload;}) ? '减载也是计划的一部分。认真练习，也认真恢复。' : adds > 0 ? adds + ' 个动作达到加重条件。把进步留在记录里，把恢复留给接下来的自己。' : '加重不是每次训练的唯一答案。保持节奏，每次认真练习都算数。');
 
     var fun = volume > 0 ? '约等于搬动 20 kg 行李箱 ' + Math.round(volume / 20) + ' 次' : '不靠配重片，也完成了 ' + Math.round(reps) + ' 次动作';
     var note = volume > 0 ? '趣味类比 = 累计训练容量 ÷ 20 kg，不是一次举起的重量。' : '自重动作按次数记录，不虚构重量。';
-    var totalDates = dates({ records: db.records.filter(function (r) { return r.date <= selected; }) }).length;
-    return { date: selected, isToday: selected === GZ.today(), profile: p, name: p.name || '训练者', tone: tone,
+    var weekText = GZ.weekText(pick.week, db.params);
+    return { recordId: pick.id, day: pick.day, dayName: pick.dayName, week: pick.week, weekText: weekText, seq: pick.seq, label: pick.label,
+      date: selected, isToday: selected === GZ.today(), profile: p, name: p.name || '训练者', hasName: !!p.name, tone: tone,
       title: q.text, quote: q, attribution: attribution(q), copy: summary, volume: Math.round(volume * 100) / 100, volumeText: (volume / 1000).toFixed(2),
       reps: Math.round(reps), sets: sets, adds: adds, estimated: estimated, rows: rows,
-      sessions: included.length,
-      days: sessions.filter(function(s) { return included.indexOf(s.rec.id) >= 0; }).map(function (s) { return s.rec.day; }).filter(function (d, i, arr) { return arr.indexOf(d) === i; }).join(' / '),
-      trainingDays: totalDates, weight: p.showWeight && bw !== null ? bw : null, fun: fun, funNote: note,
-      caption: (p.name || '训练者') + ' · ' + selected + '\n' + '“' + q.text + '”\n——' + attribution(q) + (q.original ? '\n原文：' + q.original : '') + '\n' + rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' + fun + '（累计容量的趣味类比）\n' + '训练小结（本应用生成）：' + summary + '\n#训练打卡 #认真练习' };
+      sessions: 1, days: pick.day + ' ' + pick.dayName, trainingDays: pick.seq, weight: p.showWeight && bw !== null ? bw : null, fun: fun, funNote: note,
+      caption: (p.name || '训练者') + (p.handle ? ' ' + p.handle : '') + ' · ' + selected + ' · ' + pick.day + ' ' + pick.dayName + ' · 第 ' + pick.seq + ' 次训练\n' + '“' + q.text + '”\n——' + attribution(q) + (q.original ? '\n原文：' + q.original : '') + '\n' + rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' + fun + '（累计容量的趣味类比）\n' + '训练小结（本应用生成）：' + summary + '\n#训练打卡 #认真练习' };
   }
 
   function font(ctx, size, weight) { ctx.font = (weight || 400) + ' ' + size + 'px -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif'; }
@@ -2792,7 +2814,15 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function fit(ctx, value, width, size, min) { for (var n = size; n > min; n -= 2) { font(ctx,n,600); if (ctx.measureText(value).width <= width) return n; } return min; }
   function wrap(ctx, str, width) {
     var out = [], line = '';
-    Array.from(str).forEach(function (c) { if (c === '\n') { out.push(line); line = ''; } else if (ctx.measureText(line+c).width > width && line) { out.push(line); line = c; } else line += c; });
+    var NOHEAD = /[。，、！？；：”’）》」』…,.!?;:)]/;
+    Array.from(str).forEach(function (c) {
+      if (c === '\n') { out.push(line); line = ''; }
+      else if (ctx.measureText(line+c).width > width && line) {
+        // 避头点：标点不能单独起行，把上一个字带到下一行
+        if (NOHEAD.test(c) && line.length > 1) { var arr = Array.from(line), last = arr.pop(); out.push(arr.join('')); line = last + c; }
+        else { out.push(line); line = c; }
+      } else line += c;
+    });
     if (line) out.push(line); return out;
   }
   function loadImage(src) { return new Promise(function (resolve) { if (!src || typeof Image === 'undefined') return resolve(null); var i = new Image(); i.onload = function () { resolve(i); }; i.onerror = function () { resolve(null); }; i.src = src; }); }
@@ -2804,31 +2834,45 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var displayTitle = data.title.length > 14 ? data.title.replace(/，/g, '，\n') : data.title;
     do { font(ctx,titleSize,750); titleLines=wrap(ctx,displayTitle,952); if(titleLines.length<=3)break;titleSize-=4; } while(titleSize>40);
     var titleHeight=titleLines.length*(titleSize+18);
+    var pf=data.profile, nameSize=fit(ctx,data.name,700,52,36);
+    font(ctx,26,400); var sigLines=pf.signature?wrap(ctx,pf.signature,720).slice(0,2):[];
+    var subLine=[pf.handle, data.weight!==null?'体重 '+data.weight+' kg':''].filter(Boolean).join('  ·  ');
+    var profileH=Math.max(152, 12+nameSize+14+(subLine?36:0)+sigLines.length*38+10);
+    var top=150+profileH+86; // 名片区下方：分隔线 + 训练信息 + 留白
     font(ctx,24,500); var originLines=q.original?wrap(ctx,q.original,952):[];
     font(ctx,23,500); var creditLines=wrap(ctx,data.attribution,952);
-    var metadataY=312+titleHeight+22+originLines.length*32+creditLines.length*32;
+    var metadataY=top+titleHeight+22+originLines.length*32+creditLines.length*32;
     var offset=metadataY-510;
     font(ctx,29,500);var summaryLines=wrap(ctx,data.copy,880);
-    font(ctx,24,500);var signatureLines=data.profile.signature?wrap(ctx,data.profile.signature,952):[];
-    var H = 1620 + offset + data.rows.length * 110 + Math.max(0,summaryLines.length-2)*42 + Math.max(0,signatureLines.length-1)*32;
+    var H = 1560 + offset + data.rows.length * 110 + Math.max(0,summaryLines.length-2)*42;
     canvas.width = W; canvas.height = H; ctx.textBaseline = 'top';
     ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
     var glow = ctx.createRadialGradient(1010,50,10,880,70,720); glow.addColorStop(0,warm?'#FCD7B7':'#E0E9D9'); glow.addColorStop(1,bg);
     ctx.fillStyle = glow; ctx.fillRect(0,0,W,700);
-    rounded(ctx,64,64,230,52,26,'#FFFFFF'); text(ctx,'训练手记 / DAILY',82,80,22,muted,650);
-    text(ctx,data.date.replace(/-/g,'.'),790,80,24,muted,500);
-    ctx.save(); ctx.beginPath(); ctx.arc(112,210,48,0,Math.PI*2); ctx.clip(); ctx.fillStyle='#E0E6DA';ctx.fillRect(64,162,96,96);
-    if (avatar) { var side=Math.min(avatar.width,avatar.height);ctx.drawImage(avatar,(avatar.width-side)/2,(avatar.height-side)/2,side,side,64,162,96,96); }
-    else text(ctx,Array.from(data.name)[0],88,183,40,ink,650);
-    ctx.restore(); text(ctx,data.name,184,174,fit(ctx,data.name,580,34,26),ink,650);
-    text(ctx,data.profile.handle || '把计划，练成了已完成。',184,222,23,muted,400);
-    if (data.weight !== null) text(ctx,'体重 '+data.weight+' kg',816,222,22,muted,400);
-    titleLines.forEach(function(l,i){text(ctx,l,64,312+i*(titleSize+18),titleSize,ink,750);});
-    var creditY=312+titleHeight+4;
+    // ---- 顶部：日期 ----
+    text(ctx,'训练手记',64,68,22,muted,650);
+    ctx.textAlign='right';text(ctx,data.date.replace(/-/g,'.'),1016,68,22,muted,500);ctx.textAlign='left';
+    // ---- 个人名片：大头像 + 昵称 + ID/体重 + 签名 ----
+    var AV=136, ax=64, ay=150, cy0=ay+Math.max(0,(profileH-AV)/2);
+    ctx.save(); ctx.beginPath(); ctx.arc(ax+AV/2,cy0+AV/2,AV/2,0,Math.PI*2); ctx.closePath(); ctx.clip();
+    ctx.fillStyle=warm?'#F6DCC6':'#DCE5D3'; ctx.fillRect(ax,cy0,AV,AV);
+    if (avatar) { var side=Math.min(avatar.width,avatar.height);ctx.drawImage(avatar,(avatar.width-side)/2,(avatar.height-side)/2,side,side,ax,cy0,AV,AV); }
+    else { font(ctx,60,700); ctx.fillStyle=ink; ctx.textAlign='center'; ctx.fillText(Array.from(data.name)[0],ax+AV/2,cy0+AV/2-36); ctx.textAlign='left'; }
+    ctx.restore();
+    ctx.lineWidth=4; ctx.strokeStyle='#FFFFFF'; ctx.beginPath(); ctx.arc(ax+AV/2,cy0+AV/2,AV/2-2,0,Math.PI*2); ctx.stroke();
+    var tx=ax+AV+32, ty=ay+Math.max(0,(profileH-(nameSize+14+(subLine?36:0)+sigLines.length*38))/2);
+    text(ctx,data.name,tx,ty,nameSize,ink,700); ty+=nameSize+14;
+    if (subLine) { text(ctx,subLine,tx,ty,24,muted,500); ty+=36; }
+    sigLines.forEach(function(l){ text(ctx,l,tx,ty,26,ink,400); ty+=38; });
+    // ---- 本次训练：哪一天 / 第几周 / 第几次 ----
+    var infoY=150+profileH+24;
+    ctx.strokeStyle='#DCE1D6'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(64,infoY); ctx.lineTo(1016,infoY); ctx.stroke();
+    text(ctx,data.day+' '+data.dayName+'  ·  '+data.weekText+'  ·  第 '+data.seq+' 次训练',64,infoY+22,24,ink,600);
+    titleLines.forEach(function(l,i){text(ctx,l,64,top+i*(titleSize+18),titleSize,ink,750);});
+    var creditY=top+titleHeight+4;
     originLines.forEach(function(l,i){text(ctx,l,64,creditY+i*32,24,muted,400);});
     creditY+=originLines.length*32;
     creditLines.forEach(function(l,i){text(ctx,l,64,creditY+i*32,23,muted,500);});
-    text(ctx,data.days+'  ·  '+data.sessions+' 次训练',68,metadataY,24,muted,550);
     rounded(ctx,64,566+offset,952,256,38,'#FFFFFF');
     text(ctx,data.estimated ? '估算训练容量' : '累计训练容量',100,600+offset,25,muted,500);
     text(ctx,data.volumeText,92,642+offset,108,ink,750);
@@ -2840,27 +2884,25 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     rounded(ctx,64,992+offset,952,126,28,warm?'#FFE8D3':'#E6EDDF');
     text(ctx,data.fun,92,1018+offset,fit(ctx,data.fun,900,30,24),ink,650);
     text(ctx,data.funNote,92,1065+offset,20,muted,400);
-    text(ctx,'今日训练清单',64,1160+offset,29,ink,650);text(ctx,'第 '+data.trainingDays+' 个训练日',784,1166+offset,22,muted,500);
+    text(ctx,'本次训练清单',64,1160+offset,29,ink,650);ctx.textAlign='right';text(ctx,data.rows.length+' 项动作',1016,1166+offset,22,muted,500);ctx.textAlign='left';
     var y = 1222+offset;
     data.rows.forEach(function(r,i){
       ctx.strokeStyle='#DCE1D6';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,y-14);ctx.lineTo(1016,y-14);ctx.stroke();
       text(ctx,r.tier,64,y+2,23,muted,650);
       var rowName=r.name; font(ctx,30,650); var names=wrap(ctx,rowName,390);
       names.slice(0,2).forEach(function(l,j){text(ctx,l,144,y+j*33,30,ink,650);});
-      text(ctx,r.day+' · '+r.result,144,y+72,21,muted,400);
+      text(ctx,r.result,144,y+72,21,muted,400);
       font(ctx,27,650);ctx.textAlign='right';text(ctx,r.load,1016,y+2,27,ink,650);text(ctx,r.stage+' · '+r.reps+' 次',1016,y+44,22,muted,400);ctx.textAlign='left';
       y += 110;
     });
     y += 26;ctx.strokeStyle='#DCE1D6';ctx.beginPath();ctx.moveTo(64,y);ctx.lineTo(1016,y);ctx.stroke();
     text(ctx,'训练小结 · 本应用生成',64,y+26,22,muted,500);
     summaryLines.forEach(function(l,i){text(ctx,l,64,y+66+i*42,29,ink,500);});
-    var foot=y+88+summaryLines.length*42;
-    signatureLines.forEach(function(l,i){text(ctx,l,64,foot+i*32,24,muted,500);});
     text(ctx,'认真练习，也认真恢复。',64,H-103,22,muted,500);
     text(ctx,'容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。',64,H-62,18,muted,400);
     return canvas;
   }
-  return { PROFILE: PROFILE, profile: profile, dates: dates, build: build, draw: draw, QUOTES: QUOTES, TONES: TONES, quoteList: quoteList, chooseQuote: chooseQuote, attribution: attribution };
+  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, QUOTES: QUOTES, TONES: TONES, quoteList: quoteList, chooseQuote: chooseQuote, attribution: attribution };
 });
 </script>
 <script>/* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
@@ -3550,7 +3592,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     S._review = vm;
     h += seg([{ html: '总结' }, { html: '周报' }, { html: '日志' }], r.tab, 'rtab');
     var sd = Share.build(load());
-    if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date) + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.sessions + ' 次训练 · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 累计容量</div><button class="btn-primary" data-act="shareopen" data-date="' + sd.date + '">生成分享卡片</button></div>';
+    if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date.slice(5).replace('-', '月') + '日') + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.day + ' ' + esc(sd.dayName) + ' · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 训练容量</div><button class="btn-primary" data-act="shareopen" data-id="' + sd.recordId + '">生成分享卡片</button></div>';
     else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
     if (r.tab === 0) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
@@ -3590,7 +3632,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           if (op) {
             h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
               (l.note ? '<div class="note-box">' + esc(l.note) + '</div>' : '') +
-              '<div class="log-act"><span class="btn-small" data-act="shareopen" data-date="' + l.date + '">分享当天</span><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
+              '<div class="log-act"><span class="btn-small" data-act="shareopen" data-id="' + l.id + '">分享这次</span><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
           }
           h += '</div>';
         });
@@ -3603,9 +3645,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function reviewAct(act, ds, el) {
     var r = S.review;
-    if (act === 'shareopen') { r.share = {date:ds.date,tone:'fire',variant:0,theme:'sage',image:null,blob:null}; return true; }
+    if (act === 'shareopen') { r.share = {id:ds.id,tone:'fire',variant:0,theme:'sage',image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
-    if (act === 'sharedate') { r.share.date=el.value; r.share.variant=0; delete r.share.quoteId; return true; }
+    if (act === 'sharerec') { r.share.id=el.value; r.share.variant=0; delete r.share.quoteId; return true; }
     if (act === 'sharetone') { r.share.tone=ds.tone; r.share.variant=0; delete r.share.quoteId; return true; }
     if (act === 'sharequote') { r.share.quoteId=el.value; return true; }
     if (act === 'quotelibrary') { r.share.library=true; r.share.q=''; return true; }
@@ -3618,10 +3660,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'shareagain') {
-      var cq=Share.build(load(),r.share.date,r.share).quote, qp=Share.quoteList(cq.tone), qi=qp.findIndex(function(q){return q.id===cq.id;});
+      var cq=Share.build(load(),r.share.id,r.share).quote, qp=Share.quoteList(cq.tone), qi=qp.findIndex(function(q){return q.id===cq.id;});
       r.share.quoteId=qp[(qi+1)%qp.length].id; return true;
     }
-    if (act === 'sharecopy') { var cd=Share.build(load(),r.share.date,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
+    if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
     if (act === 'shareprofile') { r.share=null; S.tab='settings'; render(); return false; }
@@ -3648,13 +3690,15 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
   // ================= 成果分享（纯本地 Canvas 高清 PNG） =================
   function renderShareSheet() {
-    var sh=S.review.share, data=Share.build(load(),sh.date,sh);
+    var sh=S.review.share, data=Share.build(load(),sh.id,sh);
+    if (data) { sh.id=data.recordId; sh.date=data.date; sh.day=data.day; }
     if(!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">这一天没有可分享的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
-    var list=Share.dates(load());
+    var list=Share.sessionList(load());
     if(sh.library) return renderQuoteCatalog();
-    return '<div class="mask share-mask data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
+    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
       '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
-      '<div class="share-options"><label>训练日期 <select data-act="sharedate" aria-label="训练日期">' + list.map(function(d){return '<option '+(d===data.date?'selected':'')+'>'+d+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
+      '<div class="share-options"><label>分享哪次训练 <select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
+      (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没设置名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') +
       '<div class="share-pills" role="group" aria-label="名句心境">'+Share.TONES.map(function(t){return '<button class="'+(data.tone===t.id?'on':'')+'" data-act="sharetone" data-tone="'+t.id+'">'+t.label+'</button>';}).join('')+'<button data-act="shareagain">换一句</button></div>' +
       '<label class="quote-selector">'+Share.quoteList(data.tone).length+' 句'+Share.TONES.find(function(t){return t.id===data.tone;}).label+'名句 <select data-act="sharequote" aria-label="选择经典名句">'+Share.quoteList(data.tone).map(function(q){return '<option value="'+q.id+'" '+(q.id===data.quote.id?'selected':'')+'>'+esc(q.text+' — '+q.author)+'</option>';}).join('')+'</select></label><button class="quote-browse" data-act="quotelibrary">浏览全部 '+Share.QUOTES.length+' 句 <span>按作者、作品搜索 ›</span></button>' +
       '<details class="quote-source"><summary>'+esc(data.attribution)+' · 核对出处</summary><p>'+esc(data.quote.context)+'</p>'+(data.quote.original?'<p>核验英文文本：'+esc(data.quote.original)+'<br>中文：本应用自译，非引用现成译本。</p>':'')+'<p>'+esc(data.quote.note)+'。简体字、标点按核验文本展示；仅作心态表达，不是训练指导。</p><a href="'+esc(data.quote.source)+'" target="_blank" rel="noopener noreferrer">打开原文来源 ↗</a></details>' +
@@ -3682,7 +3726,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     sh.image=null; sh.blob=null;
     var generation=(sh.generation || 0)+1; sh.generation=generation;
     try {
-      var data=Share.build(load(),sh.date,sh); if(!data) return;
+      var data=Share.build(load(),sh.id,sh); if(!data) return;
       if(document.fonts && document.fonts.ready) await document.fonts.ready;
       var canvas=document.createElement('canvas'); await Share.draw(canvas,data,sh.theme);
       var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png');});
@@ -3695,9 +3739,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function exportShareImage(system) {
     var sh=S.review.share; if(!sh||!sh.blob) { toast('图片正在生成，请稍候');return; }
-    var filename='训练战报_'+sh.date+'.png', file=new File([sh.blob],filename,{type:'image/png'});
+    var filename='训练战报_'+sh.date+'_'+(sh.day||'')+'.png', file=new File([sh.blob],filename,{type:'image/png'});
     if(system && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share) {
-      navigator.share({files:[file],title:'训练战报 · '+sh.date}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
+      navigator.share({files:[file],title:'训练战报 · '+sh.date+' '+(sh.day||'')}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
     }
     var a=document.createElement('a'),url=URL.createObjectURL(sh.blob);a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(function(){URL.revokeObjectURL(url);},30000);

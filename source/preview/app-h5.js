@@ -685,7 +685,7 @@
     S._review = vm;
     h += seg([{ html: '总结' }, { html: '周报' }, { html: '日志' }], r.tab, 'rtab');
     var sd = Share.build(load());
-    if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date) + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.sessions + ' 次训练 · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 累计容量</div><button class="btn-primary" data-act="shareopen" data-date="' + sd.date + '">生成分享卡片</button></div>';
+    if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date.slice(5).replace('-', '月') + '日') + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.day + ' ' + esc(sd.dayName) + ' · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 训练容量</div><button class="btn-primary" data-act="shareopen" data-id="' + sd.recordId + '">生成分享卡片</button></div>';
     else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
     if (r.tab === 0) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
@@ -725,7 +725,7 @@
           if (op) {
             h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
               (l.note ? '<div class="note-box">' + esc(l.note) + '</div>' : '') +
-              '<div class="log-act"><span class="btn-small" data-act="shareopen" data-date="' + l.date + '">分享当天</span><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
+              '<div class="log-act"><span class="btn-small" data-act="shareopen" data-id="' + l.id + '">分享这次</span><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
           }
           h += '</div>';
         });
@@ -738,9 +738,9 @@
   }
   function reviewAct(act, ds, el) {
     var r = S.review;
-    if (act === 'shareopen') { r.share = {date:ds.date,tone:'fire',variant:0,theme:'sage',image:null,blob:null}; return true; }
+    if (act === 'shareopen') { r.share = {id:ds.id,tone:'fire',variant:0,theme:'sage',image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
-    if (act === 'sharedate') { r.share.date=el.value; r.share.variant=0; delete r.share.quoteId; return true; }
+    if (act === 'sharerec') { r.share.id=el.value; r.share.variant=0; delete r.share.quoteId; return true; }
     if (act === 'sharetone') { r.share.tone=ds.tone; r.share.variant=0; delete r.share.quoteId; return true; }
     if (act === 'sharequote') { r.share.quoteId=el.value; return true; }
     if (act === 'quotelibrary') { r.share.library=true; r.share.q=''; return true; }
@@ -753,10 +753,10 @@
     }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'shareagain') {
-      var cq=Share.build(load(),r.share.date,r.share).quote, qp=Share.quoteList(cq.tone), qi=qp.findIndex(function(q){return q.id===cq.id;});
+      var cq=Share.build(load(),r.share.id,r.share).quote, qp=Share.quoteList(cq.tone), qi=qp.findIndex(function(q){return q.id===cq.id;});
       r.share.quoteId=qp[(qi+1)%qp.length].id; return true;
     }
-    if (act === 'sharecopy') { var cd=Share.build(load(),r.share.date,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
+    if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
     if (act === 'shareprofile') { r.share=null; S.tab='settings'; render(); return false; }
@@ -783,13 +783,15 @@
 
   // ================= 成果分享（纯本地 Canvas 高清 PNG） =================
   function renderShareSheet() {
-    var sh=S.review.share, data=Share.build(load(),sh.date,sh);
+    var sh=S.review.share, data=Share.build(load(),sh.id,sh);
+    if (data) { sh.id=data.recordId; sh.date=data.date; sh.day=data.day; }
     if(!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">这一天没有可分享的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
-    var list=Share.dates(load());
+    var list=Share.sessionList(load());
     if(sh.library) return renderQuoteCatalog();
-    return '<div class="mask share-mask data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
+    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
       '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
-      '<div class="share-options"><label>训练日期 <select data-act="sharedate" aria-label="训练日期">' + list.map(function(d){return '<option '+(d===data.date?'selected':'')+'>'+d+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
+      '<div class="share-options"><label>分享哪次训练 <select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
+      (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没设置名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') +
       '<div class="share-pills" role="group" aria-label="名句心境">'+Share.TONES.map(function(t){return '<button class="'+(data.tone===t.id?'on':'')+'" data-act="sharetone" data-tone="'+t.id+'">'+t.label+'</button>';}).join('')+'<button data-act="shareagain">换一句</button></div>' +
       '<label class="quote-selector">'+Share.quoteList(data.tone).length+' 句'+Share.TONES.find(function(t){return t.id===data.tone;}).label+'名句 <select data-act="sharequote" aria-label="选择经典名句">'+Share.quoteList(data.tone).map(function(q){return '<option value="'+q.id+'" '+(q.id===data.quote.id?'selected':'')+'>'+esc(q.text+' — '+q.author)+'</option>';}).join('')+'</select></label><button class="quote-browse" data-act="quotelibrary">浏览全部 '+Share.QUOTES.length+' 句 <span>按作者、作品搜索 ›</span></button>' +
       '<details class="quote-source"><summary>'+esc(data.attribution)+' · 核对出处</summary><p>'+esc(data.quote.context)+'</p>'+(data.quote.original?'<p>核验英文文本：'+esc(data.quote.original)+'<br>中文：本应用自译，非引用现成译本。</p>':'')+'<p>'+esc(data.quote.note)+'。简体字、标点按核验文本展示；仅作心态表达，不是训练指导。</p><a href="'+esc(data.quote.source)+'" target="_blank" rel="noopener noreferrer">打开原文来源 ↗</a></details>' +
@@ -817,7 +819,7 @@
     sh.image=null; sh.blob=null;
     var generation=(sh.generation || 0)+1; sh.generation=generation;
     try {
-      var data=Share.build(load(),sh.date,sh); if(!data) return;
+      var data=Share.build(load(),sh.id,sh); if(!data) return;
       if(document.fonts && document.fonts.ready) await document.fonts.ready;
       var canvas=document.createElement('canvas'); await Share.draw(canvas,data,sh.theme);
       var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png');});
@@ -830,9 +832,9 @@
   }
   function exportShareImage(system) {
     var sh=S.review.share; if(!sh||!sh.blob) { toast('图片正在生成，请稍候');return; }
-    var filename='训练战报_'+sh.date+'.png', file=new File([sh.blob],filename,{type:'image/png'});
+    var filename='训练战报_'+sh.date+'_'+(sh.day||'')+'.png', file=new File([sh.blob],filename,{type:'image/png'});
     if(system && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share) {
-      navigator.share({files:[file],title:'训练战报 · '+sh.date}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
+      navigator.share({files:[file],title:'训练战报 · '+sh.date+' '+(sh.day||'')}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
     }
     var a=document.createElement('a'),url=URL.createObjectURL(sh.blob);a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(function(){URL.revokeObjectURL(url);},30000);
