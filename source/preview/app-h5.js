@@ -740,10 +740,14 @@
     var r = S.review;
     if (act === 'shareopen') { r.share = {date:ds.date,tone:'fire',variant:0,theme:'sage',image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
-    if (act === 'sharedate') { r.share.date=el.value; r.share.variant=0; return true; }
-    if (act === 'sharetone') { r.share.tone=ds.tone; r.share.variant=0; return true; }
+    if (act === 'sharedate') { r.share.date=el.value; r.share.variant=0; delete r.share.quoteId; return true; }
+    if (act === 'sharetone') { r.share.tone=ds.tone; r.share.variant=0; delete r.share.quoteId; return true; }
+    if (act === 'sharequote') { r.share.quoteId=el.value; return true; }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
-    if (act === 'shareagain') { r.share.variant++; return true; }
+    if (act === 'shareagain') {
+      var cq=Share.build(load(),r.share.date,r.share).quote, qp=Share.quoteList(cq.tone), qi=qp.findIndex(function(q){return q.id===cq.id;});
+      r.share.quoteId=qp[(qi+1)%qp.length].id; return true;
+    }
     if (act === 'sharecopy') { var cd=Share.build(load(),r.share.date,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
@@ -777,7 +781,9 @@
     return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
       '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
       '<div class="share-options"><label>训练日期 <select data-act="sharedate" aria-label="训练日期">' + list.map(function(d){return '<option '+(d===data.date?'selected':'')+'>'+d+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
-      '<div class="share-pills" role="group" aria-label="文案风格">'+[['fire','燃一点'],['calm','克制派'],['fun','有点皮']].map(function(t){return '<button class="'+(sh.tone===t[0]?'on':'')+'" data-act="sharetone" data-tone="'+t[0]+'">'+t[1]+'</button>';}).join('')+'<button data-act="shareagain">换一句</button></div>' +
+      '<div class="share-pills" role="group" aria-label="名句心境">'+Share.TONES.map(function(t){return '<button class="'+(data.tone===t.id?'on':'')+'" data-act="sharetone" data-tone="'+t.id+'">'+t.label+'</button>';}).join('')+'<button data-act="shareagain">换一句</button></div>' +
+      '<label class="quote-selector">选一句经典 <select data-act="sharequote" aria-label="选择经典名句">'+Share.quoteList(data.tone).map(function(q){return '<option value="'+q.id+'" '+(q.id===data.quote.id?'selected':'')+'>'+esc(q.text+' — '+q.author)+'</option>';}).join('')+'</select></label>' +
+      '<details class="quote-source"><summary>'+esc(data.attribution)+' · 核对出处</summary><p>'+esc(data.quote.context)+'</p>'+(data.quote.original?'<p>原文：'+esc(data.quote.original)+'<br>中文：本应用自译，非引用现成译本。</p>':'')+'<p>简体字、标点按当前核验文本展示；名句只作心态表达，不是训练指导。</p><a href="'+esc(data.quote.source)+'" target="_blank" rel="noopener noreferrer">打开原文来源 ↗</a></details>' +
       '<div class="share-pills" role="group" aria-label="卡片配色">'+[['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>' +
       '<div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span>正在整理你的训练成果…</span></div>' +
       '<div class="share-hint">按所选日期汇总全部训练。趣味类比不是实际搬运或热量测算；预览即最终图片。可长按图片保存。</div>' +

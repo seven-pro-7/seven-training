@@ -376,6 +376,12 @@ css.append("""
 .app .share-pills { display: flex; gap: 6px; margin: 10px 0; }
 .app .share-pills button { background: var(--fill); border-radius: 999px; color: var(--label2); padding: 10px 13px; font-size: 13px; min-height: 44px; }
 .app .share-pills button.on { color: #304129; background: #DFE8D7; font-weight: 600; }
+.app .quote-selector { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--label2); margin: 14px 0; }
+.app .quote-selector select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 0; border-radius: 12px; background: #FFFFFF; color: var(--label); font-size: 15px; text-overflow: ellipsis; }
+.app .quote-source { border-radius: 14px; padding: 12px; background: var(--fill); color: var(--label2); font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+.app .quote-source summary { cursor: pointer; font-weight: 500; }
+.app .quote-source p { margin: 10px 0; }
+.app .quote-source a { color: #385530; display: inline-block; padding: 10px 0; }
 .app .share-art { border-radius: 20px; overflow: hidden; background: #F5F6F3; min-height: 200px; }
 .app .share-art img { width: 100%; height: auto; display: block; -webkit-touch-callout: default; user-select: auto; }
 .app .share-art span { display: block; padding: 80px 12px; color: var(--label2); text-align: center; }
