@@ -1,7 +1,7 @@
 /* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
 (function () {
   'use strict';
-  var GZ = window.GZ, Chart = window.GZChart;
+  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare;
   var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', BK_DISMISS = 'gzclp_bk_dismiss';
   var TABS = [
     { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
@@ -684,6 +684,9 @@
     var vm = GZ.buildReview(load()), r = S.review, h = '';
     S._review = vm;
     h += seg([{ html: '总结' }, { html: '周报' }, { html: '日志' }], r.tab, 'rtab');
+    var sd = Share.build(load());
+    if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date) + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.sessions + ' 次训练 · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 累计容量</div><button class="btn-primary" data-act="shareopen" data-date="' + sd.date + '">生成分享卡片</button></div>';
+    else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
     if (r.tab === 0) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
         '<div class="lt-head"><span class="lt-c1">主项</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
@@ -722,7 +725,7 @@
           if (op) {
             h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
               (l.note ? '<div class="note-box">' + esc(l.note) + '</div>' : '') +
-              '<div class="log-act"><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
+              '<div class="log-act"><span class="btn-small" data-act="shareopen" data-date="' + l.date + '">分享当天</span><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
           }
           h += '</div>';
         });
@@ -730,10 +733,21 @@
       }
       h += '<div class="sec-f" style="text-align:center">修改或删除任意一次记录，之后的重量与阶段会自动重算</div>';
     }
+    if (r.share) h += renderShareSheet();
     return h;
   }
-  function reviewAct(act, ds) {
+  function reviewAct(act, ds, el) {
     var r = S.review;
+    if (act === 'shareopen') { r.share = {date:ds.date,tone:'fire',variant:0,theme:'sage',image:null,blob:null}; return true; }
+    if (act === 'shareclose') { r.share=null; return true; }
+    if (act === 'sharedate') { r.share.date=el.value; r.share.variant=0; return true; }
+    if (act === 'sharetone') { r.share.tone=ds.tone; r.share.variant=0; return true; }
+    if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
+    if (act === 'shareagain') { r.share.variant++; return true; }
+    if (act === 'sharecopy') { var cd=Share.build(load(),r.share.date,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
+    if (act === 'shareexport') { exportShareImage(false); return false; }
+    if (act === 'sharesystem') { exportShareImage(true); return false; }
+    if (act === 'shareprofile') { r.share=null; S.tab='settings'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
     if (act === 'toggle') { r.open[ds.id] = !r.open[ds.id]; return true; }
@@ -753,6 +767,55 @@
       var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
       try { document.execCommand('copy'); done(); } catch (e) { toast('复制失败'); } document.body.removeChild(ta);
     }
+  }
+
+  // ================= 成果分享（纯本地 Canvas 高清 PNG） =================
+  function renderShareSheet() {
+    var sh=S.review.share, data=Share.build(load(),sh.date,sh);
+    if(!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">这一天没有可分享的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
+    var list=Share.dates(load());
+    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
+      '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
+      '<div class="share-options"><label>训练日期 <select data-act="sharedate" aria-label="训练日期">' + list.map(function(d){return '<option '+(d===data.date?'selected':'')+'>'+d+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
+      '<div class="share-pills" role="group" aria-label="文案风格">'+[['fire','燃一点'],['calm','克制派'],['fun','有点皮']].map(function(t){return '<button class="'+(sh.tone===t[0]?'on':'')+'" data-act="sharetone" data-tone="'+t[0]+'">'+t[1]+'</button>';}).join('')+'<button data-act="shareagain">换一句</button></div>' +
+      '<div class="share-pills" role="group" aria-label="卡片配色">'+[['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>' +
+      '<div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span>正在整理你的训练成果…</span></div>' +
+      '<div class="share-hint">按所选日期汇总全部训练。趣味类比不是实际搬运或热量测算；预览即最终图片。可长按图片保存。</div>' +
+      '<div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div></div>';
+  }
+  async function paintSharePreview() {
+    var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;
+    sh.image=null; sh.blob=null;
+    var generation=(sh.generation || 0)+1; sh.generation=generation;
+    try {
+      var data=Share.build(load(),sh.date,sh); if(!data) return;
+      if(document.fonts && document.fonts.ready) await document.fonts.ready;
+      var canvas=document.createElement('canvas'); await Share.draw(canvas,data,sh.theme);
+      var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png');});
+      if(S.review.share!==sh || sh.generation!==generation || !box.isConnected) return;
+      if(!blob) throw new Error('导出失败');
+      sh.blob=blob;sh.image=canvas.toDataURL('image/png');
+      box.innerHTML='';var img=new Image();img.src=sh.image;img.alt=data.name+' · '+data.date+' 训练战报';box.appendChild(img);
+      document.querySelectorAll('[data-act="shareexport"],[data-act="sharesystem"]').forEach(function(b){b.disabled=false;});
+    } catch(e) { if(box.isConnected) box.textContent='图片生成失败，请关闭后重试。'; }
+  }
+  function exportShareImage(system) {
+    var sh=S.review.share; if(!sh||!sh.blob) { toast('图片正在生成，请稍候');return; }
+    var filename='GZCLP_训练战报_'+sh.date+'.png', file=new File([sh.blob],filename,{type:'image/png'});
+    if(system && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share) {
+      navigator.share({files:[file],title:'训练战报 · '+sh.date}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
+    }
+    var a=document.createElement('a'),url=URL.createObjectURL(sh.blob);a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},30000);
+    toast(system?'已下载图片，可自行分享到社媒':'已下载 PNG；iPhone 也可长按预览图保存');
+  }
+  function uploadShareAvatar(file) {
+    if(!file)return;
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>10*1024*1024){toast('请选择不超过 10 MB 的 JPG、PNG 或 WebP');return;}
+    var reader=new FileReader();reader.onload=function(){var img=new Image();img.onload=function(){
+      var c=document.createElement('canvas');c.width=c.height=160;var x=c.getContext('2d'),sz=Math.min(img.width,img.height);x.drawImage(img,(img.width-sz)/2,(img.height-sz)/2,sz,sz,0,0,160,160);
+      var db=load(),pp=Share.profile(db.params.shareProfile);pp.avatar=c.toDataURL('image/jpeg',0.8);db.params.shareProfile=pp;save(db);render(true);toast('头像已裁切并保存');
+    };img.onerror=function(){toast('图片无法读取');};img.src=reader.result;};reader.readAsDataURL(file);
   }
 
   // ================= 设置 =================
@@ -783,6 +846,14 @@
     var db = load(), P = db.params, st = S.settings, h = '', tmPct = Math.round(P.tmRatio * 100), rp = GZ.replay(db), names = libNames(db);
     var inp = function (k, v, unit, extra) { return '<input class="f-in num" inputmode="decimal" data-act="param" data-k="' + k + '" ' + (extra || '') + ' value="' + v + '"><span class="f-u">' + unit + '</span>'; };
     h += '\u0000base\u0000';
+    var pp = Share.profile(P.shareProfile);
+    h += '<div class="sec-h" id="shareProfileSec">分享名片</div><div class="list profile-list">' +
+      '<div class="cell"><span class="flex1">头像</span><label class="profile-avatar">' + (pp.avatar ? '<img src="' + pp.avatar + '" alt="头像">' : '<span>' + esc(pp.name.slice(0,1) || '我') + '</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-act="profileavatar"></label><span class="btn-small" data-act="profilenoavatar">移除</span></div>' +
+      '<div class="cell"><label for="profileName" class="flex1">昵称</label><input id="profileName" class="profile-in" data-act="profiletext" data-k="name" maxlength="18" value="' + esc(pp.name) + '" placeholder="分享时显示的名字"></div>' +
+      '<div class="cell"><label for="profileHandle" class="flex1">社媒 ID</label><input id="profileHandle" class="profile-in" data-act="profiletext" data-k="handle" maxlength="24" value="' + esc(pp.handle) + '" placeholder="可选，如 @seven"></div>' +
+      '<div class="cell"><label for="profileSignature" class="flex1">个性签名</label><input id="profileSignature" class="profile-in" data-act="profiletext" data-k="signature" maxlength="48" value="' + esc(pp.signature) + '" placeholder="可选，写给坚持训练的自己"></div>' +
+      '<div class="cell"><span class="flex1">卡片公开当天体重</span><label class="ios-sw green"><input type="checkbox" data-act="profileweight" ' + (pp.showWeight ? 'checked' : '') + '><i></i></label></div></div>' +
+      '<div class="sec-f">昵称、ID、头像、签名会出现在图片上。体重默认隐藏；不显示训练备注、云仓库或令牌。名片随私人云同步保存。输入后离开字段自动保存。</div>';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
@@ -877,6 +948,12 @@
     var st = S.settings, si = Number(ds.si);
     var slotMut = function (fn) { return mutate(function (db) { fn(db.days[st.d].slots[si], db); }); };
     switch (act) {
+      case 'profiletext':
+        return mutate(function(db) { var pp = Share.profile(db.params.shareProfile); pp[ds.k] = el.value; db.params.shareProfile = Share.profile(pp); }, '分享名片已保存');
+      case 'profileweight': return mutate(function(db) { var pp=Share.profile(db.params.shareProfile); pp.showWeight=el.checked; db.params.shareProfile=pp; }, el.checked ? '卡片会显示已记录的当天体重' : '卡片不再公开体重');
+      case 'profilenoavatar': return mutate(function(db) { var pp=Share.profile(db.params.shareProfile); pp.avatar=''; db.params.shareProfile=pp; }, '头像已移除');
+      case 'profileavatar':
+        uploadShareAvatar(el.files && el.files[0]); return false;
       case 'param': var v = parseFloat(el.value); if (isNaN(v) || v < 0) return true; if (ds.pct) v = v / 100; return mutate(function (db) { setPath(db.params, ds.k, v); });
       case 'mode': return mutate(function (db) { db.params.ruleMode = ds.v; }, ds.v === 'full' ? '已切换：完整三阶规则' : '已切换：严格按表格公式');
       case 'adaptsw': return mutate(function (db) { db.params.adaptive = el.checked; }, el.checked ? '已开启：按末组次数自适应加重' : '已关闭：固定步幅加重');
@@ -948,6 +1025,7 @@
     navState();
     document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === S.tab); });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
+    if (S.tab === 'review' && S.review.share) paintSharePreview();
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
   function navState() {

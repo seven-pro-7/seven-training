@@ -356,6 +356,36 @@ GLASS_CSS = r'''
 }
 '''
 css.append(GLASS_CSS)
+css.append("""
+.app .profile-list .profile-in { border: 0; background: transparent; text-align: right; font-size: 16px; color: var(--label); width: 62%; min-width: 0; outline: none; }
+.app .profile-avatar { width: 44px; height: 44px; border-radius: 50%; background: #E6EDDF; color: #354531; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-right: 10px; cursor: pointer; }
+.app .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.app .profile-avatar input { display: none; }
+.app .share-entry { background: linear-gradient(125deg,#FFFFFF,#EEF2E8); }
+.app .share-entry-title { font-size: 22px; font-weight: 700; color: var(--label); margin: 10px 0; letter-spacing: -.5px; }
+.app .share-entry-meta { font-size: 13px; color: var(--label2); margin-bottom: 16px; }
+.app .share-entry .btn-primary { width: 100%; font-size: 15px; height: 48px; }
+.app .share-sheet { padding: 12px 16px 16px; }
+.app .share-toolbar { display: flex; align-items: center; justify-content: space-between; }
+.app .share-toolbar .sheet-title { margin: 6px 0 10px; }
+.app .share-sheet button { border: 0; font-family: inherit; cursor: pointer; }
+.app .share-close { width: 44px; height: 44px; border-radius: 50%; background: var(--fill); font-size: 22px; color: var(--label2); }
+.app .share-options { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; font-size: 13px; color: var(--label2); gap: 8px; }
+.app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); max-width: 144px; }
+.app .share-options button { color: var(--label2); font-size: 13px; background: transparent; padding: 8px 0; }
+.app .share-pills { display: flex; gap: 6px; margin: 10px 0; }
+.app .share-pills button { background: var(--fill); border-radius: 999px; color: var(--label2); padding: 10px 13px; font-size: 13px; min-height: 44px; }
+.app .share-pills button.on { color: #304129; background: #DFE8D7; font-weight: 600; }
+.app .share-art { border-radius: 20px; overflow: hidden; background: #F5F6F3; min-height: 200px; }
+.app .share-art img { width: 100%; height: auto; display: block; -webkit-touch-callout: default; user-select: auto; }
+.app .share-art span { display: block; padding: 80px 12px; color: var(--label2); text-align: center; }
+.app .share-hint { font-size: 11px; line-height: 1.5; margin: 12px 4px; color: var(--label2); }
+.app .share-actions { display: flex; gap: 7px; position: sticky; bottom: -16px; padding: 12px 0 16px; background: #F5F5F8; z-index: 2; }
+.app .share-actions button { flex: 1; min-width: 0; height: 48px; border-radius: 999px; background: var(--fill); color: var(--label); font-size: 13px; font-weight: 600; }
+.app .share-actions button.main { background: var(--accent); color: #FFF; }
+.app .share-actions button:disabled { opacity: .45; }
+""")
+
 css = [type_scale(c) for c in css]
 
 html = f"""<!DOCTYPE html>
@@ -374,6 +404,7 @@ html = f"""<!DOCTYPE html>
 </div></div>
 <script>{(ROOT / 'utils' / 'engine.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'chart.js').read_text()}</script>
+<script>{(ROOT / 'utils' / 'share.js').read_text()}</script>
 <script>{(ROOT / 'preview' / 'app-h5.js').read_text()}</script>
 </body></html>"""
 html = html.replace('<span>􀙇 􀛨</span>', '<span>●●● ▮</span>')

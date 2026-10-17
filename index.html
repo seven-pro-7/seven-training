@@ -675,6 +675,35 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 @media (prefers-reduced-motion: reduce) {
   .app *, .app *::before { transition: none !important; }
 }
+
+
+.app .profile-list .profile-in { border: 0; background: transparent; text-align: right; font-size: 17px; color: var(--label); width: 62%; min-width: 0; outline: none; }
+.app .profile-avatar { width: 44px; height: 44px; border-radius: 50%; background: #E6EDDF; color: #354531; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-right: 10px; cursor: pointer; }
+.app .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.app .profile-avatar input { display: none; }
+.app .share-entry { background: linear-gradient(125deg,#FFFFFF,#EEF2E8); }
+.app .share-entry-title { font-size: 22px; font-weight: 700; color: var(--label); margin: 10px 0; letter-spacing: -.5px; }
+.app .share-entry-meta { font-size: 13px; color: var(--label2); margin-bottom: 16px; }
+.app .share-entry .btn-primary { width: 100%; font-size: 15px; height: 48px; }
+.app .share-sheet { padding: 12px 16px 16px; }
+.app .share-toolbar { display: flex; align-items: center; justify-content: space-between; }
+.app .share-toolbar .sheet-title { margin: 6px 0 10px; }
+.app .share-sheet button { border: 0; font-family: inherit; cursor: pointer; }
+.app .share-close { width: 44px; height: 44px; border-radius: 50%; background: var(--fill); font-size: 22px; color: var(--label2); }
+.app .share-options { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; font-size: 13px; color: var(--label2); gap: 8px; }
+.app .share-options select { border: 0; background: transparent; font: inherit; color: var(--label); max-width: 144px; }
+.app .share-options button { color: var(--label2); font-size: 13px; background: transparent; padding: 8px 0; }
+.app .share-pills { display: flex; gap: 6px; margin: 10px 0; }
+.app .share-pills button { background: var(--fill); border-radius: 999px; color: var(--label2); padding: 10px 13px; font-size: 13px; min-height: 44px; }
+.app .share-pills button.on { color: #304129; background: #DFE8D7; font-weight: 600; }
+.app .share-art { border-radius: 20px; overflow: hidden; background: #F5F6F3; min-height: 200px; }
+.app .share-art img { width: 100%; height: auto; display: block; -webkit-touch-callout: default; user-select: auto; }
+.app .share-art span { display: block; padding: 80px 12px; color: var(--label2); text-align: center; }
+.app .share-hint { font-size: 11px; line-height: 1.5; margin: 12px 4px; color: var(--label2); }
+.app .share-actions { display: flex; gap: 7px; position: sticky; bottom: -16px; padding: 12px 0 16px; background: #F5F5F8; z-index: 2; }
+.app .share-actions button { flex: 1; min-width: 0; height: 48px; border-radius: 999px; background: var(--fill); color: var(--label); font-size: 13px; font-weight: 600; }
+.app .share-actions button.main { background: var(--accent); color: #FFF; }
+.app .share-actions button:disabled { opacity: .45; }
 </style></head>
 <body>
 
@@ -2340,10 +2369,156 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   return { line: line, bars: bars, donut: donut, presets: presets, THEME: THEME, PALETTE: PALETTE };
 });
 </script>
+<script>/* 训练分享：纯数据聚合 + Canvas 海报。不调用外部服务，不读取同步令牌。 */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./engine'));
+  else root.GZShare = factory(root.GZ);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (GZ) {
+  'use strict';
+  var PROFILE = { name: '', handle: '', signature: '', avatar: '', showWeight: false };
+  var COPY = {
+    fire: [
+      ['今天的重量，\n明天的底气。', '不需要一次变得很强。把今天这一组认真做完，就已经在向前。'],
+      ['把努力，\n练成看得见的数字。', '每一次规范动作，都在为下一次的自己积攒底气。'],
+      ['又一次，\n说到做到。', '训练记录会记住：今天，我没有只停留在想法里。']
+    ],
+    calm: [
+      ['进步不喧哗，\n但它有重量。', '有些变化暂时看不出来，但每一次认真练习，都算数。'],
+      ['慢慢变强，\n也很了不起。', '不急着证明什么。完成今天的训练，让身体在练习和恢复中成长。'],
+      ['今天的自己，\n值得一个肯定。', '加重是进步，巩固也是。认真练完，安心休息。']
+    ],
+    fun: [
+      ['今日份的重，\n我先举为敬。', '今天搬的是重量，攒的是下一次出场的底气。练完，收工。'],
+      ['举铁营业，\n今日已打烊。', '重量留在训练记录里，好心情带走。恢复也是训练的一部分。'],
+      ['不是突然变强，\n是又练了一次。', '今日任务已交卷。主打一个：把计划变成了已完成。']
+    ]
+  };
+  function clean(v, n) { return String(v || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, n); }
+  function profile(p) {
+    p = p || {};
+    return { name: clean(p.name, 18), handle: clean(p.handle, 24), signature: clean(p.signature, 48),
+      avatar: /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p.avatar || '') && p.avatar.length < 180000 ? p.avatar : '',
+      showWeight: p.showWeight === true };
+  }
+  function hasEntry(e, deload) { return !!e && !e.skip && (!!deload || (e.v !== null && e.v !== undefined && e.v !== '')); }
+  function dates(db) {
+    var set = {};
+    (db.records || []).forEach(function (r) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(r.date || '') && Object.keys(r.entries || {}).some(function (id) { return hasEntry(r.entries[id], r.deload); })) set[r.date] = true;
+    });
+    return Object.keys(set).sort().reverse();
+  }
+  function build(db, date, opts) {
+    opts = opts || {};
+    var list = dates(db), selected = date || (list.indexOf(GZ.today()) >= 0 ? GZ.today() : list[0]);
+    var sessions = GZ.replay(db).sessions.filter(function (s) { return s.rec.date === selected; });
+    var rows = [], volume = 0, reps = 0, sets = 0, adds = 0, estimated = false, bw = null, included = [];
+    sessions.forEach(function (s) {
+      if (Number(s.rec.bw) > 0) bw = Number(s.rec.bw);
+      s.items.forEach(function (it) {
+        var e = (s.rec.entries || {})[it.slotId];
+        if (!hasEntry(e, s.rec.deload) || it.judgment === '跳过') return;
+        if (included.indexOf(s.rec.id) < 0) included.push(s.rec.id);
+        var nsets = it.deload ? it.dSets : it.sets, nreps;
+        if (it.deload) { nreps = nsets * it.reps; estimated = true; }
+        else if (it.tier === 'T2') { nreps = it.actualReps; if (e.v !== '完成' && (e.reps === undefined || e.reps === null || e.reps === '')) estimated = true; }
+        else nreps = (nsets - 1) * it.reps + Number(it.input || 0);
+        nreps = Math.max(0, Number(nreps) || 0);
+        var equip = GZ.equipOf(it.name, it.equip), w = it.deload ? it.dWeight : it.weight;
+        var load = equip === '自重' ? '自重' : GZ.fmtW(w) + ' ' + GZ.unitOf(equip);
+        var result = it.deload ? '减载完成' : it.tier === 'T2' ? (e.v === '完成' ? '完成' : '部分完成') : '末组 ' + it.input + ' 次';
+        if (it.judgment === '加重') adds++;
+        var recordedVolume = equip === '自重' ? 0 : it.volume;
+        volume += recordedVolume; reps += nreps; sets += nsets;
+        rows.push({ day: s.rec.day, tier: it.tier, name: it.name, load: load, stage: it.stage, result: result,
+          reps: nreps, sets: nsets, judgment: it.judgment, volume: recordedVolume });
+      });
+    });
+    if (!rows.length) return null;
+    var tone = COPY[opts.tone] ? opts.tone : 'fire', variant = Math.abs(Number(opts.variant) || 0) % COPY[tone].length;
+    var p = profile(db.params.shareProfile), c = COPY[tone][variant];
+    var fun = volume > 0 ? '约等于搬动 20 kg 行李箱 ' + Math.round(volume / 20) + ' 次' : '不靠配重片，也完成了 ' + Math.round(reps) + ' 次动作';
+    var note = volume > 0 ? '趣味类比 = 累计训练容量 ÷ 20 kg，不是一次举起的重量。' : '自重动作按次数记录，不虚构重量。';
+    var totalDates = dates({ records: db.records.filter(function (r) { return r.date <= selected; }) }).length;
+    return { date: selected, isToday: selected === GZ.today(), profile: p, name: p.name || '训练者', tone: tone,
+      title: c[0], copy: c[1], volume: Math.round(volume * 100) / 100, volumeText: (volume / 1000).toFixed(2),
+      reps: Math.round(reps), sets: sets, adds: adds, estimated: estimated, rows: rows,
+      sessions: included.length,
+      days: sessions.filter(function(s) { return included.indexOf(s.rec.id) >= 0; }).map(function (s) { return s.rec.day; }).filter(function (d, i, arr) { return arr.indexOf(d) === i; }).join(' / '),
+      trainingDays: totalDates, weight: p.showWeight && bw !== null ? bw : null, fun: fun, funNote: note,
+      caption: (p.name || '训练者') + ' · ' + selected + '\n' + c[0].replace(/\n/g, '') + '\n' + rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' + fun + '（累计容量的趣味类比）\n' + c[1] + '\n#GZCLP #训练打卡' };
+  }
+
+  function font(ctx, size, weight) { ctx.font = (weight || 400) + ' ' + size + 'px -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif'; }
+  function rounded(ctx, x, y, w, h, r, fill) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  }
+  function text(ctx, value, x, y, size, color, weight) { font(ctx, size, weight); ctx.fillStyle = color; ctx.fillText(String(value), x, y); }
+  function fit(ctx, value, width, size, min) { for (var n = size; n > min; n -= 2) { font(ctx,n,600); if (ctx.measureText(value).width <= width) return n; } return min; }
+  function wrap(ctx, str, width) {
+    var out = [], line = '';
+    Array.from(str).forEach(function (c) { if (c === '\n') { out.push(line); line = ''; } else if (ctx.measureText(line+c).width > width && line) { out.push(line); line = c; } else line += c; });
+    if (line) out.push(line); return out;
+  }
+  function loadImage(src) { return new Promise(function (resolve) { if (!src || typeof Image === 'undefined') return resolve(null); var i = new Image(); i.onload = function () { resolve(i); }; i.onerror = function () { resolve(null); }; i.src = src; }); }
+  // 输出的是实际 PNG，预览与保存始终同源；高度按动作数量变化，不能截掉训练内容。
+  async function draw(canvas, data, theme) {
+    var avatar = await loadImage(data.profile.avatar), ctx = canvas.getContext('2d');
+    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F', accent = '#C55A32';
+    var W = 1080, H = 1640 + data.rows.length * 110;
+    canvas.width = W; canvas.height = H; ctx.textBaseline = 'top';
+    ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+    var glow = ctx.createRadialGradient(1010,50,10,880,70,720); glow.addColorStop(0,warm?'#FCD7B7':'#E0E9D9'); glow.addColorStop(1,bg);
+    ctx.fillStyle = glow; ctx.fillRect(0,0,W,700);
+    rounded(ctx,64,64,230,52,26,'#FFFFFF'); text(ctx,'GZCLP  /  TRAINING',82,80,22,muted,650);
+    text(ctx,data.date.replace(/-/g,'.'),790,80,24,muted,500);
+    ctx.save(); ctx.beginPath(); ctx.arc(112,210,48,0,Math.PI*2); ctx.clip(); ctx.fillStyle='#E0E6DA';ctx.fillRect(64,162,96,96);
+    if (avatar) { var side=Math.min(avatar.width,avatar.height);ctx.drawImage(avatar,(avatar.width-side)/2,(avatar.height-side)/2,side,side,64,162,96,96); }
+    else text(ctx,Array.from(data.name)[0],88,183,40,ink,650);
+    ctx.restore(); text(ctx,data.name,184,174,fit(ctx,data.name,580,34,26),ink,650);
+    text(ctx,data.profile.handle || '把计划，练成了已完成。',184,222,23,muted,400);
+    if (data.weight !== null) text(ctx,'体重 '+data.weight+' kg',816,222,22,muted,400);
+    font(ctx,64,750); var titleLines=wrap(ctx,data.title,952);
+    titleLines.forEach(function(l,i){text(ctx,l,64,312+i*82,64,ink,750);});
+    text(ctx,data.days+'  ·  '+data.sessions+' 次训练',68,510,24,muted,550);
+    rounded(ctx,64,566,952,256,38,'#FFFFFF');
+    text(ctx,data.estimated ? '估算训练容量' : '累计训练容量',100,600,25,muted,500);
+    text(ctx,data.volumeText,92,642,108,ink,750);
+    font(ctx,108,750); var numWidth=ctx.measureText(data.volumeText).width;
+    text(ctx,'t',106+numWidth,692,35,muted,550);
+    text(ctx,data.volume.toLocaleString('zh-CN')+' kg · 重量 × 次数之和',100,777,22,muted,400);
+    var metrics = [[data.rows.length,'训练动作'],[data.reps,(data.estimated?'估算':'累计')+'次数'],[data.adds,'达到加重条件']];
+    metrics.forEach(function(m,i){var x=70+i*322;text(ctx,m[0],x,860,54,ink,700);text(ctx,m[1],x,924,23,muted,400);});
+    rounded(ctx,64,992,952,126,28,warm?'#FFE8D3':'#E6EDDF');
+    text(ctx,data.fun,92,1018,fit(ctx,data.fun,900,30,24),ink,650);
+    text(ctx,data.funNote,92,1065,20,muted,400);
+    text(ctx,'今日训练清单',64,1160,29,ink,650);text(ctx,'第 '+data.trainingDays+' 个训练日',784,1166,22,muted,500);
+    var y = 1222;
+    data.rows.forEach(function(r,i){
+      ctx.strokeStyle='#DCE1D6';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,y-14);ctx.lineTo(1016,y-14);ctx.stroke();
+      text(ctx,r.tier,64,y+2,23,muted,650);
+      var rowName=r.name; font(ctx,30,650); var names=wrap(ctx,rowName,390);
+      names.slice(0,2).forEach(function(l,j){text(ctx,l,144,y+j*33,30,ink,650);});
+      text(ctx,r.day+' · '+r.result,144,y+72,21,muted,400);
+      font(ctx,27,650);ctx.textAlign='right';text(ctx,r.load,1016,y+2,27,ink,650);text(ctx,r.stage+' · '+r.reps+' 次',1016,y+44,22,muted,400);ctx.textAlign='left';
+      y += 110;
+    });
+    y += 26;ctx.strokeStyle='#DCE1D6';ctx.beginPath();ctx.moveTo(64,y);ctx.lineTo(1016,y);ctx.stroke();
+    text(ctx,'“',64,y+22,64,accent,700);font(ctx,29,500);var lines=wrap(ctx,data.copy,860);
+    lines.forEach(function(l,i){text(ctx,l,114,y+36+i*42,29,ink,500);});
+    var foot=y+144;
+    if (data.profile.signature) text(ctx,data.profile.signature,64,foot,fit(ctx,data.profile.signature,952,24,20),muted,500);
+    text(ctx,'GZCLP · 认真练习，也认真恢复',64,H-103,22,muted,500);
+    text(ctx,'容量沿用记录口径：哑铃按单只，自重不计 kg；次数按组次估算。',64,H-62,18,muted,400);
+    return canvas;
+  }
+  return { PROFILE: PROFILE, profile: profile, dates: dates, build: build, draw: draw, COPY: COPY };
+});
+</script>
 <script>/* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
 (function () {
   'use strict';
-  var GZ = window.GZ, Chart = window.GZChart;
+  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare;
   var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', BK_DISMISS = 'gzclp_bk_dismiss';
   var TABS = [
     { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
@@ -3026,6 +3201,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var vm = GZ.buildReview(load()), r = S.review, h = '';
     S._review = vm;
     h += seg([{ html: '总结' }, { html: '周报' }, { html: '日志' }], r.tab, 'rtab');
+    var sd = Share.build(load());
+    if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date) + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.sessions + ' 次训练 · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 累计容量</div><button class="btn-primary" data-act="shareopen" data-date="' + sd.date + '">生成分享卡片</button></div>';
+    else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
     if (r.tab === 0) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
         '<div class="lt-head"><span class="lt-c1">主项</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
@@ -3064,7 +3242,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           if (op) {
             h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
               (l.note ? '<div class="note-box">' + esc(l.note) + '</div>' : '') +
-              '<div class="log-act"><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
+              '<div class="log-act"><span class="btn-small" data-act="shareopen" data-date="' + l.date + '">分享当天</span><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
           }
           h += '</div>';
         });
@@ -3072,10 +3250,21 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       }
       h += '<div class="sec-f" style="text-align:center">修改或删除任意一次记录，之后的重量与阶段会自动重算</div>';
     }
+    if (r.share) h += renderShareSheet();
     return h;
   }
-  function reviewAct(act, ds) {
+  function reviewAct(act, ds, el) {
     var r = S.review;
+    if (act === 'shareopen') { r.share = {date:ds.date,tone:'fire',variant:0,theme:'sage',image:null,blob:null}; return true; }
+    if (act === 'shareclose') { r.share=null; return true; }
+    if (act === 'sharedate') { r.share.date=el.value; r.share.variant=0; return true; }
+    if (act === 'sharetone') { r.share.tone=ds.tone; r.share.variant=0; return true; }
+    if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
+    if (act === 'shareagain') { r.share.variant++; return true; }
+    if (act === 'sharecopy') { var cd=Share.build(load(),r.share.date,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
+    if (act === 'shareexport') { exportShareImage(false); return false; }
+    if (act === 'sharesystem') { exportShareImage(true); return false; }
+    if (act === 'shareprofile') { r.share=null; S.tab='settings'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
     if (act === 'toggle') { r.open[ds.id] = !r.open[ds.id]; return true; }
@@ -3095,6 +3284,55 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
       try { document.execCommand('copy'); done(); } catch (e) { toast('复制失败'); } document.body.removeChild(ta);
     }
+  }
+
+  // ================= 成果分享（纯本地 Canvas 高清 PNG） =================
+  function renderShareSheet() {
+    var sh=S.review.share, data=Share.build(load(),sh.date,sh);
+    if(!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">这一天没有可分享的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
+    var list=Share.dates(load());
+    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="grabber"></div>' +
+      '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
+      '<div class="share-options"><label>训练日期 <select data-act="sharedate" aria-label="训练日期">' + list.map(function(d){return '<option '+(d===data.date?'selected':'')+'>'+d+'</option>';}).join('')+'</select></label><button data-act="shareprofile">编辑名片 ›</button></div>' +
+      '<div class="share-pills" role="group" aria-label="文案风格">'+[['fire','燃一点'],['calm','克制派'],['fun','有点皮']].map(function(t){return '<button class="'+(sh.tone===t[0]?'on':'')+'" data-act="sharetone" data-tone="'+t[0]+'">'+t[1]+'</button>';}).join('')+'<button data-act="shareagain">换一句</button></div>' +
+      '<div class="share-pills" role="group" aria-label="卡片配色">'+[['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>' +
+      '<div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span>正在整理你的训练成果…</span></div>' +
+      '<div class="share-hint">按所选日期汇总全部训练。趣味类比不是实际搬运或热量测算；预览即最终图片。可长按图片保存。</div>' +
+      '<div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div></div>';
+  }
+  async function paintSharePreview() {
+    var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;
+    sh.image=null; sh.blob=null;
+    var generation=(sh.generation || 0)+1; sh.generation=generation;
+    try {
+      var data=Share.build(load(),sh.date,sh); if(!data) return;
+      if(document.fonts && document.fonts.ready) await document.fonts.ready;
+      var canvas=document.createElement('canvas'); await Share.draw(canvas,data,sh.theme);
+      var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png');});
+      if(S.review.share!==sh || sh.generation!==generation || !box.isConnected) return;
+      if(!blob) throw new Error('导出失败');
+      sh.blob=blob;sh.image=canvas.toDataURL('image/png');
+      box.innerHTML='';var img=new Image();img.src=sh.image;img.alt=data.name+' · '+data.date+' 训练战报';box.appendChild(img);
+      document.querySelectorAll('[data-act="shareexport"],[data-act="sharesystem"]').forEach(function(b){b.disabled=false;});
+    } catch(e) { if(box.isConnected) box.textContent='图片生成失败，请关闭后重试。'; }
+  }
+  function exportShareImage(system) {
+    var sh=S.review.share; if(!sh||!sh.blob) { toast('图片正在生成，请稍候');return; }
+    var filename='GZCLP_训练战报_'+sh.date+'.png', file=new File([sh.blob],filename,{type:'image/png'});
+    if(system && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share) {
+      navigator.share({files:[file],title:'训练战报 · '+sh.date}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
+    }
+    var a=document.createElement('a'),url=URL.createObjectURL(sh.blob);a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},30000);
+    toast(system?'已下载图片，可自行分享到社媒':'已下载 PNG；iPhone 也可长按预览图保存');
+  }
+  function uploadShareAvatar(file) {
+    if(!file)return;
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>10*1024*1024){toast('请选择不超过 10 MB 的 JPG、PNG 或 WebP');return;}
+    var reader=new FileReader();reader.onload=function(){var img=new Image();img.onload=function(){
+      var c=document.createElement('canvas');c.width=c.height=160;var x=c.getContext('2d'),sz=Math.min(img.width,img.height);x.drawImage(img,(img.width-sz)/2,(img.height-sz)/2,sz,sz,0,0,160,160);
+      var db=load(),pp=Share.profile(db.params.shareProfile);pp.avatar=c.toDataURL('image/jpeg',0.8);db.params.shareProfile=pp;save(db);render(true);toast('头像已裁切并保存');
+    };img.onerror=function(){toast('图片无法读取');};img.src=reader.result;};reader.readAsDataURL(file);
   }
 
   // ================= 设置 =================
@@ -3125,6 +3363,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var db = load(), P = db.params, st = S.settings, h = '', tmPct = Math.round(P.tmRatio * 100), rp = GZ.replay(db), names = libNames(db);
     var inp = function (k, v, unit, extra) { return '<input class="f-in num" inputmode="decimal" data-act="param" data-k="' + k + '" ' + (extra || '') + ' value="' + v + '"><span class="f-u">' + unit + '</span>'; };
     h += '\u0000base\u0000';
+    var pp = Share.profile(P.shareProfile);
+    h += '<div class="sec-h" id="shareProfileSec">分享名片</div><div class="list profile-list">' +
+      '<div class="cell"><span class="flex1">头像</span><label class="profile-avatar">' + (pp.avatar ? '<img src="' + pp.avatar + '" alt="头像">' : '<span>' + esc(pp.name.slice(0,1) || '我') + '</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-act="profileavatar"></label><span class="btn-small" data-act="profilenoavatar">移除</span></div>' +
+      '<div class="cell"><label for="profileName" class="flex1">昵称</label><input id="profileName" class="profile-in" data-act="profiletext" data-k="name" maxlength="18" value="' + esc(pp.name) + '" placeholder="分享时显示的名字"></div>' +
+      '<div class="cell"><label for="profileHandle" class="flex1">社媒 ID</label><input id="profileHandle" class="profile-in" data-act="profiletext" data-k="handle" maxlength="24" value="' + esc(pp.handle) + '" placeholder="可选，如 @seven"></div>' +
+      '<div class="cell"><label for="profileSignature" class="flex1">个性签名</label><input id="profileSignature" class="profile-in" data-act="profiletext" data-k="signature" maxlength="48" value="' + esc(pp.signature) + '" placeholder="可选，写给坚持训练的自己"></div>' +
+      '<div class="cell"><span class="flex1">卡片公开当天体重</span><label class="ios-sw green"><input type="checkbox" data-act="profileweight" ' + (pp.showWeight ? 'checked' : '') + '><i></i></label></div></div>' +
+      '<div class="sec-f">昵称、ID、头像、签名会出现在图片上。体重默认隐藏；不显示训练备注、云仓库或令牌。名片随私人云同步保存。输入后离开字段自动保存。</div>';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
@@ -3219,6 +3465,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var st = S.settings, si = Number(ds.si);
     var slotMut = function (fn) { return mutate(function (db) { fn(db.days[st.d].slots[si], db); }); };
     switch (act) {
+      case 'profiletext':
+        return mutate(function(db) { var pp = Share.profile(db.params.shareProfile); pp[ds.k] = el.value; db.params.shareProfile = Share.profile(pp); }, '分享名片已保存');
+      case 'profileweight': return mutate(function(db) { var pp=Share.profile(db.params.shareProfile); pp.showWeight=el.checked; db.params.shareProfile=pp; }, el.checked ? '卡片会显示已记录的当天体重' : '卡片不再公开体重');
+      case 'profilenoavatar': return mutate(function(db) { var pp=Share.profile(db.params.shareProfile); pp.avatar=''; db.params.shareProfile=pp; }, '头像已移除');
+      case 'profileavatar':
+        uploadShareAvatar(el.files && el.files[0]); return false;
       case 'param': var v = parseFloat(el.value); if (isNaN(v) || v < 0) return true; if (ds.pct) v = v / 100; return mutate(function (db) { setPath(db.params, ds.k, v); });
       case 'mode': return mutate(function (db) { db.params.ruleMode = ds.v; }, ds.v === 'full' ? '已切换：完整三阶规则' : '已切换：严格按表格公式');
       case 'adaptsw': return mutate(function (db) { db.params.adaptive = el.checked; }, el.checked ? '已开启：按末组次数自适应加重' : '已关闭：固定步幅加重');
@@ -3290,6 +3542,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     navState();
     document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === S.tab); });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
+    if (S.tab === 'review' && S.review.share) paintSharePreview();
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
   function navState() {
