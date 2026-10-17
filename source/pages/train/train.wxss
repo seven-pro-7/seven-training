@@ -144,3 +144,6 @@
 .res-name { margin-left: 16rpx; }
 .res-r { display: flex; flex-direction: column; align-items: flex-end; }
 .res-next { font-size: 24rpx; color: var(--label2); }
+
+.v-adapt { margin-top: 10rpx; padding: 14rpx 20rpx; border-radius: 16rpx; background: rgba(255,107,26,0.08); font-size: 23rpx; color: var(--label2); line-height: 1.5; }
+.v-adapt-t { font-size: 20rpx; font-weight: 700; color: #fff; background: #FF6B1A; border-radius: 8rpx; padding: 0 10rpx; margin-right: 12rpx; line-height: 30rpx; }

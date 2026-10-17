@@ -139,6 +139,7 @@
         </view>
         <text class="v-l" wx:else>按减载重量完成</text>
       </view>
+      <view class="v-adapt" wx:if="{{item.preview.boost && item.preview.adaptNote}}"><text class="v-adapt-t">多加一档</text>{{item.preview.adaptNote}}</view>
     </block>
   </view>
 

@@ -58,6 +58,7 @@ Page({
   onMode(e) { const v = e.currentTarget.dataset.v; this.mutate((db) => { db.params.ruleMode = v; }, v === 'full' ? '已切换：完整三阶规则' : '已切换：严格表格公式'); },
   onDeload(e) { this.mutate((db) => { db.params.deloadEnabled = e.detail.value; }); },
   onRotate(e) { this.mutate((db) => { db.params.autoRotate = e.detail.value; }, e.detail.value ? '已开启：每轮自动轮换 T2/T3' : '已关闭自动轮换'); },
+  onAdaptive(e) { this.mutate((db) => { db.params.adaptive = e.detail.value; }, e.detail.value ? '已开启：按末组次数自适应加重' : '已关闭：固定步幅加重'); },
   onLock(e) { const si = Number(e.currentTarget.dataset.si); this.slotMut(si, (s) => { s.noRotate = !s.noRotate; }, false); },
   onDayTab(e) { this.setData({ dIdx: Number(e.currentTarget.dataset.i) }); },
 

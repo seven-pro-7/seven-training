@@ -265,6 +265,7 @@
       deloadEnabled: true,
       deloadEvery: 6,
       t1FailLimit: 2,
+      adaptive: true, // 按末组 AMRAP 次数自适应加重：次数远超加重线时，一次多加 1~2 档
       autoRotate: true // 每轮（8 周）自动轮换 T2/T3 动作
     };
   }
@@ -493,6 +494,28 @@
     var n = Number(e.w);
     return isNaN(n) || n < 0 ? null : fix(n);
   }
+  /**
+   * 按最后一组 AMRAP 次数自适应加重（仅「完整三阶」模式；「严格按表格」仍是固定步幅）。
+   * 原理：次数 ↔ 强度有稳定的对应关系（NSCA %1RM–次数表；Epley 公式 1RM = w × (1 + 次数/30)）。
+   * 末组次数远超「加重线」，说明这个重量其实比计划偏轻。把重量调到「刚好做到加重线次数」所需的重量，
+   * 差值就是 gap；但 AMRAP 高次数时 Epley 会高估（>10 次误差明显），而且下次还要连做 5 组，
+   * 所以只取 gap 的一半（ADAPT.damp）、次数最多按 15 次计（ADAPT.repCap）、一次最多加 3 档（ADAPT.maxSteps）。
+   * 结果永远不会低于普通步幅——它只会「多加」，不会「少加」。
+   */
+  var ADAPT = { damp: 0.5, repCap: 15, maxSteps: 3, t3Extra: 10, t3MaxSteps: 2 };
+  function adaptiveUp(P, w, a, add, step, inc) {
+    var out = { up: step, boost: false, note: '' };
+    if (!P.adaptive || P.ruleMode === 'excel' || !step || !(a > add) || !(w > 0)) return out;
+    var ar = Math.min(a, ADAPT.repCap);
+    var gap = w * ((1 + ar / 30) / (1 + add / 30) - 1);
+    var want = roundTo(gap * ADAPT.damp, inc || step);
+    var up = Math.max(step, Math.min(want, ADAPT.maxSteps * step));
+    if (up > step) {
+      out.up = up; out.boost = true;
+      out.note = '末组 ' + a + ' 次，比加重线（' + add + ' 次）多 ' + (a - add) + ' 次，重量明显偏轻：本次多加到 +' + fmtW(up) + ' kg（常规 +' + fmtW(step) + '）';
+    }
+    return out;
+  }
   function evaluate(s, st, e, P, deload) {
     var def = stageDef(s.tier, st.stage);
     var planned = st.weight, mw = manualW(e);
@@ -531,7 +554,11 @@
         r.nextWeight = a >= 6 ? fix(w + step) : w;
         r.nextFail = 0;
       } else {
-        if (a >= def.add) { r.judgment = '加重'; r.nextWeight = alignTo(fix(w + step), inc); r.nextFail = 0; }
+        if (a >= def.add) {
+          var ad = adaptiveUp(P, w, a, def.add, step, inc);
+          r.judgment = '加重'; r.nextWeight = alignTo(fix(w + ad.up), inc); r.nextFail = 0;
+          if (ad.boost) { r.boost = true; r.adaptNote = ad.note; }
+        }
         else if (a >= def.hold && def.next !== null) { r.judgment = '保持'; r.nextFail = 0; }
         else if (def.next === null) {
           // 10×1+ 未达标：测试新 5RM，取 90% 为新 TM，重置回 5×3+
@@ -560,7 +587,14 @@
       // =IF(F>=阈值,"加重","保持") / 上肢：ROUND((E+步幅)/2.5)*2.5
       if (t >= P.t3Threshold && equipOf(s.name, s.equip) === '自重') {
         r.judgment = '建议负重'; r.nextWeight = w; // 自重无法直接增加 kg，引导更换到同动作的负重版本
-      } else if (t >= P.t3Threshold) { r.judgment = '加重'; r.nextWeight = alignTo(fix(w + step), inc); }
+      } else if (t >= P.t3Threshold) {
+        var up3 = step;
+        if (P.adaptive && P.ruleMode !== 'excel' && step && t >= P.t3Threshold + ADAPT.t3Extra) {
+          up3 = Math.min(ADAPT.t3MaxSteps, 2) * step; r.boost = true;
+          r.adaptNote = '末组 ' + t + ' 次，超过加重线（' + P.t3Threshold + ' 次）' + (t - P.t3Threshold) + ' 次：本次多加一档 +' + fmtW(up3) + ' kg（常规 +' + fmtW(step) + '）';
+        }
+        r.judgment = '加重'; r.nextWeight = alignTo(fix(w + up3), inc);
+      }
       else { r.judgment = '保持'; r.nextWeight = w; }
     }
     r.delta = fix(r.nextWeight - w);
@@ -873,7 +907,7 @@
         preview: (hasValue(e) || deload) ? {
           judgment: res.judgment, color: JUDGE_COLORS[res.judgment] || '#8E8E93', icon: JUDGE_ICON[res.judgment] || '',
           nextStage: res.nextStage, nextWeight: fmtW(res.nextWeight), stageChanged: res.nextStage !== st.stage,
-          delta: res.delta > 0 ? '+' + fmtW(res.delta) : res.delta < 0 ? fmtW(res.delta) : '±0',
+          delta: res.delta > 0 ? '+' + fmtW(res.delta) : res.delta < 0 ? fmtW(res.delta) : '±0', boost: !!res.boost, adaptNote: res.adaptNote || '',
           e1rm: res.e1rm ? fmtW(Math.round(res.e1rm * 10) / 10) : '', volume: Math.round(res.volume), sub: !!res.sub, origName: res.origName || ''
         } : null
       };
@@ -1330,6 +1364,7 @@
     'T1 降阶：需连续 2 次未达标，单次失败只预警',
     '推荐重量：T1=1RM×76.5%；T2≈1RM×动作系数×65%；T3≈1RM×动作系数×50%',
     '器械取整：杠铃按 2.5kg；哑铃按单只 1~2kg；负重按外加重量；自重只记次数；固定器械按配重档',
+    '自适应加重：末组次数远超加重线时多加 1~2 档（T1 按 Epley 估算的差距取一半，最多 3 档；T3 超过阈值 10 次加 2 档）；只会多加，不会少加；「严格按表格」模式不启用',
     '动作轮换：T1 四大项固定；T2/T3 每轮（8 周）在同一动作模式内自动换一次，不与上一轮重复，一轮内保持不变',
     '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
   ];
@@ -1344,7 +1379,7 @@
     saveRecord: saveRecord, deleteRecord: deleteRecord, clearRecords: clearRecords, replaceDb: replaceDb, mergeDb: mergeDb, sameDb: sameDb, stampConfig: stampConfig, cfgPart: cfgPart, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
     libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
-    planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
+    adaptiveUp: adaptiveUp, ADAPT: ADAPT, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight
   };
 });
