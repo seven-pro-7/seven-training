@@ -679,7 +679,7 @@
   function lastBackup() { return Number(localStorage.getItem(BK) || 0); }
   function renderLibrary() {
     var db = load(), st = S.settings, lib = GZ.buildLibrary(db, { tier: st.tier, q: st.q }), h = '';
-    h += '<div class="lib-back" data-act="libback">‹ 设置</div>';
+    h += '<div class="lib-back" data-act="libback">‹ 设置</div><div class="pg-title">动作库</div>';
     h += '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="libq" value="' + esc(st.q) + '" placeholder="搜索动作、部位或器械"></div>';
     h += '<div id="libSeg"' + (st.q ? ' style="display:none"' : '') + '>' + seg(lib.tiers.map(function (x) { return { html: x.id + '<span class="seg-n">' + x.n + '</span>', on: st.tier === x.id, data: ' data-t="' + x.id + '"' }; }), -1, 'libtier') +
       '<div class="sec-f tier-tip">' + TIER_TIP[st.tier] + '</div></div>';
@@ -896,10 +896,19 @@
   function render(keepScroll) {
     var body = document.getElementById('body'), y = body.scrollTop;
     document.getElementById('navTitle').textContent = S.tab === 'settings' && S.settings.view === 'lib' ? '动作库' : TABS.filter(function (t) { return t.id === S.tab; })[0].title;
-    body.innerHTML = '<div class="pg-' + S.tab + '"><div class="page">' + RENDER[S.tab]() + '</div></div>';
+    var isLib = S.tab === 'settings' && S.settings.view === 'lib';
+    var bigTitle = S.tab === 'train' || isLib ? '' : '<div class="pg-title">' + TABS.filter(function (t) { return t.id === S.tab; })[0].title + '</div>';
+    body.innerHTML = '<div class="pg-' + S.tab + '"><div class="page">' + bigTitle + RENDER[S.tab]() + '</div></div>';
     body.scrollTop = keepScroll ? y : 0;
+    navState();
     document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === S.tab); });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
+  }
+  /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
+  function navState() {
+    var body = document.getElementById('body'), nav = document.querySelector('.nav'); if (!body || !nav) return;
+    nav.classList.toggle('edge', body.scrollTop > 4);
+    nav.classList.toggle('titled', body.scrollTop > 46);
   }
   function handle(e, type) {
     var el = e.target.closest('[data-act]');
@@ -919,6 +928,7 @@
     body.addEventListener('click', function (e) { handle(e, 'click'); });
     body.addEventListener('change', function (e) { handle(e, 'change'); });
     body.addEventListener('input', function (e) { handle(e, 'input'); });
+    body.addEventListener('scroll', navState, { passive: true });
     document.getElementById('tabbar').addEventListener('click', function (e) {
       var it = e.target.closest('.tb-item'); if (!it) return;
       if (S.tab === it.dataset.tab) { body.scrollTo({ top: 0, behavior: 'smooth' }); return; }

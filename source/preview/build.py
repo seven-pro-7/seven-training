@@ -228,6 +228,109 @@ def type_scale(css_text):
 
 
 shell_css = type_scale(shell_css)
+GLASS_CSS = r'''
+/* ===== Liquid Glass（iOS 26/27 设计语言）=====
+ * 1 层级：导航与标签栏是浮在内容之上的玻璃层，内容铺满并从下方滚过
+ * 2 和谐：胶囊形控件、同心圆角、更高的控件、更大更粗的左对齐标题
+ * 3 一致：同一套玻璃材质用于标签栏、弹层、完成栏；适配降低透明度 / 增强对比度 / 减弱动态效果
+ */
+.app { --navh: 44px; --tabh: 62px; --tabgap: 12px; --tabbottom: calc(var(--tabgap) + env(safe-area-inset-bottom));
+  --glass: rgba(250,250,252,0.78); --glass-edge: inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -1px 1px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.09);
+  --glass-blur: blur(28px) saturate(190%); }
+@media (min-width: 761px) { .app { --tabbottom: 22px; } }
+@media (max-width: 760px) { .app { --navh: calc(44px + env(safe-area-inset-top)); } }
+
+/* 导航栏：透明，内容从下面滚过；滚动后出现「滚动边缘效果」与小标题 */
+.app .nav { height: var(--navh); margin-bottom: calc(-1 * var(--navh)); background: transparent; z-index: 20; pointer-events: none; }
+.app .nav .capsule { pointer-events: auto; }
+.app .nav::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: calc(100% + 22px); z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(242,242,247,0.96) 0%, rgba(242,242,247,0.82) 62%, rgba(242,242,247,0) 100%);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent); mask-image: linear-gradient(to bottom, #000 58%, transparent);
+  opacity: 0; transition: opacity .25s ease; }
+.app .nav.edge::before { opacity: 1; }
+.app #navTitle { opacity: 0; transform: translateY(4px); transition: opacity .2s ease, transform .2s ease; }
+.app .nav.titled #navTitle { opacity: 1; transform: none; }
+.app #body { padding-top: var(--navh); padding-bottom: 0; }
+.app #body > div > .page::after { content: ''; display: block; height: calc(var(--tabh) + var(--tabbottom) + 16px); }
+
+/* 大号、加粗、左对齐的页面标题 */
+.app .pg-title { font-size: 34px; font-weight: 700; letter-spacing: -0.6px; line-height: 1.15; margin: 6px 4px 16px; color: var(--label); }
+.app .large-title { font-weight: 700; letter-spacing: -0.6px; }
+.app .head { padding-left: 4px; }
+
+/* 浮动玻璃标签栏 */
+.app .tabbar { position: absolute; left: 16px; right: 16px; bottom: var(--tabbottom); height: var(--tabh); padding: 0 6px; z-index: 50;
+  align-items: center; border-top: none; border-radius: 999px; background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge), 0 10px 30px rgba(0,0,0,0.12); }
+.phone .tabbar, .app .tabbar { padding-bottom: 0; }
+.app .tb-item { height: calc(var(--tabh) - 12px); border-radius: 999px; transition: background .25s ease, transform .15s ease; }
+.app .tb-item.on { background: rgba(118,118,128,0.14); }
+.app .tb-item:active { transform: scale(0.92); }
+
+/* 卡片与分组列表：更柔和的同心圆角、更高的行 */
+.app .card { border-radius: 26px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+.app .list { border-radius: 26px; }
+.app .cell { min-height: 52px; }
+.app .sec-h { font-size: 17px; font-weight: 600; color: var(--label); padding: 26px 6px 10px; }
+.app .sec-f { padding-left: 6px; padding-right: 6px; }
+.app .card-title .t { font-weight: 700; }
+
+/* 胶囊形控件 */
+.app .seg, .app .tabs { border-radius: 999px; padding: 3px; }
+.app .seg-i, .app .tabs .tab { border-radius: 999px; padding-top: 8px; padding-bottom: 8px; transition: background .2s ease, box-shadow .2s ease; }
+.app .seg-i.on, .app .tabs .tab.on { box-shadow: 0 3px 8px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(0,0,0,0.04), inset 0 1px 0 #fff; }
+.app .btn-primary { border-radius: 999px; min-height: 52px; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 6px 16px rgba(255,107,26,0.26); transition: transform .15s ease, opacity .15s; }
+.app .btn-primary:active, .app .btn-ghost:active, .app .go-btn:active { transform: scale(0.97); }
+.app .btn-ghost { border-radius: 999px; }
+.app .pg-train .stepper { border-radius: 999px; }
+.app .pg-train .verdict { border-radius: 16px; }
+.app .pg-train .w-edit { border-radius: 999px; }
+
+/* 按压反馈：轻微收缩，像在按一块玻璃 */
+.app .ex-row, .app .cell.tap, .app .gcell { transition: transform .15s ease, background .15s ease; }
+.app .ex-row:active, .app .cell.tap:active { transform: scale(0.985); }
+
+/* 训练页完成栏：浮在标签栏上方的玻璃胶囊 */
+.app .pg-train .submit-bar { bottom: calc(var(--tabh) + var(--tabbottom) + 10px); margin: 14px 0 0; padding: 0; gap: 10px;
+  background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; border-top: none; }
+.app .pg-train .sb-count { height: 52px; padding: 0 18px; display: flex; align-items: center; border-radius: 999px; background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-edge), 0 6px 18px rgba(0,0,0,0.08); }
+.app .pg-train button.sb-btn { height: 52px; }
+
+/* 弹层：浮起的玻璃面板，四角与屏幕圆角同心 */
+.app #body .mask, .app .mask { bottom: 0; background: rgba(0,0,0,0.22); z-index: 100; }
+.app .sheet { --bg: #F5F5F8; width: calc(100% - 16px); margin: 0 8px calc(8px + env(safe-area-inset-bottom)); border-radius: 34px;
+  background: rgba(245,245,248,0.97); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 20px 60px rgba(0,0,0,0.18); max-height: calc(100% - 70px); }
+.app .grabber { width: 36px; height: 5px; background: rgba(60,60,67,0.25); }
+.app .sheet-title { font-weight: 700; }
+
+/* 休息胶囊、提示：同一套玻璃语言 */
+.app .rest-cap { background: rgba(28,28,30,0.82); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 8px 24px rgba(0,0,0,0.22); }
+.app .rc-ring i { background: #2A2A2C; }
+.app .rest-pop { border-radius: 24px; background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-edge), 0 12px 32px rgba(0,0,0,0.16); }
+.app .rp-b { border-radius: 999px; }
+.app #toast { border-radius: 999px; padding: 12px 22px; }
+
+.app .lib-rec { color: var(--label2); }
+/* 辅助功能 */
+@media (prefers-reduced-transparency: reduce) {
+  .app .tabbar, .app .sheet, .app .pg-train .sb-count, .app .rest-pop { background: #FFFFFF; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .app .nav::before { background: #F2F2F7; -webkit-mask-image: none; mask-image: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .app .rest-cap { background: #1C1C1E; }
+}
+@media (prefers-contrast: more) {
+  .app .tabbar, .app .sheet, .app .pg-train .sb-count { box-shadow: 0 0 0 1px rgba(0,0,0,0.45); }
+  .app .card, .app .list { box-shadow: 0 0 0 1px rgba(0,0,0,0.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app *, .app *::before { transition: none !important; }
+}
+'''
+css.append(GLASS_CSS)
 css = [type_scale(c) for c in css]
 
 html = f"""<!DOCTYPE html>
