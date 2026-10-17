@@ -19,7 +19,7 @@
 .rg + .gen { margin-top: 28rpx; }
 
 .wk-n { font-size: 36rpx; font-weight: 700; }
-.dltag { font-size: 22rpx; color: var(--teal); font-weight: 600; margin-left: 14rpx; }
+.dltag { font-size: 22rpx; color: var(--label2); font-weight: 600; margin-left: 14rpx; background: var(--fill); border-radius: 8rpx; padding: 0 10rpx; }
 .dflags { gap: 8rpx; }
 .dflag { font-size: 20rpx; font-weight: 600; padding: 4rpx 10rpx; border-radius: 8rpx; color: var(--label3); background: var(--fill2); }
 .dflag.on { background: var(--accent-soft); color: var(--accent); }

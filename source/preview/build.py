@@ -103,6 +103,32 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .app .pg-train .sb-count { font-size: 14px; color: var(--label2); white-space: nowrap; }
 .app .pg-train .sb-count b { color: var(--label); font-size: 17px; font-weight: 600; }
 .app .pg-train button.sb-btn { flex: 1; margin: 0; height: 48px; }
+.app .pg-train .t3-group { padding: 4px 0; margin-bottom: 8px; }
+.app .pg-train .ex-row.g { margin: 0; border-radius: 0; background: transparent; padding: 12px 16px; min-height: 48px; }
+.app .pg-train .ex-row.g + .ex-row.g { border-top: 0.5px solid var(--sep); }
+.app .pg-train .ex-row.g .exr-n { font-size: 15px; font-weight: 400; }
+.app .pg-stats .empty-chart { margin: 12px 0 4px; padding: 22px 16px; border-radius: 14px; background: var(--fill2); text-align: center; }
+.app .pg-stats .ec-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+.app .pg-stats .ec-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--label3); }
+.app .pg-stats .ec-dots i.on { background: var(--accent); }
+.app .pg-stats .ec-t { font-size: 15px; font-weight: 600; color: var(--label); }
+.app .pg-stats .ec-s { font-size: 13px; color: var(--label2); margin-top: 4px; line-height: 1.5; }
+.app .pg-stats .kv-na { display: block; font-size: 22px; font-weight: 600; color: var(--label3); line-height: 1.3; }
+.app .pg-review .lt-head, .app .pg-review .lt-row { display: flex; align-items: center; gap: 8px; }
+.app .pg-review .lt-head { font-size: 11px; color: var(--label2); padding: 2px 0 8px; border-bottom: 0.5px solid var(--sep); }
+.app .pg-review .lt-row { padding: 12px 0; }
+.app .pg-review .lt-row + .lt-row { border-top: 0.5px solid var(--sep); }
+.app .pg-review .lt-c1 { flex: 1.5; min-width: 0; display: flex; flex-direction: column; }
+.app .pg-review .lt-c2, .app .pg-review .lt-c3, .app .pg-review .lt-c4 { flex: 1; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.app .pg-review .lt-n { font-size: 15px; font-weight: 600; color: var(--label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app .pg-review .lt-s { font-size: 11px; color: var(--label2); margin-top: 2px; white-space: nowrap; }
+.app .pg-review .lt-v { font-size: 17px; font-weight: 600; color: var(--label); }
+.app .pg-review .lt-j { font-size: 11px; font-weight: 600; margin-top: 2px; }
+.app .pg-review .lt-g { font-size: 17px; font-weight: 600; color: var(--label2); }
+.app .pg-review .lt-g.up { color: var(--accent); }
+.app .pg-settings .adv-head { margin-top: 20px; }
+.app .pg-settings .slot-rec { color: var(--label2); }
+.app .pg-settings .adv-head .val { font-size: 13px; color: var(--label2); margin-right: 6px; }
 .rest-float { position: absolute; right: 14px; z-index: 210; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .rest-cap { display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px; border-radius: 999px; background: #1C1C1E; color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.18); cursor: pointer; user-select: none; }
 .rc-ring { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -187,6 +213,22 @@ head = """<meta charset="utf-8">
 <link rel="icon" type="image/png" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <title>GZCLP 训练追踪</title>"""
+
+def type_scale(css_text):
+    """统一字号阶梯：11 / 13 / 15 / 17 / 22 / 28 px；> 30px 的展示型数字（重量、倒计时）不动"""
+    def fix(m):
+        v = float(m.group(1))
+        if v > 40:
+            return m.group(0)
+        if v > 30:
+            return "font-size: 34px"
+        n = 11 if v < 12 else 13 if v < 14 else 15 if v < 16 else 17 if v < 19 else 22 if v < 25 else 28
+        return f"font-size: {n}px"
+    return re.sub(r'font-size:\s*(\d*\.?\d+)px', fix, css_text)
+
+
+shell_css = type_scale(shell_css)
+css = [type_scale(c) for c in css]
 
 html = f"""<!DOCTYPE html>
 <html lang="zh-CN"><head>{head}

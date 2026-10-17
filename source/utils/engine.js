@@ -1156,12 +1156,26 @@
       prevVol = vol || prevVol;
     }
 
+    // 主项进度表：每个 T1 主项一行（起始 → 下次、最近末组、当前阶段、最佳 e1RM）
+    var liftTable = [], lifts0 = liftSlots(db);
+    Object.keys(lifts0).forEach(function (key) {
+      var info = lifts0[key], hist = [];
+      S.forEach(function (s) { s.items.forEach(function (it) { if (it.slotId === info.slot.id && it.judgment !== '跳过' && !it.deload && !it.sub && it.name === info.name) hist.push(it); }); });
+      var st0 = rp.states[info.slot.id], start = hist.length ? hist[0].weight : initWeight(info.slot, P), last = hist[hist.length - 1];
+      var best = null; hist.forEach(function (it) { if (it.e1rm && (!best || it.e1rm > best)) best = it.e1rm; });
+      var gain = fix(st0.weight - start);
+      liftTable.push({ key: key, name: info.name, day: info.day.id, stage: st0.stage, n: hist.length,
+        start: fmtW(start), next: fmtW(st0.weight), gain: gain > 0 ? '+' + fmtW(gain) : gain < 0 ? fmtW(gain) : '±0', up: gain > 0,
+        last: last ? String(last.input) : '—', lastJ: last ? last.judgment : '', lastColor: last ? JUDGE_COLORS[last.judgment] || '#8E8E93' : '#C7C7CC',
+        best: best ? fmtW(Math.round(best * 10) / 10) : '—', fail: st0.fail || 0 });
+    });
+
     // 总结洞察（教练口吻）
     var insights = [];
     var k = stats.kpi;
     if (!S.length) insights.push({ type: 'info', text: '还没有训练记录。去「训练」页完成第一次 A1，数据会自动长出来。' });
     else {
-      insights.push({ type: 'info', text: '已完成 ' + k.sessions + '/' + k.planned + ' 次训练（' + k.progress + '%），累计容量 ' + k.volume + '，共 ' + k.adds + ' 次加重。' });
+      insights.push({ type: 'info', text: '已完成 ' + k.sessions + '/' + k.planned + ' 次训练（' + k.progress + '%），累计容量 ' + k.volume + '，共 ' + k.adds + ' 次加重。' + (k.warns ? '' : '目前没有预警，节奏正常。') });
       var lifts = liftSlots(db);
       Object.keys(lifts).forEach(function (key) {
         var info = lifts[key], hist = [];
@@ -1171,7 +1185,7 @@
         for (var i = hist.length - 1; i >= 0 && hist[i].judgment === '加重'; i--) streak++;
         var gain = fix(lastIt.nextWeight - first.weight);
         if (streak >= 2) insights.push({ type: 'up', text: info.name + ' 连续 ' + streak + ' 次加重，' + fmtW(first.weight) + '→' + fmtW(lastIt.nextWeight) + 'kg，节奏在线。' });
-        else if (lastIt.judgment === '加重') insights.push({ type: 'up', text: info.name + ' 上次 AMRAP ' + lastIt.input + ' 次，下次上 ' + fmtW(lastIt.nextWeight) + 'kg' + (gain > 0 ? '（累计 +' + fmtW(gain) + '）' : '') + '。' });
+        // 单次加重已在「主项进度」表里展示，这里不再重复
         if (lastIt.judgment === '建议降阶') insights.push({ type: 'warn', text: info.name + ' 末组没到 ' + stageDef('T1', lastIt.stage).hold + ' 次。下次同重量再冲，连续两次未达标才降阶，先睡好吃好。' });
         if (lastIt.judgment === '降阶') insights.push({ type: 'warn', text: info.name + ' 已切到 ' + lastIt.nextStage + '，重量保持 ' + fmtW(lastIt.nextWeight) + 'kg，用更少次数顶住强度。' });
         if (lastIt.judgment === '重置') insights.push({ type: 'warn', text: info.name + ' 完成一轮三阶，已重置回 5×3+ @ ' + fmtW(lastIt.nextWeight) + 'kg。' });
@@ -1197,7 +1211,7 @@
 
     var logs = S.slice().reverse().map(logView);
     insights.forEach(function (i) { i.icon = INS_ICON[i.type] || 'i'; });
-    return { insights: insights, weeks: weekCards.reverse(), logs: logs, kpi: k };
+    return { insights: insights, liftTable: liftTable, weeks: weekCards.reverse(), logs: logs, kpi: k };
   }
 
   // ---------- 动作库 / 更换动作 ----------

@@ -16,14 +16,14 @@
 .grid-head, .grid-row { display: flex; align-items: center; gap: 12rpx; }
 .grid-head { margin-bottom: 12rpx; }
 .gw { width: 72rpx; display: flex; flex-direction: column; font-size: 26rpx; font-weight: 600; color: var(--label2); }
-.dltag { font-size: 20rpx; color: var(--teal); font-weight: 600; }
+.dltag { font-size: 20rpx; color: var(--label2); font-weight: 600; background: var(--fill); border-radius: 8rpx; padding: 0 8rpx; margin-left: 6rpx; }
 .gh { flex: 1; text-align: center; font-size: 26rpx; font-weight: 600; color: var(--label2); }
 .grid-row { margin-bottom: 12rpx; }
 .gcell { position: relative; flex: 1; height: 84rpx; border-radius: 18rpx; background: var(--fill2); display: flex; align-items: center; justify-content: center; }
-.gcell .cw { font-size: 28rpx; font-weight: 500; color: var(--label3); }
+.gcell .cw { font-size: 28rpx; font-weight: 500; color: var(--label2); }
 .gcell.done { background: var(--accent-soft); }
 .gcell.done .cw { color: var(--label); font-weight: 600; }
-.gcell.ready .cw { color: var(--label2); }
+.gcell.ready .cw { color: var(--label); }
 .gcell.next { background: var(--card); box-shadow: inset 0 0 0 3rpx var(--accent); }
 .gcell.next .cw { color: var(--accent); font-weight: 700; }
 .cdot { position: absolute; top: 10rpx; right: 10rpx; width: 12rpx; height: 12rpx; border-radius: 50%; }
