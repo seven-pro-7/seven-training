@@ -1,6 +1,6 @@
 {
-  "name": "GZCLP 训练追踪",
-  "short_name": "GZCLP",
+  "name": "训练手记",
+  "short_name": "训练手记",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

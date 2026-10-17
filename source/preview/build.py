@@ -151,9 +151,6 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .app .slot-sheet .lib-row .lib-s { font-size: 13px; color: var(--label2); font-weight: 400; }
 .app .slot-sheet .lib-row .lib-n { font-size: 17px; font-weight: 600; }
 .app .slot-sheet .lib-row .lib-rec { font-size: 11px; }
-.app .slot-sheet .lib-row .lib-s { font-size: 13px; color: var(--label2); font-weight: 400; }
-.app .slot-sheet .lib-row .lib-n { font-size: 17px; font-weight: 600; }
-.app .slot-sheet .lib-row .lib-rec { font-size: 11px; }
 .rest-float { position: absolute; right: 14px; z-index: 210; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .rest-cap { display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px; border-radius: 999px; background: #1C1C1E; color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.18); cursor: pointer; user-select: none; }
 .rc-ring { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -211,7 +208,7 @@ tabbar = ''.join(
 
 side = """
 <div class="side">
-  <h1>GZCLP <span>训练追踪</span></h1>
+  <h1>训练<span>手记</span></h1>
   <div>8 周 · A1 → B1 → A2 → B2 循环</div>
   <ul>
     <li><b>训练</b>：只填末组次数或是否完成，下次重量自动算出</li>
@@ -228,16 +225,16 @@ side = """
 """
 
 head = """<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F2F2F7">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="GZCLP">
+<meta name="apple-mobile-web-app-title" content="训练手记">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>GZCLP 训练追踪</title>"""
+<title>训练手记</title>"""
 
 def type_scale(css_text):
     """统一字号阶梯：11 / 13 / 15 / 17 / 22 / 28 px；> 30px 的展示型数字（重量、倒计时）不动"""
@@ -393,6 +390,47 @@ css.append("""
 """)
 
 css = [type_scale(c) for c in css]
+# Final semantic design layer: same typography / 44px tap targets across the five pages and share UI.
+css.append(r"""
+.app { --font-caption: 11px; --font-footnote: 13px; --font-body: 15px; --font-headline: 17px; --font-title: 22px; --font-heading: 28px; --font-display: 34px; --font-input: 16px; }
+.app button, .app input, .app select, .app textarea { font-family: inherit; letter-spacing: normal; }
+.app button { -webkit-appearance: none; appearance: none; border: 0; cursor: pointer; }
+.app button:focus-visible, .app [tabindex]:focus-visible, .app input:focus-visible, .app select:focus-visible { outline: 2px solid #7B8C6F; outline-offset: 3px; }
+.app .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+.app .card-title .t, .app .sec-h { font-size: var(--font-headline); font-weight: 600; }
+.app .sheet-title { font-size: var(--font-title); line-height: 1.3; letter-spacing: -.3px; }
+.app .pg-title { font-size: var(--font-display); font-weight: 700; }
+.app .sec-f { font-size: var(--font-footnote); line-height: 1.55; }
+.app .cap { font-size: var(--font-footnote); line-height: 1.45; }
+.app .link, .app .btn-small { font-size: var(--font-body); }
+.app .btn-primary, .app .btn-ghost { font-size: var(--font-headline); font-weight: 600; min-height: 48px; }
+.app .profile-list .profile-in, .app .sync-in, .app .search-in, .app .note, .app .imp { font-size: var(--font-input); }
+.app .share-sheet .share-toolbar { gap: 12px; }
+.app .share-sheet .share-options { font-size: var(--font-footnote); }
+.app .share-sheet .share-options button { min-height: 44px; font-size: var(--font-body); }
+.app .share-sheet .share-options select { font-family: inherit; font-size: var(--font-input); min-height: 44px; }
+.app .share-sheet .share-pills { gap: 6px; }
+.app .share-sheet .share-pills button { font-size: var(--font-body); font-weight: 500; min-height: 44px; flex: 1; padding: 10px 8px; }
+.app .share-sheet .share-pills button.on { background: #DEE7D6; color: #35482E; font-weight: 600; }
+.app .share-sheet .quote-selector { font-size: var(--font-footnote); }
+.app .share-sheet .quote-selector select { font-family: inherit; font-size: var(--font-input); padding: 12px; border-radius: 16px; }
+.app .share-sheet .quote-source { font-size: var(--font-footnote); line-height: 1.55; background: #ECEEE8; }
+.app .share-sheet .share-hint { font-size: var(--font-footnote); line-height: 1.55; }
+.app .share-sheet .share-actions { bottom: -16px; padding-top: 10px; }
+.app .share-sheet .share-actions button { font-size: var(--font-body); font-weight: 600; min-height: 48px; }
+.app .quote-browse { display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; width:100%; padding:12px; margin:0 0 12px; border-radius:16px; background:#FFFFFF; color:var(--label); font-size:var(--font-body); min-height:48px; }
+.app .quote-browse span { color:var(--label2); font-size:var(--font-footnote); }
+.app .quote-back { background:transparent; color:var(--label); font-size:var(--font-body); min-height:44px; padding:4px 0; }
+.app .quote-total { font-size:var(--font-footnote); color:var(--label2); }
+.app .quote-catalog .search { margin:14px 0; }
+.app .quote-card { display:flex; flex-direction:column; align-items:flex-start; text-align:left; width:100%; padding:16px; margin-bottom:10px; background:#FFFFFF; border-radius:20px; color:var(--label); }
+.app .quote-card-text { font-size:var(--font-headline); font-weight:600; line-height:1.5; }
+.app .quote-card-credit { margin-top:8px; font-size:var(--font-footnote); line-height:1.45; color:var(--label2); }
+.app .quote-card:active { background:#E8EFDF; }
+.app .share-sheet .share-close { min-width:44px; min-height:44px; }
+@media (prefers-reduced-motion: reduce) { .app * { scroll-behavior:auto !important; } }
+""")
+
 
 html = f"""<!DOCTYPE html>
 <html lang="zh-CN"><head>{head}
@@ -420,7 +458,7 @@ if not WEB.exists():
     WEB.mkdir()
 (WEB / 'index.html').write_text(html)
 manifest = {
-    'name': 'GZCLP 训练追踪', 'short_name': 'GZCLP', 'start_url': './', 'scope': './', 'display': 'standalone',
+    'name': '训练手记', 'short_name': '训练手记', 'start_url': './', 'scope': './', 'display': 'standalone',
     'background_color': '#F2F2F7', 'theme_color': '#F2F2F7', 'lang': 'zh-CN',
     'icons': [{'src': 'icon-180.png', 'sizes': '180x180', 'type': 'image/png'}, {'src': 'icon-512.png', 'sizes': '512x512', 'type': 'image/png'}]
 }
