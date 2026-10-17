@@ -734,10 +734,22 @@
     var lib = libFindIn(db, ch.name);
     return { slot: Object.assign({}, s, { name: ch.name, equip: ch.equip || (lib ? lib.equip : '') }), change: ch, resetNow: ch.fromWeek === week, auto: !!ch.auto };
   }
-  /** 执行一个槽位：处理“更换起始周重置”和“仅本次替换” */
+  /**
+   * 某训练日第 week 次开练时的起始状态：
+   *  1. 这一次刚换入新动作 → 从该动作的第一阶段、起始重量重新进阶；
+   *  2. 用户在计划页「调整重量」→ 只替换重量，阶段与失败次数保持不变（不改写任何历史记录）。
+   */
+  function startState(s, st, ef, week) {
+    var out = ef.resetNow ? { stage: FIRST_STAGE[s.tier], weight: ef.change.weight, fail: 0 } : st;
+    var adj = null;
+    (s.adjusts || []).forEach(function (a) { if (a.fromWeek === week) adj = a; });
+    if (adj) out = Object.assign({}, out, { weight: adj.weight });
+    return out;
+  }
+  /** 执行一个槽位：处理“更换起始周重置”、“调整重量”和“仅本次替换” */
   function runSlot(db, s, st, e, week, deload, hist) {
     var ef = effectiveSlot(db, s, week, hist);
-    if (ef.resetNow) st = { stage: FIRST_STAGE[s.tier], weight: ef.change.weight, fail: 0 };
+    st = startState(s, st, ef, week);
     var res;
     if (e && e.ex && e.ex !== ef.slot.name) {
       var lib = libFindIn(db, e.ex);
@@ -872,7 +884,7 @@
       // 仅本次替换：起始重量默认取该动作上次做过的重量，没有则沿用原计划重量
       var subDefault = null;
       if (e.ex) {
-        var ef0 = effectiveSlot(db, s0, week, hist), st0 = ef0.resetNow ? { weight: ef0.change.weight } : states[s0.id];
+        var ef0 = effectiveSlot(db, s0, week, hist), st0 = startState(s0, states[s0.id], ef0, week);
         if (e.ex === ef0.slot.name) { delete e.ex; }
         else {
           subDefault = lastW[e.ex] !== undefined ? lastW[e.ex] : st0.weight;
@@ -964,7 +976,7 @@
       var nw = (rp.counts[d.id] || 0) + 1;
       return { day: d.id, name: d.name, slots: d.slots.map(function (s0) {
         var ef = effectiveSlot(db, s0, nw, rp.hist), s = ef.slot;
-        var st = ef.resetNow ? { stage: FIRST_STAGE[s.tier], weight: ef.change.weight, fail: 0 } : rp.states[s0.id], last = null;
+        var st = startState(s0, rp.states[s0.id], ef, nw), last = null;
         for (var i = rp.sessions.length - 1; i >= 0; i--) {
           if (rp.sessions[i].rec.day === d.id) {
             var f = rp.sessions[i].items.filter(function (x) { return x.slotId === s.id; })[0];
@@ -999,9 +1011,18 @@
     var cur = cycleOf(recommend(db, rp).week, P).cycle;
     cycle = Math.max(1, cycle || cur);
     var plan = planCycles(db, cycle), act = plan.actual[cycle], prev = cycle > 1 ? plan.actual[cycle - 1] : null, changed = 0;
+    var isCur = cycle === cur;
     var days = db.days.map(function (d) {
-      return { id: d.id, name: d.name, slots: d.slots.filter(function (s) { return s.tier !== 'T1'; }).map(function (s) {
-        var name = act[s.id], pv = prev ? prev[s.id] : '', isNew = !!prev && name !== pv, eq = equipOf(name, '');
+      var items = {};
+      if (isCur) buildTrain(db, { day: d.id }).items.forEach(function (it) { items[it.slotId] = it; });
+      return { id: d.id, name: d.name, slots: d.slots.map(function (s) {
+        if (s.tier === 'T1') {
+          var t1 = items[s.id], n1 = t1 ? t1.name : effectiveSlot(db, s, cycleStartWeek(cycle, P), rp.hist).slot.name;
+          return { id: s.id, tier: 'T1', name: n1, equip: equipOf(n1, ''), prev: '', isNew: false, locked: false, fixed: true, role: '主项 · 四大项不轮换', why: '', startW: '',
+            cur: t1 ? (t1.canAdjust ? t1.weightText + ' ' + t1.unitText : '自重') + ' · ' + t1.repsText : '' };
+        }
+        var it0 = items[s.id];
+        var name = it0 ? it0.name : act[s.id], pv = prev ? prev[s.id] : '', isNew = !!prev && name !== pv, eq = equipOf(name, '');
         if (isNew) changed++;
         var def = ROTATION[s.id], startW = '';
         if (isNew && cycle >= cur) {
@@ -1009,11 +1030,12 @@
           startW = eq === '自重' ? '自重' : fmtW(w) + ' ' + unitOf(eq);
         }
         return { id: s.id, tier: s.tier, name: name, equip: eq, prev: pv, isNew: isNew, locked: !rotationOn(P, s),
-          role: def ? def.role : '', why: def ? def.why : '', startW: startW };
+          role: def ? def.role : '', why: def ? def.why : '', startW: it0 ? '' : startW,
+          cur: it0 ? (it0.canAdjust ? it0.weightText + ' ' + it0.unitText : '自重') + ' · ' + it0.repsText : '' };
       }) };
     });
     return { cycle: cycle, curCycle: cur, enabled: P.autoRotate !== false, changed: changed, total: rotationSlots(db).length,
-      isFuture: cycle > cur, days: days, principles: ROTATION_PRINCIPLES };
+      isFuture: cycle > cur, isCur: isCur, days: days, principles: ROTATION_PRINCIPLES };
   }
 
   // ---------- 视图模型：数据统计 ----------
@@ -1093,7 +1115,7 @@
           if (s2.rec.day === d.id) { var it = s2.items[si]; if (!it.sub && it.judgment !== '跳过') arr[s2.week - 1] = it.weight; }
         });
         var cnt = rp.counts[d.id] || 0, ef = effectiveSlot(db, s, cnt + 1, rp.hist);
-        if (cnt < arr.length) arr[cnt] = ef.resetNow ? ef.change.weight : rp.states[s.id].weight; // 下一次计划重量
+        if (cnt < arr.length) arr[cnt] = startState(s, rp.states[s.id], ef, cnt + 1).weight; // 下一次计划重量
         return { name: ef.slot.name, tier: s.tier, data: arr };
       });
       return { day: d.id, name: d.name, cols: cols, nextIdx: rp.counts[d.id] || 0 };
@@ -1229,6 +1251,7 @@
     var rp = replay(db), fromWeek = (rp.counts[dayId] || 0) + 1;
     var w = weight === null || weight === undefined || weight === '' || isNaN(Number(weight)) ? null : fix(Number(weight));
     s.changes = (s.changes || []).filter(function (c) { return c.fromWeek < fromWeek; });
+    s.adjusts = (s.adjusts || []).filter(function (a) { return a.fromWeek < fromWeek; });
     if (fromWeek === 1) {
       s.name = name; s.equip = lib ? lib.equip : '';
       if (w !== null && w !== initWeight(s, db.params)) s.init = { type: 'fixed', value: w };
@@ -1239,6 +1262,45 @@
     if (w === null) w = rp.states[s.id].weight;
     s.changes.push({ fromWeek: fromWeek, name: name, equip: lib ? lib.equip : '', weight: w });
     return { fromWeek: fromWeek };
+  }
+  /**
+   * 调整某个位置的当前重量：从这个训练日的下一次训练起生效（本周还没练就是本周）。
+   * 只改重量，不重置阶段，也不改动任何历史记录；之后照常按规则加重。
+   */
+  function adjustSlot(db, dayId, slotId, weight) {
+    var d = dayById(db, dayId), s = null;
+    d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
+    var w = Number(weight);
+    if (!s || isNaN(w) || w < 0) return { error: '重量不正确' };
+    var fromWeek = (replay(db).counts[dayId] || 0) + 1;
+    s.adjusts = (s.adjusts || []).filter(function (a) { return a.fromWeek !== fromWeek; });
+    s.adjusts.push({ fromWeek: fromWeek, weight: fix(w) });
+    return { fromWeek: fromWeek };
+  }
+  /** 锁定 / 解锁某个位置的自动轮换 */
+  function setNoRotate(db, dayId, slotId, v) {
+    var d = dayById(db, dayId), s = null;
+    d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
+    if (!s) return null;
+    if (v) s.noRotate = true; else delete s.noRotate;
+    return s;
+  }
+  /** 计划页动作面板：一个位置此刻的完整状态（与训练卡完全一致） */
+  function slotInfo(db, dayId, slotId, rp) {
+    rp = rp || replay(db);
+    var P = db.params, d = dayById(db, dayId), s = null;
+    d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
+    if (!s) return null;
+    var vm = buildTrain(db, { day: dayId }), it = vm.items.filter(function (x) { return x.slotId === slotId; })[0];
+    var fromWeek = (rp.counts[dayId] || 0) + 1, roundWeek = roundInfo(db, rp).week;
+    var cyc = cycleOf(fromWeek, P).cycle, plan = planCycles(db, cyc + 1), def = ROTATION[s.id];
+    return { dayId: dayId, dayName: d.name, slotId: slotId, tier: s.tier, name: it.name, equip: it.equip, unitText: it.unitText,
+      weight: it.weight, weightText: it.weightText, repsText: it.repsText, stage: it.stage, canAdjust: it.canAdjust, wStep: it.wStep,
+      role: s.tier === 'T1' ? '主项' : def ? def.role : '', why: def ? def.why : '',
+      rotTier: s.tier !== 'T1', autoRotate: P.autoRotate !== false, locked: !!s.noRotate,
+      nextCycle: cyc + 1, nextName: s.tier === 'T1' ? '' : plan.actual[cyc + 1][s.id],
+      fromWeek: fromWeek, when: fromWeek === roundWeek ? '本周' : '下周', weekText: weekText(fromWeek, P),
+      adjusted: (s.adjusts || []).some(function (a) { return a.fromWeek === fromWeek; }) };
   }
   /** 动作库列表（更换弹层 / 动作库页面共用） */
   function buildLibrary(db, opts) {
@@ -1268,7 +1330,7 @@
     var d = dayById(db, dayId), s = null;
     d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
     var rp = replay(db), wk = (rp.counts[dayId] || 0) + 1, ef = effectiveSlot(db, s, wk, rp.hist), lastW = lastWeights(rp);
-    var curW = ef.resetNow ? ef.change.weight : rp.states[s.id].weight;
+    var curW = startState(s, rp.states[s.id], ef, wk).weight;
     return { rotates: rotationOn(db.params, s), dayId: dayId, slotId: slotId, tier: s.tier, name: ef.slot.name, week: wk, weight: curW, weightText: fmtW(curW), lastW: lastW, base: wk === 1 };
   }
 
@@ -1394,7 +1456,7 @@
     saveRecord: saveRecord, deleteRecord: deleteRecord, clearRecords: clearRecords, replaceDb: replaceDb, mergeDb: mergeDb, sameDb: sameDb, stampConfig: stampConfig, cfgPart: cfgPart, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
     libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
-    adaptiveUp: adaptiveUp, ADAPT: ADAPT, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
+    adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight
   };
 });

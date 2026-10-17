@@ -129,6 +129,31 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .app .pg-settings .adv-head { margin-top: 20px; }
 .app .pg-settings .slot-rec { color: var(--label2); }
 .app .pg-settings .adv-head .val { font-size: 13px; color: var(--label2); margin-right: 6px; }
+/* 计划页动作面板 */
+.app .pg-plan .rot-row.tap { cursor: pointer; }
+.app .pg-plan .rot-row.tap:active { background: var(--fill); }
+.app .pg-plan .rot-cw { display: inline-block; margin-right: 8px; font-weight: 600; color: var(--label); font-size: 13px; }
+.app .pg-plan .rot-chev { color: var(--label3); font-size: 18px; margin-left: 6px; align-self: center; }
+.app .slot-sheet .slot-head { display: flex; align-items: center; gap: 8px; padding: 4px 0 14px; }
+.app .slot-sheet .slot-name { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; color: var(--label); }
+.app .slot-sheet .slot-now { display: flex; align-items: flex-end; gap: 14px; padding: 4px 2px 16px; }
+.app .slot-sheet .slot-wv { font-size: 34px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+.app .slot-sheet .slot-wu { font-size: 13px; color: var(--label2); margin-left: 4px; }
+.app .slot-sheet .slot-meta { display: flex; flex-direction: column; gap: 2px; padding-bottom: 3px; }
+.app .slot-sheet .slot-reps { font-size: 15px; font-weight: 600; color: var(--label); }
+.app .slot-sheet .slot-when { font-size: 13px; color: var(--label2); }
+.app .slot-sheet .slot-adj { display: flex; align-items: center; gap: 12px; }
+.app .slot-sheet .slot-adj .stepper { display: flex; flex-direction: row; align-items: center; background: var(--fill); border-radius: 999px; overflow: hidden; }
+.app .slot-sheet .slot-adj .stepper .st-btn { display: flex; align-items: center; justify-content: center; width: 44px; height: 40px; flex-shrink: 0; font-size: 22px; font-weight: 500; color: var(--label); cursor: pointer; user-select: none; }
+.app .slot-sheet .slot-adj .stepper .st-btn:active { background: rgba(0,0,0,0.06); }
+.app .slot-sheet .slot-adj .stepper .st-val { width: 72px; height: 40px; text-align: center; font-size: 20px; font-weight: 600; background: transparent; border: 0; outline: 0; color: var(--label); padding: 0; }
+.app .slot-sheet .slot-ok { margin-top: 16px; }
+.app .slot-sheet .lib-row .lib-s { font-size: 13px; color: var(--label2); font-weight: 400; }
+.app .slot-sheet .lib-row .lib-n { font-size: 17px; font-weight: 600; }
+.app .slot-sheet .lib-row .lib-rec { font-size: 11px; }
+.app .slot-sheet .lib-row .lib-s { font-size: 13px; color: var(--label2); font-weight: 400; }
+.app .slot-sheet .lib-row .lib-n { font-size: 17px; font-weight: 600; }
+.app .slot-sheet .lib-row .lib-rec { font-size: 11px; }
 .rest-float { position: absolute; right: 14px; z-index: 210; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .rest-cap { display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px; border-radius: 999px; background: #1C1C1E; color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.18); cursor: pointer; user-select: none; }
 .rc-ring { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }

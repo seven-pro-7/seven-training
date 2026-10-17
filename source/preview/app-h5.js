@@ -495,13 +495,15 @@
     if (rt) {
       h += '<div class="card rot-card"><div class="card-title"><span class="t">' + vm.cycleText + '动作编排</span><span class="s">' +
         (!rt.enabled ? '自动轮换已关闭' : rt.cycle === 1 ? '起始动作' : '换了 ' + rt.changed + ' / ' + rt.total + ' 个') + '</span></div>' +
-        '<div class="rot-tip">T1 四大项固定；T2/T3 每轮在同一动作模式内换一次，一轮 ' + vm.weeksPerCycle + ' 周内保持不变' + (rt.isFuture ? '。这一轮还没开始，以下为预排' : '') + '</div>' +
+        '<div class="rot-tip">' + (rt.isCur ? '点任意一行可调整重量或更换动作，从该训练日的下一次训练起生效。' : 'T1 四大项固定；T2/T3 每轮在同一动作模式内换一次，一轮 ' + vm.weeksPerCycle + ' 周内保持不变。') + (rt.isFuture ? '这一轮还没开始，以下为预排。' : '') + '</div>' +
         rt.days.map(function (d) {
           return '<div class="rot-day"><div class="rot-dh"><span class="num rot-did">' + d.id + '</span><span class="rot-dn">' + esc(d.name) + '</span></div>' +
             d.slots.map(function (r) {
-              return '<div class="rot-row">' + tier(r.tier) + '<div class="rot-main"><div class="rot-n">' + esc(r.name) + equipTag(r.equip) +
-                (r.isNew ? '<span class="rot-new">新</span>' : '') + (r.locked ? '<span class="rot-lock">锁定</span>' : '') + '</div>' +
-                '<div class="rot-s">' + esc(r.role) + (r.isNew ? ' · 上一轮 ' + esc(r.prev) : '') + (r.startW ? ' · 起始 ' + esc(r.startW) : '') + '</div></div></div>';
+              return '<div class="rot-row' + (rt.isCur ? ' tap' : '') + '"' + (rt.isCur ? ' data-act="slotsheet" data-day="' + d.id + '" data-slot="' + r.id + '"' : '') + '>' + tier(r.tier) +
+                '<div class="rot-main"><div class="rot-n">' + esc(r.name) + equipTag(r.equip) +
+                (r.isNew ? '<span class="rot-new">新</span>' : '') + (r.fixed ? '<span class="rot-lock">固定</span>' : r.locked ? '<span class="rot-lock">锁定</span>' : '') + '</div>' +
+                '<div class="rot-s">' + (rt.isCur && r.cur ? '<span class="num rot-cw">' + esc(r.cur) + '</span>' : '') + esc(r.role) + (r.isNew ? ' · 上一轮 ' + esc(r.prev) : '') + (r.startW ? ' · 起始 ' + esc(r.startW) : '') + '</div></div>' +
+                (rt.isCur ? '<span class="rot-chev">›</span>' : '') + '</div>';
             }).join('') + '</div>';
         }).join('') +
         '<div class="rot-why-btn" data-act="why">' + (p.why ? '收起编排依据' : '查看编排依据') + '<span class="chev">' + (p.why ? '⌃' : '›') + '</span></div>' +
@@ -522,11 +524,61 @@
         (d.note ? '<div class="note-box">' + esc(d.note) + '</div>' : '') +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="edit" data-id="' + d.id + '">修改这次</div><div class="btn-ghost solid" data-act="closeDetail">完成</div></div></div></div>';
     }
+    if (p.slot) h += renderSlotSheet();
     return h;
   }
+  // ============ 计划页：单个位置的动作面板（调整重量 / 更换动作 / 锁定轮换） ============
+  function slotState(dayId, slotId) {
+    var info = GZ.slotInfo(load(), dayId, slotId);
+    if (!info) return null;
+    return { day: dayId, slot: slotId, info: info, mode: 'info', w: String(info.weight), q: '' };
+  }
+  function renderSlotSheet() {
+    var sl = S.plan.slot; if (!sl) return '';
+    var info = sl.info, h = '', pick = sl.mode === 'pick';
+    h += '<div class="mask" data-act="slotclose"><div class="sheet slot-sheet" data-stop="1"><div class="grabber"></div>' +
+      '<div class="row between"><span class="sheet-cap">' + info.dayId + ' · ' + esc(info.dayName) + '</span><span class="link" data-act="slotclose">关闭</span></div>' +
+      '<div class="slot-head">' + tier(info.tier) + '<span class="slot-name">' + esc(pick ? '更换动作 · 当前 ' + info.name : info.name) + '</span>' + (pick ? '' : equipTag(info.equip)) + '</div>';
+    if (pick) {
+      h += '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="slotq" value="' + esc(sl.q) + '" placeholder="搜索动作、部位或器械"></div>' +
+        '<div class="sec-f">选中后从现在' + info.when + '这次开始用新动作，按 ' + info.tier + ' 规则从推荐重量重新进阶。原动作的历史记录不受影响。</div>' +
+        '<div class="lib-list"><div class="list">' + libRows(GZ.buildLibrary(load(), { tier: info.tier, q: sl.q, current: info.name }), { pick: true, sel: '', slotTier: info.tier, empty: '没有找到' }) + '</div></div>';
+      return h + '</div></div>';
+    }
+    h += '<div class="slot-now"><div class="slot-wbox"><span class="num slot-wv">' + (info.canAdjust ? info.weightText : '自重') + '</span><span class="slot-wu">' + (info.canAdjust ? esc(info.unitText) : '') + '</span></div>' +
+      '<div class="slot-meta"><span class="slot-reps">' + esc(info.repsText) + '</span>' +
+      '<span class="slot-when">' + (info.adjusted ? '已手动调整 · ' : '') + '下次 ' + info.when + ' · ' + esc(info.weekText) + '</span></div></div>';
+    if (info.canAdjust) {
+      h += '<div class="list"><div class="cell slot-adj"><span class="flex1">调整重量</span><div class="stepper">' +
+        '<div class="st-btn" data-act="swstep" data-d="-1">−</div><input class="st-val num" inputmode="decimal" data-act="swin" value="' + esc(sl.w) + '">' +
+        '<div class="st-btn" data-act="swstep" data-d="1">+</div></div></div></div>' +
+        '<div class="sec-f">只改重量，阶段和失败次数都不变，也不会改动已有记录，之后照常按规则加重。</div>';
+    }
+    if (info.rotTier) {
+      h += '<div class="list"><div class="cell tap" data-act="slotpick"><span class="flex1">更换动作</span><span class="val">' +
+        esc(info.nextCycle ? '第 ' + info.nextCycle + ' 轮换成 ' + info.nextName : '') + '</span><span class="chev">›</span></div>' +
+        '<div class="cell"><span class="flex1">锁定，不参与自动轮换</span><label class="ios-sw green"><input type="checkbox" data-act="slotlock" ' + (info.locked ? 'checked' : '') + '><i></i></label></div></div>' +
+        '<div class="sec-f">' + esc(info.why) + '。锁定后这个位置每轮都用同一个动作，除非你手动更换。</div>';
+    } else {
+      h += '<div class="sec-f">T1 主项固定在本训练日，不参与轮换，训练时可以临时替换。</div>';
+    }
+    var changed = Math.abs((Number(sl.w) || 0) - info.weight) > 0.01;
+    h += '<button class="btn-primary slot-ok" data-act="slotsw">' + (changed ? '改成 ' + (Number(sl.w) || 0) + (info.canAdjust ? ' ' + esc(info.unitText) : '') : '完成') + '</button>';
+    return h + '</div></div>';
+  }
   function goTrain(day) { var t = S.train; if (!t.recordId) { t.day = day; t.draft = GZ.blankDraft(load(), day); t.deload = undefined; } S.tab = 'train'; }
-  function planAct(act, ds) {
+  function planAct(act, ds, el) {
     var p = S.plan;
+    if (act === 'swappick' && p.slot && p.slot.mode === 'pick') {
+      var inf2 = p.slot.info;
+      if (ds.name === inf2.name) { p.slot.mode = 'info'; return true; }
+      var dbp = load(), rw = GZ.recommendWeight(dbp, ds.name, inf2.tier, { preferLast: true });
+      var rs = GZ.swapSlot(dbp, p.slot.day, p.slot.slot, ds.name, rw.weight);
+      if (rs && rs.error) { toast(rs.error); return false; }
+      save(dbp);
+      p.slot = slotState(p.slot.day, p.slot.slot);
+      toast('已改为 ' + ds.name + (rw.unit === '自重' ? '' : ' · 起始 ' + rw.text + ' ' + rw.unit) + '，' + inf2.when + '生效'); return true;
+    }
     if (act === 'ov') { p.ov = Number(ds.i); return true; }
     if (act === 'why') { p.why = !p.why; return true; }
     if (act === 'cycle') {
@@ -540,6 +592,34 @@
       if (ds.status === 'done') { p.detail = GZ.buildReview(load()).logs.filter(function (l) { return l.id === ds.id; })[0]; return true; }
       if (ds.status === 'next' || ds.status === 'ready') { goTrain(ds.day); return true; }
       toast('推演值：假设每次都加重'); return false;
+    }
+    if (act === 'slotsheet') { p.slot = slotState(ds.day, ds.slot); return true; }
+    if (act === 'slotclose') { p.slot = null; return true; }
+    if (act === 'slotpick') {
+      if (p.slot.info.tier === 'T1') { toast('T1 只能在训练时临时替换'); return false; }
+      p.slot.mode = 'pick'; p.slot.q = ''; return true;
+    }
+    if (act === 'slotq') { p.slot.q = el.value; return true; }
+    if (act === 'swstep') {
+      var inf = p.slot.info, cur = Number(p.slot.w) || 0;
+      p.slot.w = String(Math.max(0, Math.round((cur + Number(ds.d) * inf.wStep) * 100) / 100));
+      return true;
+    }
+    if (act === 'swin') { p.slot.w = el.value; return false; }
+    if (act === 'slotlock') {
+      var dbl = load(); GZ.setNoRotate(dbl, p.slot.day, p.slot.slot, el.checked); save(dbl);
+      var back = slotState(p.slot.day, p.slot.slot); p.slot = back;
+      toast(el.checked ? '已锁定，不再自动轮换' : '已恢复自动轮换'); return true;
+    }
+    if (act === 'slotsw') {
+      var dbw = load(), wv = Number(p.slot.w), infw = p.slot.info;
+      if (isNaN(wv) || wv < 0) { toast('请填写重量'); return false; }
+      if (Math.abs(wv - infw.weight) < 0.01) { p.slot = null; return true; }
+      var rr = GZ.adjustSlot(dbw, p.slot.day, p.slot.slot, wv);
+      if (rr && rr.error) { toast(rr.error); return false; }
+      save(dbw);
+      p.slot = slotState(p.slot.day, p.slot.slot);
+      toast(infw.name + ' 改为 ' + wv + (infw.canAdjust ? ' ' + infw.unitText : '') + ' · ' + infw.when + '生效'); return true;
     }
     if (act === 'closeDetail') { p.detail = null; return true; }
     if (act === 'edit') { p.detail = null; startEdit(ds.id); return true; }
@@ -723,31 +803,11 @@
       (P.deloadEnabled ? '<div class="cell"><span class="flex1">每轮第</span>' + inp('deloadEvery', P.deloadEvery, '周减载') + '</div>' : '') +
       '<div class="cell"><span class="flex1">每轮自动轮换 T2/T3</span><label class="ios-sw green"><input type="checkbox" data-act="rotsw" ' + (P.autoRotate !== false ? 'checked' : '') + '><i></i></label></div></div>' +
       '<div class="sec-f">' + (P.autoRotate !== false ? '每进入新一轮，T2/T3 会在同一动作模式内自动换成上一轮没练过的动作，T1 四大项不变。' : '') + '完成一轮（' + P.totalWeeks + ' 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内周序计算' + (P.deloadEnabled ? '（每轮第 ' + P.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : '') + '。</div>';
-    var d = db.days[st.d], curCyc = GZ.cycleOf(GZ.recommend(db, rp).week, P).cycle, nextPlan = GZ.planCycles(db, curCyc + 1);
     h += '\u0000act\u0000';
     h += '<div class="sec-h">动作</div><div class="list"><div class="cell tap" data-act="openlib"><span class="flex1">动作库</span><span class="val">' + GZ.libAll(db).length + ' 个' +
-      (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div></div>';
-    h += '<div class="sec-h">训练日动作</div>' + seg(db.days.map(function (x) { return { html: '<span class="num">' + x.id + '</span>' }; }), st.d, 'sday') + '<div class="list">';
-    d.slots.forEach(function (s, si) {
-      var ef = GZ.effectiveSlot(db, s, (rp.counts[d.id] || 0) + 1, rp.hist), cur = ef.slot.name;
-      var opts = names[s.tier].indexOf(cur) < 0 ? [cur].concat(names[s.tier]) : names[s.tier];
-      var eq = GZ.equipOf(cur, ef.slot.equip), ss = Object.assign({}, s, { name: cur, equip: eq });
-      var rc = GZ.recommendWeight(db, cur, s.tier, { preferLast: false });
-      h += '<div class="cell slot"><div class="slot-top">' + tier(s.tier) + '<label class="flex1 ex-pick">' + esc(cur) + equipTag(eq) + '<span class="chev">⌄</span><select data-act="ex" data-si="' + si + '">' +
-        opts.map(function (n) { return '<option ' + (n === cur ? 'selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '</select></label>' +
-        '<span class="init-step">' + (eq === '自重' ? '达阈值后改负重' : '每次 +' + GZ.stepOf(ss, P) + ' kg · 按 ' + GZ.incOf(ss, P) + ' kg 档') + '</span>' +
-        '<span class="init num">' + (eq === '自重' ? '自重' : GZ.fmtW(GZ.initWeight(s, P)) + '<span class="f-u"> kg</span>') + '</span></div>' +
-        (ef.auto ? '<div class="slot-chg">第 ' + ef.change.cycle + ' 轮自动轮换 · 上一轮 ' + esc(ef.change.prev) + '</div>' : ef.change ? '<div class="slot-chg">第 ' + ef.change.fromWeek + ' 周起更换 · 原 ' + esc(s.name) + '</div>' : '') +
-        (s.tier !== 'T1' ? '<div class="slot-rot"><span class="flex1">' + (P.autoRotate === false || s.noRotate ? '不参与轮换' : '第 ' + (curCyc + 1) + ' 轮将换成「' + esc(nextPlan.actual[curCyc + 1][s.id]) + '」') + '</span><span class="rot-lock-btn ' + (s.noRotate ? 'on' : '') + '" data-act="lock" data-si="' + si + '">' + (s.noRotate ? '已锁定' : '锁定') + '</span></div>' : '') +
-        '<div class="slot-rec"><span class="flex1">系统推荐 ' + esc(rc.text) + (rc.unit === '自重' ? '' : ' ' + esc(rc.unit)) + ' · ' + esc(rc.note) + '</span><span class="rec-apply" data-act="applyrec" data-si="' + si + '">采用</span></div>' +
-        '<div class="slot-cfg"><span class="cfg-l">首周</span><div class="mini-seg"><div class="ms ' + (s.init.type === 'pct' ? 'on' : '') + '" data-act="itype" data-si="' + si + '" data-v="pct">TM%</div><div class="ms ' + (s.init.type === 'fixed' ? 'on' : '') + '" data-act="itype" data-si="' + si + '" data-v="fixed">固定</div></div>';
-      if (s.init.type === 'pct') {
-        h += '<label class="base-pick">' + GZ.LIFTS[s.init.base] + '<span class="chev">⌄</span><select data-act="base" data-si="' + si + '">' + GZ.LIFT_ORDER.map(function (k) { return '<option value="' + k + '" ' + (k === s.init.base ? 'selected' : '') + '>' + GZ.LIFTS[k] + '</option>'; }).join('') + '</select></label>' +
-          '<span class="cap">×</span><input class="f-in sm num" inputmode="decimal" data-act="pctv" data-si="' + si + '" value="' + Math.round(s.init.pct * 100) + '"><span class="cap">%</span>';
-      } else h += '<input class="f-in sm num" inputmode="decimal" data-act="fixv" data-si="' + si + '" value="' + s.init.value + '"><span class="cap">kg</span>';
-      h += '</div></div>';
-    });
-    h += '</div>';
+      (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div>' +
+      '<div class="cell tap" data-act="goplan"><span class="flex1">调整动作与重量</span><span class="val">在计划页</span><span class="chev">›</span></div></div>' +
+      '<div class="sec-f">每个训练日练什么、每个动作多重，都在「计划 → 动作编排」里调整，点任意一行即可改重量或换动作，与该训练日的下一次训练一致。</div>';
     h += '\u0000sync\u0000';
     var sc = Sync.cfg();
     h += '<div class="sec-h" id="syncSec">云同步</div>';
@@ -822,13 +882,6 @@
       case 'adaptsw': return mutate(function (db) { db.params.adaptive = el.checked; }, el.checked ? '已开启：按末组次数自适应加重' : '已关闭：固定步幅加重');
       case 'dlen': return mutate(function (db) { db.params.deloadEnabled = el.checked; });
       case 'rotsw': return mutate(function (db) { db.params.autoRotate = el.checked; }, el.checked ? '已开启：每轮自动轮换 T2/T3' : '已关闭自动轮换');
-      case 'lock': return mutate(function (db) { var sl = db.days[st.d].slots[si]; sl.noRotate = !sl.noRotate; }, false);
-      case 'sday': st.d = Number(ds.i); return true;
-      case 'ex':
-        var dbx = load(), dd = dbx.days[st.d], rx = GZ.swapSlot(dbx, dd.id, dd.slots[si].id, el.value, null);
-        if (rx && rx.error) { toast(rx.error); return false; }
-        save(dbx);
-        toast(rx && rx.base ? '已更换为 ' + el.value : '第 ' + rx.fromWeek + ' 周起改为 ' + el.value); return true;
       case 'openlib': st.view = 'lib'; st.q = ''; render(); return false;
       case 'libback': st.view = ''; st.add = null; render(); return false;
       case 'libtier': st.tier = ds.t; return true;
@@ -852,16 +905,8 @@
         var dba = load(), err = GZ.addCustomEx(dba, st.add);
         if (err) { toast(err); return false; }
         save(dba); st.tier = st.add.tier; st.q = ''; st.add = null; render(); toast('已添加'); return false;
-      case 'itype': return slotMut(function (s, db) { if (s.init.type === ds.v) return; var w = GZ.initWeight(s, db.params); s.init = ds.v === 'fixed' ? { type: 'fixed', value: w } : { type: 'pct', base: s.lift || 'bench', pct: 0.5 }; });
-      case 'base': return slotMut(function (s) { s.init.base = el.value; });
-      case 'pctv': var pv = parseFloat(el.value); if (isNaN(pv)) return true; return slotMut(function (s) { s.init.pct = pv / 100; });
-      case 'fixv': var fv = parseFloat(el.value); if (isNaN(fv)) return true; return slotMut(function (s) { s.init.value = fv; });
-      case 'applyrec':
-        var dbr = load(), dyr = dbr.days[st.d], sr0 = dyr.slots[si], wkr = (GZ.replay(dbr).counts[dyr.id] || 0) + 1;
-        var efr = GZ.effectiveSlot(dbr, sr0, wkr), rr = GZ.recommendWeight(dbr, efr.slot.name, sr0.tier, { preferLast: false });
-        if (efr.change) GZ.swapSlot(dbr, dyr.id, sr0.id, efr.slot.name, rr.weight); else sr0.init = { type: 'fixed', value: rr.weight };
-        save(dbr); toast('已采用推荐 ' + rr.text + (rr.unit === '自重' ? '' : ' ' + rr.unit)); return true;
       case 'advtoggle': st.adv = !st.adv; return true;
+      case 'goplan': S.tab = 'plan'; render(); return false;
       case 'export': exportFile(); return false;
       case 'syncconnect':
         if (st.connecting) return false;
@@ -916,7 +961,7 @@
     var tag = el.tagName, isField = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
     if (type === 'click' && isField) return;
     if (type === 'change' && !isField) return;
-    if (type === 'input' && ['note', 'bw', 'swapq', 'libq'].indexOf(el.dataset.act) < 0) return;
+    if (type === 'input' && ['note', 'bw', 'swapq', 'libq', 'slotq'].indexOf(el.dataset.act) < 0) return;
     if (type === 'change' && (el.dataset.act === 'swapq' || el.dataset.act === 'libq')) return;
     if (el.classList.contains('mask') && e.target.closest('[data-stop]')) return;
     var prevTab = S.tab;
