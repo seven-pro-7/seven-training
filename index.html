@@ -2226,7 +2226,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var c = Sync.cfg(), synced = Sync.on() && c.lastAt && Date.now() - c.lastAt < 3 * 86400000;
     var sunday = new Date().getDay() === 0 && days > 6, longNo = !synced && days > 7;
     var syncErr = Sync.on() && c.state === 'err' && (!c.lastAt || Date.now() - c.lastAt > 86400000);
-    if (!sunday && !longNo && !syncErr) return '';
+    // 备份提醒已按需求移除，仅保留云同步连续失败的提醒
+    if (!syncErr) return '';
     var msg = syncErr ? '云同步已超过 1 天没有成功：' + c.lastErr
       : sunday ? '今天周日，导出一份备份存到 iCloud「文件」作为第二重保险'
       : (bk ? Math.floor(days) + ' 天' : '一直') + '没有备份了，数据只存在这台设备上';
