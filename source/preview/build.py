@@ -115,16 +115,16 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .app .pg-stats .ec-t { font-size: 15px; font-weight: 600; color: var(--label); }
 .app .pg-stats .ec-s { font-size: 13px; color: var(--label2); margin-top: 4px; line-height: 1.5; }
 .app .pg-stats .kv-na { display: block; font-size: 22px; font-weight: 600; color: var(--label3); line-height: 1.3; }
-.app .pg-review .lt-head, .app .pg-review .lt-row { display: flex; align-items: center; gap: 8px; }
-.app .pg-review .lt-head { font-size: 11px; color: var(--label2); padding: 2px 0 8px; border-bottom: 0.5px solid var(--sep); }
+.app .pg-review .lt-head, .app .pg-review .lt-row { display: flex; align-items: center; gap: 12px; }
+.app .pg-review .lt-head { font-size: 13px; color: var(--label2); padding: 2px 0 8px; border-bottom: 0.5px solid var(--sep); }
 .app .pg-review .lt-row { padding: 12px 0; }
 .app .pg-review .lt-row + .lt-row { border-top: 0.5px solid var(--sep); }
-.app .pg-review .lt-c1 { flex: 1.5; min-width: 0; display: flex; flex-direction: column; }
+.app .pg-review .lt-c1 { flex: 1.25; min-width: 0; display: flex; flex-direction: column; }
 .app .pg-review .lt-c2, .app .pg-review .lt-c3, .app .pg-review .lt-c4 { flex: 1; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
 .app .pg-review .lt-n { font-size: 15px; font-weight: 600; color: var(--label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.app .pg-review .lt-s { font-size: 11px; color: var(--label2); margin-top: 2px; white-space: nowrap; }
+.app .pg-review .lt-s { font-size: 13px; color: var(--label2); margin-top: 2px; white-space: nowrap; }
 .app .pg-review .lt-v { font-size: 17px; font-weight: 600; color: var(--label); }
-.app .pg-review .lt-j { font-size: 11px; font-weight: 600; margin-top: 2px; }
+.app .pg-review .lt-j { font-size: 13px; font-weight: 600; margin-top: 2px; }
 .app .pg-review .lt-g { font-size: 17px; font-weight: 600; color: var(--label2); }
 .app .pg-review .lt-g.up { color: var(--accent); }
 .app .pg-settings .adv-head { margin-top: 20px; }
