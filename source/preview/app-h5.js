@@ -732,7 +732,8 @@
     if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date.slice(5).replace('-', '月') + '日') + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.day + ' ' + esc(sd.dayName) + ' · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 训练容量</div><button class="btn-primary" data-act="shareopen" data-id="' + sd.recordId + '">生成分享卡片</button></div>';
     else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
     var bs = Share.badgeState(load());
-    h += '<div class="list wall-entry"><div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div></div>';
+    h += '<div class="list wall-entry"><div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div>' +
+      (bs.nextGoals[0] ? (function () { var g = bs.nextGoals[0], d = bs.byId[g.id], p = bs.prog[g.id]; return '<div class="cell tap wall-goal" data-act="wallopen"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>下一个：' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>'; })() : '') + '</div>';
     if (r.tab === 0) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
         '<div class="lt-head"><span class="lt-c1">主项</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
@@ -785,25 +786,25 @@
   }
   function reviewAct(act, ds, el) {
     var r = S.review;
-    if (act === 'shareopen') { r.share = {id:ds.id,funVariant:0,theme:'sage',body:false,badgePick:null,image:null,blob:null}; return true; }
+    if (act === 'shareopen') { r.share = {id:ds.id,funVariant:0,theme:'sage',body:false,badgePick:null,badgeVariant:0,image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
-    if (act === 'sharerec') { r.share.id=el.value; r.share.funVariant=0; r.share.badgePick=null; return true; }
+    if (act === 'sharerec') { r.share.id=el.value; r.share.funVariant=0; r.share.badgePick=null; r.share.badgeVariant=0; return true; }
     if (act === 'wallopen') { r.wall = true; return true; }
     if (act === 'wallclose') { r.wall = false; return true; }
     if (act === 'bodytoggle') { r.share.body = !!el.checked; return true; }
     if (act === 'badgepick') {
-      var cur = Share.build(load(), r.share.id, r.share), ids = cur ? cur.badges.map(function (b) { return b.id; }) : [];
-      var at = ids.indexOf(ds.id);
-      if (at >= 0) ids.splice(at, 1); else if (ids.length >= 2) { toast('卡片最多展示 2 枚，先取消一枚'); return false; } else ids.push(ds.id);
-      r.share.badgePick = ids; return true;
+      // 卡片只展示一枚：点已选中的 = 不展示；点别的 = 换成它
+      var cur = Share.build(load(), r.share.id, r.share), now = cur && cur.badges[0] ? cur.badges[0].id : '';
+      r.share.badgePick = now === ds.id ? [] : [ds.id]; return true;
     }
-    if (act === 'watchgo') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick }; r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
+    if (act === 'badgeagain') { r.share.badgePick = null; r.share.badgeVariant = (r.share.badgeVariant || 0) + 1; return true; }
+    if (act === 'watchgo') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick, badgeVariant: r.share.badgeVariant }; r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'funagain') { r.share.funVariant=(r.share.funVariant||0)+1; return true; }
     if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
-    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick }; r.share=null; S.tab='settings'; render(); return false; }
+    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick, badgeVariant: r.share.badgeVariant }; r.share=null; S.tab='settings'; render(); return false; }
     if (act === 'sharetrain') { r.share=null; S.tab='train'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
@@ -837,9 +838,12 @@
       : '<span class="ss-ava ss-ava-t" aria-hidden="true">' + esc(Array.from(data.name || '我')[0]) + '</span>';
     var who = [data.profile.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join(' · ') || (data.profile.signature ? '' : '未设置社媒 ID');
     var picked = {}; data.badges.forEach(function (b) { picked[b.id] = 1; });
-    var badgeBlock = data.badgeCands.length
-      ? '<div class="ss-badges">' + data.badgeCands.map(function (b) { return '<button class="ss-badge' + (picked[b.id] ? ' on' : '') + '" data-act="badgepick" data-id="' + esc(b.id) + '" aria-pressed="' + (picked[b.id] ? 'true' : 'false') + '"><span class="ss-badge-e">' + esc(b.e) + '</span><span class="ss-badge-t"><b>' + esc(b.title) + '</b><i>' + esc(b.desc) + '</i></span><span class="ss-badge-ck">' + (picked[b.id] ? '✓' : '') + '</span></button>'; }).join('') + '</div><p class="ss-hint">这次训练新达成的里程碑，卡片最多展示 2 枚，点一下切换。</p>'
-      : '<p class="ss-empty">这次训练没有新的里程碑。已获得 ' + data.badgeEarned + ' / ' + data.badgeAll + ' 枚，点右上角看看下一个目标。</p>';
+    var nCand = data.badgeCands.length, manual = Array.isArray(sh.badgePick);
+    var badgeBlock = nCand
+      ? '<div class="ss-badges" role="radiogroup" aria-label="卡片上展示的里程碑">' + data.badgeCands.map(function (b) { return '<button class="ss-badge' + (picked[b.id] ? ' on' : '') + '" role="radio" data-act="badgepick" data-id="' + esc(b.id) + '" aria-checked="' + (picked[b.id] ? 'true' : 'false') + '"><span class="ss-badge-e">' + esc(b.e) + '</span><span class="ss-badge-t"><b>' + esc(b.title) + '</b><i>' + esc(b.desc) + '</i></span><span class="ss-badge-ck">' + (picked[b.id] ? '✓' : '') + '</span></button>'; }).join('') + '</div>' +
+        '<p class="ss-hint">' + (nCand > 1 ? '这次训练达成了 ' + nCand + ' 枚，卡片只展示 1 枚：' + (manual ? (data.badges.length ? '已按你的选择。' : '你选了不展示。') + '点「🎲 随机」可回到随机。' : '现在是随机挑的，不满意可以点「🎲 换一枚」，或直接点选。') : '这次达成 1 枚，点一下可选择展示或不展示。') + '</p>'
+      : '<p class="ss-empty">这次训练没有新的里程碑。已获得 ' + data.badgeEarned + ' / ' + data.badgeAll + ' 枚，看看徽章墙里最接近的目标。</p>';
+    var badgeAct = (nCand > 1 ? '<button class="ss-act dice" data-act="badgeagain">' + (manual ? '🎲 随机' : '🎲 换一枚') + '</button>' : '') + '<button class="ss-act" data-act="wallopen">徽章墙 ›</button>';
     var hasWatch = !!(load().params.watch && (load().params.watch.workouts || []).length);
     var watchBlock = data.watchBody
       ? '<div class="ss-watch"><div class="ss-watch-t"><b>卡片显示手表记录</b><span>用时 ' + data.watchBody.min + ' 分' + (data.watchBody.avgHr ? ' · 平均心率 ' + data.watchBody.avgHr : '') + (data.watchBody.kcal ? ' · ' + data.watchBody.kcal + ' 千卡' : '') + '</span></div><label class="ios-sw green"><input type="checkbox" data-act="bodytoggle" ' + (sh.body ? 'checked' : '') + ' aria-label="卡片显示手表记录"><i></i></label></div>'
@@ -856,7 +860,7 @@
         (data.profile.signature ? '<p class="ss-sig">' + esc(data.profile.signature) + '</p>' : '') +
         (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
       // 二、里程碑
-      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 里程碑</span><button class="ss-act" data-act="wallopen">徽章墙 ›</button></div>' + badgeBlock + '</div>' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 里程碑</span><span class="ss-acts">' + badgeAct + '</span></div>' + badgeBlock + '</div>' +
       // 三、纵览与趣味
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 纵览与趣味</span><span class="ss-acts"><span class="quote-total">' + (data.funIndex + 1) + ' / ' + data.funTotal + '</span><button class="ss-act dice" data-act="funagain">🎲 换一个</button></span></div>' +
         '<div class="ss-metrics"><span><b class="num">' + esc(String(data.rows.length)) + '</b>项动作</span><span><b class="num">' + esc(String(data.reps)) + '</b>次动作</span><span><b class="num">' + esc(String(data.adds)) + '</b>项加重</span></div>' +
@@ -878,35 +882,34 @@
   }
 
   // ================= 里程碑徽章墙 =================
-  function badgeProgress(d, pg) {
-    var m = /^(count|vol|w-hours|w-sets|w-sleep|streak)-(\d+)$/.exec(d.id);
-    if (!m) return '';
-    var t = Number(m[2]);
-    if (m[1] === 'count') return pg.count.value + ' / ' + t + ' 次';
-    if (m[1] === 'vol') { var tv = t / 1000; return pg.volume.value + ' / ' + tv.toLocaleString('zh-CN') + ' t'; }
-    if (m[1] === 'w-hours') return pg.hours.value + ' / ' + t + ' 小时';
-    if (m[1] === 'w-sets') return pg.sets.value + ' / ' + t + ' 组';
-    if (m[1] === 'w-sleep') return pg.sleep.value + ' / ' + t + ' 晚';
-    if (m[1] === 'streak') return pg.streak.value + ' / ' + t + ' 周';
-    return '';
+  function fmtProg(p) {
+    var v = p.v, t = p.t;
+    return (Number.isInteger(v) ? v : v.toFixed(v < 10 ? 2 : 1).replace(/\.?0+$/, '')) + ' / ' + t.toLocaleString('zh-CN') + ' ' + p.u;
   }
   function renderBadgeWall() {
-    var st = Share.badgeState(load()), pg = st.progress;
-    var WALL_ORDER = ['count', 'volume', 'streak', 'cycle', 'watch'];
+    var st = Share.badgeState(load());
+    var WALL_ORDER = ['count', 'progress', 'strength', 'volume', 'session', 'streak', 'cycle', 'watch'];
+    var near = st.nextGoals.slice(0, 3).map(function (g) {
+      var d = st.byId[g.id], p = st.prog[g.id];
+      return '<div class="wall-n"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>';
+    }).join('');
+    var nearBlock = near ? '<div class="wall-g"><div class="wall-gt">最接近的目标</div><div class="wall-near">' + near + '</div></div>' : '';
     var body = Badges.GROUPS.slice().sort(function (a, b) { return WALL_ORDER.indexOf(a.id) - WALL_ORDER.indexOf(b.id); }).map(function (g) {
       var items = st.defs.filter(function (d) { return d.group === g.id; });
       if (!items.length) return '';
-      return '<div class="wall-g"><div class="wall-gt">' + esc(g.name) + '</div><div class="wall-grid">' + items.map(function (d) {
-        var e = st.earned[d.id], on = !!e;
-        var sub = on ? e.date.slice(5).replace('-', '月') + '日' + (e.count > 1 ? ' · ×' + e.count : '') : (badgeProgress(d, pg) || '未获得');
-        return '<div class="wall-b' + (on ? ' on' : '') + '"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><b>' + esc(d.title) + '</b><i>' + esc(sub) + '</i><span class="wall-d">' + esc(d.desc) + '</span></div>';
+      var got = items.filter(function (d) { return st.earned[d.id]; }).length;
+      return '<div class="wall-g"><div class="wall-gt">' + esc(g.name) + '<span class="wall-gc num">' + got + ' / ' + items.length + '</span></div><div class="wall-grid">' + items.map(function (d) {
+        var e = st.earned[d.id], on = !!e, p = st.prog[d.id];
+        var sub = on ? e.date.slice(5).replace('-', '月') + '日' + (e.count > 1 ? ' · ×' + e.count : '') : (p ? fmtProg(p) : '未获得');
+        var bar = !on && p && p.pct > 0 ? '<span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span>' : '';
+        return '<div class="wall-b' + (on ? ' on' : '') + '"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><b>' + esc(d.title) + '</b><i>' + esc(sub) + '</i>' + bar + '<span class="wall-d">' + esc(d.desc) + '</span></div>';
       }).join('') + '</div></div>';
     }).join('');
     var hasW = !!(load().params.watch && (load().params.watch.workouts || []).length);
     return '<div class="mask share-mask" data-act="wallclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title">里程碑</span><button class="share-close" data-act="wallclose" aria-label="关闭徽章墙">×</button></div>' +
-      '<p class="wall-sum">已获得 <b class="num">' + st.earnedCount + '</b> / ' + st.total + ' 枚 · 彩色是已获得，灰色是下一个目标</p></div>' +
-      '<div class="ss-body">' + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「设置 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。</p></div></div></div>';
+      '<p class="wall-sum">已获得 <b class="num">' + st.earnedCount + '</b> / ' + st.total + ' 枚 · 彩色是已获得，灰色带进度条</p></div>' +
+      '<div class="ss-body">' + nearBlock + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「设置 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。主项重量按 T1 工作重量统计，需完成目标（加重或保持）才算。</p></div></div></div>';
   }
   async function paintSharePreview() {
     var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;
@@ -1213,7 +1216,7 @@
       S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
       if (S.tab === 'review' && S.review.returnTo && prevTab === 'settings') {
         var back = S.review.returnTo; S.review.returnTo = null;
-        S.review.share = { id: back.id, funVariant: back.funVariant || 0, theme: back.theme || 'sage', body: !!back.body, badgePick: back.badgePick || null, image: null, blob: null };
+        S.review.share = { id: back.id, funVariant: back.funVariant || 0, theme: back.theme || 'sage', body: !!back.body, badgePick: back.badgePick || null, badgeVariant: back.badgeVariant || 0, image: null, blob: null };
         render();
       }
     });

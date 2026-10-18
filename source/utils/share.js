@@ -164,12 +164,22 @@
     rp.sessions.forEach(function (s, i) {
       var ok = s.items.some(function (it) { var e = (s.rec.entries || {})[it.slotId]; return hasEntry(e, s.rec.deload) && it.judgment !== '跳过'; });
       if (!ok || !/^\d{4}-\d{2}-\d{2}$/.test(s.rec.date || '')) return;
-      out.push({ id: s.rec.id, date: s.rec.date, day: s.rec.day, week: s.week, order: i, volume: sessionVolume(s) });
+      // adds：这次达到加重条件的动作数；lifts：T1 主项这次完成目标（加重/保持）的工作重量，失败或降阶不算
+      var adds = 0, lifts = {};
+      s.items.forEach(function (it) {
+        var e = (s.rec.entries || {})[it.slotId];
+        if (!hasEntry(e, s.rec.deload) || it.judgment === '跳过' || it.deload) return;
+        if (it.judgment === '加重') adds++;
+        if (it.tier === 'T1' && it.lift && (it.judgment === '加重' || it.judgment === '保持') && GZ.equipOf(it.name, it.equip) !== '自重') {
+          lifts[it.lift] = Math.max(lifts[it.lift] || 0, Number(it.weight) || 0);
+        }
+      });
+      out.push({ id: s.rec.id, date: s.rec.date, day: s.rec.day, week: s.week, order: i, volume: sessionVolume(s), adds: adds, lifts: lifts });
     });
     return out;
   }
   function badgeStateFrom(db, facts) {
-    return Badges.compute(facts.map(function (f) { return Object.assign({}, f); }), { params: db.params, dayIds: (db.days || []).map(function (d) { return d.id; }), watch: db.params && db.params.watch });
+    return Badges.compute(facts.map(function (f) { return Object.assign({}, f); }), { params: db.params, dayIds: (db.days || []).map(function (d) { return d.id; }), today: GZ.today(), watch: db.params && db.params.watch });
   }
   /** 徽章墙与卡片用的完整状态 */
   function badgeState(db) { var rp = GZ.replay(db); return badgeStateFrom(db, validSessions(rp)); }
@@ -222,7 +232,10 @@
     // 手表：同一天按先后与训练记录一一对应；没对上就不显示任何身体数据
     var wk = Badges.watchFor(db.params && db.params.watch, facts, me);
     var state = badgeStateFrom(db, facts), cands = state.bySession[pick.id] || [];
-    var chosen = Array.isArray(opts.badgePick) ? opts.badgePick.filter(function (id) { return cands.indexOf(id) >= 0; }) : cands.slice(0, 2);
+    // 卡片只展示一枚：用户手选优先（可取消为 0 枚）；否则按「训练 id + 换一个次数」稳定随机
+    var chosen = [];
+    if (Array.isArray(opts.badgePick)) chosen = opts.badgePick.filter(function (id) { return cands.indexOf(id) >= 0; }).slice(0, 1);
+    else if (cands.length) chosen = [Badges.pickOne(cands, pick.id, opts.badgeVariant)];
     var bodyParts = [];
     if (wk) {
       bodyParts.push('用时 ' + wk.min + ' 分');

@@ -172,3 +172,20 @@
 .app .wall-b i { font-style: normal; font-size: 13px; color: var(--label2); }
 .app .wall-b.on i { color: #35482E; font-weight: 600; }
 .app .wall-d { font-size: 11px; line-height: 1.4; color: var(--label2); }
+
+/* ===== 目标进度：进度条 / 最接近目标 / 分类计数 ===== */
+.app .wall-gt { display: flex; align-items: baseline; justify-content: space-between; }
+.app .wall-gc { font-size: 13px; font-weight: 600; color: var(--label2); }
+.app .wall-bar { display: block; height: 4px; border-radius: 999px; background: rgba(60,60,67,0.12); overflow: hidden; margin-top: 6px; }
+.app .wall-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.app .wall-b .wall-bar { margin-top: 4px; }
+.app .wall-near { display: flex; flex-direction: column; background: #fff; border-radius: 16px; padding: 4px 14px; }
+.app .wall-n { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.app .wall-goal { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.app .wall-n + .wall-n { border-top: 0.5px solid var(--sep); }
+.app .wall-n .wall-e, .app .wall-goal .wall-e { filter: none; opacity: 1; font-size: 24px; flex: 0 0 auto; }
+.app .wall-nt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.app .wall-nt b { font-size: 15px; font-weight: 600; color: var(--label); }
+.app .wall-nt i { font-style: normal; font-size: 13px; color: var(--label2); margin-top: 2px; }
+.app .wall-pct { flex: 0 0 auto; font-size: 15px; font-weight: 600; color: var(--accent); }
+.app .wall-goal { border-top: 0.5px solid var(--sep); }

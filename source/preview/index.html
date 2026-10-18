@@ -866,6 +866,23 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .wall-b.on i { color: #35482E; font-weight: 600; }
 .app .wall-d { font-size: 11px; line-height: 1.4; color: var(--label2); }
 
+/* ===== 目标进度：进度条 / 最接近目标 / 分类计数 ===== */
+.app .wall-gt { display: flex; align-items: baseline; justify-content: space-between; }
+.app .wall-gc { font-size: 13px; font-weight: 600; color: var(--label2); }
+.app .wall-bar { display: block; height: 4px; border-radius: 999px; background: rgba(60,60,67,0.12); overflow: hidden; margin-top: 6px; }
+.app .wall-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.app .wall-b .wall-bar { margin-top: 4px; }
+.app .wall-near { display: flex; flex-direction: column; background: #fff; border-radius: 16px; padding: 4px 14px; }
+.app .wall-n { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.app .wall-goal { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.app .wall-n + .wall-n { border-top: 0.5px solid var(--sep); }
+.app .wall-n .wall-e, .app .wall-goal .wall-e { filter: none; opacity: 1; font-size: 22px; flex: 0 0 auto; }
+.app .wall-nt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.app .wall-nt b { font-size: 15px; font-weight: 600; color: var(--label); }
+.app .wall-nt i { font-style: normal; font-size: 13px; color: var(--label2); margin-top: 2px; }
+.app .wall-pct { flex: 0 0 auto; font-size: 15px; font-weight: 600; color: var(--accent); }
+.app .wall-goal { border-top: 0.5px solid var(--sep); }
+
 
 .app { --font-caption: 11px; --font-footnote: 13px; --font-body: 15px; --font-headline: 17px; --font-title: 22px; --font-heading: 28px; --font-display: 34px; --font-input: 16px; }
 .app button, .app input, .app select, .app textarea { font-family: inherit; letter-spacing: normal; }
@@ -2571,42 +2588,73 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   'use strict';
 
   // ---------- 徽章定义 ----------
-  // group 决定卡片优先级：周期 > 容量 > 次数 > 坚持 > 手表；tier 越大越靠前
+  // rank 只决定徽章墙/候选列表的先后；卡片上展示哪一枚由「随机或手动选择」决定
   var GROUPS = [
-    { id: 'cycle', name: '周期', rank: 5 },
-    { id: 'volume', name: '累计容量', rank: 4 },
-    { id: 'count', name: '训练次数', rank: 3 },
-    { id: 'streak', name: '坚持', rank: 2 },
+    { id: 'cycle', name: '周期', rank: 9 },
+    { id: 'strength', name: '主项重量', rank: 8 },
+    { id: 'volume', name: '累计容量', rank: 7 },
+    { id: 'session', name: '单次容量', rank: 6 },
+    { id: 'progress', name: '加重进阶', rank: 5 },
+    { id: 'count', name: '训练次数', rank: 4 },
+    { id: 'streak', name: '坚持', rank: 3 },
     { id: 'watch', name: '手表', rank: 1 }
   ];
-  var COUNTS = [1, 10, 25, 50, 100, 200];
+  var COUNTS = [1, 5, 10, 25, 50, 75, 100, 150, 200, 300];
   var VOLUMES = [
+    { kg: 5000, title: '一头非洲象', desc: '累计容量 5 t，约一头成年非洲象的体重', e: '🐘' },
     { kg: 12000, title: '一辆公交车', desc: '累计容量 12 t，约一辆公交车的重量', e: '🚌' },
+    { kg: 25000, title: '累计 25 吨', desc: '累计容量 25 t', e: '📦' },
     { kg: 41000, title: '一架波音 737', desc: '累计容量 41 t，约一架空机波音 737', e: '✈️' },
+    { kg: 75000, title: '累计 75 吨', desc: '累计容量 75 t', e: '🏗️' },
     { kg: 150000, title: '一头蓝鲸', desc: '累计容量 150 t，约一头蓝鲸的体重', e: '🐋' },
+    { kg: 280000, title: '一架空客 A380', desc: '累计容量 280 t，约一架空载 A380（空重约 277 t）', e: '🛫' },
+    { kg: 500000, title: '累计 500 吨', desc: '累计容量 500 t', e: '🚢' },
     { kg: 1000000, title: '千吨容量', desc: '累计容量 1,000 t', e: '⛰️' },
     { kg: 7300000, title: '一座埃菲尔铁塔', desc: '累计容量 7,300 t，约埃菲尔铁塔的钢铁结构', e: '🗼' }
   ];
+  var SESSION_VOLS = [3000, 5000, 8000, 10000, 15000];          // 单次训练容量（kg）
+  var ADDS = [10, 25, 50, 100, 200, 300];                        // 累计达到加重条件的动作数
+  var WEEKS_DONE = [2, 4, 12, 26, 52];                           // 累计练完的计划周
+  var MONTH_N = [8, 12, 16];                                     // 单个自然月的训练次数
   var STREAKS = [2, 4, 8];
-  var HOURS = [10, 25, 50, 100];
-  var SETS = [100, 250, 500, 1000];
-  var SLEEP_NIGHTS = [3, 7];
+  var LIFT_NAME = { squat: '深蹲', bench: '卧推', deadlift: '硬拉', ohp: '推举' };
+  var LIFT_E = { squat: '🦵', bench: '🏋️', deadlift: '🏗️', ohp: '🚀' };
+  var LIFT_KG = { squat: [80, 100, 120, 140, 160], bench: [60, 80, 100, 120], deadlift: [100, 120, 140, 160, 180, 200], ohp: [30, 40, 50, 60, 70] };
+  var LIFT_ORDER = ['squat', 'bench', 'deadlift', 'ohp'];
+  var HOURS = [5, 10, 25, 50, 100, 200];
+  var SETS = [50, 100, 250, 500, 1000, 2000];
+  var KCALS = [1000, 2500, 5000, 10000];
+  var SLEEP_NIGHTS = [3, 7, 14];
+  var GOOD_NIGHTS = [10, 30, 60];
   var SLEEP_SCORE = 85;
 
+  function fmtN(n) { return Number(n).toLocaleString('zh-CN'); }
   function defs(P) {
     var N = Math.max(1, (P && (P.weeksPerCycle || P.totalWeeks)) || 8), out = [];
-    function add(group, id, title, desc, e, tier, repeat) { out.push({ id: id, group: group, title: title, desc: desc, e: e, tier: tier, repeat: !!repeat }); }
-    COUNTS.forEach(function (n) { add('count', 'count-' + n, '第 ' + n + ' 次训练', '累计完成 ' + n + ' 次训练', '🎯', n); });
-    VOLUMES.forEach(function (v, i) { add('volume', 'vol-' + v.kg, v.title, v.desc, v.e, i + 1); });
+    // m：进度指标名；t：目标值；u：单位。无 m 的徽章（完美一周等）没有进度条
+    function add(group, id, title, desc, e, tier, repeat, m, t, u) { out.push({ id: id, group: group, title: title, desc: desc, e: e, tier: tier, repeat: !!repeat, m: m || null, t: t || 0, u: u || '' }); }
+    COUNTS.forEach(function (n) { add('count', 'count-' + n, '第 ' + n + ' 次训练', '累计完成 ' + n + ' 次训练', '🎯', n, false, 'count', n, '次'); });
+    ADDS.forEach(function (n) { add('progress', 'adds-' + n, '累计加重 ' + n + ' 次', '累计 ' + n + ' 次有动作达到加重条件（按计划规则判定）', '📈', n, false, 'adds', n, '次'); });
+    VOLUMES.forEach(function (v, i) { add('volume', 'vol-' + v.kg, v.title, v.desc, v.e, i + 1, false, 'volume', v.kg / 1000, 't'); });
+    SESSION_VOLS.forEach(function (kg) { add('session', 'sess-' + kg, '单次 ' + kg / 1000 + ' 吨', '单次训练的容量（重量 × 次数）达到 ' + kg / 1000 + ' t', '💥', kg, false, 'sess', kg / 1000, 't'); });
+    LIFT_ORDER.forEach(function (k) {
+      LIFT_KG[k].forEach(function (kg) {
+        add('strength', 'lift-' + k + '-' + kg, LIFT_NAME[k] + ' ' + kg + ' kg', 'T1 ' + LIFT_NAME[k] + '的工作重量达到 ' + kg + ' kg，并完成目标（加重或保持）', LIFT_E[k], kg, false, 'lift-' + k, kg, 'kg');
+      });
+    });
     add('streak', 'perfect-week', '完美一周', '一个计划周的全部训练日，在 7 天内完成', '⭐', 1, true);
-    STREAKS.forEach(function (n) { add('streak', 'streak-' + n, '连续 ' + n + ' 周全勤', '连续 ' + n + ' 个计划周都在 7 天内练完；中断后重新计数', '🔥', n); });
+    STREAKS.forEach(function (n) { add('streak', 'streak-' + n, '连续 ' + n + ' 周全勤', '连续 ' + n + ' 个计划周都在 7 天内练完；中断后重新计数', '🔥', n, false, 'streak', n, '周'); });
     add('streak', 'streak-record', '最长连续刷新', '全勤连续周数刷新个人最长记录（至少 2 周）', '🏅', 99, true);
-    [1, 2, 3].forEach(function (c) { add('cycle', 'cycle-' + c, '完成第 ' + c + ' 个 ' + N + ' 周周期', '第 ' + c + ' 轮 ' + N + ' 周全部训练完成', '🏁', c); });
+    WEEKS_DONE.forEach(function (n) { add('streak', 'weeks-' + n, '累计练满 ' + n + ' 周', '累计 ' + n + ' 个计划周的全部训练日都练完', '🗓️', n, false, 'weeks', n, '周'); });
+    MONTH_N.forEach(function (n) { add('streak', 'month-' + n, '单月 ' + n + ' 练', '同一个自然月内训练 ' + n + ' 次', '📆', n, false, 'month', n, '次'); });
+    [1, 2, 3].forEach(function (c) { add('cycle', 'cycle-' + c, '完成第 ' + c + ' 个 ' + N + ' 周周期', '第 ' + c + ' 轮 ' + N + ' 周全部训练完成', '🏁', c, false, 'cyc-' + c, N, '周'); });
     add('cycle', 'cycle-full', '满勤周期', '一个周期内每个计划周都是完美一周', '💎', 90, true);
     add('cycle', 'deload-done', '减载完成', '完成一次减载周，恢复也是计划的一部分', '🌿', 80);
-    HOURS.forEach(function (h) { add('watch', 'w-hours-' + h, '手表累计 ' + h + ' 小时', '手表记录的力量训练累计 ' + h + ' 小时（自训练手记开始记录起）', '⏱️', h); });
-    SETS.forEach(function (s) { add('watch', 'w-sets-' + s, '手表累计 ' + s + ' 组', '手表记录的力量训练累计 ' + s + ' 组（自训练手记开始记录起）', '💪', s); });
-    SLEEP_NIGHTS.forEach(function (n) { add('watch', 'w-sleep-' + n, '睡得好 · ' + n + ' 晚', '睡眠评分 ≥ ' + SLEEP_SCORE + ' 连续 ' + n + ' 晚', '😴', n); });
+    HOURS.forEach(function (h) { add('watch', 'w-hours-' + h, '手表累计 ' + h + ' 小时', '手表记录的力量训练累计 ' + h + ' 小时（自训练手记开始记录起）', '⏱️', h, false, 'hours', h, '小时'); });
+    SETS.forEach(function (n) { add('watch', 'w-sets-' + n, '手表累计 ' + n + ' 组', '手表记录的力量训练累计 ' + n + ' 组（自训练手记开始记录起）', '💪', n, false, 'sets', n, '组'); });
+    KCALS.forEach(function (n) { add('watch', 'w-kcal-' + n, '手表累计 ' + fmtN(n) + ' 千卡', '手表估算的力量训练消耗累计 ' + fmtN(n) + ' 千卡（估算值，自训练手记开始记录起）', '🍚', n, false, 'kcal', n, '千卡'); });
+    SLEEP_NIGHTS.forEach(function (n) { add('watch', 'w-sleep-' + n, '睡得好 · 连续 ' + n + ' 晚', '睡眠评分 ≥ ' + SLEEP_SCORE + ' 连续 ' + n + ' 晚', '😴', n, false, 'sleep', n, '晚'); });
+    GOOD_NIGHTS.forEach(function (n) { add('watch', 'w-good-' + n, '睡得好 · 累计 ' + n + ' 晚', '睡眠评分 ≥ ' + SLEEP_SCORE + ' 的夜晚累计 ' + n + ' 晚（不要求连续）', '🌙', n, false, 'good', n, '晚'); });
     return out;
   }
   function groupRank(g) { for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].id === g) return GROUPS[i].rank; return 0; }
@@ -2664,9 +2712,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
   // ---------- 核心计算 ----------
   /**
-   * sessions：按时间先后的有效训练 [{id,date,day,week,volume,order}]
-   * opts：{ params, dayIds, watch }
-   * 返回 { defs, earned:{id:{date,id,count}}, bySession:{id:[badgeId...]}, progress, watchFrom }
+   * sessions：按时间先后的有效训练 [{id,date,day,week,volume,order,adds,lifts}]
+   *   adds：这次达到加重条件的动作数；lifts：{squat,bench,deadlift,ohp} 这次 T1 完成目标（加重/保持）的工作重量
+   * opts：{ params, dayIds, watch, today }
+   * 返回 { defs, earned, bySession, progress, prog, nextGoals, watchFrom, ... }
    */
   function compute(sessions, opts) {
     opts = opts || {};
@@ -2679,7 +2728,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         var m = /^cycle-(\d+)$/.exec(id);
         if (!m) return;
         var N = Math.max(1, P.weeksPerCycle || P.totalWeeks || 8);
-        byId[id] = { id: id, group: 'cycle', title: '完成第 ' + m[1] + ' 个 ' + N + ' 周周期', desc: '第 ' + m[1] + ' 轮 ' + N + ' 周全部训练完成', e: '🏁', tier: +m[1], repeat: false };
+        byId[id] = { id: id, group: 'cycle', title: '完成第 ' + m[1] + ' 个 ' + N + ' 周周期', desc: '第 ' + m[1] + ' 轮 ' + N + ' 周全部训练完成', e: '🏁', tier: +m[1], repeat: false, m: null, t: 0, u: '' };
       }
       var d = byId[id];
       if (!d.repeat && earned[id]) return;
@@ -2692,16 +2741,28 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
     var list = sessions.slice().sort(function (a, b) { return a.order - b.order; });
     list.forEach(function (s, i) { s.seq = i + 1; });
+    var M = {};                      // 各进度指标的当前值
 
-    // 1) 训练次数、2) 累计容量
-    var cum = 0;
+    // 1) 训练次数、累计容量、单次容量、累计加重、主项重量
+    var cum = 0, addsNow = 0, liftMax = { squat: 0, bench: 0, deadlift: 0, ohp: 0 }, sessMax = 0;
     list.forEach(function (s) {
       if (COUNTS.indexOf(s.seq) >= 0) award('count-' + s.seq, s);
       var before = cum; cum += Number(s.volume) || 0;
       VOLUMES.forEach(function (v) { if (before < v.kg && cum >= v.kg) award('vol-' + v.kg, s); });
+      var sv = Number(s.volume) || 0; sessMax = Math.max(sessMax, sv);
+      SESSION_VOLS.forEach(function (kg) { if (sv >= kg) award('sess-' + kg, s); });
+      var ab = addsNow; addsNow += Number(s.adds) || 0;
+      ADDS.forEach(function (n) { if (ab < n && addsNow >= n) award('adds-' + n, s); });
+      LIFT_ORDER.forEach(function (k) {
+        var w = Number(s.lifts && s.lifts[k]) || 0;
+        if (w > liftMax[k]) liftMax[k] = w;
+        LIFT_KG[k].forEach(function (kg) { if (w >= kg) award('lift-' + k + '-' + kg, s); });
+      });
     });
+    M.count = list.length; M.volume = cum / 1000; M.sess = sessMax / 1000; M.adds = addsNow;
+    LIFT_ORDER.forEach(function (k) { M['lift-' + k] = liftMax[k]; });
 
-    // 3) 计划周：谁在什么时候凑齐全部训练日
+    // 2) 计划周：谁在什么时候凑齐全部训练日
     var weeks = {};
     list.forEach(function (s) {
       var w = weeks[s.week] || (weeks[s.week] = { week: s.week, first: s.date, covered: {}, done: false, doneSess: null, doneDate: '', perfect: false });
@@ -2727,20 +2788,36 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     });
     var curStreak = 0;
     wk.slice().reverse().some(function (n) { var w = weeks[n]; if (!w.done) return false; if (w.perfect) { curStreak += 1; return false; } return true; });
+    M.streak = curStreak;
+    // 累计练满的计划周（按各周凑齐的先后）
+    var doneWeeks = wk.map(function (n) { return weeks[n]; }).filter(function (w) { return w.done; }).sort(function (a, b) { return a.doneSess.order - b.doneSess.order; });
+    doneWeeks.forEach(function (w, i) { if (WEEKS_DONE.indexOf(i + 1) >= 0) award('weeks-' + (i + 1), w.doneSess); });
+    M.weeks = doneWeeks.length;
+
+    // 3) 单月训练次数
+    var monthCnt = {};
+    list.forEach(function (s) {
+      var ym = s.date.slice(0, 7); monthCnt[ym] = (monthCnt[ym] || 0) + 1;
+      if (MONTH_N.indexOf(monthCnt[ym]) >= 0) award('month-' + monthCnt[ym], s);
+    });
+    var curYM = (opts.today || (list.length ? list[list.length - 1].date : '')).slice(0, 7);
+    M.month = monthCnt[curYM] || 0;
 
     // 4) 周期：一轮里每一周都练完 → 完成周期；每周都是完美一周 → 满勤；首次减载周练完 → 减载完成
     var N = Math.max(1, P.weeksPerCycle || P.totalWeeks || 8), cycleMax = 0;
     wk.forEach(function (n) { cycleMax = Math.max(cycleMax, Math.ceil(n / N)); });
     var deloadAwarded = false;
-    for (var c = 1; c <= cycleMax; c++) {
-      var first = (c - 1) * N + 1, ok = true, all = true, last = null;
+    for (var c = 1; c <= Math.max(cycleMax, 1); c++) {
+      var first = (c - 1) * N + 1, ok = true, all = true, last = null, doneIn = 0;
       for (var n2 = first; n2 < first + N; n2++) {
         var w2 = weeks[n2];
         if (!w2 || !w2.done) { ok = false; all = false; continue; }
+        doneIn += 1;
         if (!w2.perfect) all = false;
         if (!last || w2.doneSess.order > last.order) last = w2.doneSess;
       }
-      if (ok) { award('cycle-' + c, last); if (all) award('cycle-full', last, { cycle: c }); }
+      M['cyc-' + c] = doneIn;
+      if (ok && cycleMax >= c) { award('cycle-' + c, last); if (all) award('cycle-full', last, { cycle: c }); }
     }
     wk.forEach(function (n) {
       var w = weeks[n];
@@ -2748,43 +2825,44 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     });
 
     // 5) 手表：只从训练手记第一条记录的日期开始计
-    var watch = opts.watch, watchFrom = list.length ? list[0].date : '', hoursNow = 0, setsNow = 0, nightsNow = 0;
+    var watch = opts.watch, watchFrom = list.length ? list[0].date : '', hoursNow = 0, setsNow = 0, kcalNow = 0, nightsNow = 0, goodNow = 0;
+    function markEarned(id, date, sess) { if (!earned[id]) earned[id] = { id: id, count: 1, date: date, recordId: sess ? sess.id : '', seq: sess ? sess.seq : 0, wallOnly: true }; }
+    function lastOnOrBefore(date) { var pick = null; list.forEach(function (s) { if (s.date <= date) pick = s; }); return pick; }
+    function onDate(date) { var pick = null; list.forEach(function (s) { if (s.date === date) pick = s; }); return pick; }
+    function cross(id, date) { var sess = onDate(date); if (sess) award(id, sess); else markEarned(id, date, lastOnOrBefore(date)); }
     if (watch && watchFrom) {
-      var cm = 0, cs = 0, lastOnOrBefore = function (date) {
-        var pick = null; list.forEach(function (s) { if (s.date <= date) pick = s; }); return pick;
-      }, onDate = function (date) {
-        var pick = null; list.forEach(function (s) { if (s.date === date) pick = s; }); return pick;
-      };
+      var cm = 0, cs = 0, ck = 0;
       (watch.workouts || []).filter(function (w) { return w.date >= watchFrom; }).sort(function (a, b) { return a.start - b.start; }).forEach(function (w) {
-        var bm = cm, bs = cs; cm += w.min; cs += w.sets;
-        var sess = onDate(w.date);
-        HOURS.forEach(function (h) { if (bm < h * 60 && cm >= h * 60) { if (sess) award('w-hours-' + h, sess); else markEarned('w-hours-' + h, w.date, lastOnOrBefore(w.date)); } });
-        SETS.forEach(function (s) { if (bs < s && cs >= s) { if (sess) award('w-sets-' + s, sess); else markEarned('w-sets-' + s, w.date, lastOnOrBefore(w.date)); } });
+        var bm = cm, bs = cs, bk = ck; cm += w.min; cs += w.sets; ck += w.kcal || 0;
+        HOURS.forEach(function (h) { if (bm < h * 60 && cm >= h * 60) cross('w-hours-' + h, w.date); });
+        SETS.forEach(function (n) { if (bs < n && cs >= n) cross('w-sets-' + n, w.date); });
+        KCALS.forEach(function (n) { if (bk < n && ck >= n) cross('w-kcal-' + n, w.date); });
       });
-      hoursNow = cm / 60; setsNow = cs;
+      hoursNow = cm / 60; setsNow = cs; kcalNow = ck;
       var dates = Object.keys(watch.sleep || {}).filter(function (d) { return d >= watchFrom; }).sort(), run = 0, prevDate = null, prevGood = false;
       dates.forEach(function (d) {
         var good = watch.sleep[d].score >= SLEEP_SCORE;
         // 必须是连续的自然日，且前一晚也达标；中间缺一晚就重新计数
         run = !good ? 0 : (prevGood && prevDate && dayNum(d) - dayNum(prevDate) === 1 ? run + 1 : 1);
         prevDate = d; prevGood = good;
-        SLEEP_NIGHTS.forEach(function (n) {
-          if (run === n && !earned['w-sleep-' + n]) {
-            var sess = onDate(d);
-            if (sess) award('w-sleep-' + n, sess); else markEarned('w-sleep-' + n, d, lastOnOrBefore(d));
-          }
-        });
+        if (good) { goodNow += 1; if (GOOD_NIGHTS.indexOf(goodNow) >= 0) cross('w-good-' + goodNow, d); }
+        SLEEP_NIGHTS.forEach(function (n) { if (run === n) cross('w-sleep-' + n, d); });
       });
       nightsNow = run;
     }
-    // 获得日期不对应任何一次训练时（例如睡眠当天没练），只记入徽章墙，不上分享卡片
-    function markEarned(id, date, sess) { if (!earned[id]) earned[id] = { id: id, count: 1, date: date, recordId: sess ? sess.id : '', seq: sess ? sess.seq : 0, wallOnly: true }; }
+    M.hours = hoursNow; M.sets = setsNow; M.kcal = kcalNow; M.sleep = nightsNow; M.good = goodNow;
 
-    // 排序：卡片优先级
-    function prio(id) { var d = byId[id]; return groupRank(d.group) * 1000 + d.tier; }
-    Object.keys(bySession).forEach(function (k) { bySession[k].sort(function (a, b) { return prio(b) - prio(a); }); });
+    // 排序：候选列表先后（周期 > 主项重量 > 容量 > …）
+    function prio(id) { var d = byId[id]; return groupRank(d.group) * 100000 + d.tier; }
+    Object.keys(bySession).forEach(function (k) {
+      // 同一次训练一口气跨过同一系列的多档（如单次 3 吨 + 5 吨）：候选里只留最高一档，徽章墙仍各自点亮
+      var top = {};
+      bySession[k].forEach(function (id) { var d = byId[id]; if (d.m && (!top[d.m] || d.tier > byId[top[d.m]].tier)) top[d.m] = id; });
+      bySession[k] = bySession[k].filter(function (id) { var d = byId[id]; return !d.m || top[d.m] === id; });
+      bySession[k].sort(function (a, b) { return prio(b) - prio(a); });
+    });
 
-    // 进度（徽章墙用）
+    // 进度（徽章墙 + 「下一个目标」）
     function nextOf(arr, v) { for (var i = 0; i < arr.length; i++) if (v < arr[i]) return arr[i]; return null; }
     var progress = {
       count: { value: list.length, next: nextOf(COUNTS, list.length), unit: '次' },
@@ -2795,11 +2873,35 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       sleep: { value: nightsNow, next: nextOf(SLEEP_NIGHTS, nightsNow), unit: '晚' }
     };
     var all = ds.concat(Object.keys(byId).filter(function (k) { return !ds.some(function (d) { return d.id === k; }); }).map(function (k) { return byId[k]; }));
-    return { defs: all, byId: byId, earned: earned, bySession: bySession, progress: progress, watchFrom: watchFrom, events: events,
+    var prog = {};
+    all.forEach(function (d) {
+      if (!d.m) return;
+      var v = Number(M[d.m]) || 0;
+      prog[d.id] = { v: r2(v), t: d.t, u: d.u, pct: d.t ? Math.max(0, Math.min(1, v / d.t)) : 0 };
+    });
+    // 每一类里「最接近」的未达成目标，按完成度从高到低
+    var best = {};
+    all.forEach(function (d) {
+      if (!d.m || earned[d.id] || !prog[d.id]) return;
+      var cur = best[d.group], pg = prog[d.id];
+      if (!cur || pg.pct > prog[cur.id].pct || (pg.pct === prog[cur.id].pct && d.tier < cur.tier)) best[d.group] = d;
+    });
+    var nextGoals = Object.keys(best).map(function (g) { return { id: best[g].id, group: g, pct: prog[best[g].id].pct }; })
+      .filter(function (x) { return x.pct > 0; }).sort(function (a, b) { return b.pct - a.pct; });
+    return { defs: all, byId: byId, earned: earned, bySession: bySession, progress: progress, prog: prog, nextGoals: nextGoals, metrics: M, watchFrom: watchFrom, events: events,
       total: ds.length, earnedCount: ds.filter(function (d) { return earned[d.id]; }).length };
   }
 
-  return { GROUPS: GROUPS, defs: defs, compute: compute, sanitizeWatch: sanitizeWatch, mergeWatch: mergeWatch, watchFor: watchFor, groupRank: groupRank, SLEEP_SCORE: SLEEP_SCORE };
+  /** 从候选里稳定地「随机」挑一枚：同一次训练、同一个 variant 永远得到同一个结果，点「换一个」则 variant+1 */
+  function pickOne(ids, seed, variant) {
+    if (!ids || !ids.length) return '';
+    var h = 2166136261, str = String(seed || '') + '|' + ids.slice().sort().join(',');
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    var sorted = ids.slice().sort();
+    return sorted[(h + (Number(variant) || 0)) % sorted.length];
+  }
+
+  return { GROUPS: GROUPS, defs: defs, compute: compute, pickOne: pickOne, sanitizeWatch: sanitizeWatch, mergeWatch: mergeWatch, watchFor: watchFor, groupRank: groupRank, SLEEP_SCORE: SLEEP_SCORE };
 });
 </script>
 <script>/* 训练分享：纯数据聚合 + Canvas 海报。不调用外部服务，不读取同步令牌。 */
@@ -2968,12 +3070,22 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     rp.sessions.forEach(function (s, i) {
       var ok = s.items.some(function (it) { var e = (s.rec.entries || {})[it.slotId]; return hasEntry(e, s.rec.deload) && it.judgment !== '跳过'; });
       if (!ok || !/^\d{4}-\d{2}-\d{2}$/.test(s.rec.date || '')) return;
-      out.push({ id: s.rec.id, date: s.rec.date, day: s.rec.day, week: s.week, order: i, volume: sessionVolume(s) });
+      // adds：这次达到加重条件的动作数；lifts：T1 主项这次完成目标（加重/保持）的工作重量，失败或降阶不算
+      var adds = 0, lifts = {};
+      s.items.forEach(function (it) {
+        var e = (s.rec.entries || {})[it.slotId];
+        if (!hasEntry(e, s.rec.deload) || it.judgment === '跳过' || it.deload) return;
+        if (it.judgment === '加重') adds++;
+        if (it.tier === 'T1' && it.lift && (it.judgment === '加重' || it.judgment === '保持') && GZ.equipOf(it.name, it.equip) !== '自重') {
+          lifts[it.lift] = Math.max(lifts[it.lift] || 0, Number(it.weight) || 0);
+        }
+      });
+      out.push({ id: s.rec.id, date: s.rec.date, day: s.rec.day, week: s.week, order: i, volume: sessionVolume(s), adds: adds, lifts: lifts });
     });
     return out;
   }
   function badgeStateFrom(db, facts) {
-    return Badges.compute(facts.map(function (f) { return Object.assign({}, f); }), { params: db.params, dayIds: (db.days || []).map(function (d) { return d.id; }), watch: db.params && db.params.watch });
+    return Badges.compute(facts.map(function (f) { return Object.assign({}, f); }), { params: db.params, dayIds: (db.days || []).map(function (d) { return d.id; }), today: GZ.today(), watch: db.params && db.params.watch });
   }
   /** 徽章墙与卡片用的完整状态 */
   function badgeState(db) { var rp = GZ.replay(db); return badgeStateFrom(db, validSessions(rp)); }
@@ -3026,7 +3138,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     // 手表：同一天按先后与训练记录一一对应；没对上就不显示任何身体数据
     var wk = Badges.watchFor(db.params && db.params.watch, facts, me);
     var state = badgeStateFrom(db, facts), cands = state.bySession[pick.id] || [];
-    var chosen = Array.isArray(opts.badgePick) ? opts.badgePick.filter(function (id) { return cands.indexOf(id) >= 0; }) : cands.slice(0, 2);
+    // 卡片只展示一枚：用户手选优先（可取消为 0 枚）；否则按「训练 id + 换一个次数」稳定随机
+    var chosen = [];
+    if (Array.isArray(opts.badgePick)) chosen = opts.badgePick.filter(function (id) { return cands.indexOf(id) >= 0; }).slice(0, 1);
+    else if (cands.length) chosen = [Badges.pickOne(cands, pick.id, opts.badgeVariant)];
     var bodyParts = [];
     if (wk) {
       bodyParts.push('用时 ' + wk.min + ' 分');
@@ -3924,7 +4039,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date.slice(5).replace('-', '月') + '日') + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.day + ' ' + esc(sd.dayName) + ' · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 训练容量</div><button class="btn-primary" data-act="shareopen" data-id="' + sd.recordId + '">生成分享卡片</button></div>';
     else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
     var bs = Share.badgeState(load());
-    h += '<div class="list wall-entry"><div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div></div>';
+    h += '<div class="list wall-entry"><div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div>' +
+      (bs.nextGoals[0] ? (function () { var g = bs.nextGoals[0], d = bs.byId[g.id], p = bs.prog[g.id]; return '<div class="cell tap wall-goal" data-act="wallopen"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>下一个：' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>'; })() : '') + '</div>';
     if (r.tab === 0) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
         '<div class="lt-head"><span class="lt-c1">主项</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
@@ -3977,25 +4093,25 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function reviewAct(act, ds, el) {
     var r = S.review;
-    if (act === 'shareopen') { r.share = {id:ds.id,funVariant:0,theme:'sage',body:false,badgePick:null,image:null,blob:null}; return true; }
+    if (act === 'shareopen') { r.share = {id:ds.id,funVariant:0,theme:'sage',body:false,badgePick:null,badgeVariant:0,image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
-    if (act === 'sharerec') { r.share.id=el.value; r.share.funVariant=0; r.share.badgePick=null; return true; }
+    if (act === 'sharerec') { r.share.id=el.value; r.share.funVariant=0; r.share.badgePick=null; r.share.badgeVariant=0; return true; }
     if (act === 'wallopen') { r.wall = true; return true; }
     if (act === 'wallclose') { r.wall = false; return true; }
     if (act === 'bodytoggle') { r.share.body = !!el.checked; return true; }
     if (act === 'badgepick') {
-      var cur = Share.build(load(), r.share.id, r.share), ids = cur ? cur.badges.map(function (b) { return b.id; }) : [];
-      var at = ids.indexOf(ds.id);
-      if (at >= 0) ids.splice(at, 1); else if (ids.length >= 2) { toast('卡片最多展示 2 枚，先取消一枚'); return false; } else ids.push(ds.id);
-      r.share.badgePick = ids; return true;
+      // 卡片只展示一枚：点已选中的 = 不展示；点别的 = 换成它
+      var cur = Share.build(load(), r.share.id, r.share), now = cur && cur.badges[0] ? cur.badges[0].id : '';
+      r.share.badgePick = now === ds.id ? [] : [ds.id]; return true;
     }
-    if (act === 'watchgo') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick }; r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
+    if (act === 'badgeagain') { r.share.badgePick = null; r.share.badgeVariant = (r.share.badgeVariant || 0) + 1; return true; }
+    if (act === 'watchgo') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick, badgeVariant: r.share.badgeVariant }; r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'funagain') { r.share.funVariant=(r.share.funVariant||0)+1; return true; }
     if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
-    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick }; r.share=null; S.tab='settings'; render(); return false; }
+    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick, badgeVariant: r.share.badgeVariant }; r.share=null; S.tab='settings'; render(); return false; }
     if (act === 'sharetrain') { r.share=null; S.tab='train'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
@@ -4029,9 +4145,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       : '<span class="ss-ava ss-ava-t" aria-hidden="true">' + esc(Array.from(data.name || '我')[0]) + '</span>';
     var who = [data.profile.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join(' · ') || (data.profile.signature ? '' : '未设置社媒 ID');
     var picked = {}; data.badges.forEach(function (b) { picked[b.id] = 1; });
-    var badgeBlock = data.badgeCands.length
-      ? '<div class="ss-badges">' + data.badgeCands.map(function (b) { return '<button class="ss-badge' + (picked[b.id] ? ' on' : '') + '" data-act="badgepick" data-id="' + esc(b.id) + '" aria-pressed="' + (picked[b.id] ? 'true' : 'false') + '"><span class="ss-badge-e">' + esc(b.e) + '</span><span class="ss-badge-t"><b>' + esc(b.title) + '</b><i>' + esc(b.desc) + '</i></span><span class="ss-badge-ck">' + (picked[b.id] ? '✓' : '') + '</span></button>'; }).join('') + '</div><p class="ss-hint">这次训练新达成的里程碑，卡片最多展示 2 枚，点一下切换。</p>'
-      : '<p class="ss-empty">这次训练没有新的里程碑。已获得 ' + data.badgeEarned + ' / ' + data.badgeAll + ' 枚，点右上角看看下一个目标。</p>';
+    var nCand = data.badgeCands.length, manual = Array.isArray(sh.badgePick);
+    var badgeBlock = nCand
+      ? '<div class="ss-badges" role="radiogroup" aria-label="卡片上展示的里程碑">' + data.badgeCands.map(function (b) { return '<button class="ss-badge' + (picked[b.id] ? ' on' : '') + '" role="radio" data-act="badgepick" data-id="' + esc(b.id) + '" aria-checked="' + (picked[b.id] ? 'true' : 'false') + '"><span class="ss-badge-e">' + esc(b.e) + '</span><span class="ss-badge-t"><b>' + esc(b.title) + '</b><i>' + esc(b.desc) + '</i></span><span class="ss-badge-ck">' + (picked[b.id] ? '✓' : '') + '</span></button>'; }).join('') + '</div>' +
+        '<p class="ss-hint">' + (nCand > 1 ? '这次训练达成了 ' + nCand + ' 枚，卡片只展示 1 枚：' + (manual ? (data.badges.length ? '已按你的选择。' : '你选了不展示。') + '点「🎲 随机」可回到随机。' : '现在是随机挑的，不满意可以点「🎲 换一枚」，或直接点选。') : '这次达成 1 枚，点一下可选择展示或不展示。') + '</p>'
+      : '<p class="ss-empty">这次训练没有新的里程碑。已获得 ' + data.badgeEarned + ' / ' + data.badgeAll + ' 枚，看看徽章墙里最接近的目标。</p>';
+    var badgeAct = (nCand > 1 ? '<button class="ss-act dice" data-act="badgeagain">' + (manual ? '🎲 随机' : '🎲 换一枚') + '</button>' : '') + '<button class="ss-act" data-act="wallopen">徽章墙 ›</button>';
     var hasWatch = !!(load().params.watch && (load().params.watch.workouts || []).length);
     var watchBlock = data.watchBody
       ? '<div class="ss-watch"><div class="ss-watch-t"><b>卡片显示手表记录</b><span>用时 ' + data.watchBody.min + ' 分' + (data.watchBody.avgHr ? ' · 平均心率 ' + data.watchBody.avgHr : '') + (data.watchBody.kcal ? ' · ' + data.watchBody.kcal + ' 千卡' : '') + '</span></div><label class="ios-sw green"><input type="checkbox" data-act="bodytoggle" ' + (sh.body ? 'checked' : '') + ' aria-label="卡片显示手表记录"><i></i></label></div>'
@@ -4048,7 +4167,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         (data.profile.signature ? '<p class="ss-sig">' + esc(data.profile.signature) + '</p>' : '') +
         (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
       // 二、里程碑
-      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 里程碑</span><button class="ss-act" data-act="wallopen">徽章墙 ›</button></div>' + badgeBlock + '</div>' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 里程碑</span><span class="ss-acts">' + badgeAct + '</span></div>' + badgeBlock + '</div>' +
       // 三、纵览与趣味
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 纵览与趣味</span><span class="ss-acts"><span class="quote-total">' + (data.funIndex + 1) + ' / ' + data.funTotal + '</span><button class="ss-act dice" data-act="funagain">🎲 换一个</button></span></div>' +
         '<div class="ss-metrics"><span><b class="num">' + esc(String(data.rows.length)) + '</b>项动作</span><span><b class="num">' + esc(String(data.reps)) + '</b>次动作</span><span><b class="num">' + esc(String(data.adds)) + '</b>项加重</span></div>' +
@@ -4070,35 +4189,34 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
 
   // ================= 里程碑徽章墙 =================
-  function badgeProgress(d, pg) {
-    var m = /^(count|vol|w-hours|w-sets|w-sleep|streak)-(\d+)$/.exec(d.id);
-    if (!m) return '';
-    var t = Number(m[2]);
-    if (m[1] === 'count') return pg.count.value + ' / ' + t + ' 次';
-    if (m[1] === 'vol') { var tv = t / 1000; return pg.volume.value + ' / ' + tv.toLocaleString('zh-CN') + ' t'; }
-    if (m[1] === 'w-hours') return pg.hours.value + ' / ' + t + ' 小时';
-    if (m[1] === 'w-sets') return pg.sets.value + ' / ' + t + ' 组';
-    if (m[1] === 'w-sleep') return pg.sleep.value + ' / ' + t + ' 晚';
-    if (m[1] === 'streak') return pg.streak.value + ' / ' + t + ' 周';
-    return '';
+  function fmtProg(p) {
+    var v = p.v, t = p.t;
+    return (Number.isInteger(v) ? v : v.toFixed(v < 10 ? 2 : 1).replace(/\.?0+$/, '')) + ' / ' + t.toLocaleString('zh-CN') + ' ' + p.u;
   }
   function renderBadgeWall() {
-    var st = Share.badgeState(load()), pg = st.progress;
-    var WALL_ORDER = ['count', 'volume', 'streak', 'cycle', 'watch'];
+    var st = Share.badgeState(load());
+    var WALL_ORDER = ['count', 'progress', 'strength', 'volume', 'session', 'streak', 'cycle', 'watch'];
+    var near = st.nextGoals.slice(0, 3).map(function (g) {
+      var d = st.byId[g.id], p = st.prog[g.id];
+      return '<div class="wall-n"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>';
+    }).join('');
+    var nearBlock = near ? '<div class="wall-g"><div class="wall-gt">最接近的目标</div><div class="wall-near">' + near + '</div></div>' : '';
     var body = Badges.GROUPS.slice().sort(function (a, b) { return WALL_ORDER.indexOf(a.id) - WALL_ORDER.indexOf(b.id); }).map(function (g) {
       var items = st.defs.filter(function (d) { return d.group === g.id; });
       if (!items.length) return '';
-      return '<div class="wall-g"><div class="wall-gt">' + esc(g.name) + '</div><div class="wall-grid">' + items.map(function (d) {
-        var e = st.earned[d.id], on = !!e;
-        var sub = on ? e.date.slice(5).replace('-', '月') + '日' + (e.count > 1 ? ' · ×' + e.count : '') : (badgeProgress(d, pg) || '未获得');
-        return '<div class="wall-b' + (on ? ' on' : '') + '"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><b>' + esc(d.title) + '</b><i>' + esc(sub) + '</i><span class="wall-d">' + esc(d.desc) + '</span></div>';
+      var got = items.filter(function (d) { return st.earned[d.id]; }).length;
+      return '<div class="wall-g"><div class="wall-gt">' + esc(g.name) + '<span class="wall-gc num">' + got + ' / ' + items.length + '</span></div><div class="wall-grid">' + items.map(function (d) {
+        var e = st.earned[d.id], on = !!e, p = st.prog[d.id];
+        var sub = on ? e.date.slice(5).replace('-', '月') + '日' + (e.count > 1 ? ' · ×' + e.count : '') : (p ? fmtProg(p) : '未获得');
+        var bar = !on && p && p.pct > 0 ? '<span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span>' : '';
+        return '<div class="wall-b' + (on ? ' on' : '') + '"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><b>' + esc(d.title) + '</b><i>' + esc(sub) + '</i>' + bar + '<span class="wall-d">' + esc(d.desc) + '</span></div>';
       }).join('') + '</div></div>';
     }).join('');
     var hasW = !!(load().params.watch && (load().params.watch.workouts || []).length);
     return '<div class="mask share-mask" data-act="wallclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title">里程碑</span><button class="share-close" data-act="wallclose" aria-label="关闭徽章墙">×</button></div>' +
-      '<p class="wall-sum">已获得 <b class="num">' + st.earnedCount + '</b> / ' + st.total + ' 枚 · 彩色是已获得，灰色是下一个目标</p></div>' +
-      '<div class="ss-body">' + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「设置 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。</p></div></div></div>';
+      '<p class="wall-sum">已获得 <b class="num">' + st.earnedCount + '</b> / ' + st.total + ' 枚 · 彩色是已获得，灰色带进度条</p></div>' +
+      '<div class="ss-body">' + nearBlock + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「设置 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。主项重量按 T1 工作重量统计，需完成目标（加重或保持）才算。</p></div></div></div>';
   }
   async function paintSharePreview() {
     var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;
@@ -4405,7 +4523,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
       if (S.tab === 'review' && S.review.returnTo && prevTab === 'settings') {
         var back = S.review.returnTo; S.review.returnTo = null;
-        S.review.share = { id: back.id, funVariant: back.funVariant || 0, theme: back.theme || 'sage', body: !!back.body, badgePick: back.badgePick || null, image: null, blob: null };
+        S.review.share = { id: back.id, funVariant: back.funVariant || 0, theme: back.theme || 'sage', body: !!back.body, badgePick: back.badgePick || null, badgeVariant: back.badgeVariant || 0, image: null, blob: null };
         render();
       }
     });
