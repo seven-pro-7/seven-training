@@ -48,8 +48,16 @@
     }
     dash(ctx, []);
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    var every = labels.length > 10 ? Math.ceil(labels.length / 8) : 1;
-    labels.forEach(function (lb, i) { if (i % every === 0) { ctx.fillStyle = THEME.axis; ctx.fillText(lb, xAt(i), H - pad.b + 7); } });
+    // 按最宽标签与相邻点间距决定隔几个显示一个，保证不挤在一起（点少时全显示）
+    var maxW = 0; labels.forEach(function (lb) { maxW = Math.max(maxW, ctx.measureText(lb).width); });
+    var gap = labels.length > 1 ? Math.abs(xAt(1) - xAt(0)) : 1e9;
+    var every = Math.max(1, Math.ceil((maxW + 10) / Math.max(gap, 1)));
+    labels.forEach(function (lb, i) {
+      if (i % every !== 0) return;
+      // 第一个标签居中会被左边缘截掉，夹在可见范围内
+      var hw = ctx.measureText(lb).width / 2, x = Math.max(xAt(i), hw + 1);
+      ctx.fillStyle = THEME.axis; ctx.fillText(lb, x, H - pad.b + 7);
+    });
   }
 
   function line(ctx, W, H, o) {

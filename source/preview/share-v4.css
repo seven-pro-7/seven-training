@@ -189,3 +189,33 @@
 .app .wall-nt i { font-style: normal; font-size: 13px; color: var(--label2); margin-top: 2px; }
 .app .wall-pct { flex: 0 0 auto; font-size: 15px; font-weight: 600; color: var(--accent); }
 .app .wall-goal { border-top: 0.5px solid var(--sep); }
+
+/* ===== 动作详情 / 月报 ===== */
+.app .ex-link { display: block; width: 100%; margin-top: 12px; padding: 12px 0 2px; border: 0; border-top: 0.5px solid var(--sep); background: none; color: var(--accent); font-size: 15px; font-weight: 600; text-align: center; }
+.app .cell.pr.tap { cursor: pointer; }
+.app .cell.pr.tap:active { background: var(--fill); }
+.app .ex-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.app .ex-sub { display: flex; align-items: center; gap: 8px; margin: 2px 2px 8px; font-size: 13px; color: var(--label2); }
+.app .ex-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.app .ex-k { display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: 20px; background: rgba(255,255,255,0.78); min-width: 0; }
+.app .ex-kl { font-size: 13px; color: var(--label2); font-weight: 600; }
+.app .ex-kv { display: flex; align-items: baseline; gap: 4px; }
+.app .ex-kv b { font-size: 22px; font-weight: 700; color: var(--label); line-height: 1.2; }
+.app .ex-kv i { font-style: normal; font-size: 13px; color: var(--label2); }
+.app .ex-ks { font-size: 13px; color: var(--label2); line-height: 1.4; }
+.app .ex-src { font-size: 13px; color: var(--label2); white-space: nowrap; }
+.app .ss-sec .cv { margin-top: 2px; }
+.app .ss-sec .mini { margin-top: 12px; padding-top: 12px; }
+.app .ex-rows { display: flex; flex-direction: column; }
+.app .ex-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; min-height: 56px; }
+.app .ex-row + .ex-row { border-top: 0.5px solid var(--sep); }
+.app .ex-d { flex: 0 0 44px; font-size: 13px; color: var(--label2); font-weight: 600; }
+.app .ex-m { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.app .ex-m b { font-size: 15px; font-weight: 600; color: var(--label); }
+.app .ex-m i { font-style: normal; font-size: 13px; color: var(--label2); }
+.app .ex-e { display: flex; flex-direction: column; align-items: flex-end; flex: 0 0 auto; }
+.app .ex-e b { font-size: 15px; font-weight: 600; color: var(--label); }
+.app .ex-e i { font-style: normal; font-size: 13px; color: var(--label2); }
+.app .ex-row .jtag { flex: 0 0 auto; font-size: 13px; min-width: 40px; text-align: right; }
+.app .ex-method { margin-top: 10px; }
+.app .ss-gap { height: 12px; }

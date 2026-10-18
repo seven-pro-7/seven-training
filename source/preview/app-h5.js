@@ -1,7 +1,7 @@
 /* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
 (function () {
   'use strict';
-  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges;
+  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly;
   var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', WATCH_KEY = 'gzclp_watch_v1', BK_DISMISS = 'gzclp_bk_dismiss';
   var TABS = [
     { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
@@ -219,7 +219,7 @@
   var S = {
     tab: 'train',
     train: { day: null, draft: null, recordId: null, deload: undefined, date: GZ.today(), bw: '', note: '', result: null, createdAt: null },
-    plan: { ov: 0, detail: null, cycle: 0 }, stats: { lift: 0, day: 0 }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', tier: 'T1', q: '', add: null }
+    plan: { ov: 0, detail: null, cycle: 0 }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', tier: 'T1', q: '', add: null }
   };
   var rest = { show: false, left: 0, total: 0, name: '', timer: null };
 
@@ -689,7 +689,8 @@
       if (cur.sampleTip && cur.n >= 2) h += '<div class="tip">' + cur.sampleTip + '</div>';
       else if (cur.vs1RM !== null && cur.vs1RM > 3) h += '<div class="tip">已超过录入 1RM ' + cur.vs1RM + '%，可以在设置里更新 1RM</div>';
     }
-    h += (cur && cur.n >= 2 ? '<div class="legend"><div class="lg"><div class="sw" style="background:#FF6B1A"></div>e1RM</div><div class="lg"><div class="sw dash" style="border-color:#0A84FF"></div>回归趋势</div><div class="lg"><div class="sw dash" style="border-color:#C7C7CC"></div>录入 1RM</div></div>' : '') + '</div>';
+    h += (cur && cur.n >= 2 ? '<div class="legend"><div class="lg"><div class="sw" style="background:#FF6B1A"></div>e1RM</div><div class="lg"><div class="sw dash" style="border-color:#0A84FF"></div>回归趋势</div><div class="lg"><div class="sw dash" style="border-color:#C7C7CC"></div>录入 1RM</div></div>' : '') +
+      (cur ? '<button class="ex-link" data-act="exopen" data-name="' + esc(cur.name) + '">查看「' + esc(cur.name) + '」的完整详情 ›</button>' : '') + '</div>';
     var wt = s.weightTrend[st.day];
     h += '<div class="card"><div class="card-title"><span class="t">重量走势</span><span class="s">空心点为下次计划</span></div>' +
       seg(s.weightTrend.map(function (d) { return { html: '<span class="num">' + d.day + '</span>' }; }), st.day, 'wday') +
@@ -698,9 +699,11 @@
       s.volume.stacks.map(function (x) { return '<div class="lg"><div class="sw" style="background:' + x.color + '"></div>' + x.name + '</div>'; }).join('') + '</div></div>';
     h += '<div class="card"><div class="card-title"><span class="t">判定分布</span><span class="s">全部训练日</span></div><div class="row"><canvas id="c_p" class="cv-sq"></canvas><div class="pie-list">' +
       (s.pie.length ? s.pie.map(function (x) { return '<div class="pl"><div class="sw" style="background:' + x.color + '"></div><span class="pl-l">' + x.label + '</span><span class="num pl-v">' + x.value + '</span><span class="pl-p num">' + x.pct + '%</span></div>'; }).join('') : '<div class="cap">暂无判定</div>') + '</div></div></div>';
-    h += '<div class="sec-h">最高重量</div><div class="list">' +
-      (s.prs.length ? s.prs.map(function (x) { return '<div class="cell pr">' + tier(x.tier) + '<div class="pr-main"><span>' + x.name + '</span><span class="pr-sub">' + x.day + ' · ' + x.date + '</span></div><span class="num pr-w">' + x.w + '<span class="pr-u"> kg</span></span></div>'; }).join('') : '<div class="empty-tip">完成训练后显示</div>') + '</div>';
+    h += '<div class="sec-h">动作 · 最高重量</div><div class="list">' +
+      (s.prs.length ? s.prs.map(function (x) { return '<div class="cell pr tap" data-act="exopen" data-name="' + esc(x.name) + '" role="button" aria-label="查看' + esc(x.name) + '的详情">' + tier(x.tier) + '<div class="pr-main"><span>' + x.name + '</span><span class="pr-sub">' + x.day + ' · ' + x.date + '</span></div><span class="num pr-w">' + x.w + '<span class="pr-u"> kg</span></span><span class="chev">›</span></div>'; }).join('') : '<div class="empty-tip">完成训练后显示</div>') + '</div>' +
+      (s.prs.length ? '<div class="sec-f">点任意一个动作，查看它的重量曲线、容量和估算 1RM 趋势。</div>' : '');
     if (s.bw.length >= 2) h += '<div class="sec-h">体重</div><div class="card"><canvas id="c_bw" class="cv short"></canvas></div>';
+    if (st.ex) h += renderExerciseSheet();
     return h;
   }
   function ctxOf(id) {
@@ -717,10 +720,70 @@
     if ((c = ctxOf('c_v'))) P.volume(c.ctx, c.w, c.h, s.volume);
     if ((c = ctxOf('c_p'))) P.pie(c.ctx, c.w, c.h, s);
     if ((c = ctxOf('c_bw'))) P.bw(c.ctx, c.w, c.h, s.bw);
+    if (st.ex) drawExercise();
+  }
+  var TIER_HEX = { T1: '#FF6B1A', T2: '#0A84FF', T3: '#8E8E93' };
+  function drawExercise() {
+    var d = Insight.detail(load(), S.stats.ex), c; if (!d) return;
+    var se = d.series, multi = d.tiers.length > 1, col = function (t) { return TIER_HEX[t] || '#FF6B1A'; };
+    if ((c = ctxOf('c_ex_w'))) {
+      var sw = multi ? d.tiers.map(function (t) { return { color: col(t), data: se.byTier[t].perf, width: 2.2, connect: true }; })
+        : [{ color: '#FF6B1A', data: se.perf, width: 2.5, fill: 'rgba(255,107,26,0.22)', connect: true }];
+      Chart.line(c.ctx, c.w, c.h, { labels: se.labels, series: sw, emptyText: '暂无数据' });
+    }
+    if ((c = ctxOf('c_ex_e'))) {
+      var ser = [];
+      if (d.ref && d.primary === 'T1') ser.push({ color: '#C7C7CC', data: se.labels.map(function () { return d.ref; }), dashed: true, width: 1, dots: false });
+      if (se.reg) ser.push({ color: '#0A84FF', data: se.reg, dashed: true, width: 1.5, dots: false, connect: true });
+      if (multi) d.tiers.forEach(function (t) { if (t !== d.primary) ser.push({ color: col(t), data: se.byTier[t].e1rm, width: 1.4, connect: true }); });
+      ser.push({ color: multi ? col(d.primary) : '#FF6B1A', data: multi ? se.byTier[d.primary].e1rm : se.e1rm, width: 2.5, fill: multi ? undefined : 'rgba(255,107,26,0.22)', connect: true });
+      Chart.line(c.ctx, c.w, c.h, { labels: se.labels, series: ser, emptyText: '还没有可估算的记录' });
+    }
+    if ((c = ctxOf('c_ex_v'))) Chart.bars(c.ctx, c.w, c.h, { labels: se.labels, stacks: d.tiers.map(function (t) { return { name: t, color: col(t), data: se.byTier[t].volume }; }), emptyText: '暂无容量数据' });
+  }
+  function fmtKg(v) { return GZ.fmtW(Math.round(v * 10) / 10); }
+  function renderExerciseSheet() {
+    var d = Insight.detail(load(), S.stats.ex);
+    if (!d) { S.stats.ex = null; return ''; }
+    var unit = d.bw ? '次' : d.unit.replace(' 单只', '').replace(' 外加', '');
+    var kp = function (l, v, u, sub) { return '<div class="ex-k"><span class="ex-kl">' + l + '</span><span class="ex-kv"><b class="num">' + v + '</b>' + (u ? '<i>' + u + '</i>' : '') + '</span><span class="ex-ks">' + sub + '</span></div>'; };
+    var dt = function (x) { return x.slice(5).replace('-', '月') + '日'; };
+    var perfLabel = d.bw ? '次数走势' : '重量走势';
+    var kpis = '<div class="ex-kpis">' +
+      kp(d.bw ? '最近次数' : '最佳重量', d.bw ? d.points[d.points.length - 1].last !== null ? d.points[d.points.length - 1].last : d.points[d.points.length - 1].reps : fmtKg(d.bestWeight.v), d.bw ? '次' : unit, d.bw ? dt(d.lastDate) : dt(d.bestWeight.date)) +
+      kp('估算 1RM', d.bestE1 ? fmtKg(d.bestE1.v) : '—', d.bestE1 ? 'kg' : '', d.bw ? '自重不估算' : d.bestE1 ? '最佳 · ' + dt(d.bestE1.date) : '暂无') +
+      kp('累计容量', d.bw ? '—' : (d.volume >= 1000 ? (d.volume / 1000).toFixed(2) : d.volume), d.bw ? '' : (d.volume >= 1000 ? 't' : 'kg'), d.bw ? '自重不计 kg' : '均 ' + d.avgVolume.toLocaleString('zh-CN') + ' kg / 次') +
+      kp('记录次数', d.n, '次', d.adds ? '加重 ' + d.adds + ' 次' : '首次 ' + dt(d.firstDate)) + '</div>';
+    var e1sec = '';
+    if (!d.bw) {
+      var delta = d.e1Delta === null ? '' : '<div class="mini"><div class="mi"><span class="num mi-v ' + (d.e1Delta > 0 ? 'accent' : '') + '">' + (d.e1Delta > 0 ? '+' : '') + d.e1Delta + '</span><span class="mi-l">首次至今 kg</span></div>' +
+        (d.slope !== null ? '<div class="mi"><span class="num mi-v">' + (d.slope >= 0 ? '+' : '') + d.slope + '</span><span class="mi-l">kg / 周</span></div><div class="mi"><span class="num mi-v">' + d.r2 + '</span><span class="mi-l">R²</span></div>' : '<div class="mi"><span class="num mi-v">—</span><span class="mi-l">趋势需 3 次</span></div>') +
+        (d.vsRef !== null ? '<div class="mi"><span class="num mi-v">' + (d.vsRef > 0 ? '+' : '') + d.vsRef + '%</span><span class="mi-l">对比录入 1RM</span></div>' : '') + '</div>';
+      e1sec = '<div class="ss-sec"><div class="ss-h"><span class="ss-t">估算 1RM 趋势</span>' + (d.latestE1 ? '<span class="ex-src">' + esc(d.e1Kind) + '</span>' : '') + '</div>' +
+        '<canvas id="c_ex_e" class="cv"></canvas>' +
+        '<div class="legend">' + (d.tiers.length > 1 ? d.tiers.map(function (t) { return '<div class="lg"><div class="sw" style="background:' + (TIER_HEX[t] || '#FF6B1A') + '"></div>' + t + (t === d.primary ? ' · 估算以此为准' : '') + '</div>'; }).join('') : '<div class="lg"><div class="sw" style="background:#FF6B1A"></div>估算 1RM</div>') + (d.slope !== null ? '<div class="lg"><div class="sw dash" style="border-color:#0A84FF"></div>回归趋势</div>' : '') + (d.ref && d.primary === 'T1' ? '<div class="lg"><div class="sw dash" style="border-color:#C7C7CC"></div>录入 1RM</div>' : '') + '</div>' +
+        delta + (d.tip ? '<p class="ss-hint">' + esc(d.tip) + '</p>' : '') + '</div>';
+    } else e1sec = '<div class="ss-sec"><div class="ss-h"><span class="ss-t">估算 1RM</span></div><p class="ss-empty">' + esc(d.tip) + '</p></div>';
+    var volsec = d.bw ? '' : '<div class="ss-sec"><div class="ss-h"><span class="ss-t">每次容量</span>' + (d.bestVolume ? '<span class="ex-src">最高 ' + d.bestVolume.v.toLocaleString('zh-CN') + ' kg</span>' : '') + '</div><canvas id="c_ex_v" class="cv"></canvas>' + (d.tiers.length > 1 ? '<div class="legend">' + d.tiers.map(function (t) { return '<div class="lg"><div class="sw" style="background:' + (TIER_HEX[t] || '#FF6B1A') + '"></div>' + t + '</div>'; }).join('') + '</div>' : '') + '</div>';
+    var rows = d.recent.map(function (p) {
+      var main = d.bw ? (p.last !== null ? '末组 ' + p.last + ' 次' : '共 ' + p.reps + ' 次') : fmtKg(p.weight) + ' kg × ' + p.reps + ' 次';
+      return '<div class="ex-row"><span class="ex-d num">' + p.md + '</span><span class="ex-m"><b>' + esc(main) + '</b><i>' + esc(p.day + ' · ' + p.stage + (p.volume ? ' · ' + Math.round(p.volume).toLocaleString('zh-CN') + ' kg' : '')) + '</i></span><span class="ex-e">' + (p.e1rm ? '<b class="num">' + fmtKg(p.e1rm) + '</b><i>1RM</i>' : '<i>—</i>') + '</span><span class="jtag" style="color:' + (GZ.JUDGE_COLORS ? GZ.JUDGE_COLORS[p.judgment] || '#8E8E93' : '#8E8E93') + '">' + esc(p.judgment) + '</span></div>';
+    }).join('');
+    return '<div class="mask share-mask" data-act="exclose"><div class="sheet share-sheet" data-stop="1">' +
+      '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title ex-title">' + esc(d.name) + '</span><button class="share-close" data-act="exclose" aria-label="关闭动作详情">×</button></div>' +
+      '<p class="ex-sub">' + d.tiers.map(function (t) { return tier(t); }).join(' ') + '<span>' + esc(d.equip) + ' · ' + esc(d.days.join(' / ')) + ' · ' + d.n + ' 次记录</span></p></div>' +
+      '<div class="ss-body">' + kpis +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">' + perfLabel + '</span></div><canvas id="c_ex_w" class="cv"></canvas></div>' +
+      e1sec + volsec +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">最近记录</span><span class="ex-src">共 ' + d.n + ' 次</span></div><div class="ex-rows">' + rows + '</div></div>' +
+      '<details class="quote-source ex-method"><summary>估算方法</summary><p>1RM 用 Epley 公式估算：重量 × (1 + 次数 ÷ 30)。T1 取末组 AMRAP；T2 取实际完成次数 ÷ 组数；T3 取末组次数，超过 ' + Insight.REP_CAP + ' 次按 ' + Insight.REP_CAP + ' 次计（高次数会让公式偏高，所以偏保守）。自重动作不估算。</p><p>估算值只用于看趋势，不是真实 1RM，也不会改变训练计划里的重量。</p></details>' +
+      '</div></div></div>';
   }
   function statsAct(act, ds) {
     if (act === 'lift') { S.stats.lift = Number(ds.i); return true; }
     if (act === 'wday') { S.stats.day = Number(ds.i); return true; }
+    if (act === 'exopen') { S.stats.ex = ds.name; return true; }
+    if (act === 'exclose') { S.stats.ex = null; return true; }
   }
 
   // ================= 回顾 =================
@@ -732,7 +795,8 @@
     if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date.slice(5).replace('-', '月') + '日') + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.day + ' ' + esc(sd.dayName) + ' · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 训练容量</div><button class="btn-primary" data-act="shareopen" data-id="' + sd.recordId + '">生成分享卡片</button></div>';
     else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
     var bs = Share.badgeState(load());
-    h += '<div class="list wall-entry"><div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div>' +
+    var mths = Monthly.months(load());
+    h += '<div class="list wall-entry">' + (mths.length ? '<div class="cell tap" data-act="monthopen" data-ym="' + mths[0] + '"><span class="flex1">月报</span><span class="val">' + esc(Monthly.ymText(mths[0])) + '</span><span class="chev">›</span></div>' : '') + '<div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div>' +
       (bs.nextGoals[0] ? (function () { var g = bs.nextGoals[0], d = bs.byId[g.id], p = bs.prog[g.id]; return '<div class="cell tap wall-goal" data-act="wallopen"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>下一个：' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>'; })() : '') + '</div>';
     if (r.tab === 0) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
@@ -788,6 +852,8 @@
     var r = S.review;
     if (act === 'shareopen') { r.share = {id:ds.id,funVariant:0,theme:'sage',body:false,badgePick:null,badgeVariant:0,image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
+    if (act === 'monthopen') { r.share = { kind: 'month', ym: ds.ym || null, funVariant: 0, theme: 'sage', body: false, image: null, blob: null }; return true; }
+    if (act === 'monthpick') { r.share.ym = el.value; r.share.funVariant = 0; return true; }
     if (act === 'sharerec') { r.share.id=el.value; r.share.funVariant=0; r.share.badgePick=null; r.share.badgeVariant=0; return true; }
     if (act === 'wallopen') { r.wall = true; return true; }
     if (act === 'wallclose') { r.wall = false; return true; }
@@ -798,13 +864,13 @@
       r.share.badgePick = now === ds.id ? [] : [ds.id]; return true;
     }
     if (act === 'badgeagain') { r.share.badgePick = null; r.share.badgeVariant = (r.share.badgeVariant || 0) + 1; return true; }
-    if (act === 'watchgo') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick, badgeVariant: r.share.badgeVariant }; r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
+    if (act === 'watchgo') { r.returnTo = shareKeep(r.share); r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'funagain') { r.share.funVariant=(r.share.funVariant||0)+1; return true; }
-    if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
+    if (act === 'sharecopy') { var cd = r.share.kind === 'month' ? Monthly.build(load(), r.share.ym, r.share) : Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
-    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick, badgeVariant: r.share.badgeVariant }; r.share=null; S.tab='settings'; render(); return false; }
+    if (act === 'shareprofile') { r.returnTo = shareKeep(r.share); r.share=null; S.tab='settings'; render(); return false; }
     if (act === 'sharetrain') { r.share=null; S.tab='train'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
@@ -828,7 +894,51 @@
   }
 
   // ================= 成果分享（纯本地 Canvas 高清 PNG） =================
+  /** 跳去设置页（改名片、导入手表）前记住当前分享面板，回来自动恢复；训练战报与月报共用 */
+  function shareKeep(sh) { return { kind: sh.kind || '', id: sh.id, ym: sh.ym || null, funVariant: sh.funVariant, theme: sh.theme, body: sh.body, badgePick: sh.badgePick, badgeVariant: sh.badgeVariant }; }
+  function shareRestore(b) { return { kind: b.kind || '', id: b.id, ym: b.ym || null, funVariant: b.funVariant || 0, theme: b.theme || 'sage', body: !!b.body, badgePick: b.badgePick || null, badgeVariant: b.badgeVariant || 0, image: null, blob: null }; }
+  function renderMonthSheet() {
+    var sh = S.review.share, data = Monthly.build(load(), sh.ym, sh);
+    if (!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">还没有可生成月报的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
+    sh.ym = data.ym;
+    var ava = data.profile.avatar
+      ? '<img class="ss-ava" src="' + esc(data.profile.avatar) + '" alt="' + esc(data.name) + ' 的头像">'
+      : '<span class="ss-ava ss-ava-t" aria-hidden="true">' + esc(Array.from(data.name || '我')[0]) + '</span>';
+    var who = data.profile.handle || (data.profile.signature ? '' : '未设置社媒 ID');
+    var hasWatch = !!(load().params.watch && (load().params.watch.workouts || []).length);
+    var w = data.watch;
+    var watchBlock = w
+      ? '<div class="ss-watch"><div class="ss-watch-t"><b>卡片显示手表记录</b><span>力量训练 ' + w.hours + ' 小时 · ' + w.sets + ' 组' + (w.kcal ? ' · ' + w.kcal.toLocaleString('zh-CN') + ' 千卡' : '') + '</span></div><label class="ios-sw green"><input type="checkbox" data-act="bodytoggle" ' + (sh.body ? 'checked' : '') + ' aria-label="卡片显示手表记录"><i></i></label></div>'
+      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? '这个月在手表里没有力量训练记录' : '导入 COROS 手表快照后，可显示本月训练时长、组数，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
+    var delta = data.volDelta === null ? '这是第一个有记录的月份' : '比 ' + data.prevMon + (data.volDelta >= 0 ? '多 ' : '少 ') + Math.abs(data.volDelta) + '%（' + data.prevMon + ' ' + (data.prev.volume / 1000).toFixed(2) + ' t）';
+    var progRows = data.prog.length ? '<div class="ex-rows">' + data.prog.map(function (p) {
+      return '<div class="ex-row"><span class="ex-d">' + tier(p.tier) + '</span><span class="ex-m"><b>' + esc(p.name) + '</b><i>' + (p.prior === null ? '本月首次记录' : p.delta > 0 ? '较上月 +' + p.delta + ' kg（+' + p.pct + '%）' : p.delta < 0 ? '较上月 ' + p.delta + ' kg' : '与上月持平') + '</i></span><span class="ex-e"><b class="num">' + p.e1 + '</b><i>kg 估算 1RM</i></span></div>';
+    }).join('') + '</div>' : '<p class="ss-empty">本月还没有可以估算 1RM 的记录。</p>';
+    var chips = data.milestones.length ? '<div class="ss-cells">' + data.milestones.map(function (m) { return '<span class="ss-cell">' + esc(m.e) + ' ' + esc(m.title) + '</span>'; }).join('') + '</div><p class="ss-hint">本月共解锁 ' + data.milestoneCount + ' 枚，同一系列跨过多档时只展示最高一档，卡片上最多放 6 枚。</p>' : '<p class="ss-empty">本月没有新解锁的里程碑。</p>';
+    return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1">' +
+      '<div class="share-head"><div class="grabber"></div>' +
+        '<div class="share-toolbar"><span class="sheet-title">月报</span><button class="share-close" data-act="shareclose" aria-label="关闭月报">×</button></div>' +
+        '<div class="ss-theme" role="group" aria-label="卡片配色">' + [['sage','鼠尾草'],['warm','暖杏色']].map(function(t){return '<button class="'+(sh.theme===t[0]?'on':'')+'" data-act="sharetheme" data-theme="'+t[0]+'" aria-pressed="'+(sh.theme===t[0])+'">'+t[1]+'</button>';}).join('') + '</div>' +
+      '</div><div class="ss-body">' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">01 · 月份与名片</span><button class="ss-act" data-act="shareprofile">编辑名片 ›</button></div>' +
+        '<label class="ss-pick"><span class="ss-pick-l">哪个月</span><select data-act="monthpick" aria-label="选择月份">' + data.months.map(function (m) { return '<option value="' + m + '" ' + (m === data.ym ? 'selected' : '') + '>' + esc(Monthly.ymText(m)) + '</option>'; }).join('') + '</select></label>' +
+        '<div class="ss-row">' + ava + '<div class="ss-who"><span class="ss-name">' + esc(data.name) + '</span><span class="ss-sub">' + esc(who) + '</span></div></div>' +
+        (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 本月纵览</span></div>' +
+        '<div class="ss-metrics"><span><b class="num">' + data.n + '</b>次训练</span><span><b class="num">' + data.days + '</b>个训练日</span><span><b class="num">' + data.adds + '</b>项加重</span></div>' +
+        '<p class="ss-load">累计 ' + esc(data.volumeText) + ' t · ' + data.volume.toLocaleString('zh-CN') + ' kg · ' + esc(delta) + (data.ongoing ? ' · 本月进行中' : '') + '</p></div>' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 趣味换算</span><span class="ss-acts"><span class="quote-total">' + (data.funIndex + 1) + ' / ' + data.funTotal + '</span><button class="ss-act dice" data-act="funagain">🎲 换一个</button></span></div>' +
+        '<div class="ss-fun"><span class="ss-fun-tag">' + esc(data.funTag) + '</span>' + esc((data.funEmoji ? data.funEmoji + ' ' : '') + data.fun) + (data.funBasis ? '<span class="ss-fun-note">算法：' + esc(data.funBasis) + '</span>' : '') + '</div>' + watchBlock + '</div>' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">04 · 进步与里程碑</span><button class="ss-act" data-act="wallopen">徽章墙 ›</button></div>' + progRows + '<div class="ss-gap"></div>' + chips + '</div>' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">05 · 本月小结</span></div><div class="ss-sum">' + esc(data.copy) + '</div></div>' +
+      '<div class="share-art-wrap"><div id="shareArtwork" class="share-art" aria-label="月报图片预览"><span class="share-loading">正在整理本月的训练…</span></div></div>' +
+      '<div class="share-hint">预览即最终图片，可长按保存；日历里实心圆点是练了的日子，外圈表示当天练了两次。</div>' +
+      '</div>' +
+      '<div class="share-foot"><div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div>' +
+      '</div></div>';
+  }
   function renderShareSheet() {
+    if (S.review.share.kind === 'month') return renderMonthSheet();
     var sh=S.review.share, data=Share.build(load(),sh.id,sh);
     if (data) { sh.id=data.recordId; sh.date=data.date; sh.day=data.day; }
     if(!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">这一天没有可分享的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
@@ -916,22 +1026,23 @@
     sh.image=null; sh.blob=null;
     var generation=(sh.generation || 0)+1; sh.generation=generation;
     try {
-      var data=Share.build(load(),sh.id,sh); if(!data) return;
+      var isMonth = sh.kind === 'month';
+      var data = isMonth ? Monthly.build(load(), sh.ym, sh) : Share.build(load(),sh.id,sh); if(!data) return;
       if(document.fonts && document.fonts.ready) await document.fonts.ready;
-      var canvas=document.createElement('canvas'); await Share.draw(canvas,data,sh.theme);
+      var canvas=document.createElement('canvas'); await (isMonth ? Monthly.draw(canvas,data,sh.theme) : Share.draw(canvas,data,sh.theme));
       var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png');});
       if(S.review.share!==sh || sh.generation!==generation || !box.isConnected) return;
       if(!blob) throw new Error('导出失败');
       sh.blob=blob;sh.image=canvas.toDataURL('image/png');
-      box.innerHTML='';var img=new Image();img.src=sh.image;img.alt=data.name+' · '+data.date+' 训练战报';box.appendChild(img);
+      box.innerHTML='';var img=new Image();img.src=sh.image;img.alt=data.name+' · '+(isMonth ? data.title+' 月报' : data.date+' 训练战报');box.appendChild(img);
       document.querySelectorAll('[data-act="shareexport"],[data-act="sharesystem"]').forEach(function(b){b.disabled=false;});
     } catch(e) { if(box.isConnected) box.textContent='图片生成失败，请关闭后重试。'; }
   }
   function exportShareImage(system) {
     var sh=S.review.share; if(!sh||!sh.blob) { toast('图片正在生成，请稍候');return; }
-    var filename='训练战报_'+sh.date+'_'+(sh.day||'')+'.png', file=new File([sh.blob],filename,{type:'image/png'});
+    var isMonth = sh.kind === 'month', filename = isMonth ? '月报_'+sh.ym+'.png' : '训练战报_'+sh.date+'_'+(sh.day||'')+'.png', file=new File([sh.blob],filename,{type:'image/png'});
     if(system && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share) {
-      navigator.share({files:[file],title:'训练战报 · '+sh.date+' '+(sh.day||'')}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
+      navigator.share({files:[file],title:isMonth ? '月报 · '+sh.ym : '训练战报 · '+sh.date+' '+(sh.day||'')}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
     }
     var a=document.createElement('a'),url=URL.createObjectURL(sh.blob);a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(function(){URL.revokeObjectURL(url);},30000);
@@ -1216,7 +1327,7 @@
       S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
       if (S.tab === 'review' && S.review.returnTo && prevTab === 'settings') {
         var back = S.review.returnTo; S.review.returnTo = null;
-        S.review.share = { id: back.id, funVariant: back.funVariant || 0, theme: back.theme || 'sage', body: !!back.body, badgePick: back.badgePick || null, badgeVariant: back.badgeVariant || 0, image: null, blob: null };
+        S.review.share = shareRestore(back);
         render();
       }
     });

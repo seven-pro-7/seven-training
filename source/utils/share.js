@@ -396,5 +396,7 @@
     summaryLines.forEach(function (l, k) { text(ctx, l, 84, smTop + k * 46, 34, ink, 500); });
     return canvas;
   }
-  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, chooseFun: chooseFun, funPool: funPool, THINGS: THINGS, FOODS: FOODS, badgeState: badgeState, validSessions: validSessions };
+  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, chooseFun: chooseFun, funPool: funPool, THINGS: THINGS, FOODS: FOODS, badgeState: badgeState, validSessions: validSessions, sessionVolume: sessionVolume,
+    // 绘图与换算的公共小工具，月报等其他卡片复用，保持字号、避头点、对照物口径一致
+    H: { font: font, rounded: rounded, text: text, fit: fit, wrap: wrap, loadImage: loadImage, secLabel: secLabel, compare: compare, num: num, hashSeed: hashSeed, shuffled: shuffled, hasEntry: hasEntry, FOODS: FOODS } };
 });
