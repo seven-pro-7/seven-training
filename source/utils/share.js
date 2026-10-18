@@ -1,8 +1,8 @@
 /* 训练分享：纯数据聚合 + Canvas 海报。不调用外部服务，不读取同步令牌。 */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./engine'));
-  else root.GZShare = factory(root.GZ);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (GZ) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./engine'), require('./badges'));
+  else root.GZShare = factory(root.GZ, root.GZBadges);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (GZ, Badges) {
   'use strict';
   var PROFILE = { name: '', handle: '', signature: '', avatar: '', showWeight: false };
   // ---------- 趣味换算：诚实的算术对照 + 数据彩蛋 ----------
@@ -63,6 +63,31 @@
     }
     return null;
   }
+  // 能量对照：[emoji, 名称, 单份千卡, 量词, 份量说明]。千卡是手表估算，文案里会写明
+  var FOODS = [
+    ['🥚', '水煮蛋', 75, '个', '1 个约 50 g'],
+    ['🍌', '香蕉', 90, '根', '中等大小一根'],
+    ['🍎', '苹果', 95, '个', '中等大小一个'],
+    ['🥤', '可乐', 140, '罐', '330 ml 一罐'],
+    ['🍚', '白米饭', 230, '碗', '熟米饭约 200 g 一碗'],
+    ['🍔', '汉堡', 250, '个', '普通汉堡一个'],
+    ['🍕', '披萨', 285, '片', '一片约 100 g'],
+    ['🧋', '奶茶', 300, '杯', '中杯约 500 ml']
+  ];
+  /** 手表数据派生的说法：只有这次训练对上了手表记录才会出现 */
+  function watchEggs(d) {
+    var w = d.watch, out = [];
+    if (!w) return out;
+    if (w.kcal > 0) FOODS.forEach(function (f) {
+      var r = w.kcal / f[2];
+      if (r < 0.8 || r > 40) return;
+      var n = Math.max(1, Math.round(r));
+      out.push({ e: f[0], tag: '能量对照', text: '手表估算消耗 ' + num(w.kcal, 0) + ' 千卡，约等于 ' + n + ' ' + f[3] + f[1],
+        basis: num(w.kcal, 0) + ' kcal ÷ ' + f[2] + ' kcal（' + f[1] + '，' + f[4] + '）≈ ' + n + '；热量为手表估算，仅作趣味参考' });
+    });
+    if (w.min > 0 && d.volume > 0) out.push({ e: '⚡', tag: '训练密度', text: '平均每分钟搬运 ' + num(d.volume / w.min) + ' kg', basis: num(d.volume) + ' kg ÷ ' + w.min + ' 分钟（手表计时）' });
+    return out;
+  }
   /** 数据彩蛋：只用本次或历史记录里的真实数字，不编造 */
   function eggs(d) {
     var out = [], v = d.volume;
@@ -94,7 +119,7 @@
   }
   /** 全部可用说法（洗牌后的稳定顺序）。每换一次就翻到下一条，一轮内不重复 */
   function funPool(seedKey, d) {
-    var items = THINGS.map(function (t) { return compare(d.volume, t); }).filter(Boolean).concat(eggs(d));
+    var items = THINGS.map(function (t) { return compare(d.volume, t); }).filter(Boolean).concat(eggs(d)).concat(watchEggs(d));
     return shuffled(items, hashSeed(seedKey));
   }
   function chooseFun(seedKey, opts, d) {
@@ -133,6 +158,22 @@
     out.forEach(function (x, i) { x.seq = i + 1; });
     return out.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.order - a.order; });
   }
+  /** 有效训练（时间先后）：徽章计算的输入，口径与分享卡片一致 */
+  function validSessions(rp) {
+    var out = [];
+    rp.sessions.forEach(function (s, i) {
+      var ok = s.items.some(function (it) { var e = (s.rec.entries || {})[it.slotId]; return hasEntry(e, s.rec.deload) && it.judgment !== '跳过'; });
+      if (!ok || !/^\d{4}-\d{2}-\d{2}$/.test(s.rec.date || '')) return;
+      out.push({ id: s.rec.id, date: s.rec.date, day: s.rec.day, week: s.week, order: i, volume: sessionVolume(s) });
+    });
+    return out;
+  }
+  function badgeStateFrom(db, facts) {
+    return Badges.compute(facts.map(function (f) { return Object.assign({}, f); }), { params: db.params, dayIds: (db.days || []).map(function (d) { return d.id; }), watch: db.params && db.params.watch });
+  }
+  /** 徽章墙与卡片用的完整状态 */
+  function badgeState(db) { var rp = GZ.replay(db); return badgeStateFrom(db, validSessions(rp)); }
+  function badgeBrief(state, id) { var d = state.byId[id]; return { id: id, title: d.title, e: d.e, desc: d.desc, group: d.group }; }
   /**
    * key：训练记录 id（推荐）；兼容旧调用传日期——取那天最后一次训练。
    * 不传：今天有训练取今天最后一次，否则取最近一次。
@@ -171,16 +212,26 @@
     var p = profile(db.params.shareProfile);
     var summary = '记录了 ' + rows.length + ' 项动作、' + Math.round(reps) + ' 次训练动作。' +
       (sessions.some(function(x){return x.rec.deload;}) ? '减载也是计划的一部分。认真练习，也认真恢复。' : adds > 0 ? adds + ' 个动作达到加重条件。把进步留在记录里，把恢复留给接下来的自己。' : '加重不是每次训练的唯一答案。保持节奏，每次认真练习都算数。');
-    // 历史累计与「上一次同训练日」容量：只读已有记录，不改数据
-    var totalVolume = 0, prevVolume = 0, passed = false;
-    rp.sessions.forEach(function (s) {
-      var sv = sessionVolume(s);
-      totalVolume += sv;
-      if (s.rec.id === pick.id) passed = true;
-      else if (!passed && s.rec.day === pick.day && sv > 0) prevVolume = sv;
+    // 历史累计（到本次为止）与「上一次同训练日」容量：只读已有记录，不改数据
+    var facts = validSessions(rp), me = facts.filter(function (f) { return f.id === pick.id; })[0];
+    var totalVolume = 0, prevVolume = 0;
+    facts.forEach(function (f) {
+      if (f.order <= me.order) totalVolume += f.volume;
+      if (f.order < me.order && f.day === pick.day && f.volume > 0) prevVolume = f.volume;
     });
+    // 手表：同一天按先后与训练记录一一对应；没对上就不显示任何身体数据
+    var wk = Badges.watchFor(db.params && db.params.watch, facts, me);
+    var state = badgeStateFrom(db, facts), cands = state.bySession[pick.id] || [];
+    var chosen = Array.isArray(opts.badgePick) ? opts.badgePick.filter(function (id) { return cands.indexOf(id) >= 0; }) : cands.slice(0, 2);
+    var bodyParts = [];
+    if (wk) {
+      bodyParts.push('用时 ' + wk.min + ' 分');
+      if (wk.avgHr > 0) bodyParts.push('平均心率 ' + wk.avgHr);
+      if (wk.kcal > 0) bodyParts.push('消耗 ' + wk.kcal + ' 千卡');
+    }
+    var bodyLine = opts.body === true && bodyParts.length ? '手表记录 · ' + bodyParts.join(' · ') : '';
     var fn = chooseFun(selected + pick.id, opts, { volume: volume, reps: reps, sets: sets, rows: rows, adds: adds,
-      day: pick.day, seq: pick.seq, totalVolume: totalVolume, prevVolume: prevVolume });
+      day: pick.day, seq: pick.seq, totalVolume: totalVolume, prevVolume: prevVolume, watch: wk });
     var fun = fn.text;
     var weekText = GZ.weekText(pick.week, db.params);
     return { recordId: pick.id, day: pick.day, dayName: pick.dayName, week: pick.week, weekText: weekText, seq: pick.seq, label: pick.label,
@@ -189,8 +240,11 @@
       reps: Math.round(reps), sets: sets, adds: adds, estimated: estimated, rows: rows,
       sessions: 1, days: pick.day + ' ' + pick.dayName, trainingDays: pick.seq, weight: p.showWeight && bw !== null ? bw : null,
       fun: fun, funEmoji: fn.e, funTag: fn.tag, funBasis: fn.basis, funIndex: fn.index, funTotal: fn.total,
+      badges: chosen.map(function (id) { return badgeBrief(state, id); }), badgeCands: cands.map(function (id) { return badgeBrief(state, id); }),
+      badgeEarned: state.earnedCount, badgeAll: state.total, watchBody: wk ? { min: wk.min, sets: wk.sets, avgHr: wk.avgHr, kcal: wk.kcal } : null, bodyLine: bodyLine,
       caption: (p.name || '训练者') + (p.handle ? ' ' + p.handle : '') + ' · ' + selected + ' · ' + pick.day + ' ' + pick.dayName + ' · 第 ' + pick.seq + ' 次训练\n' +
         rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' +
+        (chosen.length ? '里程碑：' + chosen.map(function (id) { return state.byId[id].title; }).join('、') + '\n' : '') + (bodyLine ? bodyLine + '\n' : '') +
         fn.e + ' ' + fun + '\n' + '训练小结：' + summary + '\n#训练打卡 #认真练习' };
   }
   /** 一次训练的计入容量（自重不计 kg，与卡片口径一致） */
@@ -248,9 +302,11 @@
     var funH = 36 + 26 + 14 + funLines.length * (fs + 14) + (basisLines.length ? 10 + basisLines.length * 34 : 0) + 36;
     // ---- 纵向坐标 ----
     // 一、个人名片 + 训练阶段 + 日期
-    var s1Top = 72, s1Div = s1Top + profileH + 30, s1Stage = s1Div + 26, s2Top = s1Stage + 34 + 56;
+    var s1Top = 72, s1Div = s1Top + profileH + 30, s1Stage = s1Div + 26;
+    var badges = data.badges || [], bRowTop = s1Stage + 34 + 26, bRowH = badges.length ? 60 : 0;
+    var s2Top = s1Stage + 34 + (bRowH ? 26 + bRowH + 44 : 56);
     // 二、纵览：标签 + 容量卡 + 指标 + 趣味
-    var vTop = s2Top + 54, mTop = vTop + 250 + 34, fTop = mTop + 96 + 34;
+    var vTop = s2Top + 54, mTop = vTop + 250 + 34, bodyTop = mTop + 96 + 22, fTop = mTop + 96 + 34 + (data.bodyLine ? 56 : 0);
     // 三、训练清单
     var lLbl = fTop + funH + 52, lTop = lLbl + 62;
     font(ctx, 34, 650);
@@ -277,6 +333,15 @@
     ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, s1Div); ctx.lineTo(1016, s1Div); ctx.stroke();
     text(ctx, data.day + ' ' + data.dayName, 64, s1Stage, 34, ink, 700);
     ctx.textAlign = 'right'; text(ctx, data.date.slice(5).replace('-', '月') + '日 · ' + data.weekText, 1016, s1Stage + 6, 26, muted, 500); ctx.textAlign = 'left';
+    // 本次新获得的里程碑（最多 2 枚）：小胶囊，文字为主、每枚一个 emoji
+    var bx = 64;
+    badges.forEach(function (b) {
+      var label = b.e + ' ' + b.title;
+      font(ctx, 26, 650); var bw2 = Math.ceil(ctx.measureText(label).width) + 56;
+      rounded(ctx, bx, bRowTop, bw2, bRowH, 30, warm ? '#FFDFC0' : '#DCE8D3');
+      text(ctx, label, bx + 28, bRowTop + 17, 26, ink, 650);
+      bx += bw2 + 16;
+    });
     // ==== 二、纵览数据 + 趣味包装 ====
     secLabel(ctx, s2Top, '纵览数据', muted);
     rounded(ctx, 64, vTop, 952, 250, 36, card);
@@ -287,6 +352,7 @@
     text(ctx, data.volume.toLocaleString('zh-CN') + ' kg · 重量 × 次数之和', 100, vTop + 172, 26, muted, 400);
     var metrics = [[data.rows.length, '训练动作'], [data.reps, (data.estimated ? '估算' : '累计') + '次数'], [data.adds, '达到加重条件']];
     metrics.forEach(function (m, k) { var x = 70 + k * 322; text(ctx, m[0], x, mTop, 56, ink, 700); text(ctx, m[1], x, mTop + 66, 26, muted, 400); });
+    if (data.bodyLine) text(ctx, data.bodyLine, 70, bodyTop, 26, muted, 500);
     // 趣味卡：标签 → emoji 行 → 一句话 → 算法
     rounded(ctx, 64, fTop, 952, funH, 36, fill);
     var fy = fTop + 36;
@@ -317,5 +383,5 @@
     summaryLines.forEach(function (l, k) { text(ctx, l, 84, smTop + k * 46, 34, ink, 500); });
     return canvas;
   }
-  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, chooseFun: chooseFun, funPool: funPool, THINGS: THINGS };
+  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, chooseFun: chooseFun, funPool: funPool, THINGS: THINGS, FOODS: FOODS, badgeState: badgeState, validSessions: validSessions };
 });

@@ -1,0 +1,239 @@
+/* 里程碑徽章：纯计算，不读写存储、不联网。
+ * 输入是「有效训练」列表（由 share.js 整理）+ 手表快照，输出每枚徽章何时获得、每次训练新获得了哪些。 */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./engine'));
+  else root.GZBadges = factory(root.GZ);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (GZ) {
+  'use strict';
+
+  // ---------- 徽章定义 ----------
+  // group 决定卡片优先级：周期 > 容量 > 次数 > 坚持 > 手表；tier 越大越靠前
+  var GROUPS = [
+    { id: 'cycle', name: '周期', rank: 5 },
+    { id: 'volume', name: '累计容量', rank: 4 },
+    { id: 'count', name: '训练次数', rank: 3 },
+    { id: 'streak', name: '坚持', rank: 2 },
+    { id: 'watch', name: '手表', rank: 1 }
+  ];
+  var COUNTS = [1, 10, 25, 50, 100, 200];
+  var VOLUMES = [
+    { kg: 12000, title: '一辆公交车', desc: '累计容量 12 t，约一辆公交车的重量', e: '🚌' },
+    { kg: 41000, title: '一架波音 737', desc: '累计容量 41 t，约一架空机波音 737', e: '✈️' },
+    { kg: 150000, title: '一头蓝鲸', desc: '累计容量 150 t，约一头蓝鲸的体重', e: '🐋' },
+    { kg: 1000000, title: '千吨容量', desc: '累计容量 1,000 t', e: '⛰️' },
+    { kg: 7300000, title: '一座埃菲尔铁塔', desc: '累计容量 7,300 t，约埃菲尔铁塔的钢铁结构', e: '🗼' }
+  ];
+  var STREAKS = [2, 4, 8];
+  var HOURS = [10, 25, 50, 100];
+  var SETS = [100, 250, 500, 1000];
+  var SLEEP_NIGHTS = [3, 7];
+  var SLEEP_SCORE = 85;
+
+  function defs(P) {
+    var N = Math.max(1, (P && (P.weeksPerCycle || P.totalWeeks)) || 8), out = [];
+    function add(group, id, title, desc, e, tier, repeat) { out.push({ id: id, group: group, title: title, desc: desc, e: e, tier: tier, repeat: !!repeat }); }
+    COUNTS.forEach(function (n) { add('count', 'count-' + n, '第 ' + n + ' 次训练', '累计完成 ' + n + ' 次训练', '🎯', n); });
+    VOLUMES.forEach(function (v, i) { add('volume', 'vol-' + v.kg, v.title, v.desc, v.e, i + 1); });
+    add('streak', 'perfect-week', '完美一周', '一个计划周的全部训练日，在 7 天内完成', '⭐', 1, true);
+    STREAKS.forEach(function (n) { add('streak', 'streak-' + n, '连续 ' + n + ' 周全勤', '连续 ' + n + ' 个计划周都在 7 天内练完；中断后重新计数', '🔥', n); });
+    add('streak', 'streak-record', '最长连续刷新', '全勤连续周数刷新个人最长记录（至少 2 周）', '🏅', 99, true);
+    [1, 2, 3].forEach(function (c) { add('cycle', 'cycle-' + c, '完成第 ' + c + ' 个 ' + N + ' 周周期', '第 ' + c + ' 轮 ' + N + ' 周全部训练完成', '🏁', c); });
+    add('cycle', 'cycle-full', '满勤周期', '一个周期内每个计划周都是完美一周', '💎', 90, true);
+    add('cycle', 'deload-done', '减载完成', '完成一次减载周，恢复也是计划的一部分', '🌿', 80);
+    HOURS.forEach(function (h) { add('watch', 'w-hours-' + h, '手表累计 ' + h + ' 小时', '手表记录的力量训练累计 ' + h + ' 小时（自训练手记开始记录起）', '⏱️', h); });
+    SETS.forEach(function (s) { add('watch', 'w-sets-' + s, '手表累计 ' + s + ' 组', '手表记录的力量训练累计 ' + s + ' 组（自训练手记开始记录起）', '💪', s); });
+    SLEEP_NIGHTS.forEach(function (n) { add('watch', 'w-sleep-' + n, '睡得好 · ' + n + ' 晚', '睡眠评分 ≥ ' + SLEEP_SCORE + ' 连续 ' + n + ' 晚', '😴', n); });
+    return out;
+  }
+  function groupRank(g) { for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].id === g) return GROUPS[i].rank; return 0; }
+
+  // ---------- 工具 ----------
+  var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  function dayNum(date) { var p = date.split('-'); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000); }
+  function r2(n) { return Math.round(n * 100) / 100; }
+
+  // ---------- 手表快照 ----------
+  function num(v, lo, hi) { v = Number(v); return Number.isFinite(v) && v >= lo && v <= hi ? v : null; }
+  /** 校验并规整导入的快照；格式不对直接抛错，调用方给用户提示 */
+  function sanitizeWatch(raw) {
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (e) { throw new Error('文件不是有效的 JSON'); } }
+    if (!raw || typeof raw !== 'object' || raw.schema !== 'gzclp-watch-v1') throw new Error('这不是手表快照文件（缺少 gzclp-watch-v1 标识）');
+    var ws = Array.isArray(raw.workouts) ? raw.workouts : [], out = { source: String(raw.source || 'COROS').slice(0, 24), workouts: [], sleep: {} }, seen = {};
+    if (ws.length > 3000) throw new Error('训练条数过多');
+    ws.forEach(function (w) {
+      if (!w || !DATE_RE.test(w.date || '')) return;
+      var start = num(w.start, 0, 4102444800), min = num(w.min, 1, 600), sets = num(w.sets, 0, 200), hr = num(w.avgHr, 0, 250), kcal = num(w.kcal, 0, 5000);
+      if (start === null || min === null || sets === null) return;
+      var key = w.date + '|' + start;
+      if (seen[key]) return; seen[key] = 1;
+      out.workouts.push({ date: w.date, start: Math.round(start), min: Math.round(min), sets: Math.round(sets), avgHr: hr === null ? 0 : Math.round(hr), kcal: kcal === null ? 0 : Math.round(kcal) });
+    });
+    var sl = raw.sleep && typeof raw.sleep === 'object' ? raw.sleep : {}, keys = Object.keys(sl);
+    if (keys.length > 2000) throw new Error('睡眠天数过多');
+    keys.forEach(function (d) {
+      if (!DATE_RE.test(d)) return;
+      var sc = num(sl[d] && sl[d].score, 1, 100), mi = num(sl[d] && sl[d].min, 0, 1440);
+      if (sc === null) return;
+      out.sleep[d] = { score: Math.round(sc), min: mi === null ? 0 : Math.round(mi) };
+    });
+    if (!out.workouts.length && !Object.keys(out.sleep).length) throw new Error('快照里没有可用的训练或睡眠数据');
+    out.workouts.sort(function (a, b) { return a.start - b.start; });
+    return out;
+  }
+  /** 合并：训练按「日期+开始时间」去重，睡眠按日期以新数据为准；重复导入不会翻倍 */
+  function mergeWatch(oldW, incoming) {
+    var base = oldW && oldW.workouts ? oldW : { workouts: [], sleep: {} }, seen = {}, ws = [];
+    base.workouts.concat(incoming.workouts).forEach(function (w) { var k = w.date + '|' + w.start; if (!seen[k]) { seen[k] = 1; ws.push(w); } });
+    ws.sort(function (a, b) { return a.start - b.start; });
+    var sl = Object.assign({}, base.sleep || {}, incoming.sleep || {});
+    return { source: incoming.source || base.source || 'COROS', importedAt: Date.now(), workouts: ws, sleep: sl };
+  }
+  /** 找出某次训练对应的手表训练：同一天按开始先后一一对应 */
+  function watchFor(watch, sessions, session) {
+    if (!watch || !watch.workouts || !session) return null;
+    var day = watch.workouts.filter(function (w) { return w.date === session.date; }).sort(function (a, b) { return a.start - b.start; });
+    if (!day.length) return null;
+    var same = sessions.filter(function (s) { return s.date === session.date; }).sort(function (a, b) { return a.order - b.order; });
+    var idx = same.map(function (s) { return s.id; }).indexOf(session.id);
+    return day[idx] || null;
+  }
+
+  // ---------- 核心计算 ----------
+  /**
+   * sessions：按时间先后的有效训练 [{id,date,day,week,volume,order}]
+   * opts：{ params, dayIds, watch }
+   * 返回 { defs, earned:{id:{date,id,count}}, bySession:{id:[badgeId...]}, progress, watchFrom }
+   */
+  function compute(sessions, opts) {
+    opts = opts || {};
+    var P = opts.params || {}, ds = defs(P), byId = {}, earned = {}, bySession = {}, events = [];
+    ds.forEach(function (d) { byId[d.id] = d; });
+    var dayIds = (opts.dayIds && opts.dayIds.length ? opts.dayIds : ['A1', 'B1', 'A2', 'B2']);
+    function award(id, sess, extra) {
+      if (!byId[id]) {
+        // 超出预置范围的周期（第 4 轮及以后）动态补一枚，保证不丢
+        var m = /^cycle-(\d+)$/.exec(id);
+        if (!m) return;
+        var N = Math.max(1, P.weeksPerCycle || P.totalWeeks || 8);
+        byId[id] = { id: id, group: 'cycle', title: '完成第 ' + m[1] + ' 个 ' + N + ' 周周期', desc: '第 ' + m[1] + ' 轮 ' + N + ' 周全部训练完成', e: '🏁', tier: +m[1], repeat: false };
+      }
+      var d = byId[id];
+      if (!d.repeat && earned[id]) return;
+      var cur = earned[id] || { id: id, count: 0 };
+      cur.count += 1; cur.date = sess.date; cur.recordId = sess.id; cur.seq = sess.seq;
+      earned[id] = cur;
+      (bySession[sess.id] = bySession[sess.id] || []).push(id);
+      events.push({ id: id, recordId: sess.id, extra: extra || null });
+    }
+
+    var list = sessions.slice().sort(function (a, b) { return a.order - b.order; });
+    list.forEach(function (s, i) { s.seq = i + 1; });
+
+    // 1) 训练次数、2) 累计容量
+    var cum = 0;
+    list.forEach(function (s) {
+      if (COUNTS.indexOf(s.seq) >= 0) award('count-' + s.seq, s);
+      var before = cum; cum += Number(s.volume) || 0;
+      VOLUMES.forEach(function (v) { if (before < v.kg && cum >= v.kg) award('vol-' + v.kg, s); });
+    });
+
+    // 3) 计划周：谁在什么时候凑齐全部训练日
+    var weeks = {};
+    list.forEach(function (s) {
+      var w = weeks[s.week] || (weeks[s.week] = { week: s.week, first: s.date, covered: {}, done: false, doneSess: null, doneDate: '', perfect: false });
+      if (w.done) return;
+      w.covered[s.day] = 1;
+      if (dayIds.every(function (d) { return w.covered[d]; })) {
+        w.done = true; w.doneSess = s; w.doneDate = s.date;
+        w.perfect = dayNum(s.date) - dayNum(w.first) <= 6;
+      }
+    });
+    var wk = Object.keys(weeks).map(Number).sort(function (a, b) { return a - b; }), streak = 0, bestStreak = 0, longest = 0;
+    wk.forEach(function (n) {
+      var w = weeks[n];
+      if (!w.done) return;                 // 还没练完的周：不加也不断
+      if (w.perfect) {
+        award('perfect-week', w.doneSess);
+        streak += 1;
+        if (STREAKS.indexOf(streak) >= 0) award('streak-' + streak, w.doneSess);
+        if (streak >= 2 && streak > bestStreak) award('streak-record', w.doneSess, { weeks: streak });
+        bestStreak = Math.max(bestStreak, streak);
+      } else streak = 0;
+      longest = Math.max(longest, streak);
+    });
+    var curStreak = 0;
+    wk.slice().reverse().some(function (n) { var w = weeks[n]; if (!w.done) return false; if (w.perfect) { curStreak += 1; return false; } return true; });
+
+    // 4) 周期：一轮里每一周都练完 → 完成周期；每周都是完美一周 → 满勤；首次减载周练完 → 减载完成
+    var N = Math.max(1, P.weeksPerCycle || P.totalWeeks || 8), cycleMax = 0;
+    wk.forEach(function (n) { cycleMax = Math.max(cycleMax, Math.ceil(n / N)); });
+    var deloadAwarded = false;
+    for (var c = 1; c <= cycleMax; c++) {
+      var first = (c - 1) * N + 1, ok = true, all = true, last = null;
+      for (var n2 = first; n2 < first + N; n2++) {
+        var w2 = weeks[n2];
+        if (!w2 || !w2.done) { ok = false; all = false; continue; }
+        if (!w2.perfect) all = false;
+        if (!last || w2.doneSess.order > last.order) last = w2.doneSess;
+      }
+      if (ok) { award('cycle-' + c, last); if (all) award('cycle-full', last, { cycle: c }); }
+    }
+    wk.forEach(function (n) {
+      var w = weeks[n];
+      if (!deloadAwarded && w.done && GZ.isDeloadWeek && GZ.isDeloadWeek(n, P)) { deloadAwarded = true; award('deload-done', w.doneSess); }
+    });
+
+    // 5) 手表：只从训练手记第一条记录的日期开始计
+    var watch = opts.watch, watchFrom = list.length ? list[0].date : '', hoursNow = 0, setsNow = 0, nightsNow = 0;
+    if (watch && watchFrom) {
+      var cm = 0, cs = 0, lastOnOrBefore = function (date) {
+        var pick = null; list.forEach(function (s) { if (s.date <= date) pick = s; }); return pick;
+      }, onDate = function (date) {
+        var pick = null; list.forEach(function (s) { if (s.date === date) pick = s; }); return pick;
+      };
+      (watch.workouts || []).filter(function (w) { return w.date >= watchFrom; }).sort(function (a, b) { return a.start - b.start; }).forEach(function (w) {
+        var bm = cm, bs = cs; cm += w.min; cs += w.sets;
+        var sess = onDate(w.date);
+        HOURS.forEach(function (h) { if (bm < h * 60 && cm >= h * 60) { if (sess) award('w-hours-' + h, sess); else markEarned('w-hours-' + h, w.date, lastOnOrBefore(w.date)); } });
+        SETS.forEach(function (s) { if (bs < s && cs >= s) { if (sess) award('w-sets-' + s, sess); else markEarned('w-sets-' + s, w.date, lastOnOrBefore(w.date)); } });
+      });
+      hoursNow = cm / 60; setsNow = cs;
+      var dates = Object.keys(watch.sleep || {}).filter(function (d) { return d >= watchFrom; }).sort(), run = 0, prevDate = null, prevGood = false;
+      dates.forEach(function (d) {
+        var good = watch.sleep[d].score >= SLEEP_SCORE;
+        // 必须是连续的自然日，且前一晚也达标；中间缺一晚就重新计数
+        run = !good ? 0 : (prevGood && prevDate && dayNum(d) - dayNum(prevDate) === 1 ? run + 1 : 1);
+        prevDate = d; prevGood = good;
+        SLEEP_NIGHTS.forEach(function (n) {
+          if (run === n && !earned['w-sleep-' + n]) {
+            var sess = onDate(d);
+            if (sess) award('w-sleep-' + n, sess); else markEarned('w-sleep-' + n, d, lastOnOrBefore(d));
+          }
+        });
+      });
+      nightsNow = run;
+    }
+    // 获得日期不对应任何一次训练时（例如睡眠当天没练），只记入徽章墙，不上分享卡片
+    function markEarned(id, date, sess) { if (!earned[id]) earned[id] = { id: id, count: 1, date: date, recordId: sess ? sess.id : '', seq: sess ? sess.seq : 0, wallOnly: true }; }
+
+    // 排序：卡片优先级
+    function prio(id) { var d = byId[id]; return groupRank(d.group) * 1000 + d.tier; }
+    Object.keys(bySession).forEach(function (k) { bySession[k].sort(function (a, b) { return prio(b) - prio(a); }); });
+
+    // 进度（徽章墙用）
+    function nextOf(arr, v) { for (var i = 0; i < arr.length; i++) if (v < arr[i]) return arr[i]; return null; }
+    var progress = {
+      count: { value: list.length, next: nextOf(COUNTS, list.length), unit: '次' },
+      volume: { value: r2(cum / 1000), next: (function () { var n = nextOf(VOLUMES.map(function (v) { return v.kg; }), cum); return n ? n / 1000 : null; })(), unit: 't' },
+      streak: { value: curStreak, best: bestStreak, next: nextOf(STREAKS, curStreak), unit: '周' },
+      hours: { value: r2(hoursNow), next: nextOf(HOURS, hoursNow), unit: '小时' },
+      sets: { value: setsNow, next: nextOf(SETS, setsNow), unit: '组' },
+      sleep: { value: nightsNow, next: nextOf(SLEEP_NIGHTS, nightsNow), unit: '晚' }
+    };
+    var all = ds.concat(Object.keys(byId).filter(function (k) { return !ds.some(function (d) { return d.id === k; }); }).map(function (k) { return byId[k]; }));
+    return { defs: all, byId: byId, earned: earned, bySession: bySession, progress: progress, watchFrom: watchFrom, events: events,
+      total: ds.length, earnedCount: ds.filter(function (d) { return earned[d.id]; }).length };
+  }
+
+  return { GROUPS: GROUPS, defs: defs, compute: compute, sanitizeWatch: sanitizeWatch, mergeWatch: mergeWatch, watchFor: watchFor, groupRank: groupRank, SLEEP_SCORE: SLEEP_SCORE };
+});

@@ -417,6 +417,7 @@ html = f"""<!DOCTYPE html>
 </div></div>
 <script>{(ROOT / 'utils' / 'engine.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'chart.js').read_text()}</script>
+<script>{(ROOT / 'utils' / 'badges.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'share.js').read_text()}</script>
 <script>{(ROOT / 'preview' / 'app-h5.js').read_text()}</script>
 </body></html>"""

@@ -1,7 +1,7 @@
 /* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
 (function () {
   'use strict';
-  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare;
+  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges;
   var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', BK_DISMISS = 'gzclp_bk_dismiss';
   var TABS = [
     { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
@@ -687,6 +687,8 @@
     var sd = Share.build(load());
     if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date.slice(5).replace('-', '月') + '日') + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.day + ' ' + esc(sd.dayName) + ' · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 训练容量</div><button class="btn-primary" data-act="shareopen" data-id="' + sd.recordId + '">生成分享卡片</button></div>';
     else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
+    var bs = Share.badgeState(load());
+    h += '<div class="list wall-entry"><div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div></div>';
     if (r.tab === 0) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
         '<div class="lt-head"><span class="lt-c1">主项</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
@@ -734,19 +736,30 @@
       h += '<div class="sec-f" style="text-align:center">修改或删除任意一次记录，之后的重量与阶段会自动重算</div>';
     }
     if (r.share) h += renderShareSheet();
+    if (r.wall) h += renderBadgeWall();
     return h;
   }
   function reviewAct(act, ds, el) {
     var r = S.review;
-    if (act === 'shareopen') { r.share = {id:ds.id,funVariant:0,theme:'sage',image:null,blob:null}; return true; }
+    if (act === 'shareopen') { r.share = {id:ds.id,funVariant:0,theme:'sage',body:false,badgePick:null,image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
-    if (act === 'sharerec') { r.share.id=el.value; r.share.funVariant=0; return true; }
+    if (act === 'sharerec') { r.share.id=el.value; r.share.funVariant=0; r.share.badgePick=null; return true; }
+    if (act === 'wallopen') { r.wall = true; return true; }
+    if (act === 'wallclose') { r.wall = false; return true; }
+    if (act === 'bodytoggle') { r.share.body = !!el.checked; return true; }
+    if (act === 'badgepick') {
+      var cur = Share.build(load(), r.share.id, r.share), ids = cur ? cur.badges.map(function (b) { return b.id; }) : [];
+      var at = ids.indexOf(ds.id);
+      if (at >= 0) ids.splice(at, 1); else if (ids.length >= 2) { toast('卡片最多展示 2 枚，先取消一枚'); return false; } else ids.push(ds.id);
+      r.share.badgePick = ids; return true;
+    }
+    if (act === 'watchgo') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick }; r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'funagain') { r.share.funVariant=(r.share.funVariant||0)+1; return true; }
     if (act === 'sharecopy') { var cd=Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
-    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme }; r.share=null; S.tab='settings'; render(); return false; }
+    if (act === 'shareprofile') { r.returnTo = { id: r.share.id, funVariant: r.share.funVariant, theme: r.share.theme, body: r.share.body, badgePick: r.share.badgePick }; r.share=null; S.tab='settings'; render(); return false; }
     if (act === 'sharetrain') { r.share=null; S.tab='train'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
@@ -779,6 +792,14 @@
       ? '<img class="ss-ava" src="' + esc(data.profile.avatar) + '" alt="' + esc(data.name) + ' 的头像">'
       : '<span class="ss-ava ss-ava-t" aria-hidden="true">' + esc(Array.from(data.name || '我')[0]) + '</span>';
     var who = [data.profile.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join(' · ') || (data.profile.signature ? '' : '未设置社媒 ID');
+    var picked = {}; data.badges.forEach(function (b) { picked[b.id] = 1; });
+    var badgeBlock = data.badgeCands.length
+      ? '<div class="ss-badges">' + data.badgeCands.map(function (b) { return '<button class="ss-badge' + (picked[b.id] ? ' on' : '') + '" data-act="badgepick" data-id="' + esc(b.id) + '" aria-pressed="' + (picked[b.id] ? 'true' : 'false') + '"><span class="ss-badge-e">' + esc(b.e) + '</span><span class="ss-badge-t"><b>' + esc(b.title) + '</b><i>' + esc(b.desc) + '</i></span><span class="ss-badge-ck">' + (picked[b.id] ? '✓' : '') + '</span></button>'; }).join('') + '</div><p class="ss-hint">这次训练新达成的里程碑，卡片最多展示 2 枚，点一下切换。</p>'
+      : '<p class="ss-empty">这次训练没有新的里程碑。已获得 ' + data.badgeEarned + ' / ' + data.badgeAll + ' 枚，点右上角看看下一个目标。</p>';
+    var hasWatch = !!(load().params.watch && (load().params.watch.workouts || []).length);
+    var watchBlock = data.watchBody
+      ? '<div class="ss-watch"><div class="ss-watch-t"><b>卡片显示手表记录</b><span>用时 ' + data.watchBody.min + ' 分' + (data.watchBody.avgHr ? ' · 平均心率 ' + data.watchBody.avgHr : '') + (data.watchBody.kcal ? ' · ' + data.watchBody.kcal + ' 千卡' : '') + '</span></div><label class="ios-sw green"><input type="checkbox" data-act="bodytoggle" ' + (sh.body ? 'checked' : '') + ' aria-label="卡片显示手表记录"><i></i></label></div>'
+      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? '这次训练在手表里没有对应的力量训练记录' : '导入 COROS 手表快照后，可显示用时、心率、消耗，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
     return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div>' +
         '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
@@ -790,23 +811,58 @@
         '<div class="ss-row">' + ava + '<div class="ss-who"><span class="ss-name">' + esc(data.name) + '</span><span class="ss-sub">' + esc(who) + '</span></div></div>' +
         (data.profile.signature ? '<p class="ss-sig">' + esc(data.profile.signature) + '</p>' : '') +
         (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
-      // 二、纵览与趣味
-      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 纵览与趣味</span><span class="ss-acts"><span class="quote-total">' + (data.funIndex + 1) + ' / ' + data.funTotal + '</span><button class="ss-act dice" data-act="funagain">🎲 换一个</button></span></div>' +
+      // 二、里程碑
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 里程碑</span><button class="ss-act" data-act="wallopen">徽章墙 ›</button></div>' + badgeBlock + '</div>' +
+      // 三、纵览与趣味
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 纵览与趣味</span><span class="ss-acts"><span class="quote-total">' + (data.funIndex + 1) + ' / ' + data.funTotal + '</span><button class="ss-act dice" data-act="funagain">🎲 换一个</button></span></div>' +
         '<div class="ss-metrics"><span><b class="num">' + esc(String(data.rows.length)) + '</b>项动作</span><span><b class="num">' + esc(String(data.reps)) + '</b>次动作</span><span><b class="num">' + esc(String(data.adds)) + '</b>项加重</span></div>' +
-        '<div class="ss-fun"><span class="ss-fun-tag">' + esc(data.funTag) + '</span>' + esc((data.funEmoji ? data.funEmoji + ' ' : '') + data.fun) + (data.funBasis ? '<span class="ss-fun-note">算法：' + esc(data.funBasis) + '</span>' : '') + '</div></div>' +
+        '<div class="ss-fun"><span class="ss-fun-tag">' + esc(data.funTag) + '</span>' + esc((data.funEmoji ? data.funEmoji + ' ' : '') + data.fun) + (data.funBasis ? '<span class="ss-fun-note">算法：' + esc(data.funBasis) + '</span>' : '') + '</div>' +
+        watchBlock + '</div>' +
       // 四、训练内容
-      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 训练内容</span><button class="ss-act" data-act="sharetrain">查看训练 ›</button></div>' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">04 · 训练内容</span><button class="ss-act" data-act="sharetrain">查看训练 ›</button></div>' +
         '<label class="ss-pick"><span class="ss-pick-l">哪次训练</span><select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label>' +
         '<div class="ss-cells">' + data.rows.map(function(r){return '<span class="ss-cell"><i class="ss-tier">' + esc(r.tier) + '</i>' + esc(r.name) + '<b class="num">' + esc(r.load) + '</b></span>';}).join('') + '</div>' +
         '<p class="ss-load">累计 ' + esc(data.volumeText) + ' t · ' + esc(data.volume.toLocaleString('zh-CN')) + ' kg</p></div>' +
       // 五、小结
-      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">04 · 训练小结</span></div>' +
+      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">05 · 训练小结</span></div>' +
         '<div class="ss-sum">' + esc(data.copy) + '</div></div>' +
       '<div class="share-art-wrap"><div id="shareArtwork" class="share-art" aria-label="训练成果图片预览"><span class="share-loading">正在整理你的训练成果…</span></div></div>' +
       '<div class="share-hint">预览即最终图片，可长按保存；趣味换算可以一直换下去。</div>' +
       '</div>' +
       '<div class="share-foot"><div class="share-actions"><button data-act="sharecopy">复制配文</button><button data-act="shareexport" disabled>保存图片</button><button class="main" data-act="sharesystem" disabled>系统分享</button></div></div>' +
       '</div></div>';
+  }
+
+  // ================= 里程碑徽章墙 =================
+  function badgeProgress(d, pg) {
+    var m = /^(count|vol|w-hours|w-sets|w-sleep|streak)-(\d+)$/.exec(d.id);
+    if (!m) return '';
+    var t = Number(m[2]);
+    if (m[1] === 'count') return pg.count.value + ' / ' + t + ' 次';
+    if (m[1] === 'vol') { var tv = t / 1000; return pg.volume.value + ' / ' + tv.toLocaleString('zh-CN') + ' t'; }
+    if (m[1] === 'w-hours') return pg.hours.value + ' / ' + t + ' 小时';
+    if (m[1] === 'w-sets') return pg.sets.value + ' / ' + t + ' 组';
+    if (m[1] === 'w-sleep') return pg.sleep.value + ' / ' + t + ' 晚';
+    if (m[1] === 'streak') return pg.streak.value + ' / ' + t + ' 周';
+    return '';
+  }
+  function renderBadgeWall() {
+    var st = Share.badgeState(load()), pg = st.progress;
+    var WALL_ORDER = ['count', 'volume', 'streak', 'cycle', 'watch'];
+    var body = Badges.GROUPS.slice().sort(function (a, b) { return WALL_ORDER.indexOf(a.id) - WALL_ORDER.indexOf(b.id); }).map(function (g) {
+      var items = st.defs.filter(function (d) { return d.group === g.id; });
+      if (!items.length) return '';
+      return '<div class="wall-g"><div class="wall-gt">' + esc(g.name) + '</div><div class="wall-grid">' + items.map(function (d) {
+        var e = st.earned[d.id], on = !!e;
+        var sub = on ? e.date.slice(5).replace('-', '月') + '日' + (e.count > 1 ? ' · ×' + e.count : '') : (badgeProgress(d, pg) || '未获得');
+        return '<div class="wall-b' + (on ? ' on' : '') + '"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><b>' + esc(d.title) + '</b><i>' + esc(sub) + '</i><span class="wall-d">' + esc(d.desc) + '</span></div>';
+      }).join('') + '</div></div>';
+    }).join('');
+    var hasW = !!(load().params.watch && (load().params.watch.workouts || []).length);
+    return '<div class="mask share-mask" data-act="wallclose"><div class="sheet share-sheet" data-stop="1">' +
+      '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title">里程碑</span><button class="share-close" data-act="wallclose" aria-label="关闭徽章墙">×</button></div>' +
+      '<p class="wall-sum">已获得 <b class="num">' + st.earnedCount + '</b> / ' + st.total + ' 枚 · 彩色是已获得，灰色是下一个目标</p></div>' +
+      '<div class="ss-body">' + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「设置 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。</p></div></div></div>';
   }
   async function paintSharePreview() {
     var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;
@@ -879,6 +935,15 @@
       '<div class="cell"><label for="profileSignature" class="flex1">个性签名</label><input id="profileSignature" class="profile-in" data-act="profiletext" data-k="signature" maxlength="48" value="' + esc(pp.signature) + '" placeholder="可选，写给坚持训练的自己"></div>' +
       '<div class="cell"><span class="flex1">卡片公开当天体重</span><label class="ios-sw green"><input type="checkbox" data-act="profileweight" ' + (pp.showWeight ? 'checked' : '') + '><i></i></label></div></div>' +
       '<div class="sec-f">昵称、ID、头像、签名会出现在图片上。体重默认隐藏；不显示训练备注、云仓库或令牌。名片随私人云同步保存。输入后离开字段自动保存。</div>';
+    var wd = P.watch, wn = wd && wd.workouts ? wd.workouts.length : 0, wsn = wd && wd.sleep ? Object.keys(wd.sleep).length : 0;
+    h += '<div class="sec-h" id="watchSec">手表数据</div><div class="list">' +
+      '<div class="cell"><span class="flex1">' + esc((wd && wd.source) || 'COROS') + '</span><span class="val">' + (wn || wsn ? esc(wn + ' 次训练 · ' + wsn + ' 晚睡眠') : '未导入') + '</span></div>' +
+      (wd && wd.importedAt ? '<div class="cell"><span class="flex1">最近导入</span><span class="val">' + ago(wd.importedAt) + '</span></div>' : '') +
+      '<label class="cell tap"><span class="flex1 accent">导入手表快照文件</span><span class="chev">›</span><input type="file" accept=".json,application/json" data-act="watchfile" style="display:none"></label>' +
+      '<div class="cell tap" data-act="watchpaste"><span class="flex1 accent">粘贴快照文本</span><span class="chev">' + (st.wpaste ? '⌃' : '›') + '</span></div>' +
+      (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
+      (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
+      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。快照由对话里的「同步手表」生成，重复导入不会重复计数。</div>';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
@@ -964,6 +1029,13 @@
     try { var inc = JSON.parse(txt); if (!inc || !inc.params || !inc.days) throw 0; save(GZ.replaceDb(load(), inc)); S.settings.imp = false; S.train.draft = null; S.train.day = null; toast('恢复成功'); render(true); }
     catch (e) { toast('文件内容不正确'); }
   }
+  function importWatch(txt) {
+    try {
+      var clean = Badges.sanitizeWatch(txt), db = load();
+      db.params.watch = Badges.mergeWatch(db.params.watch, clean); save(db);
+      S.settings.wpaste = false; toast('已导入 ' + clean.workouts.length + ' 次训练、' + Object.keys(clean.sleep).length + ' 晚睡眠'); render(true);
+    } catch (e) { toast(e && e.message ? e.message : '快照内容不正确'); }
+  }
   function syncAddInputs() {
     var a = S.settings.add; if (!a) return;
     var n = document.querySelector('[data-act=addname]'), d = document.querySelector('[data-act=adddesc]');
@@ -1030,6 +1102,12 @@
       case 'impfile':
         var f = el.files && el.files[0]; if (!f) return false;
         var rd = new FileReader(); rd.onload = function () { confirmBox('从文件恢复？', '当前设备上的数据会被备份文件覆盖。', function () { importText(rd.result); }); }; rd.readAsText(f); el.value = ''; return false;
+      case 'watchfile':
+        var wf = el.files && el.files[0]; if (!wf) return false;
+        var wr = new FileReader(); wr.onload = function () { importWatch(wr.result); }; wr.readAsText(wf); el.value = ''; return false;
+      case 'watchpaste': st.wpaste = !st.wpaste; return true;
+      case 'watchdo': importWatch(document.getElementById('watchText').value); return false;
+      case 'watchclear': confirmBox('清除手表数据？', '只清除导入的手表快照；训练记录不受影响。手表系列的里程碑会重新变为未获得。', function () { mutate(function (db) { delete db.params.watch; }, '已清除手表数据'); st.wpaste = false; render(true); }); return false;
       case 'imp': st.imp = !st.imp; return true;
       case 'doImp': importText(document.getElementById('impText').value); return false;
       case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { GZ.clearRecords(db); }, '已清空'); S.train.draft = null; S.train.day = null; render(true); }); return false;
@@ -1084,7 +1162,7 @@
       S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
       if (S.tab === 'review' && S.review.returnTo && prevTab === 'settings') {
         var back = S.review.returnTo; S.review.returnTo = null;
-        S.review.share = { id: back.id, funVariant: back.funVariant || 0, theme: back.theme || 'sage', image: null, blob: null };
+        S.review.share = { id: back.id, funVariant: back.funVariant || 0, theme: back.theme || 'sage', body: !!back.body, badgePick: back.badgePick || null, image: null, blob: null };
         render();
       }
     });

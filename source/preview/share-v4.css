@@ -132,3 +132,43 @@
 .app .ss-fun { font-weight: 600; }
 .app .ss-fun-tag { display: block; font-size: 12px; font-weight: 600; color: var(--label2); margin-bottom: 2px; }
 .app .ss-fun-note { font-weight: 400; }
+
+/* ===== 里程碑：面板选择 ===== */
+.app .ss-badges { display: flex; flex-direction: column; gap: 8px; }
+.app .ss-badge {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px;
+  border: 0; border-radius: 16px; background: #F2F3EE; color: var(--label); text-align: left;
+}
+.app .ss-badge.on { background: #DFE8D7; }
+.app .ss-badge:active { transform: scale(.985); }
+.app .ss-badge-e { font-size: 24px; line-height: 1; flex: 0 0 auto; }
+.app .ss-badge-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.app .ss-badge-t b { font-size: 15px; font-weight: 600; }
+.app .ss-badge-t i { font-style: normal; font-size: 13px; color: var(--label2); line-height: 1.4; }
+.app .ss-badge-ck { flex: 0 0 22px; font-size: 17px; font-weight: 700; color: #35482E; text-align: center; }
+.app .ss-hint { margin: 10px 2px 0; font-size: 13px; line-height: 1.5; color: var(--label2); }
+.app .ss-empty { margin: 0; font-size: 15px; line-height: 1.55; color: var(--label2); }
+
+/* ===== 手表记录开关行 ===== */
+.app .ss-watch { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(60,60,67,0.10); }
+.app .ss-watch-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.app .ss-watch-t b { font-size: 15px; font-weight: 600; }
+.app .ss-watch-t span { font-size: 13px; color: var(--label2); line-height: 1.45; }
+
+/* ===== 徽章墙 ===== */
+.app .wall-entry { margin: 12px 0; }
+.app .wall-sum { margin: 0 0 10px; font-size: 13px; color: var(--label2); }
+.app .wall-g { margin: 6px 0 14px; }
+.app .wall-gt { margin: 0 4px 8px; font-size: 13px; font-weight: 600; color: var(--label2); letter-spacing: .3px; }
+.app .wall-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.app .wall-b {
+  display: flex; flex-direction: column; gap: 3px; padding: 12px; border-radius: 16px;
+  background: rgba(255,255,255,0.55); color: var(--label2);
+}
+.app .wall-b.on { background: #FFFFFF; color: var(--label); }
+.app .wall-e { font-size: 26px; line-height: 1.2; filter: grayscale(1); opacity: .38; }
+.app .wall-b.on .wall-e { filter: none; opacity: 1; }
+.app .wall-b b { font-size: 15px; font-weight: 600; }
+.app .wall-b i { font-style: normal; font-size: 13px; color: var(--label2); }
+.app .wall-b.on i { color: #35482E; font-weight: 600; }
+.app .wall-d { font-size: 11px; line-height: 1.4; color: var(--label2); }
