@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges;
-  var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', BK_DISMISS = 'gzclp_bk_dismiss';
+  var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', WATCH_KEY = 'gzclp_watch_v1', BK_DISMISS = 'gzclp_bk_dismiss';
   var TABS = [
     { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
     { id: 'review', title: '回顾' }, { id: 'settings', title: '设置' }
@@ -33,12 +33,30 @@
   }
 
   function rawLoad() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
-  function load() { var db = rawLoad(); if (!db) { db = GZ.defaults(true); save(db, { fromSync: true }); } return GZ.normalize(db); }
+  /** 手表数据单独存放（不进训练数据文件，避免每次拉取都触发配置冲突与重复推送） */
+  function watchLoad() { try { return JSON.parse(localStorage.getItem(WATCH_KEY)) || null; } catch (e) { return null; } }
+  function watchSave(w) { if (w) localStorage.setItem(WATCH_KEY, JSON.stringify(w)); else localStorage.removeItem(WATCH_KEY); }
+  function load() {
+    var db = rawLoad(); if (!db) { db = GZ.defaults(true); save(db, { fromSync: true }); }
+    db = GZ.normalize(db);
+    var w = watchLoad();
+    // 旧版把手表数据放在 params.watch：并入独立存储后从主数据里拿掉
+    if (db.params.watch) {
+      w = Badges.mergeWatch(w, { source: db.params.watch.source, workouts: db.params.watch.workouts || [], sleep: db.params.watch.sleep || {} });
+      watchSave(w); delete db.params.watch;
+      // 主数据里的旧副本必须落盘去掉，否则会被反复合并、甚至用旧值覆盖刚拉取的
+      var raw = rawLoad(); if (raw && raw.params) { delete raw.params.watch; localStorage.setItem(KEY, JSON.stringify(raw)); }
+    }
+    if (w) db.params.watch = w;
+    return db;
+  }
   /** 保存到本机；用户操作产生的保存会记下配置修改时间，并在 2 秒后自动同步到云端 */
   function save(db, opt) {
-    var fromSync = opt && opt.fromSync;
-    if (!fromSync) { var prev = rawLoad(); if (prev) GZ.stampConfig(GZ.normalize(prev), db); }
+    var fromSync = opt && opt.fromSync, hasW = Object.prototype.hasOwnProperty.call(db.params || {}, 'watch'), w = hasW ? db.params.watch : undefined;
+    if (hasW) { delete db.params.watch; watchSave(w || null); }  // 手表数据走独立键；主数据里不留
+    if (!fromSync) { var prev = rawLoad(); if (prev) { prev = GZ.normalize(prev); delete prev.params.watch; GZ.stampConfig(prev, db); } }
     localStorage.setItem(KEY, JSON.stringify(db));
+    if (hasW && w) db.params.watch = w;  // 调用方继续拿到完整对象
     if (!fromSync) Sync.schedule();
   }
 
@@ -82,7 +100,11 @@
         return req(c, 'GET', filePath(c)).then(function (g) {
           if (g.status !== 200 && g.status !== 404) throw g.status;
           var remote = null, sha = null;
-          if (g.status === 200) { sha = g.json.sha; try { remote = GZ.normalize(JSON.parse(b64dec(g.json.content))); } catch (e) { throw 'bad'; } }
+          if (g.status === 200) {
+            sha = g.json.sha;
+            try { remote = GZ.normalize(JSON.parse(b64dec(g.json.content))); } catch (e) { throw 'bad'; }
+            if (remote.params.watch) { var ow = remote.params.watch; delete remote.params.watch; try { watchSave(Badges.mergeWatch(watchLoad(), { source: ow.source, workouts: ow.workouts || [], sleep: ow.sleep || {} })); } catch (e) {} }
+          }
           var raw = rawLoad(), local = GZ.normalize(raw || GZ.defaults(true)), merged = GZ.mergeDb(local, remote);
           var pulled = !GZ.sameDb(merged, local);
           if (pulled || !raw) save(merged, { fromSync: true });
@@ -101,6 +123,7 @@
         c.state = 'ok'; c.lastAt = Date.now(); c.lastErr = ''; c.count = res.n; setCfg(c); busy = false;
         if (manual) toast(res.pulled ? '已同步，合并了其他设备的更新' : '已同步');
         refresh(res.pulled);
+        pullWatch(manual);
         if (again) { again = false; run(); }
         return true;
       }, function (st) {
@@ -109,6 +132,27 @@
         if (manual) toast(c.lastErr);
         refresh(false);
         return false;
+      });
+    }
+    /** 自动拉取手表数据：云端 gzclp-watch.json 由定时任务写入，这里只读、合并到本机，从不写回 */
+    function pullWatch(manual) {
+      var c = cfg(); if (!c || !on()) return Promise.resolve(false);
+      var wp = Object.assign({}, c, { path: 'gzclp-watch.json' });
+      return req(c, 'GET', filePath(wp)).then(function (g) {
+        c = cfg(); if (!c) return false;
+        if (g.status === 404) { c.watchErr = ''; c.watchGen = ''; c.watchAt = Date.now(); setCfg(c); if (manual) toast('云端还没有手表文件'); if (S.tab === 'settings') render(true); return false; }  // 还没有自动同步过：保持手动导入可用
+        var fail = function (m) { c.watchErr = m; setCfg(c); if (manual) toast(m); if (S.tab === 'settings') render(true); return false; };
+        if (g.status !== 200) return fail(errMsg(g.status));
+        var incoming; try { incoming = Badges.sanitizeWatch(b64dec(g.json.content)); } catch (e) { return fail('云端手表文件格式不对，已忽略'); }
+        var old = watchLoad(), before = JSON.stringify([old && old.workouts, old && old.sleep]), merged = Badges.mergeWatch(old, incoming);
+        var changed = JSON.stringify([merged.workouts, merged.sleep]) !== before;
+        if (changed) { watchSave(merged); } else if (old && old.importedAt) { merged.importedAt = old.importedAt; }  // 没变就不刷新「本机最近写入」
+        var meta = null; try { meta = JSON.parse(b64dec(g.json.content)).generatedAt; } catch (e) {}
+        c.watchErr = ''; c.watchAt = Date.now(); c.watchGen = meta || c.watchGen || ''; setCfg(c);
+        var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
+        if (manual) toast(changed ? '已拉取最新手表数据' : '手表数据已是最新');
+        if (!typing && (changed || S.tab === 'settings')) render(true);
+        return changed;
       });
     }
     function schedule() { if (!on()) return; clearTimeout(timer); timer = setTimeout(function () { run(); }, 2000); }
@@ -135,7 +179,7 @@
       });
     }
     function disconnect() { clearTimeout(timer); setCfg(null); }
-    return { cfg: cfg, on: on, run: run, schedule: schedule, connect: connect, disconnect: disconnect };
+    return { cfg: cfg, on: on, run: run, schedule: schedule, connect: connect, disconnect: disconnect, pullWatch: pullWatch };
   })();
   function ago(ts) {
     if (!ts) return '从未';
@@ -938,12 +982,18 @@
     var wd = P.watch, wn = wd && wd.workouts ? wd.workouts.length : 0, wsn = wd && wd.sleep ? Object.keys(wd.sleep).length : 0;
     h += '<div class="sec-h" id="watchSec">手表数据</div><div class="list">' +
       '<div class="cell"><span class="flex1">' + esc((wd && wd.source) || 'COROS') + '</span><span class="val">' + (wn || wsn ? esc(wn + ' 次训练 · ' + wsn + ' 晚睡眠') : '未导入') + '</span></div>' +
-      (wd && wd.importedAt ? '<div class="cell"><span class="flex1">最近导入</span><span class="val">' + ago(wd.importedAt) + '</span></div>' : '') +
-      '<label class="cell tap"><span class="flex1 accent">导入手表快照文件</span><span class="chev">›</span><input type="file" accept=".json,application/json" data-act="watchfile" style="display:none"></label>' +
+      (Sync.on() ? (function () {
+        var wc = Sync.cfg(), gen = wc.watchGen ? Date.parse(wc.watchGen) : 0;
+        var val = wc.watchErr ? '<span class="red">' + esc(wc.watchErr) + '</span>' : gen ? '<span class="green">✓ 云端更新于 ' + ago(gen) + '</span>' : wc.watchAt ? '云端暂无手表文件' : '等待首次拉取';
+        return '<div class="cell"><span class="flex1">自动同步</span><span class="val">' + val + '</span></div>' +
+          '<div class="cell tap" data-act="watchpull"><span class="flex1 accent">立即拉取</span><span class="chev">›</span></div>';
+      })() : '<div class="cell"><span class="flex1">自动同步</span><span class="val">需先开启云同步</span></div>') +
+      (wd && wd.importedAt ? '<div class="cell"><span class="flex1">本机最近写入</span><span class="val">' + ago(wd.importedAt) + '</span></div>' : '') +
+      '<label class="cell tap"><span class="flex1 accent">手动导入快照文件（备用）</span><span class="chev">›</span><input type="file" accept=".json,application/json" data-act="watchfile" style="display:none"></label>' +
       '<div class="cell tap" data-act="watchpaste"><span class="flex1 accent">粘贴快照文本</span><span class="chev">' + (st.wpaste ? '⌃' : '›') + '</span></div>' +
       (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
       (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
-      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。快照由对话里的「同步手表」生成，重复导入不会重复计数。</div>';
+      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，手表数据由定时任务写入你的私有仓库并自动拉取到这里；手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
@@ -1105,9 +1155,10 @@
       case 'watchfile':
         var wf = el.files && el.files[0]; if (!wf) return false;
         var wr = new FileReader(); wr.onload = function () { importWatch(wr.result); }; wr.readAsText(wf); el.value = ''; return false;
+      case 'watchpull': Sync.pullWatch(true); return false;
       case 'watchpaste': st.wpaste = !st.wpaste; return true;
       case 'watchdo': importWatch(document.getElementById('watchText').value); return false;
-      case 'watchclear': confirmBox('清除手表数据？', '只清除导入的手表快照；训练记录不受影响。手表系列的里程碑会重新变为未获得。', function () { mutate(function (db) { delete db.params.watch; }, '已清除手表数据'); st.wpaste = false; render(true); }); return false;
+      case 'watchclear': confirmBox('清除手表数据？', '只清除导入的手表快照；训练记录不受影响。手表系列的里程碑会重新变为未获得。', function () { mutate(function (db) { db.params.watch = null; var c = Sync.cfg(); if (c) { c.watchAt = 0; c.watchErr = ''; localStorage.setItem(SYNC_KEY, JSON.stringify(c)); } }, '已清除手表数据'); st.wpaste = false; render(true); }); return false;
       case 'imp': st.imp = !st.imp; return true;
       case 'doImp': importText(document.getElementById('impText').value); return false;
       case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { GZ.clearRecords(db); }, '已清空'); S.train.draft = null; S.train.day = null; render(true); }); return false;
