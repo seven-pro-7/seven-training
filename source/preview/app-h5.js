@@ -793,7 +793,7 @@
       // 二、纵览与趣味
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 纵览与趣味</span><span class="ss-acts"><span class="quote-total">' + (data.funIndex + 1) + ' / ' + data.funTotal + '</span><button class="ss-act dice" data-act="funagain">🎲 换一个</button></span></div>' +
         '<div class="ss-metrics"><span><b class="num">' + esc(String(data.rows.length)) + '</b>项动作</span><span><b class="num">' + esc(String(data.reps)) + '</b>次动作</span><span><b class="num">' + esc(String(data.adds)) + '</b>项加重</span></div>' +
-        '<div class="ss-fun"><span class="ss-fun-tag">' + esc(data.funTag) + '</span><span class="ss-fun-emo">' + esc(data.funIcons) + (data.funMore ? ' <b class="num">' + esc(data.funMore) + '</b>' : '') + '</span>' + esc(data.fun) + (data.funBasis ? '<span class="ss-fun-note">算法：' + esc(data.funBasis) + '</span>' : '') + '</div></div>' +
+        '<div class="ss-fun"><span class="ss-fun-tag">' + esc(data.funTag) + '</span>' + esc((data.funEmoji ? data.funEmoji + ' ' : '') + data.fun) + (data.funBasis ? '<span class="ss-fun-note">算法：' + esc(data.funBasis) + '</span>' : '') + '</div></div>' +
       // 四、训练内容
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 训练内容</span><button class="ss-act" data-act="sharetrain">查看训练 ›</button></div>' +
         '<label class="ss-pick"><span class="ss-pick-l">哪次训练</span><select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label>' +

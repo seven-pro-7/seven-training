@@ -820,9 +820,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .share-actions button.main { background: var(--accent); color: #FFF; }
 .app .share-actions button:disabled { opacity: .45; }
 .app .ss-fun { font-weight: 600; }
-.app .ss-fun-tag { display: block; font-size: 13px; font-weight: 600; color: var(--label2); margin-bottom: 4px; }
-.app .ss-fun-emo { display: block; font-size: 28px; line-height: 1.3; margin-bottom: 4px; }
-.app .ss-fun-emo .num { font-size: 22px; margin-left: 4px; }
+.app .ss-fun-tag { display: block; font-size: 13px; font-weight: 600; color: var(--label2); margin-bottom: 2px; }
 .app .ss-fun-note { font-weight: 400; }
 
 
@@ -2569,17 +2567,18 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return a;
   }
   /** 把一个重量按对照物换算成「相当于…」；不合适（太多或太少）返回 null */
+  // 每条只带一个 emoji，且只出现一次；文案本身说清数字与单位。
   function compare(volume, t, lead) {
     var r = volume / t[1], pre = lead || '';
     if (r >= 2 && r <= 3000) {
       var n = Math.round(r);
-      return { e: t[0], icons: t[0].repeat(Math.min(n, 8)), more: n > 8 ? '× ' + num(n, 0) : '', tag: '重量对照',
+      return { e: t[0], tag: '重量对照',
         text: pre + '相当于' + t[4] + ' ' + num(n, 0) + ' ' + t[3] + t[2],
         basis: num(volume) + ' kg ÷ ' + t[5].replace(/^约 |^按 /, '') + '（' + t[2] + '）≈ ' + num(n, 0) };
     }
     if (r >= 0.05 && r < 2 && t[1] >= 100) {
       var pct = r * 100;
-      return { e: t[0], icons: t[0], more: num(pct, pct < 10 ? 1 : 0) + '%', tag: '重量对照',
+      return { e: t[0], tag: '重量对照',
         text: pre + '相当于 1 ' + t[3] + t[2] + t[6] + '的 ' + num(pct, pct < 10 ? 1 : 0) + '%',
         basis: num(volume) + ' kg ÷ ' + t[5].replace(/^约 |^按 /, '') + '（' + t[2] + '）' };
     }
@@ -2588,29 +2587,29 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   /** 数据彩蛋：只用本次或历史记录里的真实数字，不编造 */
   function eggs(d) {
     var out = [], v = d.volume;
-    if (d.reps > 0) out.push({ e: '💪', icons: '💪', more: '', tag: '数据彩蛋', text: num(d.reps, 0) + ' 次发力，每一次都算数', basis: '本次记录的组次合计' });
-    if (v > 0 && d.reps > 0) out.push({ e: '⚖️', icons: '⚖️', more: '', tag: '数据彩蛋', text: '平均每次发力 ' + num(v / d.reps) + ' kg', basis: num(v) + ' kg ÷ ' + num(d.reps, 0) + ' 次' });
+    if (d.reps > 0) out.push({ e: '💪', tag: '数据彩蛋', text: num(d.reps, 0) + ' 次发力，每一次都算数', basis: '本次记录的组次合计' });
+    if (v > 0 && d.reps > 0) out.push({ e: '⚖️', tag: '数据彩蛋', text: '平均每次发力 ' + num(v / d.reps) + ' kg', basis: num(v) + ' kg ÷ ' + num(d.reps, 0) + ' 次' });
     if (d.reps > 0) {
       var sec = d.reps * 3;
-      out.push({ e: '⏱️', icons: '⏱️', more: '', tag: '数据彩蛋', text: '按每次约 3 秒计，累计发力约 ' + (sec < 90 ? sec + ' 秒' : num(sec / 60) + ' 分钟'), basis: num(d.reps, 0) + ' 次 × 3 秒（估算）' });
+      out.push({ e: '⏱️', tag: '数据彩蛋', text: '按每次约 3 秒计，累计发力约 ' + (sec < 90 ? sec + ' 秒' : num(sec / 60) + ' 分钟'), basis: num(d.reps, 0) + ' 次 × 3 秒（估算）' });
     }
-    if (d.sets > 0) out.push({ e: '🔁', icons: '🔁', more: '', tag: '数据彩蛋', text: d.sets + ' 组、' + d.rows.length + ' 项动作，都记在了账上', basis: '每组都有记录' });
-    if (d.adds > 0) out.push({ e: '🔥', icons: '🔥', more: '', tag: '数据彩蛋', text: d.adds + ' 个动作达到加重条件', basis: '按计划规则判定' });
+    if (d.sets > 0) out.push({ e: '🔁', tag: '数据彩蛋', text: d.sets + ' 组、' + d.rows.length + ' 项动作，都记在了账上', basis: '每组都有记录' });
+    if (d.adds > 0) out.push({ e: '🔥', tag: '数据彩蛋', text: d.adds + ' 个动作达到加重条件', basis: '按计划规则判定' });
     if (v > 0 && d.rows.length > 1) {
       var top = d.rows.slice().sort(function (a, b) { return b.volume - a.volume; })[0], share = top.volume / v * 100;
-      if (share >= 20) out.push({ e: '🏆', icons: '🏆', more: Math.round(share) + '%', tag: '数据彩蛋', text: top.name + ' 贡献了 ' + Math.round(share) + '% 的训练容量', basis: num(top.volume) + ' kg ÷ ' + num(v) + ' kg' });
+      if (share >= 20) out.push({ e: '🏆', tag: '数据彩蛋', text: top.name + ' 贡献了 ' + Math.round(share) + '% 的训练容量', basis: num(top.volume) + ' kg ÷ ' + num(v) + ' kg' });
     }
     if (v > 0 && d.prevVolume > 0) {
       var diff = v - d.prevVolume, pct = Math.abs(diff) / d.prevVolume * 100;
       out.push(diff >= 0
-        ? { e: '📈', icons: '📈', more: '+' + num(pct, 0) + '%', tag: '和上次比', text: '比上次 ' + d.day + ' 多举了 ' + num(diff) + ' kg', basis: num(d.prevVolume) + ' → ' + num(v) + ' kg' }
-        : { e: '🌿', icons: '🌿', more: '-' + num(pct, 0) + '%', tag: '和上次比', text: '比上次 ' + d.day + ' 少了 ' + num(-diff) + ' kg，恢复也是训练', basis: num(d.prevVolume) + ' → ' + num(v) + ' kg' });
+        ? { e: '📈', tag: '和上次比', text: '比上次 ' + d.day + ' 多举了 ' + num(diff) + ' kg', basis: num(d.prevVolume) + ' → ' + num(v) + ' kg' }
+        : { e: '🌿', tag: '和上次比', text: '比上次 ' + d.day + ' 少了 ' + num(-diff) + ' kg，恢复也是训练', basis: num(d.prevVolume) + ' → ' + num(v) + ' kg' });
     }
     if (d.totalVolume > 0 && d.seq > 0) {
       var lead = '历史累计 ' + num(d.totalVolume / 1000, 2) + ' t，', big = null;
       THINGS.slice().reverse().some(function (t) { big = compare(d.totalVolume, t, lead); return !!big; });
-      out.push(big ? { e: big.e, icons: big.icons, more: big.more, tag: '累计里程', text: big.text, basis: '累计 ' + num(d.totalVolume) + ' kg ÷ ' + big.basis.split(' ÷ ')[1] }
-        : { e: '🎯', icons: '🎯', more: '', tag: '累计里程', text: '第 ' + d.seq + ' 次训练，历史累计 ' + num(d.totalVolume / 1000, 2) + ' t', basis: '累计 ' + num(d.totalVolume) + ' kg' });
+      out.push(big ? { e: big.e, tag: '累计里程', text: big.text, basis: '累计 ' + num(d.totalVolume) + ' kg ÷ ' + big.basis.split(' ÷ ')[1] }
+        : { e: '🎯', tag: '累计里程', text: '第 ' + d.seq + ' 次训练，历史累计 ' + num(d.totalVolume / 1000, 2) + ' t', basis: '累计 ' + num(d.totalVolume) + ' kg' });
     }
     return out;
   }
@@ -2622,10 +2621,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function chooseFun(seedKey, opts, d) {
     opts = opts || {};
     var pool = funPool(seedKey, d), n = pool.length;
-    if (!n) return { e: '💪', icons: '💪', more: '', tag: '数据彩蛋', text: '认真练习的一天', basis: '', index: 0, total: 1 };
+    if (!n) return { e: '💪', tag: '数据彩蛋', text: '认真练习的一天', basis: '', index: 0, total: 1 };
     var v = Number(opts.funVariant) || 0; v = Number.isFinite(v) ? Math.trunc(v) : 0;
     var idx = ((v % n) + n) % n, pick = pool[idx];
-    return { e: pick.e, icons: pick.icons, more: pick.more, tag: pick.tag, text: pick.text, basis: pick.basis, index: idx, total: n };
+    return { e: pick.e, tag: pick.tag, text: pick.text, basis: pick.basis, index: idx, total: n };
   }
   function clean(v, n) { return String(v || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, n); }
   function profile(p) {
@@ -2710,7 +2709,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       copy: summary, volume: Math.round(volume * 100) / 100, volumeText: (volume / 1000).toFixed(2),
       reps: Math.round(reps), sets: sets, adds: adds, estimated: estimated, rows: rows,
       sessions: 1, days: pick.day + ' ' + pick.dayName, trainingDays: pick.seq, weight: p.showWeight && bw !== null ? bw : null,
-      fun: fun, funEmoji: fn.e, funIcons: fn.icons, funMore: fn.more, funTag: fn.tag, funBasis: fn.basis, funIndex: fn.index, funTotal: fn.total,
+      fun: fun, funEmoji: fn.e, funTag: fn.tag, funBasis: fn.basis, funIndex: fn.index, funTotal: fn.total,
       caption: (p.name || '训练者') + (p.handle ? ' ' + p.handle : '') + ' · ' + selected + ' · ' + pick.day + ' ' + pick.dayName + ' · 第 ' + pick.seq + ' 次训练\n' +
         rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' +
         fn.e + ' ' + fun + '\n' + '训练小结：' + summary + '\n#训练打卡 #认真练习' };
@@ -2763,10 +2762,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var subLine = [pf.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join('  ·  ');
     var profileH = Math.max(136, 10 + nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36 + 8);
     font(ctx, 34, 500); var summaryLines = wrap(ctx, data.copy, 880);
+    var funText = (data.funEmoji ? data.funEmoji + ' ' : '') + data.fun;
     var fs = 44, funLines;
-    do { font(ctx, fs, 700); funLines = wrap(ctx, data.fun, 872); if (funLines.length <= 2) break; fs -= 2; } while (fs > 32);
+    do { font(ctx, fs, 700); funLines = wrap(ctx, funText, 872); if (funLines.length <= 2) break; fs -= 2; } while (fs > 32);
     font(ctx, 26, 400); var basisLines = data.funBasis ? wrap(ctx, '算法：' + data.funBasis, 872).slice(0, 2) : [];
-    var funH = 36 + 26 + 18 + 84 + 16 + funLines.length * (fs + 14) + (basisLines.length ? 10 + basisLines.length * 34 : 0) + 36;
+    var funH = 36 + 26 + 14 + funLines.length * (fs + 14) + (basisLines.length ? 10 + basisLines.length * 34 : 0) + 36;
     // ---- 纵向坐标 ----
     // 一、个人名片 + 训练阶段 + 日期
     var s1Top = 72, s1Div = s1Top + profileH + 30, s1Stage = s1Div + 26, s2Top = s1Stage + 34 + 56;
@@ -2811,11 +2811,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     // 趣味卡：标签 → emoji 行 → 一句话 → 算法
     rounded(ctx, 64, fTop, 952, funH, 36, fill);
     var fy = fTop + 36;
-    text(ctx, data.funTag, 100, fy, 26, muted, 650); fy += 26 + 18;
-    font(ctx, 72, 400); ctx.fillStyle = ink; ctx.fillText(data.funIcons, 100, fy);
-    var iw = ctx.measureText(data.funIcons).width;
-    if (data.funMore) text(ctx, data.funMore, 100 + iw + 18, fy + 14, 44, ink, 750);
-    fy += 84 + 16;
+    text(ctx, data.funTag, 100, fy, 26, muted, 650); fy += 26 + 14;
     funLines.forEach(function (l, k) { text(ctx, l, 100, fy + k * (fs + 14), fs, ink, 700); });
     fy += funLines.length * (fs + 14) + 10;
     basisLines.forEach(function (l, k) { text(ctx, l, 100, fy + k * 34, 26, muted, 400); });
@@ -3640,7 +3636,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       // 二、纵览与趣味
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 纵览与趣味</span><span class="ss-acts"><span class="quote-total">' + (data.funIndex + 1) + ' / ' + data.funTotal + '</span><button class="ss-act dice" data-act="funagain">🎲 换一个</button></span></div>' +
         '<div class="ss-metrics"><span><b class="num">' + esc(String(data.rows.length)) + '</b>项动作</span><span><b class="num">' + esc(String(data.reps)) + '</b>次动作</span><span><b class="num">' + esc(String(data.adds)) + '</b>项加重</span></div>' +
-        '<div class="ss-fun"><span class="ss-fun-tag">' + esc(data.funTag) + '</span><span class="ss-fun-emo">' + esc(data.funIcons) + (data.funMore ? ' <b class="num">' + esc(data.funMore) + '</b>' : '') + '</span>' + esc(data.fun) + (data.funBasis ? '<span class="ss-fun-note">算法：' + esc(data.funBasis) + '</span>' : '') + '</div></div>' +
+        '<div class="ss-fun"><span class="ss-fun-tag">' + esc(data.funTag) + '</span>' + esc((data.funEmoji ? data.funEmoji + ' ' : '') + data.fun) + (data.funBasis ? '<span class="ss-fun-note">算法：' + esc(data.funBasis) + '</span>' : '') + '</div></div>' +
       // 四、训练内容
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">03 · 训练内容</span><button class="ss-act" data-act="sharetrain">查看训练 ›</button></div>' +
         '<label class="ss-pick"><span class="ss-pick-l">哪次训练</span><select data-act="sharerec" aria-label="选择训练记录">' + list.map(function(x){return '<option value="'+x.id+'" '+(x.id===data.recordId?'selected':'')+'>'+esc(x.label)+'</option>';}).join('')+'</select></label>' +
