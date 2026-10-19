@@ -49,10 +49,11 @@
   // Apple 系统色
   var JUDGE_COLORS = {
     '加重': '#FF6B1A', '建议负重': '#5856D6', '保持': '#34C759', '建议降阶': '#FF9F0A',
-    '降阶': '#AF52DE', '退阶': '#AF52DE', '重置': '#FF3B30', '减载': '#5AC8FA', '跳过': '#C7C7CC', '替换': '#5856D6'
+    '降阶': '#AF52DE', '退阶': '#AF52DE', '重置': '#FF3B30', '减载': '#5AC8FA', '跳过': '#C7C7CC', '替换': '#5856D6',
+    '减轻': '#FF9F0A', '未完成': '#FF9F0A', '纪录': '#FF6B1A', '完成': '#34C759'
   };
   var TIER_COLORS = { T1: '#FF6B1A', T2: '#0A84FF', T3: '#AEAEB2' };
-  var JUDGE_ICON = { '加重': '↑', '建议负重': '＋', '保持': '=', '建议降阶': '!', '降阶': '↓', '退阶': '↓', '重置': '↺', '减载': '~', '跳过': '–', '替换': '⇄' };
+  var JUDGE_ICON = { '加重': '↑', '建议负重': '＋', '保持': '=', '建议降阶': '!', '降阶': '↓', '退阶': '↓', '重置': '↺', '减载': '~', '跳过': '–', '替换': '⇄', '减轻': '↓', '未完成': '!', '纪录': '↑', '完成': '=' };
   var INS_ICON = { info: 'i', up: '↑', warn: '!', tip: '→', trend: '↗' };
   function dateLabel(d) {
     if (!d) return '';
@@ -493,6 +494,18 @@
   // ---------- 判定（核心规则） ----------
   function gzStageDef(tier, stage) { return STAGES[tier][stage] || STAGES[tier][FIRST_STAGE[tier]]; }
   function hasValue(e) { return e && e.v !== null && e.v !== undefined && e.v !== '' && !e.skip; }
+  /** 这一项是否已经填完。双重进阶看每一组次数，固定组次看是否标记完成。 */
+  function logged(s, e) {
+    if (!e || e.skip) return false;
+    if (s.prog === 'dual') {
+      var n = (s.scheme && s.scheme.sets) || 0, arr = e.sets || [], i;
+      if (!n) return false;
+      for (i = 0; i < n; i++) if (arr[i] === null || arr[i] === undefined || arr[i] === '') return false;
+      return true;
+    }
+    if (s.prog === 'fixed') return e.v === '完成' || e.v === 1 || e.v === '1';
+    return hasValue(e);
+  }
 
   /**
    * @param s 槽位  @param st 当前状态 {stage, weight, fail}  @param e 本次输入 {v, reps, new5RM, skip}
@@ -779,8 +792,9 @@
     PROGRESSIONS[def.id] = def;
     return def;
   }
-  function progressionOf(db) {
-    var id = db && db.params && db.params.progression;
+  function progressionOf(db, slot) {
+    var id = slot && slot.prog;
+    if (!id && db && db.params) id = db.params.progression;
     if (!id && db && db.programs) { var p = activeProgram(db); id = p && p.progression; }
     return PROGRESSIONS[id] || PROGRESSIONS.gzclp;
   }
@@ -801,6 +815,154 @@
   // 兼容旧调用：GZ.evaluate / 内部 stageDef 仍指向 GZCLP
   var evaluate = gzEvaluate, stageDef = gzStageDef;
 
+  // ---------- 计划库：双重进阶 / 线性 / 5/3/1（已确认的应用规则） ----------
+  // 向上取整到档位。对应 Wendler 原书 Excel 的 CEILING(..., 5)。
+  function ceilTo(x, inc) {
+    inc = inc || 2.5;
+    if (!(inc > 0)) return fix(x);
+    return fix(Math.ceil(x / inc - 1e-9) * inc);
+  }
+  function waveWeek(week) { return ((Math.max(1, week) - 1) % 4) + 1; }
+  function waveTop(tm, wk, inc) {
+    var pct = { 1: 0.85, 2: 0.9, 3: 0.95, 4: 0.6 }[wk] || 0.85;
+    return ceilTo(tm * pct, inc || 2.5);
+  }
+  var WAVE = {
+    1: [[0.65, 5, false], [0.75, 5, false], [0.85, 5, true]],
+    2: [[0.70, 3, false], [0.80, 3, false], [0.90, 3, true]],
+    3: [[0.75, 5, false], [0.85, 3, false], [0.95, 1, true]],
+    4: [[0.40, 5, false], [0.50, 5, false], [0.60, 5, false]]
+  };
+  function resultBase(s, st, w) {
+    return {
+      slotId: s.id, tier: s.tier, name: s.name, equip: s.equip, lift: s.lift,
+      stage: st.stage, sets: 0, reps: 0, weight: w, planned: st.weight, manual: false, fail: st.fail || 0,
+      input: null, judgment: '', nextStage: st.stage, nextWeight: st.weight, nextFail: st.fail || 0, nextCycleMiss: st.cycleMiss || 0,
+      volume: 0, e1rm: null, delta: 0, deload: false, autoWeight: st.weight, loads: null, inputMode: ''
+    };
+  }
+  function dualEvaluate(s, st, e) {
+    var sc = s.scheme || { sets: 3, repMin: 8, repMax: 12, step: 2.5 };
+    var step = sc.step || 2.5, planned = st.weight, mw = manualW(e), w = mw !== null ? mw : planned;
+    var r = resultBase(s, st, w);
+    r.manual = mw !== null; r.sets = sc.sets; r.reps = sc.repMax; r.inputMode = 'sets'; r.autoWeight = planned;
+    r.nextStage = sc.repMin + '–' + sc.repMax;
+    var nums = [], i;
+    for (i = 0; i < sc.sets; i++) {
+      var raw = e && e.sets ? e.sets[i] : null;
+      var n = raw === null || raw === undefined || raw === '' ? null : Number(raw);
+      nums.push(n);
+      r.loads = r.loads || [];
+      r.loads.push({ reps: sc.repMin + '–' + sc.repMax, weight: w, amrap: false, value: n });
+    }
+    if (e && e.skip) { r.judgment = '跳过'; r.nextWeight = planned; return r; }
+    if (nums.some(function (n) { return n === null || isNaN(n); })) { r.judgment = '跳过'; r.nextWeight = planned; return r; }
+    r.input = nums.join('/');
+    r.volume = fix(nums.reduce(function (a, n) { return a + w * n; }, 0));
+    var best = Math.max.apply(null, nums);
+    if (w > 0 && best > 0) r.e1rm = fix(w * (1 + Math.min(best, 12) / 30));
+    if (nums.every(function (n) { return n >= sc.repMax; })) {
+      r.judgment = '加重'; r.nextWeight = alignTo(w + step, step); r.nextFail = 0;
+    } else if (nums.some(function (n) { return n <= sc.repMin - 2; })) {
+      r.judgment = '减轻'; r.nextWeight = Math.max(step, alignTo(w - step, step)); r.nextFail = 0;
+    } else {
+      r.judgment = '保持'; r.nextWeight = w; r.nextFail = 0;
+    }
+    r.delta = fix(r.nextWeight - planned);
+    return r;
+  }
+  function linearEvaluate(s, st, e) {
+    var sc = s.scheme || { sets: 5, reps: 5, step: 2.5 };
+    var step = sc.step || 2.5, inc = sc.inc || 2.5, planned = st.weight, mw = manualW(e), w = mw !== null ? mw : planned;
+    var r = resultBase(s, st, w);
+    r.manual = mw !== null; r.sets = sc.sets; r.reps = sc.reps; r.inputMode = 'linear'; r.autoWeight = planned;
+    r.nextStage = sc.sets + '×' + sc.reps + '+';
+    var amrap = e && e.v !== null && e.v !== undefined && e.v !== '' ? Number(e.v) : null;
+    if (e && e.skip || amrap === null || isNaN(amrap)) { r.judgment = '跳过'; r.nextWeight = planned; return r; }
+    r.input = amrap;
+    var straight = Math.max(0, sc.sets - 1);
+    r.volume = fix(w * (straight * sc.reps + amrap));
+    if (w > 0 && amrap > 0) r.e1rm = fix(w * (1 + amrap / 30));
+    var ok = !e.miss && amrap >= sc.reps;
+    if (ok) { r.judgment = '加重'; r.nextWeight = alignTo(w + step, inc); r.nextFail = 0; }
+    else {
+      var fails = (st.fail || 0) + 1;
+      if (fails >= 3) { r.judgment = '减载'; r.nextWeight = Math.max(inc, alignTo(w * 0.9, inc)); r.nextFail = 0; }
+      else { r.judgment = '保持'; r.nextWeight = w; r.nextFail = fails; }
+    }
+    r.delta = fix(r.nextWeight - planned);
+    return r;
+  }
+  function waveEvaluate(s, st, e, P, deload, week) {
+    var sc = s.scheme || { step: 2.5, inc: 2.5 };
+    var wk = waveWeek(week || 1), rows = WAVE[wk], tm0 = st.weight, inc = sc.inc || 2.5, step = sc.step || 2.5;
+    var r = resultBase(s, st, tm0);
+    r.inputMode = 'wave'; r.sets = rows.length; r.autoWeight = tm0; r.stage = '第' + wk + '周';
+    r.loads = rows.map(function (row) {
+      return { pct: row[0], reps: row[1], weight: ceilTo(tm0 * row[0], inc), amrap: row[2] && wk !== 4 };
+    });
+    var top = r.loads[r.loads.length - 1];
+    r.weight = top.weight; r.reps = top.reps;
+    var amrap = e && e.v !== null && e.v !== undefined && e.v !== '' ? Number(e.v) : null;
+    if (e && e.skip || amrap === null || isNaN(amrap)) { r.judgment = '跳过'; r.nextWeight = tm0; r.nextStage = '第' + wk + '周'; r.barNext = waveTop(tm0, wk, inc); return r; }
+    r.input = amrap;
+    r.volume = fix(r.loads.reduce(function (a, ld, i) {
+      var reps = i === r.loads.length - 1 ? amrap : ld.reps;
+      return a + ld.weight * reps;
+    }, 0));
+    if (tm0 > 0 && amrap > 0 && wk !== 4) r.e1rm = fix(top.weight * (1 + amrap / 30));
+    var need = top.reps, missed = !!(e && e.miss) || amrap < need;
+    var cycleMiss = missed ? 1 : (st.cycleMiss || 0);
+    if (wk < 4) {
+      r.judgment = missed ? '未完成' : (amrap > need ? '纪录' : '完成');
+      r.nextWeight = tm0; r.nextFail = st.fail || 0; r.nextCycleMiss = cycleMiss; r.nextStage = '第' + waveWeek(week + 1) + '周';
+      r.barNext = waveTop(tm0, waveWeek(week + 1), inc);
+    } else {
+      var streak = (st.fail || 0) + (cycleMiss ? 1 : 0);
+      if (!cycleMiss) { r.judgment = '加重'; r.nextWeight = alignTo(tm0 + step, inc); r.nextFail = 0; }
+      else if (streak >= 2) { r.judgment = '重置'; r.nextWeight = Math.max(inc, ceilTo(tm0 * 0.9, inc)); r.nextFail = 0; }
+      else { r.judgment = '保持'; r.nextWeight = tm0; r.nextFail = streak; }
+      r.nextCycleMiss = 0; r.nextStage = '第1周';
+      r.barNext = waveTop(r.nextWeight, 1, inc);
+    }
+    r.delta = fix(r.nextWeight - tm0);
+    return r;
+  }
+  function fixedEvaluate(s, st, e, P, deload, week) {
+    var sc = s.scheme || { sets: 5, reps: 10 };
+    var sets = sc.sets, half = sc.halfOnDeload && waveWeek(week || 1) === 4;
+    if (half) sets = Math.ceil(sc.sets / 2);
+    var mw = manualW(e), w = mw !== null ? mw : st.weight, r = resultBase(s, st, w);
+    r.manual = mw !== null; r.inputMode = 'fixed'; r.sets = sets; r.reps = sc.reps; r.autoWeight = st.weight; r.nextWeight = st.weight; r.nextStage = sets + '×' + sc.reps;
+    var done = e && (e.v === '完成' || e.v === 1 || e.v === '1');
+    if (e && e.skip || !done) { r.judgment = '跳过'; return r; }
+    r.input = '完成'; r.judgment = '完成'; r.volume = fix(w * sets * sc.reps);
+    return r;
+  }
+  function progShell(id, name, desc, evaluateFn, first) {
+    return registerProgression({
+      id: id, name: name, desc: desc,
+      firstStage: function () { return first; },
+      stageDef: function () { return { sets: 1, reps: 1, add: 1, hold: 1, next: null }; },
+      initState: function (s) {
+        var sc = s.scheme || {};
+        var stage = id === 'dual' ? (sc.repMin + '–' + sc.repMax) : id === 'w531' ? '第1周' : (sc.sets || 1) + '×' + (sc.reps || 5);
+        return { stage: stage, weight: s.init && s.init.type === 'fixed' ? Number(s.init.value) || 0 : 0, fail: 0, cycleMiss: 0 };
+      },
+      freshState: function (s, weight) {
+        var st = PROGRESSIONS[id].initState(s);
+        st.weight = weight;
+        return st;
+      },
+      evaluate: evaluateFn,
+      amrapLast: function () { return id === 'linear' || id === 'w531'; }
+    });
+  }
+  progShell('dual', '双重进阶', '全部组到达次数上限后加重并回到下限；任一组低于下限 2 次则减轻。', dualEvaluate, '8–12');
+  progShell('linear', '线性加重', '完成规定次数就加重。连续 3 次完不成，工作重量减 10%。', linearEvaluate, '5+');
+  progShell('w531', '5/3/1', '按训练最大重量的四周百分比训练。规定组都完成才提高 TM；连续两轮没完成则 TM × 0.9。', waveEvaluate, '第1周');
+  progShell('fixed', '固定组次', '重量由关联主项算出，本组不自动加重。', fixedEvaluate, '5×10');
+
   // ---------- 回放 ----------
   function sortRecords(recs) {
     return recs.slice().sort(function (a, b) {
@@ -810,9 +972,9 @@
   }
   function dayById(db, id) { for (var i = 0; i < db.days.length; i++) if (db.days[i].id === id) return db.days[i]; return null; }
   function initialStates(db) {
-    var st = {}, prog = progressionOf(db);
+    var st = {};
     db.days.forEach(function (d) {
-      d.slots.forEach(function (s) { st[s.id] = prog.initState(s, db.params); });
+      d.slots.forEach(function (s) { st[s.id] = progressionOf(db, s).initState(s, db.params); });
     });
     return st;
   }
@@ -948,19 +1110,24 @@
     return out;
   }
   /** 执行一个槽位：处理“更换起始周重置”、“调整重量”和“仅本次替换” */
-  function runSlot(db, s, st, e, week, deload, hist) {
-    var ef = effectiveSlot(db, s, week, hist), prog = progressionOf(db);
+  function runSlot(db, s, st, e, week, deload, hist, snapW) {
+    var ef = effectiveSlot(db, s, week, hist), prog = progressionOf(db, ef.slot);
+    var link = ef.slot.scheme && ef.slot.scheme.link;
+    if (link && snapW && snapW[link] != null) {
+      var sc0 = ef.slot.scheme;
+      st = Object.assign({}, st, { weight: ceilTo(snapW[link] * (sc0.pct || 0.5), sc0.inc || 2.5) });
+    }
     st = startState(s, st, ef, week, prog);
     var res;
     if (e && e.ex && e.ex !== ef.slot.name) {
       var lib = libFindIn(db, e.ex);
-      res = prog.evaluate(Object.assign({}, ef.slot, { name: e.ex, equip: lib ? lib.equip : '' }), st, e, db.params, deload);
+      res = prog.evaluate(Object.assign({}, ef.slot, { name: e.ex, equip: lib ? lib.equip : '' }), st, e, db.params, deload, week);
       // 仅本次替换：记录容量，但不推进原动作的阶段与重量
       if (!res.deload && res.judgment !== '跳过') { res.judgment = '替换'; res.e1rm = null; }
       res.nextStage = st.stage; res.nextWeight = st.weight; res.nextFail = st.fail || 0; res.delta = 0;
       res.sub = true; res.origName = ef.slot.name;
     } else {
-      res = prog.evaluate(ef.slot, st, e, db.params, deload);
+      res = prog.evaluate(ef.slot, st, e, db.params, deload, week);
     }
     res.changed = !!ef.change;
     return { res: res, st: st, eff: ef, prog: prog };
@@ -1000,12 +1167,13 @@
       var day = dayById(db, rec.day);
       if (!day) continue;
       counts[rec.day] += 1;
-      var week = counts[rec.day], items = [], vol = { T1: 0, T2: 0, T3: 0 };
+      var week = counts[rec.day], items = [], vol = { T1: 0, T2: 0, T3: 0 }, snapW = {};
+      Object.keys(states).forEach(function (id) { snapW[id] = states[id] && states[id].weight; });
       day.slots.forEach(function (s) {
-        var res = runSlot(db, s, states[s.id], rec.entries ? rec.entries[s.id] : null, week, rec.deload, hist).res;
+        var res = runSlot(db, s, states[s.id], rec.entries ? rec.entries[s.id] : null, week, rec.deload, hist, snapW).res;
         items.push(res);
         vol[s.tier] += res.volume;
-        states[s.id] = { stage: res.nextStage, weight: res.nextWeight, fail: res.nextFail };
+        states[s.id] = { stage: res.nextStage, weight: res.nextWeight, fail: res.nextFail || 0, cycleMiss: res.nextCycleMiss || 0 };
       });
       items.forEach(function (it) {
         if (it.deload || it.judgment === '跳过') return;
@@ -1050,7 +1218,7 @@
       items: s.items.map(function (it) {
         return { tier: it.tier, tierColor: TIER_COLORS[it.tier], name: it.name, stage: it.stage, sub: !!it.sub, origName: it.origName || '',
           w: fmtW(it.deload ? it.dWeight : it.weight), manual: !!it.manual && !it.sub, planned: fmtW(it.planned), input: it.input === null ? '—' : it.input,
-          j: it.judgment, color: JUDGE_COLORS[it.judgment] || '#8E8E93', next: it.deload || it.judgment === '跳过' ? '' : it.sub ? '替代 ' + it.origName + '，不影响进阶' : '下次 ' + fmtW(it.nextWeight) + ' kg · ' + it.nextStage };
+          j: it.judgment, color: JUDGE_COLORS[it.judgment] || '#8E8E93', next: it.deload || it.judgment === '跳过' ? '' : it.sub ? '替代 ' + it.origName + '，不影响进阶' : '下次 ' + fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage };
       }) };
   }
 
@@ -1076,7 +1244,7 @@
       var ls = full.sessions.filter(function (x) { return x.rec.id === rd.recordId; })[0];
       lockedInfo = ls ? logView(ls) : null;
     }
-    var deloadSuggest = isDeloadWeek(week, P);
+    var deloadSuggest = progressionOf(db).id === 'gzclp' && isDeloadWeek(week, P);
     var deload = opts.deload === undefined ? deloadSuggest : !!opts.deload;
     var draft = opts.draft || blankDraft(db, dayId);
     var filled = 0, total = 0, lastW = lastWeights(full);
@@ -1092,12 +1260,15 @@
           if (manualW(e) === null) e.w = subDefault;
         }
       }
-      var run = runSlot(db, s0, states[s0.id], e, week, deload, hist), res = run.res, st = run.st, s = run.eff.slot;
-      var def = run.prog.stageDef(s.tier, st.stage);
-      var showW = deload ? res.dWeight : res.weight;
+      var snapW = {};
+      Object.keys(states).forEach(function (id) { snapW[id] = states[id] && states[id].weight; });
+      var run = runSlot(db, s0, states[s0.id], e, week, deload, hist, snapW), res = run.res, st = run.st, s = run.eff.slot;
+      var def = res.loads && res.loads.length ? { sets: res.loads.length, reps: res.loads[res.loads.length - 1].reps } : (res.inputMode ? { sets: res.sets, reps: res.reps } : run.prog.stageDef(s.tier, st.stage));
+      var showW = deload && res.dWeight != null && !res.loads ? res.dWeight : res.weight;
       if (res.sub && !deload) showW = res.weight;
       var showSets = deload ? res.dSets : def.sets;
-      total += 1; if (hasValue(e) || e.skip) filled += 1;
+      var doneLog = logged(s0, e);
+      total += 1; if (doneLog || e.skip) filled += 1;
       var dots = [];
       for (var k = 0; k < showSets; k++) dots.push({ i: k, on: k < (e.done || 0), amrap: !deload && run.prog.amrapLast(s.tier) && k === showSets - 1 });
       return {
@@ -1107,20 +1278,22 @@
         autoNew: !!(run.eff.auto && run.eff.resetNow), autoPrev: run.eff.auto && run.eff.change ? run.eff.change.prev : '',
         stage: st.stage, sets: showSets, reps: def.reps, weight: showW,
         weightText: equipOf(res.name, res.equip) === '自重' ? '自重' : fmtW(showW),
-        canAdjust: equipOf(res.name, res.equip) !== '自重',
+        canAdjust: equipOf(res.name, res.equip) !== '自重' && res.inputMode !== 'wave',
         plates: platesFor(showW, P, equipOf(res.name, res.equip)), fail: res.sub ? 0 : (st.fail || 0),
         restText: fmtRest(REST[s.tier]),
         manual: res.sub ? manualW(e) !== subDefault : res.manual, autoWeight: res.sub ? subDefault : res.autoWeight, autoText: fmtW(res.sub ? subDefault : res.autoWeight), wStep: incOf(Object.assign({}, s, { name: res.name, equip: equipOf(res.name, res.equip) }), P) || 1, editW: !!e.editW,
-        repsText: showSets + '×' + def.reps + (s.tier !== 'T2' && !deload ? '+' : ''),
-        inputType: deload ? 'deload' : s.tier === 'T2' ? 'done' : 'amrap',
-        amrapHint: s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + (equipOf(res.name, res.equip) === '自重' ? ' 建议切换负重版' : ' 加重')) : '',
+        repsText: res.inputMode === 'sets' && s.scheme ? (res.sets + '×' + s.scheme.repMin + '–' + s.scheme.repMax) : (res.loads ? res.loads.map(function (ld) { return (ld.pct ? Math.round(ld.pct * 100) + '%×' : '') + ld.reps + (ld.amrap ? '+' : ''); }).join(' · ') : showSets + '×' + def.reps + (res.inputMode === 'linear' || (s.tier !== 'T2' && !deload && !res.inputMode) ? '+' : '')),
+        inputType: res.inputMode || (deload ? 'deload' : s.tier === 'T2' ? 'done' : 'amrap'),
+        loads: res.loads || null,
+        scheme: s.scheme || null,
+        amrapHint: res.inputMode === 'sets' && s.scheme ? ('全部做到 ' + s.scheme.repMax + ' 次加重，有一组 ≤ ' + (s.scheme.repMin - 2) + ' 次减轻') : res.inputMode === 'linear' && s.scheme ? ('末组至少 ' + s.scheme.reps + ' 次加重，连续 3 次失败减 10%') : res.inputMode === 'wave' ? '规定次数没完成，这一轮不加训练最大重量' : res.inputMode === 'fixed' ? '重量固定为训练最大重量的 50%，不自动加重' : (s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + (equipOf(res.name, res.equip) === '自重' ? ' 建议切换负重版' : ' 加重')) : ''),
         amrapTarget: deload ? null : s.tier === 'T1' ? def.add : s.tier === 'T3' ? P.t3Threshold : null,
-        value: e.v, reps2: e.reps, skip: !!e.skip, new5RM: e.new5RM || '', done: e.done || 0, dots: dots,
+        value: e.v, setsIn: e.sets || null, miss: !!e.miss, logged: doneLog, reps2: e.reps, skip: !!e.skip, new5RM: e.new5RM || '', done: e.done || 0, dots: dots,
         need5RM: s.tier === 'T1' && P.ruleMode !== 'excel' && st.stage === '10×1+',
         rest: REST[s.tier],
-        preview: (hasValue(e) || deload) ? {
+        preview: (doneLog || (deload && !s0.prog)) ? {
           judgment: res.judgment, color: JUDGE_COLORS[res.judgment] || '#8E8E93', icon: JUDGE_ICON[res.judgment] || '',
-          nextStage: res.nextStage, nextWeight: fmtW(res.nextWeight), stageChanged: res.nextStage !== st.stage,
+          nextStage: res.nextStage, nextWeight: fmtW(res.barNext != null ? res.barNext : res.nextWeight), stageChanged: res.nextStage !== st.stage,
           delta: res.delta > 0 ? '+' + fmtW(res.delta) : res.delta < 0 ? fmtW(res.delta) : '±0', boost: !!res.boost, adaptNote: res.adaptNote || '',
           e1rm: res.e1rm ? fmtW(Math.round(res.e1rm * 10) / 10) : '', volume: Math.round(res.volume), sub: !!res.sub, origName: res.origName || ''
         } : null
@@ -1162,12 +1335,22 @@
             w: fmtW(it.deload ? it.dWeight : it.weight), j: it.judgment, color: JUDGE_COLORS[it.judgment] || '#8E8E93', deload: !!s.rec.deload };
         }
         var cnt = rp.counts[d.id] || 0, ahead = w - cnt - 1; // 0 = 下一次
-        var st = rp.states[t1.id];
-        // 理想推演：每次正常训练都加重；减载周不推进
-        var adds = 0;
-        for (var k = cnt + 1; k < w; k++) if (!isDeloadWeek(k, P)) adds++;
-        var proj = st.weight + (P.steps[t1.step] || 0) * adds;
-        if (isDeloadWeek(w, P)) proj = roundTo(proj * 0.5, P.rounding);
+        var st = rp.states[t1.id], proj;
+        if (t1.prog === 'w531') {
+          var waveN = ((w - 1) % 4) + 1, pctW = { 1: 0.85, 2: 0.9, 3: 0.95, 4: 0.6 }[waveN];
+          var tmW = st.weight + (t1.scheme.step || 0) * Math.max(0, Math.floor((w - 1) / 4) - Math.floor(cnt / 4));
+          proj = ceilTo(tmW * pctW, (t1.scheme && t1.scheme.inc) || 2.5);
+        } else if (t1.prog === 'linear') {
+          proj = st.weight + (t1.scheme.step || 0) * Math.max(0, w - cnt - 1);
+        } else if (t1.prog) {
+          proj = st.weight;
+        } else {
+          // 理想推演：每次正常训练都加重；减载周不推进
+          var adds = 0;
+          for (var k = cnt + 1; k < w; k++) if (!isDeloadWeek(k, P)) adds++;
+          proj = st.weight + (P.steps[t1.step] || 0) * adds;
+          if (isDeloadWeek(w, P)) proj = roundTo(proj * 0.5, P.rounding);
+        }
         return { day: d.id, week: w, status: (d.id === rec.day && ahead === 0) ? 'next' : (ahead === 0 && w === rec.week ? 'ready' : 'todo'),
           w: fmtW(fix(proj)), j: ahead === 0 ? '计划' : '理想', color: '#8E8E93', deload: isDeloadWeek(w, P) };
       });
@@ -1185,7 +1368,14 @@
           }
         }
         var start = ef.change ? ef.change.weight : initWeight(s, P);
-        return { id: s.id, changed: !!ef.change, tier: s.tier, tierColor: TIER_COLORS[s.tier], name: s.name, stage: st.stage, weight: fmtW(st.weight),
+        var showW = st.weight;
+        if (s.prog === 'w531') {
+          var wkOv = ((nw - 1) % 4) + 1, pctOv = { 1: 0.85, 2: 0.9, 3: 0.95, 4: 0.6 }[wkOv];
+          showW = ceilTo(st.weight * pctOv, (s.scheme && s.scheme.inc) || 2.5);
+        } else if (s.scheme && s.scheme.link && rp.states[s.scheme.link]) {
+          showW = ceilTo(rp.states[s.scheme.link].weight * (s.scheme.pct || 0.5), (s.scheme && s.scheme.inc) || 2.5);
+        }
+        return { id: s.id, changed: !!ef.change, tier: s.tier, tierColor: TIER_COLORS[s.tier], name: s.name, stage: st.stage, weight: fmtW(showW),
           gain: st.weight - start > 0 ? '+' + fmtW(fix(st.weight - start)) : '', fail: st.fail,
           last: last ? last.judgment : '—', lastColor: last ? JUDGE_COLORS[last.judgment] : '#C7C7CC' };
       }) };
@@ -1551,6 +1741,8 @@
       if (e.new5RM) entries[k].new5RM = Number(e.new5RM);
       if (manualW(e) !== null) entries[k].w = manualW(e);
       if (e.ex) entries[k].ex = String(e.ex);
+      if (e.miss) entries[k].miss = true;
+      if (e.sets && e.sets.length) entries[k].sets = e.sets.map(function (n) { return n === '' || n === undefined ? null : n; });
     });
     var r = { id: rec.id || uid(), date: rec.date || today(), day: rec.day, deload: !!rec.deload, note: rec.note || '', bw: rec.bw || null,
       entries: entries, createdAt: rec.createdAt || Date.now(), updatedAt: Date.now() };
@@ -1653,6 +1845,145 @@
     '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
   ];
 
+  function liftRM(db, lift) {
+    var p = oneRMProfile(db)[lift] || {};
+    return Math.max(Number(p.manual) || 0, p.latest && p.latest.v || 0) || (db.params.oneRM[lift] || 0);
+  }
+  function libSlot(id, tier, name, prog, scheme, lift) {
+    var lb = libFind(name);
+    return {
+      id: id, tier: tier, name: name, equip: lb ? lb.equip : (scheme.equip || '杠铃'), lift: lift || null,
+      init: { type: 'fixed', value: scheme.weight || 0 }, step: null, roundProg: false, noRotate: true,
+      prog: prog, scheme: scheme
+    };
+  }
+  function seedFixed(db, name, tier) {
+    var rec = recommendWeight(db, name, tier, { preferLast: false });
+    return rec && rec.weight > 0 ? rec.weight : 20;
+  }
+  function phulDays(db) {
+    function d(id, tier, name, sets, lo, hi, step, lift, seedTier, equip) {
+      return libSlot(id, tier, name, 'dual', { sets: sets, repMin: lo, repMax: hi, step: step, weight: seedFixed(db, name, seedTier || tier), equip: equip }, lift);
+    }
+    return [
+      { id: 'UP', name: '上肢力量', slots: [
+        d('UP1', 'T1', '平板卧推', 3, 3, 5, 2.5, 'bench', 'T1'),
+        d('UP2', 'T2', '上斜哑铃卧推', 3, 6, 10, 2, null, 'T2'),
+        d('UP3', 'T1', '杠铃划船', 3, 3, 5, 2.5, null, 'T1'),
+        d('UP4', 'T2', '高位下拉', 3, 6, 10, 2.5, null, 'T2'),
+        d('UP5', 'T2', '站姿实力推', 2, 5, 8, 2.5, 'ohp', 'T2'),
+        d('UP6', 'T3', '杠铃弯举', 2, 6, 10, 1.25, null, 'T3'),
+        d('UP7', 'T3', '仰卧臂屈伸', 2, 6, 10, 1.25, null, 'T3')
+      ] },
+      { id: 'LP', name: '下肢力量', slots: [
+        d('LP1', 'T1', '杠铃深蹲', 3, 3, 5, 5, 'squat', 'T1'),
+        d('LP2', 'T1', '传统硬拉', 3, 3, 5, 5, 'deadlift', 'T1'),
+        d('LP3', 'T2', '腿举', 3, 10, 15, 5, null, 'T2'),
+        d('LP4', 'T3', '俯卧腿弯举', 3, 6, 10, 2.5, null, 'T3'),
+        d('LP5', 'T3', '提踵', 4, 6, 10, 5, null, 'T3')
+      ] },
+      { id: 'UH', name: '上肢肌肥大', slots: [
+        d('UH1', 'T2', '上斜卧推', 3, 8, 12, 2.5, 'bench', 'T2'),
+        d('UH2', 'T3', '平板哑铃飞鸟', 3, 8, 12, 2, null, 'T3', '哑铃'),
+        d('UH3', 'T2', '坐姿划船', 3, 8, 12, 2.5, null, 'T2'),
+        d('UH4', 'T2', '单臂哑铃划船', 3, 8, 12, 2, null, 'T2'),
+        d('UH5', 'T3', '哑铃侧平举', 3, 8, 12, 1, null, 'T3'),
+        d('UH6', 'T3', '上斜哑铃弯举', 3, 8, 12, 1, null, 'T3'),
+        d('UH7', 'T3', '绳索三头屈伸', 3, 8, 12, 2.5, null, 'T3')
+      ] },
+      { id: 'LH', name: '下肢肌肥大', slots: [
+        d('LH1', 'T2', '前蹲', 3, 8, 12, 2.5, 'squat', 'T2'),
+        d('LH2', 'T2', '杠铃弓步', 3, 8, 12, 2.5, null, 'T2', '杠铃'),
+        d('LH3', 'T3', '坐姿腿屈伸', 3, 10, 15, 2.5, null, 'T3'),
+        d('LH4', 'T3', '俯卧腿弯举', 3, 10, 15, 2.5, null, 'T3'),
+        d('LH5', 'T3', '提踵', 3, 8, 12, 5, null, 'T3'),
+        d('LH6', 'T3', '腿举提踵', 3, 8, 12, 5, null, 'T3', '器械')
+      ] }
+    ];
+  }
+  function pplDays(db) {
+    function lin(id, tier, name, sets, step, lift) {
+      return libSlot(id, tier, name, 'linear', { sets: sets, reps: 5, step: step, inc: 2.5, weight: seedFixed(db, name, 'T1') }, lift);
+    }
+    function acc(id, tier, name, sets, lo, hi, step) {
+      return libSlot(id, tier, name, 'dual', { sets: sets, repMin: lo, repMax: hi, step: step, weight: seedFixed(db, name, tier) }, null);
+    }
+    var pushAcc = [
+      acc('PX2', 'T2', '上斜哑铃卧推', 3, 8, 12, 2),
+      acc('PX3', 'T3', '绳索下压', 3, 8, 12, 2.5),
+      acc('PX4', 'T3', '哑铃侧平举', 3, 15, 20, 1),
+      acc('PX5', 'T3', '过头绳索臂屈伸', 3, 8, 12, 2.5),
+      acc('PX6', 'T3', '哑铃侧平举', 3, 15, 20, 1)
+    ];
+    function push(id, heavyName, heavyLift, lightName) {
+      var slots = [lin(id + '1', 'T1', heavyName, 5, 2.5, heavyLift), acc(id + 'L', 'T2', lightName, 3, 8, 12, heavyLift === 'bench' ? 2.5 : 2.5)];
+      pushAcc.forEach(function (s, i) { var c = JSON.parse(JSON.stringify(s)); c.id = id + 'A' + i; slots.push(c); });
+      return slots;
+    }
+    var pullAcc = [
+      acc('LX2', 'T2', '高位下拉', 3, 8, 12, 2.5),
+      acc('LX3', 'T2', '坐姿划船', 3, 8, 12, 2.5),
+      acc('LX4', 'T3', '面拉', 5, 15, 20, 1.25),
+      acc('LX5', 'T3', '锤式弯举', 4, 8, 12, 1),
+      acc('LX6', 'T3', '哑铃弯举', 4, 8, 12, 1)
+    ];
+    function pull(id, heavy, sets, step, lift) {
+      var slots = [lin(id + '1', 'T1', heavy, sets, step, lift)];
+      pullAcc.forEach(function (s, i) { var c = JSON.parse(JSON.stringify(s)); c.id = id + 'A' + i; slots.push(c); });
+      return slots;
+    }
+    var legsAcc = [
+      acc('GX2', 'T2', '罗马尼亚硬拉', 3, 8, 12, 5),
+      acc('GX3', 'T2', '腿举', 3, 8, 12, 5),
+      acc('GX4', 'T3', '俯卧腿弯举', 3, 8, 12, 2.5),
+      acc('GX5', 'T3', '提踵', 5, 8, 12, 5)
+    ];
+    function legs(id) {
+      var slots = [lin(id + '1', 'T1', '杠铃深蹲', 3, 2.5, 'squat')];
+      legsAcc.forEach(function (s, i) { var c = JSON.parse(JSON.stringify(s)); c.id = id + 'A' + i; slots.push(c); });
+      return slots;
+    }
+    return [
+      { id: 'PA', name: '推 · 卧推', slots: push('PA', '平板卧推', 'bench', '站姿实力推') },
+      { id: 'LA', name: '拉 · 硬拉', slots: pull('LA', '传统硬拉', 1, 5, 'deadlift') },
+      { id: 'GA', name: '腿', slots: legs('GA') },
+      { id: 'PB', name: '推 · 推举', slots: push('PB', '站姿实力推', 'ohp', '平板卧推') },
+      { id: 'LB', name: '拉 · 划船', slots: pull('LB', '杠铃划船', 5, 2.5, null) },
+      { id: 'GB', name: '腿', slots: legs('GB') }
+    ];
+  }
+  function fiveDays(db) {
+    function main(id, name, lift, step) {
+      var tm0 = ceilTo(liftRM(db, lift) * 0.9, 2.5);
+      return libSlot(id, 'T1', name, 'w531', { step: step, inc: 2.5, weight: tm0 }, lift);
+    }
+    function bbb(id, name, link, lift) {
+      return libSlot(id, 'T2', name, 'fixed', { sets: 5, reps: 10, pct: 0.5, inc: 2.5, link: link, halfOnDeload: true, weight: 0 }, lift);
+    }
+    return [
+      { id: 'F1', name: '实力推', slots: [main('F1M', '站姿实力推', 'ohp', 2.5), bbb('F1B', '站姿实力推', 'F1M', 'ohp')] },
+      { id: 'F2', name: '硬拉', slots: [main('F2M', '传统硬拉', 'deadlift', 5), bbb('F2B', '传统硬拉', 'F2M', 'deadlift')] },
+      { id: 'F3', name: '卧推', slots: [main('F3M', '平板卧推', 'bench', 2.5), bbb('F3B', '平板卧推', 'F3M', 'bench')] },
+      { id: 'F4', name: '深蹲', slots: [main('F4M', '杠铃深蹲', 'squat', 5), bbb('F4B', '杠铃深蹲', 'F4M', 'squat')] }
+    ];
+  }
+  function templateCatalog() {
+    return [
+      { id: '531', name: '5/3/1', days: '每周 4 练', blurb: '四周一个循环。训练最大重量取 1RM 的 90%，主项按百分比波浪，辅助同一动作 5×10、重量固定。' },
+      { id: 'ppl', name: 'Reddit PPL', days: '每周 6 练', blurb: '推、拉、腿各两次。主项完成规定次数就加重，辅助动作全部组做到区间上限才加重。' }
+    ];
+  }
+  function templateDef(db, id) {
+    var base = {
+      autoRotate: false, adaptive: false, ruleMode: 'full',
+      oneRM: { bench: liftRM(db, 'bench'), squat: liftRM(db, 'squat'), deadlift: liftRM(db, 'deadlift'), ohp: liftRM(db, 'ohp') }
+    };
+    if (id === 'phul') return { template: 'phul', name: 'PHUL', progression: 'dual', days: phulDays(db), params: Object.assign({}, base, { deloadEnabled: false, weeksPerCycle: 12, totalWeeks: 12 }) };
+    if (id === 'ppl') return { template: 'ppl', name: 'Reddit PPL', progression: 'linear', days: pplDays(db), params: Object.assign({}, base, { deloadEnabled: false, weeksPerCycle: 8, totalWeeks: 8 }) };
+    if (id === '531') return { template: '531', name: '5/3/1', progression: 'w531', days: fiveDays(db), params: Object.assign({}, base, { deloadEnabled: false, weeksPerCycle: 4, totalWeeks: 16, tmRatio: 0.9 }) };
+    return null;
+  }
+
   return {
     VERSION: VERSION, LIFTS: LIFTS, LIFT_ORDER: LIFT_ORDER, STEP_KEYS: STEP_KEYS, STAGES: STAGES, FIRST_STAGE: FIRST_STAGE,
     REST: REST, LIB: LIB, JUDGE_COLORS: JUDGE_COLORS, JUDGE_ICON: JUDGE_ICON, dateLabel: dateLabel, backupLabel: backupLabel, TIER_COLORS: TIER_COLORS, RULES: RULES, GENERAL_RULES: GENERAL_RULES,
@@ -1665,7 +1996,7 @@
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
-    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME,
+    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, templateDef: templateDef, templateCatalog: templateCatalog, ceilTo: ceilTo,
     LEGACY_PID: LEGACY_PID, BASE_KEYS: BASE_KEYS, PLAN_KEYS: PLAN_KEYS, PROGRAM_STATUS: PROGRAM_STATUS, recPid: recPid, activePid: activePid, activeProgram: activeProgram, programById: programById,
     canTrain: canTrain, planView: planView, switchProgram: switchProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile
   };

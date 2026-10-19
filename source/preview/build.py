@@ -398,6 +398,20 @@ css.append(r"""
 .app .quote-card-credit { margin-top:8px; font-size:var(--font-footnote); line-height:1.45; color:var(--label2); }
 .app .quote-card:active { background:#E8EFDF; }
 @media (prefers-reduced-motion: reduce) { .app * { scroll-behavior:auto !important; } }
+.app .prog-row, .app .tpl-card { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-top: 0.5px solid var(--sep); }
+.app .tpl-card { display: block; }
+.app .prog-name, .app .tpl-name { font-size: 16px; font-weight: 600; color: var(--label); }
+.app .prog-sub, .app .tpl-blurb { font-size: 13px; color: var(--label2); line-height: 1.45; margin-top: 2px; }
+.app .tpl-blurb { margin: 4px 0 10px; }
+.app .tpl-days { font-size: 12px; font-weight: 600; color: var(--accent); }
+.app .prog-go { display: inline-block; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); border-radius: 999px; padding: 6px 14px; }
+.app .load-list { margin: 4px 0 8px; }
+.app .load-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; color: var(--label); border-bottom: 0.5px solid var(--sep); }
+.app .set-hint { margin: 8px 0 2px; }
+.app .pg-plan .grid-head.wide, .app .pg-plan .grid-row.wide { gap: 4px; }
+.app .pg-plan .wide .gcell { height: 36px; }
+.app .pg-plan .wide .cw, .app .pg-plan .wide .gh { font-size: 11px; }
+.app .pg-train .day-seg.wide .seg-i { font-size: 12px; padding: 6px 0; }
 """)
 
 
@@ -426,6 +440,7 @@ html = f"""<!DOCTYPE html>
 html = html.replace('<span>􀙇 􀛨</span>', '<span>●●● ▮</span>')
 
 (ROOT / 'preview' / 'index.html').write_text(html)
+(ROOT.parent / 'index.html').write_text(html)
 if not WEB.exists():
     WEB.mkdir()
 (WEB / 'index.html').write_text(html)
