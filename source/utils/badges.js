@@ -9,7 +9,6 @@
   // ---------- 徽章定义 ----------
   // rank 只决定徽章墙/候选列表的先后；卡片上展示哪一枚由「随机或手动选择」决定
   var GROUPS = [
-    { id: 'cycle', name: '周期', rank: 9 },
     { id: 'strength', name: '主项重量', rank: 8 },
     { id: 'volume', name: '累计容量', rank: 7 },
     { id: 'session', name: '单次容量', rank: 6 },
@@ -33,9 +32,7 @@
   ];
   var SESSION_VOLS = [3000, 5000, 8000, 10000, 15000];          // 单次训练容量（kg）
   var ADDS = [10, 25, 50, 100, 200, 300];                        // 累计达到加重条件的动作数
-  var WEEKS_DONE = [2, 4, 12, 26, 52];                           // 累计练完的计划周
   var MONTH_N = [8, 12, 16];                                     // 单个自然月的训练次数
-  var STREAKS = [2, 4, 8];
   var LIFT_NAME = { squat: '深蹲', bench: '卧推', deadlift: '硬拉', ohp: '推举' };
   var LIFT_E = { squat: '🦵', bench: '🏋️', deadlift: '🏗️', ohp: '🚀' };
   var LIFT_KG = { squat: [80, 100, 120, 140, 160], bench: [60, 80, 100, 120], deadlift: [100, 120, 140, 160, 180, 200], ohp: [30, 40, 50, 60, 70] };
@@ -49,7 +46,7 @@
 
   function fmtN(n) { return Number(n).toLocaleString('zh-CN'); }
   function defs(P) {
-    var N = Math.max(1, (P && (P.weeksPerCycle || P.totalWeeks)) || 8), out = [];
+    var out = [];
     // m：进度指标名；t：目标值；u：单位。无 m 的徽章（完美一周等）没有进度条
     function add(group, id, title, desc, e, tier, repeat, m, t, u) { out.push({ id: id, group: group, title: title, desc: desc, e: e, tier: tier, repeat: !!repeat, m: m || null, t: t || 0, u: u || '' }); }
     COUNTS.forEach(function (n) { add('count', 'count-' + n, '第 ' + n + ' 次训练', '累计完成 ' + n + ' 次训练', '🎯', n, false, 'count', n, '次'); });
@@ -61,14 +58,7 @@
         add('strength', 'lift-' + k + '-' + kg, LIFT_NAME[k] + ' ' + kg + ' kg', 'T1 ' + LIFT_NAME[k] + '的工作重量达到 ' + kg + ' kg，并完成目标（加重或保持）', LIFT_E[k], kg, false, 'lift-' + k, kg, 'kg');
       });
     });
-    add('streak', 'perfect-week', '完美一周', '一个计划周的全部训练日，在 7 天内完成', '⭐', 1, true);
-    STREAKS.forEach(function (n) { add('streak', 'streak-' + n, '连续 ' + n + ' 周全勤', '连续 ' + n + ' 个计划周都在 7 天内练完；中断后重新计数', '🔥', n, false, 'streak', n, '周'); });
-    add('streak', 'streak-record', '最长连续刷新', '全勤连续周数刷新个人最长记录（至少 2 周）', '🏅', 99, true);
-    WEEKS_DONE.forEach(function (n) { add('streak', 'weeks-' + n, '累计练满 ' + n + ' 周', '累计 ' + n + ' 个计划周的全部训练日都练完', '🗓️', n, false, 'weeks', n, '周'); });
     MONTH_N.forEach(function (n) { add('streak', 'month-' + n, '单月 ' + n + ' 练', '同一个自然月内训练 ' + n + ' 次', '📆', n, false, 'month', n, '次'); });
-    [1, 2, 3].forEach(function (c) { add('cycle', 'cycle-' + c, '完成第 ' + c + ' 个 ' + N + ' 周周期', '第 ' + c + ' 轮 ' + N + ' 周全部训练完成', '🏁', c, false, 'cyc-' + c, N, '周'); });
-    add('cycle', 'cycle-full', '满勤周期', '一个周期内每个计划周都是完美一周', '💎', 90, true);
-    add('cycle', 'deload-done', '减载完成', '完成一次减载周，恢复也是计划的一部分', '🌿', 80);
     HOURS.forEach(function (h) { add('watch', 'w-hours-' + h, '手表累计 ' + h + ' 小时', '手表记录的力量训练累计 ' + h + ' 小时（自训练手记开始记录起）', '⏱️', h, false, 'hours', h, '小时'); });
     SETS.forEach(function (n) { add('watch', 'w-sets-' + n, '手表累计 ' + n + ' 组', '手表记录的力量训练累计 ' + n + ' 组（自训练手记开始记录起）', '💪', n, false, 'sets', n, '组'); });
     KCALS.forEach(function (n) { add('watch', 'w-kcal-' + n, '手表累计 ' + fmtN(n) + ' 千卡', '手表估算的力量训练消耗累计 ' + fmtN(n) + ' 千卡（估算值，自训练手记开始记录起）', '🍚', n, false, 'kcal', n, '千卡'); });
@@ -133,22 +123,18 @@
   /**
    * sessions：按时间先后的有效训练 [{id,date,day,week,volume,order,adds,lifts}]
    *   adds：这次达到加重条件的动作数；lifts：{squat,bench,deadlift,ohp} 这次 T1 完成目标（加重/保持）的工作重量
-   * opts：{ params, dayIds, watch, today }
+   * 里程碑只收「所有计划都通用」的：次数、加重、主项重量、容量、单次容量、单月训练、手表。
+   * 依赖计划周定义的（完美一周、连续全勤、完成周期、减载）不在这里——不同计划训练日数不同，无法跨计划比较。
+   * sessions 应为全部计划的有效训练（按时间先后），即「终身」口径。
+   * opts：{ params, watch, today }
    * 返回 { defs, earned, bySession, progress, prog, nextGoals, watchFrom, ... }
    */
   function compute(sessions, opts) {
     opts = opts || {};
     var P = opts.params || {}, ds = defs(P), byId = {}, earned = {}, bySession = {}, events = [];
     ds.forEach(function (d) { byId[d.id] = d; });
-    var dayIds = (opts.dayIds && opts.dayIds.length ? opts.dayIds : ['A1', 'B1', 'A2', 'B2']);
     function award(id, sess, extra) {
-      if (!byId[id]) {
-        // 超出预置范围的周期（第 4 轮及以后）动态补一枚，保证不丢
-        var m = /^cycle-(\d+)$/.exec(id);
-        if (!m) return;
-        var N = Math.max(1, P.weeksPerCycle || P.totalWeeks || 8);
-        byId[id] = { id: id, group: 'cycle', title: '完成第 ' + m[1] + ' 个 ' + N + ' 周周期', desc: '第 ' + m[1] + ' 轮 ' + N + ' 周全部训练完成', e: '🏁', tier: +m[1], repeat: false, m: null, t: 0, u: '' };
-      }
+      if (!byId[id]) return;
       var d = byId[id];
       if (!d.repeat && earned[id]) return;
       var cur = earned[id] || { id: id, count: 0 };
@@ -181,39 +167,8 @@
     M.count = list.length; M.volume = cum / 1000; M.sess = sessMax / 1000; M.adds = addsNow;
     LIFT_ORDER.forEach(function (k) { M['lift-' + k] = liftMax[k]; });
 
-    // 2) 计划周：谁在什么时候凑齐全部训练日
-    var weeks = {};
-    list.forEach(function (s) {
-      var w = weeks[s.week] || (weeks[s.week] = { week: s.week, first: s.date, covered: {}, done: false, doneSess: null, doneDate: '', perfect: false });
-      if (w.done) return;
-      w.covered[s.day] = 1;
-      if (dayIds.every(function (d) { return w.covered[d]; })) {
-        w.done = true; w.doneSess = s; w.doneDate = s.date;
-        w.perfect = dayNum(s.date) - dayNum(w.first) <= 6;
-      }
-    });
-    var wk = Object.keys(weeks).map(Number).sort(function (a, b) { return a - b; }), streak = 0, bestStreak = 0, longest = 0;
-    wk.forEach(function (n) {
-      var w = weeks[n];
-      if (!w.done) return;                 // 还没练完的周：不加也不断
-      if (w.perfect) {
-        award('perfect-week', w.doneSess);
-        streak += 1;
-        if (STREAKS.indexOf(streak) >= 0) award('streak-' + streak, w.doneSess);
-        if (streak >= 2 && streak > bestStreak) award('streak-record', w.doneSess, { weeks: streak });
-        bestStreak = Math.max(bestStreak, streak);
-      } else streak = 0;
-      longest = Math.max(longest, streak);
-    });
-    var curStreak = 0;
-    wk.slice().reverse().some(function (n) { var w = weeks[n]; if (!w.done) return false; if (w.perfect) { curStreak += 1; return false; } return true; });
-    M.streak = curStreak;
-    // 累计练满的计划周（按各周凑齐的先后）
-    var doneWeeks = wk.map(function (n) { return weeks[n]; }).filter(function (w) { return w.done; }).sort(function (a, b) { return a.doneSess.order - b.doneSess.order; });
-    doneWeeks.forEach(function (w, i) { if (WEEKS_DONE.indexOf(i + 1) >= 0) award('weeks-' + (i + 1), w.doneSess); });
-    M.weeks = doneWeeks.length;
 
-    // 3) 单月训练次数
+    // 2) 单月训练次数（自然月，与计划无关）
     var monthCnt = {};
     list.forEach(function (s) {
       var ym = s.date.slice(0, 7); monthCnt[ym] = (monthCnt[ym] || 0) + 1;
@@ -222,28 +177,8 @@
     var curYM = (opts.today || (list.length ? list[list.length - 1].date : '')).slice(0, 7);
     M.month = monthCnt[curYM] || 0;
 
-    // 4) 周期：一轮里每一周都练完 → 完成周期；每周都是完美一周 → 满勤；首次减载周练完 → 减载完成
-    var N = Math.max(1, P.weeksPerCycle || P.totalWeeks || 8), cycleMax = 0;
-    wk.forEach(function (n) { cycleMax = Math.max(cycleMax, Math.ceil(n / N)); });
-    var deloadAwarded = false;
-    for (var c = 1; c <= Math.max(cycleMax, 1); c++) {
-      var first = (c - 1) * N + 1, ok = true, all = true, last = null, doneIn = 0;
-      for (var n2 = first; n2 < first + N; n2++) {
-        var w2 = weeks[n2];
-        if (!w2 || !w2.done) { ok = false; all = false; continue; }
-        doneIn += 1;
-        if (!w2.perfect) all = false;
-        if (!last || w2.doneSess.order > last.order) last = w2.doneSess;
-      }
-      M['cyc-' + c] = doneIn;
-      if (ok && cycleMax >= c) { award('cycle-' + c, last); if (all) award('cycle-full', last, { cycle: c }); }
-    }
-    wk.forEach(function (n) {
-      var w = weeks[n];
-      if (!deloadAwarded && w.done && GZ.isDeloadWeek && GZ.isDeloadWeek(n, P)) { deloadAwarded = true; award('deload-done', w.doneSess); }
-    });
 
-    // 5) 手表：只从训练手记第一条记录的日期开始计
+    // 3) 手表：只从训练手记第一条记录的日期开始计
     var watch = opts.watch, watchFrom = list.length ? list[0].date : '', hoursNow = 0, setsNow = 0, kcalNow = 0, nightsNow = 0, goodNow = 0;
     function markEarned(id, date, sess) { if (!earned[id]) earned[id] = { id: id, count: 1, date: date, recordId: sess ? sess.id : '', seq: sess ? sess.seq : 0, wallOnly: true }; }
     function lastOnOrBefore(date) { var pick = null; list.forEach(function (s) { if (s.date <= date) pick = s; }); return pick; }
@@ -286,7 +221,6 @@
     var progress = {
       count: { value: list.length, next: nextOf(COUNTS, list.length), unit: '次' },
       volume: { value: r2(cum / 1000), next: (function () { var n = nextOf(VOLUMES.map(function (v) { return v.kg; }), cum); return n ? n / 1000 : null; })(), unit: 't' },
-      streak: { value: curStreak, best: bestStreak, next: nextOf(STREAKS, curStreak), unit: '周' },
       hours: { value: r2(hoursNow), next: nextOf(HOURS, hoursNow), unit: '小时' },
       sets: { value: setsNow, next: nextOf(SETS, setsNow), unit: '组' },
       sleep: { value: nightsNow, next: nextOf(SLEEP_NIGHTS, nightsNow), unit: '晚' }

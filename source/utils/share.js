@@ -179,10 +179,24 @@
     return out;
   }
   function badgeStateFrom(db, facts) {
-    return Badges.compute(facts.map(function (f) { return Object.assign({}, f); }), { params: db.params, dayIds: (db.days || []).map(function (d) { return d.id; }), today: GZ.today(), watch: db.params && db.params.watch });
+    return Badges.compute(facts.map(function (f) { return Object.assign({}, f); }), { params: db.params, today: GZ.today(), watch: db.params && db.params.watch });
   }
-  /** 徽章墙与卡片用的完整状态 */
-  function badgeState(db) { var rp = GZ.replay(db); return badgeStateFrom(db, validSessions(rp)); }
+  /**
+   * 终身口径的有效训练：所有计划（进行中、暂停、已结束）各自回放后合并，按日期先后重新编号。
+   * 里程碑、手表对应都用它；「本计划累计 / 上次同训练日」仍只看当前计划。
+   */
+  function allFacts(db) {
+    var out = [];
+    (GZ.replayAll ? GZ.replayAll(db) : [{ program: { id: '' }, rp: GZ.replay(db) }]).forEach(function (x) {
+      validSessions(x.rp).forEach(function (f) { f.programId = x.program.id; f.createdAt = 0; out.push(f); });
+    });
+    var ca = {}; (db.records || []).forEach(function (r) { ca[r.id] = r.createdAt || 0; });
+    out.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (ca[a.id] || 0) - (ca[b.id] || 0); });
+    out.forEach(function (f, i) { f.order = i; delete f.createdAt; });
+    return out;
+  }
+  /** 徽章墙与卡片用的完整状态（终身、跨计划） */
+  function badgeState(db) { return badgeStateFrom(db, allFacts(db)); }
   function badgeBrief(state, id) { var d = state.byId[id]; return { id: id, title: d.title, e: d.e, desc: d.desc, group: d.group }; }
   /**
    * key：训练记录 id（推荐）；兼容旧调用传日期——取那天最后一次训练。
@@ -230,8 +244,9 @@
       if (f.order < me.order && f.day === pick.day && f.volume > 0) prevVolume = f.volume;
     });
     // 手表：同一天按先后与训练记录一一对应；没对上就不显示任何身体数据
-    var wk = Badges.watchFor(db.params && db.params.watch, facts, me);
-    var state = badgeStateFrom(db, facts), cands = state.bySession[pick.id] || [];
+    var life = allFacts(db), meLife = life.filter(function (f) { return f.id === pick.id; })[0] || me;
+    var wk = Badges.watchFor(db.params && db.params.watch, life, meLife);
+    var state = badgeStateFrom(db, life), cands = state.bySession[pick.id] || [];
     // 卡片只展示一枚：用户手选优先（可取消为 0 枚）；否则按「训练 id + 换一个次数」稳定随机
     var chosen = [];
     if (Array.isArray(opts.badgePick)) chosen = opts.badgePick.filter(function (id) { return cands.indexOf(id) >= 0; }).slice(0, 1);
@@ -396,7 +411,7 @@
     summaryLines.forEach(function (l, k) { text(ctx, l, 84, smTop + k * 46, 34, ink, 500); });
     return canvas;
   }
-  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, chooseFun: chooseFun, funPool: funPool, THINGS: THINGS, FOODS: FOODS, badgeState: badgeState, validSessions: validSessions, sessionVolume: sessionVolume,
+  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, chooseFun: chooseFun, funPool: funPool, THINGS: THINGS, FOODS: FOODS, badgeState: badgeState, validSessions: validSessions, allFacts: allFacts, sessionVolume: sessionVolume,
     // 绘图与换算的公共小工具，月报等其他卡片复用，保持字号、避头点、对照物口径一致
     H: { font: font, rounded: rounded, text: text, fit: fit, wrap: wrap, loadImage: loadImage, secLabel: secLabel, compare: compare, num: num, hashSeed: hashSeed, shuffled: shuffled, hasEntry: hasEntry, FOODS: FOODS } };
 });

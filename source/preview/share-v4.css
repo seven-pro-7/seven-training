@@ -219,3 +219,11 @@
 .app .ex-row .jtag { flex: 0 0 auto; font-size: 13px; min-width: 40px; text-align: right; }
 .app .ex-method { margin-top: 10px; }
 .app .ss-gap { height: 12px; }
+
+/* ===== 多计划：页面顶部的计划上下文 ===== */
+.app .plan-ctx { display: flex; align-items: center; gap: 10px; margin: 2px 0 12px; padding: 10px 14px; border-radius: 14px; background: rgba(255,255,255,0.78); min-height: 44px; box-sizing: border-box; }
+.app .plan-ctx-l { flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--label2); }
+.app .plan-ctx-n { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app .plan-ctx select { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--accent); background: none; border: 0; text-align: right; text-overflow: ellipsis; }
+.app .plan-ro { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px; padding: 10px 14px; border-radius: 14px; background: #FFF4E5; color: #8A5300; font-size: 13px; line-height: 1.5; }
+.app .plan-ro .btn-small { margin-left: auto; }

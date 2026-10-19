@@ -295,6 +295,7 @@
     db.params.steps = Object.assign(defaultParams().steps, db.params.steps);
     db.records = db.records || [];
     db.customLib = db.customLib || [];
+    normalizePrograms(db);
     // 日期校正：A2 这条记录实际是 10-15 完成，早期误记为 10-16（与 B2 同日）。
     // 只改这一条，重复执行无副作用；同步时以更新后的 updatedAt 为准，两台设备都会跟随。
     (db.records || []).forEach(function (r) {
@@ -609,6 +610,154 @@
     return r;
   }
 
+  // ================= 多计划：共享底座 / 计划 / 记录 =================
+  /**
+   * 存储形状（向下兼容 v1，只增字段）：
+   *   params / days / daysVersion  —— 当前进行中计划的「物化」副本：引擎与界面照旧直接读，不用改
+   *   programs[]                   —— 全部计划的元数据；非当前计划另存 snap = { params: 计划参数, days, daysVersion }
+   *   activeProgramId              —— 当前计划（同一时间只有一个）
+   *   records[].programId          —— 记录归属；旧记录没有这个字段，一律归第一个计划 LEGACY_PID，记录本身不改写
+   * 参数分两类：
+   *   BASE_KEYS 共享底座（体重、器材、名片）——所有计划共用，切换计划不变
+   *   PLAN_KEYS 计划自己（规则参数、周期、减载、计划起始 1RM）——各计划独立，暂停时随计划冻结
+   * 1RM 的口径：每个计划冻结自己的起始 1RM（避免改一次 1RM 就改写已暂停计划的历史）；
+   *   跨计划共享的是「1RM 档案」oneRMProfile：手动录入值 + 所有计划的估算 1RM，用于新计划的起始重量。
+   */
+  var LEGACY_PID = 'p-gzclp-1';
+  var BASE_KEYS = ['bodyWeight', 'barWeight', 'plates', 'rounding', 'shareProfile'];
+  var PLAN_KEYS = ['oneRM', 'tmRatio', 'steps', 't3Threshold', 'ruleMode', 'totalWeeks', 'weeksPerCycle', 'deloadEnabled', 'deloadEvery', 't1FailLimit', 'adaptive', 'autoRotate', 'progression'];
+  var PROGRAM_STATUS = { active: '进行中', paused: '已暂停', ended: '已结束' };
+  function clone(x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); }
+  function pickKeys(o, keys) { var r = {}; keys.forEach(function (k) { if (o && o[k] !== undefined) r[k] = clone(o[k]); }); return r; }
+  function firstRecordDate(db, pid) {
+    var ds = (db.records || []).filter(function (r) { return recPid(r) === pid && /^\d{4}-\d{2}-\d{2}$/.test(r.date || ''); }).map(function (r) { return r.date; }).sort();
+    return ds[0] || '';
+  }
+  function normalizePrograms(db) {
+    if (!Array.isArray(db.programs) || !db.programs.length) {
+      db.programs = [{ id: LEGACY_PID, template: 'gzclp-8w', name: 'GZCLP · 8 周', progression: 'gzclp', status: 'active', startedAt: '', endedAt: '', snap: null }];
+      db.activeProgramId = LEGACY_PID;
+    }
+    if (!db.programs.some(function (p) { return p.id === db.activeProgramId; })) db.activeProgramId = db.programs[0].id;
+    db.programs.forEach(function (p) {
+      if (p.id === db.activeProgramId) { if (p.status === 'paused') p.status = 'active'; p.snap = null; }
+      else if (p.status === 'active') p.status = 'paused';   // 不变式：同一时间只有一个进行中
+      if (!p.startedAt) p.startedAt = firstRecordDate(db, p.id);
+    });
+  }
+  function recPid(r) { return (r && r.programId) || LEGACY_PID; }
+  function activePid(db) { return (db && db.activeProgramId) || LEGACY_PID; }
+  function programById(db, pid) { return (db.programs || []).filter(function (p) { return p.id === pid; })[0] || null; }
+  function activeProgram(db) { return programById(db, activePid(db)); }
+  /** 当前计划还能不能继续练（主动结束后为 false，需要选下一个计划） */
+  function canTrain(db) { var p = activeProgram(db); return !p || p.status !== 'ended'; }
+  /**
+   * 计划视图：把任意一个计划投影成引擎认识的形状（底座参数 + 该计划参数、该计划的训练日），
+   * replay / build* 原样复用；回放只会读这个计划自己的记录。
+   */
+  function rootOf(db) { return (db && db.__root) || db; }
+  function planView(db, pid) {
+    var root = rootOf(db);
+    if (!pid || pid === activePid(root)) return root;
+    var p = programById(root, pid);
+    if (!p || !p.snap) return null;
+    db = root;
+    var v = Object.assign({}, db);
+    Object.defineProperty(v, '__root', { value: root, enumerable: false });   // 视图里仍能找到真正的当前计划
+    v.params = Object.assign({}, pickKeys(db.params, BASE_KEYS), clone(p.snap.params));
+    v.params.oneRM = Object.assign(defaultParams().oneRM, v.params.oneRM);
+    v.params.steps = Object.assign(defaultParams().steps, v.params.steps);
+    v.params.watch = db.params.watch;
+    v.days = clone(p.snap.days); v.daysVersion = p.snap.daysVersion; v.activeProgramId = pid;
+    return v;
+  }
+  function freezeActive(db, status) {
+    var p = activeProgram(db); if (!p) return;
+    p.snap = { params: pickKeys(db.params, PLAN_KEYS), days: clone(db.days), daysVersion: db.daysVersion };
+    p.status = status;
+    if (status === 'paused') p.pausedAt = today();
+  }
+  function thaw(db, p) {
+    var keep = pickKeys(db.params, BASE_KEYS);
+    PLAN_KEYS.forEach(function (k) { delete db.params[k]; });
+    var dp = defaultParams();
+    db.params = Object.assign(dp, keep, clone(p.snap.params), { watch: db.params.watch });
+    if (db.params.watch === undefined) delete db.params.watch;
+    db.params.oneRM = Object.assign(defaultParams().oneRM, db.params.oneRM);
+    db.params.steps = Object.assign(defaultParams().steps, db.params.steps);
+    db.days = clone(p.snap.days); db.daysVersion = p.snap.daysVersion;
+    p.snap = null; db.activeProgramId = p.id;
+  }
+  /** 切换到另一个计划（暂停当前，续练目标）。已结束的计划只读，不能切回来练 */
+  function switchProgram(db, pid) {
+    if (pid === activePid(db)) return db;
+    var t = programById(db, pid);
+    if (!t) throw new Error('找不到这个计划');
+    if (t.status === 'ended') throw new Error('已结束的计划只能查看，不能继续训练');
+    var cur = activeProgram(db);
+    freezeActive(db, cur && cur.status === 'ended' ? 'ended' : 'paused');
+    thaw(db, t); t.status = 'active'; t.pausedAt = '';
+    return db;
+  }
+  /** 主动结束一个计划：记录全部保留、只读；结束当前计划后，需要开始或续练另一个计划才能继续训练 */
+  function endProgram(db, pid) {
+    var p = programById(db, pid || activePid(db));
+    if (!p) throw new Error('找不到这个计划');
+    p.status = 'ended'; p.endedAt = today();
+    return db;
+  }
+  /**
+   * 开始一个新计划：def = { template, name, progression, params(计划参数), days }
+   * 当前计划自动暂停（已结束的保持结束）。
+   */
+  function startProgram(db, def) {
+    def = def || {};
+    var cur = activeProgram(db);
+    if (cur) freezeActive(db, cur.status === 'ended' ? 'ended' : 'paused');
+    var id = def.id || ('p-' + uid().slice(1));
+    var p = { id: id, template: def.template || '', name: def.name || '新计划', progression: def.progression || 'gzclp', status: 'paused', startedAt: def.startedAt || today(), endedAt: '',
+      snap: { params: Object.assign(pickKeys(defaultParams(), PLAN_KEYS), clone(def.params || {}), { progression: def.progression || 'gzclp' }), days: clone(def.days || defaultDays()), daysVersion: DAYS_VERSION } };
+    db.programs.push(p);
+    thaw(db, p); p.status = 'active';
+    return p;
+  }
+  /** 计划列表（含记录统计），当前计划在前 */
+  function programList(db) {
+    var cnt = {}, last = {};
+    (db.records || []).forEach(function (r) { var k = recPid(r); cnt[k] = (cnt[k] || 0) + 1; if (!last[k] || r.date > last[k]) last[k] = r.date; });
+    return (db.programs || []).map(function (p) {
+      var prog = PROGRESSIONS[p.progression] || PROGRESSIONS.gzclp;
+      return { id: p.id, name: p.name, template: p.template, progression: p.progression, progressionName: prog ? prog.name : p.progression,
+        status: p.status, statusText: PROGRAM_STATUS[p.status] || p.status, active: p.id === activePid(db),
+        startedAt: p.startedAt, endedAt: p.endedAt || '', pausedAt: p.pausedAt || '', sessions: cnt[p.id] || 0, lastDate: last[p.id] || '' };
+    }).sort(function (a, b) { return (b.active - a.active) || ((b.lastDate || b.startedAt) > (a.lastDate || a.startedAt) ? 1 : -1); });
+  }
+  /** 全部计划的回放（每个计划只读自己的记录），用于终身里程碑、1RM 档案 */
+  function replayAll(db) {
+    db = rootOf(db);
+    return (db.programs || []).map(function (p) { var v = planView(db, p.id); return v ? { program: p, view: v, rp: replay(v) } : null; }).filter(Boolean);
+  }
+  /** 1RM 档案（共享底座）：手动录入值 + 各计划估算 1RM 的最近值与最佳值 */
+  function oneRMProfile(db) {
+    db = rootOf(db);
+    var out = {};
+    LIFT_ORDER.forEach(function (k) { out[k] = { lift: k, name: LIFTS[k], manual: db.params.oneRM[k], e1rm: [], latest: null, best: null }; });
+    replayAll(db).forEach(function (x) {
+      x.rp.sessions.forEach(function (s) {
+        s.items.forEach(function (it) {
+          if (!it.lift || !it.e1rm || it.deload || it.judgment === '替换') return;
+          out[it.lift] && out[it.lift].e1rm.push({ date: s.rec.date, v: it.e1rm, programId: x.program.id });
+        });
+      });
+    });
+    Object.keys(out).forEach(function (k) {
+      var o = out[k]; o.e1rm.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+      o.latest = o.e1rm.length ? o.e1rm[o.e1rm.length - 1] : null;
+      o.e1rm.forEach(function (x) { if (!o.best || x.v > o.best.v) o.best = x; });
+    });
+    return out;
+  }
+
   // ================= 进阶策略（可插拔） =================
   /**
    * 进阶策略只回答一个问题：「一个动作槽位，这次练成这样，下次该练什么」。
@@ -632,6 +781,7 @@
   }
   function progressionOf(db) {
     var id = db && db.params && db.params.progression;
+    if (!id && db && db.programs) { var p = activeProgram(db); id = p && p.progression; }
     return PROGRESSIONS[id] || PROGRESSIONS.gzclp;
   }
   var ROLES = { T1: 'main', T2: 'assist', T3: 'accessory' };
@@ -840,7 +990,7 @@
     var states = initialStates(db), counts = {}, sessions = [], hist = { lastW: {}, e1rm: {} };
     DAY_ORDER.forEach(function (d) { counts[d] = 0; });
     db.days.forEach(function (d) { counts[d.id] = 0; });
-    var recs = sortRecords(db.records), before = null;
+    var pid = activePid(db), recs = sortRecords((db.records || []).filter(function (r) { return recPid(r) === pid; })), before = null;
     for (var i = 0; i < recs.length; i++) {
       var rec = recs[i];
       if (opts.untilId && rec.id === opts.untilId) {
@@ -1406,6 +1556,9 @@
       entries: entries, createdAt: rec.createdAt || Date.now(), updatedAt: Date.now() };
     var idx = -1;
     db.records.forEach(function (x, i) { if (x.id === r.id) idx = i; });
+    // 归属：显式指定 > 原记录的归属 > 当前计划。旧记录没有 programId 时保持「没有」（等价于第一个计划），不凭空改写
+    var owner = rec.programId || (idx >= 0 ? recPid(db.records[idx]) : activePid(db));
+    if (owner !== LEGACY_PID) r.programId = owner;
     if (idx >= 0) db.records[idx] = r; else db.records.push(r);
     return r;
   }
@@ -1426,7 +1579,7 @@
 
   // ================= 多设备同步：合并 =================
   /** 配置部分（参数、四天动作、自定义动作库）——任何一项变化都会刷新 cfgAt */
-  function cfgPart(db) { return JSON.stringify([db.params, db.days, db.customLib || [], db.daysVersion]); }
+  function cfgPart(db) { return JSON.stringify([db.params, db.days, db.customLib || [], db.daysVersion, db.programs || null, db.activeProgramId || null]); }
   /** 保存前调用：配置有变化就记下修改时间，同步时据此判断以哪台设备的配置为准 */
   function stampConfig(prevDb, db) {
     if (!prevDb || cfgPart(prevDb) !== cfgPart(db)) db.cfgAt = Date.now();
@@ -1454,7 +1607,10 @@
     records.sort(function (x, y) { return (x.createdAt || 0) - (y.createdAt || 0) || (x.id < y.id ? -1 : 1); });
     var cfgSrc = (a.cfgAt || 0) > (b.cfgAt || 0) ? a : b;
     var out = { version: cfgSrc.version || a.version, daysVersion: cfgSrc.daysVersion, params: cfgSrc.params, days: cfgSrc.days, customLib: cfgSrc.customLib || [],
+      programs: cfgSrc.programs, activeProgramId: cfgSrc.activeProgramId,
       cfgAt: Math.max(a.cfgAt || 0, b.cfgAt || 0), records: records, tomb: tomb };
+    // 旧版客户端推上来的数据没有 programs：沿用另一方的计划元数据，避免一次同步把计划列表冲掉
+    if (!out.programs) { var other = cfgSrc === a ? b : a; out.programs = other.programs; out.activeProgramId = other.activeProgramId; }
     return normalize(out);
   }
   /** 两份数据内容是否一致（忽略记录顺序），用于决定要不要写回本机 / 推送云端 */
@@ -1509,6 +1665,8 @@
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
-    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME
+    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME,
+    LEGACY_PID: LEGACY_PID, BASE_KEYS: BASE_KEYS, PLAN_KEYS: PLAN_KEYS, PROGRAM_STATUS: PROGRAM_STATUS, recPid: recPid, activePid: activePid, activeProgram: activeProgram, programById: programById,
+    canTrain: canTrain, planView: planView, switchProgram: switchProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile
   };
 });

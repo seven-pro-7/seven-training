@@ -219,9 +219,36 @@
   var S = {
     tab: 'train',
     train: { day: null, draft: null, recordId: null, deload: undefined, date: GZ.today(), bw: '', note: '', result: null, createdAt: null },
+    view: { pid: null },
     plan: { ov: 0, detail: null, cycle: 0 }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', tier: 'T1', q: '', add: null }
   };
   var rest = { show: false, left: 0, total: 0, name: '', timer: null };
+
+  // ================= 多计划：数据与回顾默认看当前计划，可切换查看其他计划 =================
+  /** 数据页 / 回顾页取数用：默认当前计划；切换后是该计划的只读视图（规则、训练日、记录都属于它） */
+  function viewDb() {
+    var db = load(), pid = S.view.pid;
+    if (pid && pid !== GZ.activePid(db)) { var v = GZ.planView(db, pid); if (v) return v; }
+    S.view.pid = null;
+    return db;
+  }
+  function viewingOther() { var db = load(); return !!S.view.pid && S.view.pid !== GZ.activePid(db) && !!GZ.planView(db, S.view.pid); }
+  /** 页面顶部的计划上下文：只有一个计划时只显示名称；多个计划时可切换查看 */
+  function planBar() {
+    var db = load(), L = GZ.programList(db), cur = L.filter(function (p) { return p.active; })[0] || L[0];
+    if (!cur) return '';
+    var viewId = viewingOther() ? S.view.pid : cur.id, v = L.filter(function (p) { return p.id === viewId; })[0] || cur;
+    if (L.length <= 1) return '<div class="plan-ctx"><span class="plan-ctx-l">当前计划</span><span class="plan-ctx-n">' + esc(cur.name) + '</span></div>';
+    return '<label class="plan-ctx sel"><span class="plan-ctx-l">' + (v.active ? '当前计划' : '查看计划') + '</span><select data-act="viewplan" aria-label="选择要查看的计划">' +
+      L.map(function (p) { return '<option value="' + esc(p.id) + '" ' + (p.id === viewId ? 'selected' : '') + '>' + esc(p.name + ' · ' + p.statusText + (p.sessions ? ' · ' + p.sessions + ' 次' : '')) + '</option>'; }).join('') + '</select></label>' +
+      (v.active ? '' : '<div class="plan-ro">正在查看「' + esc(v.name) + '」（' + esc(v.statusText) + '），只读。记录的修改与删除需要回到当前计划。<span class="btn-small" data-act="viewcur">回到当前计划</span></div>');
+  }
+  /** 计划栏的操作：数据页与回顾页共用 */
+  function viewAct(act, el) {
+    if (act === 'viewplan') { var db = load(); S.view.pid = el.value === GZ.activePid(db) ? null : el.value; S.stats.ex = null; S.review.share = null; S.review.open = {}; return true; }
+    if (act === 'viewcur') { S.view.pid = null; S.stats.ex = null; S.review.share = null; return true; }
+    return null;
+  }
 
   // ================= 训练 =================
   function trainVM() {
@@ -671,7 +698,7 @@
 
   // ================= 数据 =================
   function renderStats() {
-    var s = GZ.buildStats(load()), st = S.stats, k = s.kpi, cur = s.e1rm[st.lift], h = '';
+    var s = GZ.buildStats(viewDb()), st = S.stats, k = s.kpi, cur = s.e1rm[st.lift], h = planBar();
     S._stats = s;
     h += '<div class="kpis"><div class="kpi"><span class="k-l">训练次数</span><div><span class="num kv">' + k.sessions + '</span><span class="ku">/ ' + k.planned + '</span></div><div class="kbar"><div class="kin" style="width:' + k.progress + '%"></div></div></div>' +
       '<div class="kpi"><span class="k-l">累计容量</span><span class="num kv">' + k.volume + '</span><span class="ks">' + k.reps + ' 次</span></div>' +
@@ -724,7 +751,7 @@
   }
   var TIER_HEX = { T1: '#FF6B1A', T2: '#0A84FF', T3: '#8E8E93' };
   function drawExercise() {
-    var d = Insight.detail(load(), S.stats.ex), c; if (!d) return;
+    var d = Insight.detail(viewDb(), S.stats.ex), c; if (!d) return;
     var se = d.series, multi = d.tiers.length > 1, col = function (t) { return TIER_HEX[t] || '#FF6B1A'; };
     if ((c = ctxOf('c_ex_w'))) {
       var sw = multi ? d.tiers.map(function (t) { return { color: col(t), data: se.byTier[t].perf, width: 2.2, connect: true }; })
@@ -743,7 +770,7 @@
   }
   function fmtKg(v) { return GZ.fmtW(Math.round(v * 10) / 10); }
   function renderExerciseSheet() {
-    var d = Insight.detail(load(), S.stats.ex);
+    var d = Insight.detail(viewDb(), S.stats.ex);
     if (!d) { S.stats.ex = null; return ''; }
     var unit = d.bw ? '次' : d.unit.replace(' 单只', '').replace(' 外加', '');
     var kp = function (l, v, u, sub) { return '<div class="ex-k"><span class="ex-kl">' + l + '</span><span class="ex-kv"><b class="num">' + v + '</b>' + (u ? '<i>' + u + '</i>' : '') + '</span><span class="ex-ks">' + sub + '</span></div>'; };
@@ -779,7 +806,8 @@
       '<details class="quote-source ex-method"><summary>估算方法</summary><p>1RM 用 Epley 公式估算：重量 × (1 + 次数 ÷ 30)。T1 取末组 AMRAP；T2 取实际完成次数 ÷ 组数；T3 取末组次数，超过 ' + Insight.REP_CAP + ' 次按 ' + Insight.REP_CAP + ' 次计（高次数会让公式偏高，所以偏保守）。自重动作不估算。</p><p>估算值只用于看趋势，不是真实 1RM，也不会改变训练计划里的重量。</p></details>' +
       '</div></div></div>';
   }
-  function statsAct(act, ds) {
+  function statsAct(act, ds, el) {
+    var va = viewAct(act, el); if (va !== null) return va;
     if (act === 'lift') { S.stats.lift = Number(ds.i); return true; }
     if (act === 'wday') { S.stats.day = Number(ds.i); return true; }
     if (act === 'exopen') { S.stats.ex = ds.name; return true; }
@@ -788,14 +816,14 @@
 
   // ================= 回顾 =================
   function renderReview() {
-    var vm = GZ.buildReview(load()), r = S.review, h = '';
+    var vm = GZ.buildReview(viewDb()), r = S.review, h = planBar();
     S._review = vm;
     h += seg([{ html: '总结' }, { html: '周报' }, { html: '日志' }], r.tab, 'rtab');
-    var sd = Share.build(load());
+    var sd = Share.build(viewDb());
     if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date.slice(5).replace('-', '月') + '日') + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.day + ' ' + esc(sd.dayName) + ' · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 训练容量</div><button class="btn-primary" data-act="shareopen" data-id="' + sd.recordId + '">生成分享卡片</button></div>';
     else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
     var bs = Share.badgeState(load());
-    var mths = Monthly.months(load());
+    var mths = Monthly.months(viewDb());
     h += '<div class="list wall-entry">' + (mths.length ? '<div class="cell tap" data-act="monthopen" data-ym="' + mths[0] + '"><span class="flex1">月报</span><span class="val">' + esc(Monthly.ymText(mths[0])) + '</span><span class="chev">›</span></div>' : '') + '<div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div>' +
       (bs.nextGoals[0] ? (function () { var g = bs.nextGoals[0], d = bs.byId[g.id], p = bs.prog[g.id]; return '<div class="cell tap wall-goal" data-act="wallopen"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>下一个：' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>'; })() : '') + '</div>';
     if (r.tab === 0) {
@@ -836,20 +864,22 @@
           if (op) {
             h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
               (l.note ? '<div class="note-box">' + esc(l.note) + '</div>' : '') +
-              '<div class="log-act"><span class="btn-small" data-act="shareopen" data-id="' + l.id + '">分享这次</span><span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span></div></div>';
+              '<div class="log-act"><span class="btn-small" data-act="shareopen" data-id="' + l.id + '">分享这次</span>' + (viewingOther() ? '' : '<span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span>') + '</div></div>';
           }
           h += '</div>';
         });
         h += '</div>';
       }
-      h += '<div class="sec-f" style="text-align:center">修改或删除任意一次记录，之后的重量与阶段会自动重算</div>';
+      if (!viewingOther()) h += '<div class="sec-f" style="text-align:center">修改或删除任意一次记录，之后的重量与阶段会自动重算</div>';
     }
     if (r.share) h += renderShareSheet();
     if (r.wall) h += renderBadgeWall();
     return h;
   }
   function reviewAct(act, ds, el) {
+    var va = viewAct(act, el); if (va !== null) return va;
     var r = S.review;
+    if (viewingOther() && (act === 'del' || act === 'edit')) { toast('这是其他计划的记录，只读'); return false; }
     if (act === 'shareopen') { r.share = {id:ds.id,funVariant:0,theme:'sage',body:false,badgePick:null,badgeVariant:0,image:null,blob:null}; return true; }
     if (act === 'shareclose') { r.share=null; return true; }
     if (act === 'monthopen') { r.share = { kind: 'month', ym: ds.ym || null, funVariant: 0, theme: 'sage', body: false, image: null, blob: null }; return true; }
@@ -860,14 +890,14 @@
     if (act === 'bodytoggle') { r.share.body = !!el.checked; return true; }
     if (act === 'badgepick') {
       // 卡片只展示一枚：点已选中的 = 不展示；点别的 = 换成它
-      var cur = Share.build(load(), r.share.id, r.share), now = cur && cur.badges[0] ? cur.badges[0].id : '';
+      var cur = Share.build(viewDb(), r.share.id, r.share), now = cur && cur.badges[0] ? cur.badges[0].id : '';
       r.share.badgePick = now === ds.id ? [] : [ds.id]; return true;
     }
     if (act === 'badgeagain') { r.share.badgePick = null; r.share.badgeVariant = (r.share.badgeVariant || 0) + 1; return true; }
     if (act === 'watchgo') { r.returnTo = shareKeep(r.share); r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
     if (act === 'sharetheme') { r.share.theme=ds.theme; return true; }
     if (act === 'funagain') { r.share.funVariant=(r.share.funVariant||0)+1; return true; }
-    if (act === 'sharecopy') { var cd = r.share.kind === 'month' ? Monthly.build(load(), r.share.ym, r.share) : Share.build(load(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
+    if (act === 'sharecopy') { var cd = r.share.kind === 'month' ? Monthly.build(viewDb(), r.share.ym, r.share) : Share.build(viewDb(),r.share.id,r.share); if(cd) copyText(cd.caption,'配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
     if (act === 'shareprofile') { r.returnTo = shareKeep(r.share); r.share=null; S.tab='settings'; render(); return false; }
@@ -898,7 +928,7 @@
   function shareKeep(sh) { return { kind: sh.kind || '', id: sh.id, ym: sh.ym || null, funVariant: sh.funVariant, theme: sh.theme, body: sh.body, badgePick: sh.badgePick, badgeVariant: sh.badgeVariant }; }
   function shareRestore(b) { return { kind: b.kind || '', id: b.id, ym: b.ym || null, funVariant: b.funVariant || 0, theme: b.theme || 'sage', body: !!b.body, badgePick: b.badgePick || null, badgeVariant: b.badgeVariant || 0, image: null, blob: null }; }
   function renderMonthSheet() {
-    var sh = S.review.share, data = Monthly.build(load(), sh.ym, sh);
+    var sh = S.review.share, data = Monthly.build(viewDb(), sh.ym, sh);
     if (!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">还没有可生成月报的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
     sh.ym = data.ym;
     var ava = data.profile.avatar
@@ -939,10 +969,10 @@
   }
   function renderShareSheet() {
     if (S.review.share.kind === 'month') return renderMonthSheet();
-    var sh=S.review.share, data=Share.build(load(),sh.id,sh);
+    var sh=S.review.share, data=Share.build(viewDb(),sh.id,sh);
     if (data) { sh.id=data.recordId; sh.date=data.date; sh.day=data.day; }
     if(!data) return '<div class="mask" data-act="shareclose"><div class="sheet"><div class="sheet-title">这一天没有可分享的训练</div><button class="btn-primary" data-act="shareclose">返回</button></div></div>';
-    var list=Share.sessionList(load());
+    var list=Share.sessionList(viewDb());
     var ava = data.profile.avatar
       ? '<img class="ss-ava" src="' + esc(data.profile.avatar) + '" alt="' + esc(data.name) + ' 的头像">'
       : '<span class="ss-ava ss-ava-t" aria-hidden="true">' + esc(Array.from(data.name || '我')[0]) + '</span>';
@@ -998,7 +1028,7 @@
   }
   function renderBadgeWall() {
     var st = Share.badgeState(load());
-    var WALL_ORDER = ['count', 'progress', 'strength', 'volume', 'session', 'streak', 'cycle', 'watch'];
+    var WALL_ORDER = ['count', 'progress', 'strength', 'volume', 'session', 'streak', 'watch'];
     var near = st.nextGoals.slice(0, 3).map(function (g) {
       var d = st.byId[g.id], p = st.prog[g.id];
       return '<div class="wall-n"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>';
@@ -1027,7 +1057,7 @@
     var generation=(sh.generation || 0)+1; sh.generation=generation;
     try {
       var isMonth = sh.kind === 'month';
-      var data = isMonth ? Monthly.build(load(), sh.ym, sh) : Share.build(load(),sh.id,sh); if(!data) return;
+      var data = isMonth ? Monthly.build(viewDb(), sh.ym, sh) : Share.build(viewDb(),sh.id,sh); if(!data) return;
       if(document.fonts && document.fonts.ready) await document.fonts.ready;
       var canvas=document.createElement('canvas'); await (isMonth ? Monthly.draw(canvas,data,sh.theme) : Share.draw(canvas,data,sh.theme));
       var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png');});
