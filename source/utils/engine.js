@@ -653,8 +653,8 @@
     }
     if (!db.programs.some(function (p) { return p.id === db.activeProgramId; })) db.activeProgramId = db.programs[0].id;
     db.programs.forEach(function (p) {
-      if (p.id === db.activeProgramId) { if (p.status === 'paused') p.status = 'active'; p.snap = null; }
-      else if (p.status === 'active') p.status = 'paused';   // 不变式：同一时间只有一个进行中
+      if (p.id === db.activeProgramId) p.snap = null; // 当前计划的训练日就在 db.days 上，暂停、结束也留在这里
+      else if (p.status === 'active') p.status = 'paused';   // 不变式：同一时间最多一个进行中
       if (!p.startedAt) p.startedAt = firstRecordDate(db, p.id);
     });
   }
@@ -663,7 +663,26 @@
   function programById(db, pid) { return (db.programs || []).filter(function (p) { return p.id === pid; })[0] || null; }
   function activeProgram(db) { return programById(db, activePid(db)); }
   /** 当前计划还能不能继续练（主动结束后为 false，需要选下一个计划） */
-  function canTrain(db) { var p = activeProgram(db); return !p || p.status !== 'ended'; }
+  function canTrain(db) { var p = activeProgram(db); return !p || p.status === 'active'; }
+  /** 暂停当前计划：训练日和记录都留在原地，只是不能再记新的一次。 */
+  function pauseProgram(db, pid) {
+    var p = programById(db, pid || activePid(db));
+    if (!p) throw new Error('找不到这个计划');
+    if (p.id !== activePid(db)) throw new Error('只能暂停正在进行的计划');
+    if (p.status === 'ended') throw new Error('已结束的计划不能暂停');
+    if (p.status === 'paused') return db;
+    p.status = 'paused'; p.pausedAt = today();
+    return db;
+  }
+  /** 继续一个暂停的计划。若它不是当前计划，会先暂停正在进行的那套。 */
+  function resumeProgram(db, pid) {
+    var p = programById(db, pid || activePid(db));
+    if (!p) throw new Error('找不到这个计划');
+    if (p.status === 'ended') throw new Error('已结束的计划只能查看，不能继续训练');
+    if (p.id !== activePid(db)) return switchProgram(db, pid);
+    p.status = 'active'; p.pausedAt = '';
+    return db;
+  }
   /**
    * 计划视图：把任意一个计划投影成引擎认识的形状（底座参数 + 该计划参数、该计划的训练日），
    * replay / build* 原样复用；回放只会读这个计划自己的记录。
@@ -1967,17 +1986,45 @@
       { id: 'F4', name: '深蹲', slots: [main('F4M', '杠铃深蹲', 'squat', 5), bbb('F4B', '杠铃深蹲', 'F4M', 'squat')] }
     ];
   }
+  function templateKey(id) { return id === 'gzclp-8w' ? 'gzclp' : (id || ''); }
+  function schemeText(s) {
+    var sc = s.scheme || {};
+    if (s.prog === 'linear') return (sc.sets || 1) + '×' + (sc.reps || 5) + '+';
+    if (s.prog === 'dual') return (sc.sets || 3) + '×' + sc.repMin + '–' + sc.repMax;
+    if (s.prog === 'w531') return '百分比波浪 · 末组尽量多';
+    if (s.prog === 'fixed') return (sc.sets || 5) + '×' + (sc.reps || 10) + (sc.pct ? ' · 训练最大重量 ' + Math.round(sc.pct * 100) + '%' : '');
+    if (s.tier === 'T1') return '5×3+ → 6×2+ → 10×1+';
+    if (s.tier === 'T2') return '3×10 → 3×8 → 3×6';
+    return '3×15+';
+  }
   function templateCatalog() {
     return [
+      { id: 'gzclp', name: 'GZCLP', days: '每周 4 练', blurb: '深蹲、卧推、硬拉、实力推。主项从 5×3+ 开始，完不成就退阶；辅助动作每轮在同一模式里轮换。' },
       { id: '531', name: '5/3/1', days: '每周 4 练', blurb: '四周一个循环。训练最大重量取 1RM 的 90%，主项按百分比波浪，辅助同一动作 5×10、重量固定。' },
       { id: 'ppl', name: 'Reddit PPL', days: '每周 6 练', blurb: '推、拉、腿各两次。主项完成规定次数就加重，辅助动作全部组做到区间上限才加重。' }
     ];
+  }
+  /** 不开始计划也能看的编排：每天的动作、组次，以及按当前 1RM 估算的起始重量。 */
+  function templatePreview(db, id) {
+    var cat = templateCatalog().filter(function (x) { return x.id === id; })[0], def = templateDef(db, id);
+    if (!cat || !def) return null;
+    var P = Object.assign(defaultParams(), def.params || {}), byId = {};
+    def.days.forEach(function (d) { d.slots.forEach(function (s) { byId[s.id] = s; }); });
+    return { id: cat.id, name: cat.name, daysLabel: cat.days, blurb: cat.blurb, days: def.days.map(function (d) {
+      return { id: d.id, name: d.name, slots: d.slots.map(function (s) {
+        var w = initWeight(s, P), bw = equipOf(s.name, s.equip) === '自重';
+        if (s.scheme && s.scheme.link && byId[s.scheme.link]) w = ceilTo(initWeight(byId[s.scheme.link], P) * (s.scheme.pct || 0.5), (s.scheme.inc) || 2.5);
+        var weight = bw ? '自重' : (s.prog === 'w531' && w > 0 ? 'TM ' + fmtW(w) + ' kg' : (w > 0 ? fmtW(w) + ' kg' : ''));
+        return { tier: s.tier, name: s.name, equip: equipOf(s.name, s.equip), text: schemeText(s), weight: weight };
+      }) };
+    }) };
   }
   function templateDef(db, id) {
     var base = {
       autoRotate: false, adaptive: false, ruleMode: 'full',
       oneRM: { bench: liftRM(db, 'bench'), squat: liftRM(db, 'squat'), deadlift: liftRM(db, 'deadlift'), ohp: liftRM(db, 'ohp') }
     };
+    if (id === 'gzclp') return { template: 'gzclp', name: 'GZCLP', progression: 'gzclp', days: defaultDays(), params: { oneRM: base.oneRM, autoRotate: true, deloadEnabled: true, weeksPerCycle: 8, totalWeeks: 8, progression: 'gzclp', ruleMode: 'full' } };
     if (id === 'phul') return { template: 'phul', name: 'PHUL', progression: 'dual', days: phulDays(db), params: Object.assign({}, base, { deloadEnabled: false, weeksPerCycle: 12, totalWeeks: 12 }) };
     if (id === 'ppl') return { template: 'ppl', name: 'Reddit PPL', progression: 'linear', days: pplDays(db), params: Object.assign({}, base, { deloadEnabled: false, weeksPerCycle: 8, totalWeeks: 8 }) };
     if (id === '531') return { template: '531', name: '5/3/1', progression: 'w531', days: fiveDays(db), params: Object.assign({}, base, { deloadEnabled: false, weeksPerCycle: 4, totalWeeks: 16, tmRatio: 0.9 }) };
@@ -1996,8 +2043,8 @@
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
-    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, templateDef: templateDef, templateCatalog: templateCatalog, ceilTo: ceilTo,
+    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, ceilTo: ceilTo,
     LEGACY_PID: LEGACY_PID, BASE_KEYS: BASE_KEYS, PLAN_KEYS: PLAN_KEYS, PROGRAM_STATUS: PROGRAM_STATUS, recPid: recPid, activePid: activePid, activeProgram: activeProgram, programById: programById,
-    canTrain: canTrain, planView: planView, switchProgram: switchProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile
+    canTrain: canTrain, planView: planView, switchProgram: switchProgram, pauseProgram: pauseProgram, resumeProgram: resumeProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile
   };
 });

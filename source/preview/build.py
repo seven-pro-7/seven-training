@@ -412,6 +412,19 @@ css.append(r"""
 .app .pg-plan .wide .gcell { height: 36px; }
 .app .pg-plan .wide .cw, .app .pg-plan .wide .gh { font-size: 11px; }
 .app .pg-train .day-seg.wide .seg-i { font-size: 12px; padding: 6px 0; }
+.app .st-pill { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 8px; flex-shrink: 0; }
+.app .st-active { color: #FF6B1A; background: rgba(255,107,26,.12); }
+.app .st-paused { color: #C77700; background: rgba(255,159,10,.16); }
+.app .st-ended, .app .st-new { color: #8E8E93; background: rgba(142,142,147,.12); }
+.app .plan-ops { display: flex; gap: 8px; margin-top: 12px; }
+.app .plan-ops .btn-ghost { flex: 1; margin: 0; text-align: center; height: 40px; line-height: 40px; padding: 0 8px; }
+.app .op-end { color: var(--red); }
+.app .hold-card .hold-t { font-size: 17px; font-weight: 600; margin-top: 8px; }
+.app .hold-s, .app .lib-lead { font-size: 13px; color: var(--label2); line-height: 1.45; }
+.app .hold-card .hold-s { margin-top: 4px; }
+.app .lib-card { display: block; }
+.app .lib-more { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--label); }
+.app .lib-back { font-size: 15px; color: var(--accent); font-weight: 500; margin: 0 0 4px; }
 """)
 
 

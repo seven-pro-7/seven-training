@@ -220,7 +220,7 @@
     tab: 'train',
     train: { day: null, draft: null, recordId: null, deload: undefined, date: GZ.today(), bw: '', note: '', result: null, createdAt: null },
     view: { pid: null },
-    plan: { ov: 0, detail: null, cycle: 0 }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', tier: 'T1', q: '', add: null }
+    plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '' }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', tier: 'T1', q: '', add: null }
   };
   var rest = { show: false, left: 0, total: 0, name: '', timer: null };
 
@@ -259,7 +259,19 @@
   }
   function entry(slot) { var d = S.train.draft; return d[slot] || (d[slot] = { v: null, done: 0 }); }
 
+  function renderTrainHold(cur) {
+    var paused = cur.status === 'paused';
+    return '<div class="head"><div class="large-title">' + esc(cur.name) + '</div></div>' +
+      '<div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
+      '<div class="hold-t">' + (paused ? '这套计划暂停了' : '这套计划已经结束') + '</div>' +
+      '<div class="hold-s">' + (paused ? '进度和记录都还在。继续之后才能记新的训练。' : '不能再往这套里记训练。记录仍可在数据和回顾里查看。') + '</div>' +
+      '<div class="plan-ops">' +
+      (paused ? '<div class="btn-ghost solid" data-act="resumetrain">继续这套</div>' : '') +
+      '<div class="btn-ghost" data-act="toplan">去计划</div></div></div>';
+  }
   function renderTrain() {
+    var db0 = load(), cur0 = GZ.activeProgram(db0);
+    if (cur0 && cur0.status !== 'active' && !S.train.recordId) return renderTrainHold(cur0);
     var vm = trainVM(), t = S.train, h = '';
     h += '<div class="head"><div class="row between"><label class="date-pick"><span class="head-sub">' + (vm.editing ? '编辑记录 · ' : '') + vm.weekText + (vm.locked ? ' · 已完成' : ' · ' + GZ.dateLabel(t.date)) + '</span>' +
       (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '">') + '</label>' + (vm.editing ? '<span class="link" data-act="cancelEdit">取消</span>' : '') + '</div>' +
@@ -485,11 +497,21 @@
       case 'rest': beginRest(Number(ds.rest), ds.name); return false;
       case 'cancelEdit': t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; return true;
       case 'submit': submit(); return false;
+      case 'resumetrain':
+        confirmBox('继续这套计划？', '继续后可以记新的训练。', function () {
+          var dbr = load();
+          try { GZ.resumeProgram(dbr); } catch (err) { toast(err.message || '无法继续'); return; }
+          save(dbr); resetTrain(); toast('已继续'); render();
+        });
+        return false;
+      case 'toplan': S.tab = 'plan'; S.plan.view = ''; render(); return false;
       case 'closeResult': t.result = null; return true;
       case 'gotoStats': t.result = null; S.tab = 'stats'; return true;
     }
   }
   function submit() {
+    var db0 = load(), cur0 = GZ.activeProgram(db0);
+    if (cur0 && cur0.status !== 'active' && !S.train.recordId) return toast(cur0.status === 'paused' ? '计划已暂停' : '计划已结束');
     var vm = trainVM(), t = S.train;
     if (vm.locked) return;
     var missing = vm.deload ? [] : vm.items.filter(function (it) { return !it.skip && !it.logged; });
@@ -591,12 +613,20 @@
 
   // ================= 计划 =================
   function renderPlan() {
-    var db = load(), vm = GZ.buildPlan(db, { cycle: S.plan.cycle }), p = S.plan, h = '';
-    h += '<div class="card next-card"><div class="row"><div class="flex1"><span class="cap">下一次训练</span><div class="next-t"><span class="num accent">' + vm.next.day + '</span> ' + vm.next.name + '</div>' +
-      '<span class="cap">' + vm.next.weekText + (vm.next.deload ? ' · 减载周' : '') + '</span></div><div class="go-btn" data-act="go" data-day="' + vm.next.day + '">开始</div></div>' +
-      '<div class="prog"><div class="row between"><span class="cap">本轮进度（' + vm.weeksPerCycle + ' 周 / 轮）</span><span class="cap"><span class="num strong">' + vm.cycleDone + '</span> / ' + vm.cyclePlanned + ' 次 · ' + vm.cycleProgress + '%</span></div>' +
-      '<div class="bar"><div class="bar-in" style="width:' + vm.cycleProgress + '%"></div></div><span class="cap total-cap">累计已完成 ' + vm.done + ' 次训练</span></div></div>';
-    h += programCard(db);
+    var p = S.plan;
+    if (p.view === 'lib') return renderPlanLib();
+    if (p.view === 'browse') return renderPlanBrowse();
+    var db = load(), cur = GZ.activeProgram(db), vm = GZ.buildPlan(db, { cycle: p.cycle }), h = '';
+    var live = !cur || cur.status === 'active', holding = cur && cur.status === 'paused', closed = cur && cur.status === 'ended';
+    h += planStatusCard(cur);
+    if (live) {
+      h += '<div class="card next-card"><div class="row"><div class="flex1"><span class="cap">下一次训练</span><div class="next-t"><span class="num accent">' + vm.next.day + '</span> ' + vm.next.name + '</div>' +
+        '<span class="cap">' + vm.next.weekText + (vm.next.deload ? ' · 减载周' : '') + '</span></div><div class="go-btn" data-act="go" data-day="' + vm.next.day + '">去训练</div></div>' +
+        '<div class="prog"><div class="row between"><span class="cap">本轮进度（' + vm.weeksPerCycle + ' 周 / 轮）</span><span class="cap"><span class="num strong">' + vm.cycleDone + '</span> / ' + vm.cyclePlanned + ' 次 · ' + vm.cycleProgress + '%</span></div>' +
+        '<div class="bar"><div class="bar-in" style="width:' + vm.cycleProgress + '%"></div></div><span class="cap total-cap">累计已完成 ' + vm.done + ' 次训练</span></div></div>';
+    } else {
+      h += '<div class="card hold-card"><div class="hold-t">' + (holding ? '暂停中，训练进度停在这里' : '已结束，下面是这套计划的记录') + '</div><div class="hold-s">' + (holding ? '继续之后才能记新的训练。' : '不能再往这套里记训练。') + '</div></div>';
+    }
     var wide = vm.days.length > 4, gz = (db.params.progression || 'gzclp') === 'gzclp';
     h += '<div class="card"><div class="card-title"><div class="cyc-nav"><span class="cyc-btn ' + (vm.canPrev ? '' : 'off') + '" data-act="cycle" data-d="-1">‹</span>' +
       '<span class="t cyc-label">' + vm.cycleText + (vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : '') + '</span>' +
@@ -618,11 +648,11 @@
         rt.days.map(function (d) {
           return '<div class="rot-day"><div class="rot-dh"><span class="num rot-did">' + d.id + '</span><span class="rot-dn">' + esc(d.name) + '</span></div>' +
             d.slots.map(function (r) {
-              return '<div class="rot-row' + (rt.isCur ? ' tap' : '') + '"' + (rt.isCur ? ' data-act="slotsheet" data-day="' + d.id + '" data-slot="' + r.id + '"' : '') + '>' + tier(r.tier) +
+              return '<div class="rot-row' + (rt.isCur && !closed ? ' tap' : '') + '"' + (rt.isCur && !closed ? ' data-act="slotsheet" data-day="' + d.id + '" data-slot="' + r.id + '"' : '') + '>' + tier(r.tier) +
                 '<div class="rot-main"><div class="rot-n">' + esc(r.name) + equipTag(r.equip) +
                 (r.isNew ? '<span class="rot-new">新</span>' : '') + (r.fixed ? '<span class="rot-lock">固定</span>' : r.locked ? '<span class="rot-lock">锁定</span>' : '') + '</div>' +
                 '<div class="rot-s">' + (rt.isCur && r.cur ? '<span class="num rot-cw">' + esc(r.cur) + '</span>' : '') + esc(r.role) + (r.isNew ? ' · 上一轮 ' + esc(r.prev) : '') + (r.startW ? ' · 起始 ' + esc(r.startW) : '') + '</div></div>' +
-                (rt.isCur ? '<span class="rot-chev">›</span>' : '') + '</div>';
+                (rt.isCur && !closed ? '<span class="rot-chev">›</span>' : '') + '</div>';
             }).join('') + '</div>';
         }).join('') +
         (gz ? '<div class="rot-why-btn" data-act="why">' + (p.why ? '收起编排依据' : '查看编排依据') + '<span class="chev">' + (p.why ? '⌃' : '›') + '</span></div>' +
@@ -685,17 +715,62 @@
     h += '<button class="btn-primary slot-ok" data-act="slotsw">' + (changed ? '改成 ' + (Number(sl.w) || 0) + (info.canAdjust ? ' ' + esc(info.unitText) : '') : '完成') + '</button>';
     return h + '</div></div>';
   }
-  function goTrain(day) { var t = S.train; if (!t.recordId) { t.day = day; t.draft = GZ.blankDraft(load(), day); t.deload = undefined; } S.tab = 'train'; }
-  function programCard(db) {
-    var list = GZ.programList(db), cat = GZ.templateCatalog(), h = '<div class="card prog-card"><div class="card-title"><span class="t">训练计划</span><span class="s">一次只练一套</span></div>';
-    list.forEach(function (p) {
-      h += '<div class="prog-row"><div class="flex1"><div class="prog-name">' + esc(p.name) + (p.active ? ' · 进行中' : '') + '</div><div class="prog-sub">' + esc(p.statusText) + ' · ' + p.sessions + ' 次' + (p.lastDate ? ' · 最近 ' + p.lastDate.slice(5) : '') + '</div></div>' +
-        (p.active || p.status === 'ended' ? '' : '<div class="prog-go" data-act="resume" data-id="' + esc(p.id) + '">续练</div>') + '</div>';
+  function stPill(status) {
+    var cls = status === 'active' ? 'st-active' : status === 'paused' ? 'st-paused' : status === 'ended' ? 'st-ended' : 'st-new';
+    var text = status === 'active' ? '进行中' : status === 'paused' ? '已暂停' : status === 'ended' ? '已结束' : '未开始';
+    return '<span class="st-pill ' + cls + '">' + text + '</span>';
+  }
+  function openInstance(db, tpl) {
+    var key = GZ.templateKey(tpl), list = GZ.programList(db).filter(function (p) { return GZ.templateKey(p.template) === key && p.status !== 'ended'; });
+    return list[0] || null;
+  }
+  function planStatusCard(cur) {
+    if (!cur) return '';
+    var h = '<div class="card"><div class="row between"><div class="prog-name">' + esc(cur.name) + '</div>' + stPill(cur.status) + '</div>';
+    h += '<div class="plan-ops">';
+    if (cur.status === 'active') h += '<div class="btn-ghost" data-act="pausecur">暂停</div><div class="btn-ghost op-end" data-act="endcur">结束</div>';
+    else if (cur.status === 'paused') h += '<div class="btn-ghost solid" data-act="resumecur">继续</div><div class="btn-ghost op-end" data-act="endcur">结束</div>';
+    h += '<div class="btn-ghost" data-act="openlib">计划库</div></div></div>';
+    return h;
+  }
+  function renderPlanLib() {
+    var db = load(), h = '<div class="lib-back" data-act="libback">‹ 计划</div><div class="pg-title">计划库</div>';
+    h += '<div class="sec-f lib-lead">点进任意一套就能看每天练什么。没开始也能看。</div>';
+    GZ.templateCatalog().forEach(function (c) {
+      var inst = openInstance(db, c.id);
+      var ended = !inst && GZ.programList(db).some(function (p) { return GZ.templateKey(p.template) === c.id && p.status === 'ended'; });
+      h += '<div class="card lib-card tap" data-act="browse" data-id="' + c.id + '"><div class="row between"><span class="tpl-name">' + esc(c.name) + '</span>' + stPill(inst ? inst.status : (ended ? 'ended' : '')) + '</div>' +
+        '<div class="tpl-days">' + esc(c.days) + (inst && inst.sessions ? ' · 已练 ' + inst.sessions + ' 次' : '') + '</div><div class="tpl-blurb">' + esc(c.blurb) + '</div><div class="lib-more">查看安排 <span class="chev">›</span></div></div>';
     });
-    cat.forEach(function (c) {
-      h += '<div class="tpl-card"><div class="row between"><span class="tpl-name">' + esc(c.name) + '</span><span class="tpl-days">' + esc(c.days) + '</span></div><div class="tpl-blurb">' + esc(c.blurb) + '</div><div class="prog-go" data-act="newprog" data-id="' + c.id + '">开始这套</div></div>';
+    return h;
+  }
+  function renderPlanBrowse() {
+    var db = load(), prev = GZ.templatePreview(db, S.plan.tpl);
+    if (!prev) return '<div class="lib-back" data-act="libback">‹ 计划库</div><div class="pg-title">计划详情</div>';
+    var inst = openInstance(db, prev.id);
+    var h = '<div class="lib-back" data-act="backlib">‹ 计划库</div><div class="pg-title">' + esc(prev.name) + '</div>';
+    h += '<div class="card"><div class="row between"><span class="tpl-days">' + esc(prev.daysLabel) + '</span>' + stPill(inst ? inst.status : '') + '</div><div class="tpl-blurb">' + esc(prev.blurb) + '</div>';
+    if (inst) h += '<div class="hold-s">这套' + (inst.status === 'active' ? '正在进行' : '已暂停') + (inst.sessions ? '，已练 ' + inst.sessions + ' 次' : '') + '。</div>';
+    h += '<div class="plan-ops">' + browseOps(inst, prev.id) + '</div></div>';
+    prev.days.forEach(function (d) {
+      h += '<div class="card"><div class="card-title"><span class="t"><span class="num">' + esc(d.id) + '</span> ' + esc(d.name) + '</span></div>';
+      d.slots.forEach(function (s) {
+        h += '<div class="ov-row">' + tier(s.tier) + '<div class="ov-main"><span class="ovn">' + esc(s.name) + '</span><span class="ov-sub">' + esc(s.text) + '</span></div>' +
+          '<div class="ov-right"><span class="num ov-w">' + esc(s.weight) + '</span></div></div>';
+      });
+      h += '</div>';
     });
-    return h + '</div>';
+    h += '<div class="sec-f">起始重量按现在的 1RM 估算。开始之后，这套计划才会计入训练记录。</div>';
+    return h;
+  }
+  function browseOps(inst, tpl) {
+    if (!inst) return '<div class="btn-ghost solid" data-act="starttpl" data-id="' + tpl + '">开始</div>';
+    if (inst.status === 'active') return '<div class="btn-ghost" data-act="pausecur">暂停</div><div class="btn-ghost op-end" data-act="endcur">结束</div>';
+    return '<div class="btn-ghost solid" data-act="resumetpl" data-id="' + inst.id + '">继续</div><div class="btn-ghost op-end" data-act="endtpl" data-id="' + inst.id + '">结束</div>';
+  }
+  function goTrain(day) {
+    if (!GZ.canTrain(load())) { toast('这套计划现在不能训练'); return false; }
+    var t = S.train; if (!t.recordId) { t.day = day; t.draft = GZ.blankDraft(load(), day); t.deload = undefined; } S.tab = 'train'; return true;
   }
   function resetTrain() {
     var t = S.train;
@@ -722,28 +797,60 @@
       if (next < 1 || next > vm.maxCycle) return false;
       p.cycle = next; return true;
     }
-    if (act === 'go') { goTrain(ds.day); return true; }
-    if (act === 'newprog') {
-      var cat = GZ.templateCatalog().filter(function (x) { return x.id === ds.id; })[0];
-      if (!cat) return false;
-      confirmBox('开始「' + cat.name + '」？', '当前计划会暂停，记录都保留，之后可以在这里续练。新计划按现在的 1RM 计算起始重量。', function () {
-        var dbn = load(), def = GZ.templateDef(dbn, ds.id);
-        if (!def) { toast('没有这套计划'); return; }
-        GZ.startProgram(dbn, def); save(dbn); resetTrain(); S.tab = 'train'; toast('已开始 ' + def.name); render();
+    if (act === 'go') { if (!goTrain(ds.day)) return false; return true; }
+    if (act === 'openlib') { p.view = 'lib'; return true; }
+    if (act === 'libback') { p.view = ''; return true; }
+    if (act === 'backlib') { p.view = 'lib'; return true; }
+    if (act === 'browse') { p.tpl = ds.id; p.view = 'browse'; return true; }
+    if (act === 'pausecur') {
+      var cur = GZ.activeProgram(load());
+      if (!cur || cur.status !== 'active') return false;
+      confirmBox('暂停「' + cur.name + '」？', '暂停后不能记新的训练。进度和记录都保留，可以随时继续。', function () {
+        var dbn = load();
+        try { GZ.pauseProgram(dbn); } catch (err) { toast(err.message || '无法暂停'); return; }
+        save(dbn); resetTrain(); toast('已暂停'); render();
       });
       return false;
     }
-    if (act === 'resume') {
-      confirmBox('续练这个计划？', '当前计划会暂停，记录都保留。', function () {
+    if (act === 'resumecur' || act === 'resumetpl') {
+      var pid = act === 'resumetpl' ? ds.id : GZ.activePid(load());
+      var target = GZ.programList(load()).filter(function (x) { return x.id === pid; })[0];
+      if (!target) return false;
+      var other = GZ.activeProgram(load());
+      var extra = other && other.id !== target.id && other.status === 'active' ? '当前的「' + other.name + '」会暂停。' : '';
+      confirmBox('继续「' + target.name + '」？', '继续后可以记新的训练。' + extra, function () {
         var dbr = load();
-        try { GZ.switchProgram(dbr, ds.id); } catch (err) { toast(err.message || '无法切换'); return; }
-        save(dbr); resetTrain(); S.tab = 'train'; toast('已切回'); render();
+        try { GZ.resumeProgram(dbr, pid); } catch (err) { toast(err.message || '无法继续'); return; }
+        save(dbr); resetTrain(); S.plan.view = ''; toast('已继续'); render();
+      });
+      return false;
+    }
+    if (act === 'endcur' || act === 'endtpl') {
+      var eid = act === 'endtpl' ? ds.id : GZ.activePid(load());
+      var ep = GZ.programList(load()).filter(function (x) { return x.id === eid; })[0];
+      if (!ep || ep.status === 'ended') return false;
+      confirmBox('结束「' + ep.name + '」？', '结束后不能再练这套，也不能恢复。记录仍可在数据和回顾里查看。', function () {
+        var dbe = load();
+        try { GZ.endProgram(dbe, eid); } catch (err) { toast(err.message || '无法结束'); return; }
+        save(dbe); resetTrain(); toast('已结束'); render();
+      });
+      return false;
+    }
+    if (act === 'starttpl') {
+      var cat = GZ.templateCatalog().filter(function (x) { return x.id === ds.id; })[0];
+      if (!cat) return false;
+      var curp = GZ.activeProgram(load());
+      var note = curp && curp.status !== 'ended' ? '当前的「' + curp.name + '」会暂停，记录都保留。' : '起始重量按现在的 1RM 计算。';
+      confirmBox('开始「' + cat.name + '」？', note, function () {
+        var dbn = load(), def = GZ.templateDef(dbn, ds.id);
+        if (!def) { toast('没有这套计划'); return; }
+        GZ.startProgram(dbn, def); save(dbn); resetTrain(); S.plan.view = ''; S.tab = 'plan'; toast('已开始 ' + def.name); render();
       });
       return false;
     }
     if (act === 'cell') {
       if (ds.status === 'done') { p.detail = GZ.buildReview(load()).logs.filter(function (l) { return l.id === ds.id; })[0]; return true; }
-      if (ds.status === 'next' || ds.status === 'ready') { goTrain(ds.day); return true; }
+      if (ds.status === 'next' || ds.status === 'ready') { if (!goTrain(ds.day)) return false; return true; }
       toast('推演值：假设每次都加重'); return false;
     }
     if (act === 'slotsheet') { p.slot = slotState(ds.day, ds.slot); return true; }
@@ -1397,9 +1504,11 @@
   var ACT = { train: trainAct, plan: planAct, stats: statsAct, review: reviewAct, settings: settingsAct };
   function render(keepScroll) {
     var body = document.getElementById('body'), y = body.scrollTop;
-    document.getElementById('navTitle').textContent = S.tab === 'settings' && S.settings.view === 'lib' ? '动作库' : TABS.filter(function (t) { return t.id === S.tab; })[0].title;
+    var planSub = S.tab === 'plan' && S.plan.view;
+    var planTitle = S.plan.view === 'lib' ? '计划库' : '计划详情';
+    document.getElementById('navTitle').textContent = S.tab === 'settings' && S.settings.view === 'lib' ? '动作库' : planSub ? planTitle : TABS.filter(function (t) { return t.id === S.tab; })[0].title;
     var isLib = S.tab === 'settings' && S.settings.view === 'lib';
-    var bigTitle = S.tab === 'train' || isLib ? '' : '<div class="pg-title">' + TABS.filter(function (t) { return t.id === S.tab; })[0].title + '</div>';
+    var bigTitle = S.tab === 'train' || isLib || planSub ? '' : '<div class="pg-title">' + TABS.filter(function (t) { return t.id === S.tab; })[0].title + '</div>';
     body.innerHTML = '<div class="pg-' + S.tab + '"><div class="page">' + bigTitle + RENDER[S.tab]() + '</div></div>';
     body.scrollTop = keepScroll ? y : 0;
     navState();
