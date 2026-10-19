@@ -1455,7 +1455,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
 
   // ---------- 判定（核心规则） ----------
-  function stageDef(tier, stage) { return STAGES[tier][stage] || STAGES[tier][FIRST_STAGE[tier]]; }
+  function gzStageDef(tier, stage) { return STAGES[tier][stage] || STAGES[tier][FIRST_STAGE[tier]]; }
   function hasValue(e) { return e && e.v !== null && e.v !== undefined && e.v !== '' && !e.skip; }
 
   /**
@@ -1489,8 +1489,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     }
     return out;
   }
-  function evaluate(s, st, e, P, deload) {
-    var def = stageDef(s.tier, st.stage);
+  function gzEvaluate(s, st, e, P, deload) {
+    var def = gzStageDef(s.tier, st.stage);
     var planned = st.weight, mw = manualW(e);
     var step = stepOf(s, P), inc = incOf(s, P);
     // 手动重量：本次按实际重量计算判定，下次重量在实际重量上推进
@@ -1574,6 +1574,48 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return r;
   }
 
+  // ================= 进阶策略（可插拔） =================
+  /**
+   * 进阶策略只回答一个问题：「一个动作槽位，这次练成这样，下次该练什么」。
+   * 训练日编排、动作轮换、周轮次、回放、统计、徽章、分享都与具体策略无关，只通过下面的接口取数。
+   *   id / name / desc
+   *   firstStage(tier)                  → 该层级的第一个阶段键
+   *   stageDef(tier, stage)             → { sets, reps, add?, hold?, next? }（训练页显示组数与次数）
+   *   initState(slot, P)                → 计划开始时的状态 { stage, weight, fail }
+   *   freshState(slot, weight)          → 换入新动作时从头进阶的状态
+   *   evaluate(slot, state, entry, P, deload) → 本次结果：judgment / nextStage / nextWeight / nextFail / volume / e1rm …
+   *   amrapLast(tier)                   → 最后一组是否 AMRAP（训练页最后一个圆点画成实心）
+   * 层级 T1/T2/T3 在策略之外统一映射为通用角色：主项 / 辅助 / 配件（roleOf），
+   * 换计划时历史数据按「动作名 + 角色」衔接，不依赖某个策略的阶段名。
+   */
+  var PROGRESSIONS = {};
+  var PROG_KEYS = ['id', 'name', 'firstStage', 'stageDef', 'initState', 'freshState', 'evaluate', 'amrapLast'];
+  function registerProgression(def) {
+    PROG_KEYS.forEach(function (k) { if (!def || def[k] === undefined) throw new Error('进阶策略缺少 ' + k + '：' + (def && def.id)); });
+    PROGRESSIONS[def.id] = def;
+    return def;
+  }
+  function progressionOf(db) {
+    var id = db && db.params && db.params.progression;
+    return PROGRESSIONS[id] || PROGRESSIONS.gzclp;
+  }
+  var ROLES = { T1: 'main', T2: 'assist', T3: 'accessory' };
+  var ROLE_NAME = { main: '主项', assist: '辅助', accessory: '配件' };
+  function roleOf(tier) { return ROLES[tier] || 'accessory'; }
+
+  registerProgression({
+    id: 'gzclp', name: 'GZCLP', family: 'stage',
+    desc: 'T1 5×3+ → 6×2+ → 10×1+，T2 3×10 → 3×8 → 3×6，T3 3×15+ 末组达标加重；每次训练都可能加重。',
+    firstStage: function (tier) { return FIRST_STAGE[tier]; },
+    stageDef: gzStageDef,
+    initState: function (s, P) { return { stage: FIRST_STAGE[s.tier], weight: initWeight(s, P), fail: 0 }; },
+    freshState: function (s, weight) { return { stage: FIRST_STAGE[s.tier], weight: weight, fail: 0 }; },
+    evaluate: gzEvaluate,
+    amrapLast: function (tier) { return tier !== 'T2'; }
+  });
+  // 兼容旧调用：GZ.evaluate / 内部 stageDef 仍指向 GZCLP
+  var evaluate = gzEvaluate, stageDef = gzStageDef;
+
   // ---------- 回放 ----------
   function sortRecords(recs) {
     return recs.slice().sort(function (a, b) {
@@ -1583,9 +1625,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function dayById(db, id) { for (var i = 0; i < db.days.length; i++) if (db.days[i].id === id) return db.days[i]; return null; }
   function initialStates(db) {
-    var st = {};
+    var st = {}, prog = progressionOf(db);
     db.days.forEach(function (d) {
-      d.slots.forEach(function (s) { st[s.id] = { stage: FIRST_STAGE[s.tier], weight: initWeight(s, db.params), fail: 0 }; });
+      d.slots.forEach(function (s) { st[s.id] = prog.initState(s, db.params); });
     });
     return st;
   }
@@ -1712,8 +1754,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    *  1. 这一次刚换入新动作 → 从该动作的第一阶段、起始重量重新进阶；
    *  2. 用户在计划页「调整重量」→ 只替换重量，阶段与失败次数保持不变（不改写任何历史记录）。
    */
-  function startState(s, st, ef, week) {
-    var out = ef.resetNow ? { stage: FIRST_STAGE[s.tier], weight: ef.change.weight, fail: 0 } : st;
+  function startState(s, st, ef, week, prog) {
+    prog = prog || PROGRESSIONS.gzclp;
+    var out = ef.resetNow ? prog.freshState(s, ef.change.weight) : st;
     var adj = null;
     (s.adjusts || []).forEach(function (a) { if (a.fromWeek === week) adj = a; });
     if (adj) out = Object.assign({}, out, { weight: adj.weight });
@@ -1721,21 +1764,21 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   /** 执行一个槽位：处理“更换起始周重置”、“调整重量”和“仅本次替换” */
   function runSlot(db, s, st, e, week, deload, hist) {
-    var ef = effectiveSlot(db, s, week, hist);
-    st = startState(s, st, ef, week);
+    var ef = effectiveSlot(db, s, week, hist), prog = progressionOf(db);
+    st = startState(s, st, ef, week, prog);
     var res;
     if (e && e.ex && e.ex !== ef.slot.name) {
       var lib = libFindIn(db, e.ex);
-      res = evaluate(Object.assign({}, ef.slot, { name: e.ex, equip: lib ? lib.equip : '' }), st, e, db.params, deload);
+      res = prog.evaluate(Object.assign({}, ef.slot, { name: e.ex, equip: lib ? lib.equip : '' }), st, e, db.params, deload);
       // 仅本次替换：记录容量，但不推进原动作的阶段与重量
       if (!res.deload && res.judgment !== '跳过') { res.judgment = '替换'; res.e1rm = null; }
       res.nextStage = st.stage; res.nextWeight = st.weight; res.nextFail = st.fail || 0; res.delta = 0;
       res.sub = true; res.origName = ef.slot.name;
     } else {
-      res = evaluate(ef.slot, st, e, db.params, deload);
+      res = prog.evaluate(ef.slot, st, e, db.params, deload);
     }
     res.changed = !!ef.change;
-    return { res: res, st: st, eff: ef };
+    return { res: res, st: st, eff: ef, prog: prog };
   }
   // ---------- 多轮循环（每 N 周为一轮，完成一轮后进入下一轮） ----------
   function cycleLen(P) { return Math.max(1, P.weeksPerCycle || P.totalWeeks || 8); }
@@ -1857,7 +1900,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       // 仅本次替换：起始重量默认取该动作上次做过的重量，没有则沿用原计划重量
       var subDefault = null;
       if (e.ex) {
-        var ef0 = effectiveSlot(db, s0, week, hist), st0 = startState(s0, states[s0.id], ef0, week);
+        var ef0 = effectiveSlot(db, s0, week, hist), st0 = startState(s0, states[s0.id], ef0, week, progressionOf(db));
         if (e.ex === ef0.slot.name) { delete e.ex; }
         else {
           subDefault = lastW[e.ex] !== undefined ? lastW[e.ex] : st0.weight;
@@ -1865,13 +1908,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         }
       }
       var run = runSlot(db, s0, states[s0.id], e, week, deload, hist), res = run.res, st = run.st, s = run.eff.slot;
-      var def = stageDef(s.tier, st.stage);
+      var def = run.prog.stageDef(s.tier, st.stage);
       var showW = deload ? res.dWeight : res.weight;
       if (res.sub && !deload) showW = res.weight;
       var showSets = deload ? res.dSets : def.sets;
       total += 1; if (hasValue(e) || e.skip) filled += 1;
       var dots = [];
-      for (var k = 0; k < showSets; k++) dots.push({ i: k, on: k < (e.done || 0), amrap: !deload && s.tier !== 'T2' && k === showSets - 1 });
+      for (var k = 0; k < showSets; k++) dots.push({ i: k, on: k < (e.done || 0), amrap: !deload && run.prog.amrapLast(s.tier) && k === showSets - 1 });
       return {
         slotId: s.id, tier: s.tier, tierColor: TIER_COLORS[s.tier], name: res.name, equip: equipOf(res.name, res.equip), equipNote: EQUIP_NOTE[equipOf(res.name, res.equip)] || '',
         unitText: unitOf(equipOf(res.name, res.equip)), isBW: equipOf(res.name, res.equip) === '自重',
@@ -1949,7 +1992,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var nw = (rp.counts[d.id] || 0) + 1;
       return { day: d.id, name: d.name, slots: d.slots.map(function (s0) {
         var ef = effectiveSlot(db, s0, nw, rp.hist), s = ef.slot;
-        var st = startState(s0, rp.states[s0.id], ef, nw), last = null;
+        var st = startState(s0, rp.states[s0.id], ef, nw, progressionOf(db)), last = null;
         for (var i = rp.sessions.length - 1; i >= 0; i--) {
           if (rp.sessions[i].rec.day === d.id) {
             var f = rp.sessions[i].items.filter(function (x) { return x.slotId === s.id; })[0];
@@ -2088,7 +2131,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           if (s2.rec.day === d.id) { var it = s2.items[si]; if (!it.sub && it.judgment !== '跳过') arr[s2.week - 1] = it.weight; }
         });
         var cnt = rp.counts[d.id] || 0, ef = effectiveSlot(db, s, cnt + 1, rp.hist);
-        if (cnt < arr.length) arr[cnt] = startState(s, rp.states[s.id], ef, cnt + 1).weight; // 下一次计划重量
+        if (cnt < arr.length) arr[cnt] = startState(s, rp.states[s.id], ef, cnt + 1, progressionOf(db)).weight; // 下一次计划重量
         return { name: ef.slot.name, tier: s.tier, data: arr };
       });
       return { day: d.id, name: d.name, cols: cols, nextIdx: rp.counts[d.id] || 0 };
@@ -2181,7 +2224,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         var gain = fix(lastIt.nextWeight - first.weight);
         if (streak >= 2) insights.push({ type: 'up', text: info.name + ' 连续 ' + streak + ' 次加重，' + fmtW(first.weight) + '→' + fmtW(lastIt.nextWeight) + 'kg，节奏在线。' });
         // 单次加重已在「主项进度」表里展示，这里不再重复
-        if (lastIt.judgment === '建议降阶') insights.push({ type: 'warn', text: info.name + ' 末组没到 ' + stageDef('T1', lastIt.stage).hold + ' 次。下次同重量再冲，连续两次未达标才降阶，先睡好吃好。' });
+        if (lastIt.judgment === '建议降阶') insights.push({ type: 'warn', text: info.name + ' 末组没到 ' + progressionOf(db).stageDef('T1', lastIt.stage).hold + ' 次。下次同重量再冲，连续两次未达标才降阶，先睡好吃好。' });
         if (lastIt.judgment === '降阶') insights.push({ type: 'warn', text: info.name + ' 已切到 ' + lastIt.nextStage + '，重量保持 ' + fmtW(lastIt.nextWeight) + 'kg，用更少次数顶住强度。' });
         if (lastIt.judgment === '重置') insights.push({ type: 'warn', text: info.name + ' 完成一轮三阶，已重置回 5×3+ @ ' + fmtW(lastIt.nextWeight) + 'kg。' });
       });
@@ -2303,7 +2346,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var d = dayById(db, dayId), s = null;
     d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
     var rp = replay(db), wk = (rp.counts[dayId] || 0) + 1, ef = effectiveSlot(db, s, wk, rp.hist), lastW = lastWeights(rp);
-    var curW = startState(s, rp.states[s.id], ef, wk).weight;
+    var curW = startState(s, rp.states[s.id], ef, wk, progressionOf(db)).weight;
     return { rotates: rotationOn(db.params, s), dayId: dayId, slotId: slotId, tier: s.tier, name: ef.slot.name, week: wk, weight: curW, weightText: fmtW(curW), lastW: lastW, base: wk === 1 };
   }
 
@@ -2430,7 +2473,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
-    ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight
+    ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
+    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME
   };
 });
 </script>
