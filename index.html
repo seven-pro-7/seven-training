@@ -972,6 +972,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .lib-more { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--label); }
 .app .lib-back { font-size: 15px; color: var(--accent); font-weight: 500; margin: 0 0 4px; }
 .app .lib-entry { display: flex; align-items: center; font-size: 16px; font-weight: 600; color: var(--label); }
+.app .chip-row { display: flex; gap: 8px; overflow-x: auto; padding: 0 0 8px; }
+.app .chip-row::-webkit-scrollbar { display: none; }
+.app .chip { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 6px 12px; background: var(--fill); color: var(--label); font-size: 13px; font-weight: 600; }
+.app .chip.on { background: var(--accent); color: #fff; }
+.app .chip-n { margin-left: 4px; font-weight: 500; opacity: .72; }
+.app .filter-lab { font-size: 12px; color: var(--label2); margin: 8px 2px 4px; }
 </style></head>
 <body>
 
@@ -1018,7 +1024,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
   // ---------- 基础常量 ----------
   var VERSION = 1;
-  var DAYS_VERSION = 3; // 动作模板版本，升级后 normalize 会刷新未自定义的 T2/T3 槽位（v3：A2 深蹲命名统一）
+  var DAYS_VERSION = 4; // 动作模板版本。v4：T2 只放复合变式，T3 只放孤立；引体、高位下拉从 T3 调到 T2
   var LIFTS = { squat: '杠铃深蹲', bench: '平板卧推', deadlift: '传统硬拉', ohp: '站姿实力推' };
   var LIFT_ORDER = ['squat', 'bench', 'deadlift', 'ohp'];
   var STEP_KEYS = [
@@ -1104,18 +1110,23 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     ['T2', '哑铃卧推', '上肢·水平推', '哑铃', '活动范围大；单只≈卧推的 38%', 'bench', 0.38, 2],
     ['T2', '上斜哑铃卧推', '上肢·水平推', '哑铃', '上胸容量；单只≈卧推的 30%', 'bench', 0.3, 2],
     ['T2', '单臂哑铃划船', '上肢·水平拉', '哑铃', '单侧背阔；单只≈卧推的 35%', 'bench', 0.35, 2],
-    ['T2', '引体向上', '上肢·垂直拉', '自重', '背阔肌主项；以体重做次数，无外加重量', 'bench', 0, 0],
+    ['T2', '引体向上', '上肢·垂直拉', '自重', '垂直拉复合动作；以体重做次数，无外加重量', 'bench', 0, 0],
     ['T2', '负重引体向上', '上肢·垂直拉', '负重', '外加重量≈卧推的 10%，起步附加体重 5~10%', 'bench', 0.1, 2.5],
+    ['T2', '反握引体向上', '上肢·垂直拉', '自重', '掌心朝内的垂直拉；以体重做次数', 'bench', 0, 0],
+    ['T2', '高位下拉', '上肢·垂直拉', '器械', '垂直拉复合动作；配重约为卧推的 55%', 'bench', 0.55, 2.5],
+    ['T2', '对握高位下拉', '上肢·垂直拉', '器械', '中立握垂直拉；配重约为卧推的 50%', 'bench', 0.5, 2.5],
+    ['T2', '反握高位下拉', '上肢·垂直拉', '器械', '反握垂直拉，肘部更靠近身体；配重约为卧推的 48%', 'bench', 0.48, 2.5],
+    ['T2', '俯身划船', '上肢·水平拉', '杠铃', '水平拉复合动作；约为卧推的 85%', 'bench', 0.85, 2.5],
+    ['T2', '山羊挺身', '下背·伸髋', '器械', '髋铰链辅助；以体重做次数，需要时再手动加重', 'deadlift', 0, 0],
+    ['T2', '高脚杯深蹲', '下肢·蹲', '哑铃', '深蹲模式变式；单只≈深蹲的 25%', 'squat', 0.25, 2],
+    ['T2', '保加利亚分腿蹲', '下肢·单腿', '哑铃', '单腿蹲变式；单只≈深蹲的 25%', 'squat', 0.25, 2],
     ['T2', '双杠臂屈伸', '上肢·水平推', '自重', '下胸与三头；以体重做次数', 'bench', 0, 0],
     ['T2', '负重双杠臂屈伸', '上肢·水平推', '负重', '外加重量≈卧推的 12%', 'bench', 0.12, 2.5],
     ['T2', '腿举', '下肢·蹲', '器械', '腿部容量；配重约为深蹲的 140%', 'squat', 1.4, 5],
     ['T2', '哈克深蹲', '下肢·蹲', '器械', '股四头肌容量；配重约为深蹲的 90%', 'squat', 0.9, 5],
     ['T2', '坐姿划船', '上肢·水平拉', '器械', '背部厚度；配重约为卧推的 70%', 'bench', 0.7, 2.5],
-    // ---- T3：辅助孤立动作，按 15RM（≈65% 以下）取重 ----
-    ['T3', '高位下拉', '上肢·垂直拉', '器械', '背阔肌容量；配重约为卧推的 85%', 'bench', 0.85, 2.5],
-    ['T3', '对握高位下拉', '上肢·垂直拉', '器械', '中立握，肘部更舒适；配重约为卧推的 80%', 'bench', 0.8, 2.5],
+    // ---- T3：只放单关节孤立，按 15RM（≈65% 以下）取重。引体、下拉、划船是复合动作，放在 T2 ----
     ['T3', '直臂下压', '上肢·垂直拉', '器械', '背阔孤立；配重约为卧推的 25%', 'bench', 0.25, 2.5],
-    ['T3', '反握引体向上', '上肢·垂直拉', '自重', '掌心朝内，二头参与更多；以体重做次数', 'bench', 0, 0],
     ['T3', '绳索下压', '上肢·伸肘', '器械', '三头主项；配重约为卧推的 30%', 'bench', 0.3, 2.5],
     ['T3', '绳索三头屈伸', '上肢·伸肘', '器械', '三头容量；配重约为卧推的 25%', 'bench', 0.25, 2.5],
     ['T3', '过头绳索臂屈伸', '上肢·伸肘', '器械', '拉长位练三头长头，增肌优于下压（Maeo 2023）；配重约为卧推的 22%', 'bench', 0.22, 2.5],
@@ -1125,12 +1136,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     ['T3', '俯卧腿弯举', '下肢·屈膝', '器械', '腘绳肌容量；配重约为深蹲的 30%', 'squat', 0.3, 2.5],
     ['T3', '坐姿腿弯举', '下肢·屈膝', '器械', '屈髋位拉长腘绳肌，增肌优于俯卧位（Maeo 2021）；配重约为深蹲的 35%', 'squat', 0.35, 2.5],
     ['T3', '坐姿腿屈伸', '下肢·伸膝', '器械', '股四头肌容量；配重约为深蹲的 40%', 'squat', 0.4, 2.5],
+    ['T3', '单腿腿屈伸', '下肢·伸膝', '器械', '单侧股四头肌；配重约为深蹲的 25%', 'squat', 0.25, 2.5],
     ['T3', '腿外展', '下肢·髋外展', '器械', '臀中肌；配重约为深蹲的 40%', 'squat', 0.4, 5],
-    ['T3', '山羊挺身', '下背·伸髋', '器械', '竖脊肌；以体重做次数，需要时再手动加重', 'deadlift', 0, 0],
     ['T3', '提踵', '下肢·踝', '器械', '小腿容量；配重约为深蹲的 60%', 'squat', 0.6, 5],
     ['T3', '杠铃弯举', '上肢·屈肘', '杠铃', '二头主项；约为卧推的 40%', 'bench', 0.4, 1.25],
     ['T3', 'EZ杆弯举', '上肢·屈肘', '杠铃', 'EZ 杆半旋握，腕部压力更小；约为卧推的 38%', 'bench', 0.38, 1.25],
-    ['T3', '俯身划船', '上肢·水平拉', '杠铃', '背部容量；约为卧推的 85%', 'bench', 0.85, 2.5],
     ['T3', '哑铃弯举', '上肢·屈肘', '哑铃', '二头容量；单只≈卧推的 15%', 'bench', 0.15, 1],
     ['T3', '锤式弯举', '上肢·屈肘', '哑铃', '肱桡肌与二头；单只≈卧推的 17%', 'bench', 0.17, 1],
     ['T3', '上斜哑铃弯举', '上肢·屈肘', '哑铃', '肩伸位拉长二头长头；单只≈卧推的 12%', 'bench', 0.12, 1],
@@ -1138,8 +1148,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     ['T3', '绳索侧平举', '肩·中束', '器械', '底部仍有张力；单侧配重约为卧推的 7%', 'bench', 0.07, 1.25],
     ['T3', '反向飞鸟', '肩·后束', '哑铃', '三角肌后束；单只≈卧推的 12%', 'bench', 0.12, 1],
     ['T3', '哑铃耸肩', '肩·斜方', '哑铃', '斜方肌容量；单只≈硬拉的 30%', 'deadlift', 0.3, 2],
-    ['T3', '高脚杯深蹲', '下肢·蹲', '哑铃', '深蹲模式容量；单只≈深蹲的 25%', 'squat', 0.25, 2],
-    ['T3', '保加利亚分腿蹲', '下肢·单腿', '哑铃', '单腿稳定与臀部；单只≈深蹲的 25%', 'squat', 0.25, 2],
     ['T3', '卷腹', '核心·屈曲', '自重', '腹直肌；以体重做次数', 'squat', 0, 0],
     ['T3', '悬垂举腿', '核心·屈髋', '自重', '下腹与髋屈肌；以体重做次数', 'squat', 0, 0]
   ].map(function (r) { return { tier: r[0], name: r[1], part: r[2], equip: r[3], desc: r[4], base: r[5], ratio: r[6], inc: r[7] }; });
@@ -1148,8 +1156,28 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     for (var i = 0; i < LIB.length; i++) if (LIB[i].name === name) return LIB[i];
     return null;
   }
-  var PARTS = ['下肢·蹲', '下肢·髋铰链', '下肢·髋伸', '下肢·屈膝', '下肢·伸膝', '下肢·单腿', '上肢·水平推', '上肢·垂直推', '上肢·水平拉', '上肢·垂直拉',
-    '上肢·屈肘', '上肢·伸肘', '肩·中束', '肩·后束', '核心', '其他'];
+  var PARTS = ['下肢·蹲', '下肢·髋铰链', '下肢·髋伸', '下肢·屈膝', '下肢·伸膝', '下肢·单腿', '下肢·踝', '下肢·髋外展',
+    '上肢·水平推', '上肢·水平内收', '上肢·垂直推', '上肢·水平拉', '上肢·垂直拉', '上肢·屈肘', '上肢·伸肘',
+    '肩·中束', '肩·后束', '肩·斜方', '下背·伸髋', '核心·屈曲', '核心·屈髋', '核心', '其他'];
+  /** 动作库的筛选模式。部位仍保留，用来在同一个模式里再收窄。 */
+  var PATTERNS = [
+    { id: 'squat', label: '蹲', parts: ['下肢·蹲', '下肢·单腿'] },
+    { id: 'hinge', label: '髋铰链', parts: ['下肢·髋铰链', '下肢·髋伸', '下背·伸髋'] },
+    { id: 'legs', label: '腿部孤立', parts: ['下肢·屈膝', '下肢·伸膝', '下肢·踝', '下肢·髋外展'] },
+    { id: 'hpush', label: '水平推', parts: ['上肢·水平推', '上肢·水平内收'] },
+    { id: 'vpush', label: '垂直推', parts: ['上肢·垂直推'] },
+    { id: 'hpull', label: '水平拉', parts: ['上肢·水平拉'] },
+    { id: 'vpull', label: '垂直拉', parts: ['上肢·垂直拉'] },
+    { id: 'arm', label: '手臂', parts: ['上肢·屈肘', '上肢·伸肘'] },
+    { id: 'shoulder', label: '肩', parts: ['肩·中束', '肩·后束', '肩·斜方'] },
+    { id: 'core', label: '核心', parts: ['核心·屈曲', '核心·屈髋', '核心'] },
+    { id: 'other', label: '其他', parts: ['其他'] }
+  ];
+  function patternOfPart(part) {
+    for (var i = 0; i < PATTERNS.length; i++) if (PATTERNS[i].parts.indexOf(part) >= 0) return PATTERNS[i];
+    return PATTERNS[PATTERNS.length - 1];
+  }
+  function stampLib(x) { if (x && !x.pattern) x.pattern = patternOfPart(x.part).id; return x; }
   var EQUIPS = ['杠铃', '哑铃', '自重', '负重', '器械'];
   // 器械类别说明（显示在动作库顶部与标签 tooltip）
   var EQUIP_NOTE = {
@@ -1178,7 +1206,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   // 动作库 = 内置 + 自定义
   function libAll(db) {
     var custom = (db && db.customLib) || [];
-    return custom.map(function (x) { return Object.assign({ custom: true }, x); }).concat(LIB);
+    return custom.map(function (x) { return stampLib(Object.assign({ custom: true }, x)); }).concat(LIB.map(stampLib));
+  }
+  function libUnique(db) {
+    var seen = {}, out = [];
+    libAll(db).forEach(function (x) { if (seen[x.name]) return; seen[x.name] = 1; out.push(x); });
+    return out;
   }
   function libFindIn(db, name) {
     var all = libAll(db);
@@ -1187,14 +1220,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function addCustomEx(db, ex) {
     var name = String(ex.name || '').trim();
-    if ((ex.tier || 'T3') === 'T1') return 'T1 严格限定为深蹲、卧推、硬拉、实力推四大项，不能添加自定义动作';
     if (!name) return '请填写动作名称';
     if (name.length > 16) return '名称最多 16 个字';
     if (libFindIn(db, name)) return '动作库里已有「' + name + '」';
     db.customLib = db.customLib || [];
-    var eq = normEquip(ex.equip);
+    var eq = normEquip(ex.equip), part = ex.part || '其他';
     var d0 = DEF_PROFILE[eq] || DEF_PROFILE['杠铃'];
-    db.customLib.unshift({ tier: ex.tier || 'T3', name: name, part: ex.part || '其他', equip: eq, desc: String(ex.desc || '').trim() || '自定义动作',
+    db.customLib.unshift({ name: name, part: part, pattern: patternOfPart(part).id, equip: eq, desc: String(ex.desc || '').trim() || '自定义动作',
       base: ex.base || d0.base, ratio: ex.ratio !== undefined ? ex.ratio : d0.ratio, inc: ex.inc !== undefined ? ex.inc : d0.inc });
     return '';
   }
@@ -1212,41 +1244,40 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function fixed(v) { return { type: 'fixed', value: v }; }
 
   /**
-   * GZCLP 四天模板（扩展容量版，每天 1×T1 + 2×T2 + 2×T3）
-   * 设计原则：
-   *  - T1 四大项不变：A1 深蹲 / B1 实力推 / A2 卧推 / B2 硬拉
-   *  - 每个 T2/T3 动作在整套计划里唯一，不跨天重复（避免同名动作出现两套独立重量，造成理解/误操作成本）
-   *  - T2 配该训练日主题的相关复合动作；T3 补齐背、肩、臂、腿等孤立肌群，保证全身均衡
-   *  - 加重按「每次练到该动作时推进」：四天轮转里每个动作每轮（每周）出现一次，所以表现为每周加重，符合 GZCLP
+   * GZCLP 四天（每天 1×T1 + 2×T2 + 2×T3）
+   *  - T1 主项：A1 深蹲 / B1 实力推 / A2 卧推 / B2 硬拉
+   *  - T2 变式：同一动作模式的复合变式，外加垂直拉、水平拉。引体、高位下拉、划船都在这里
+   *  - T3 孤立：单关节，弯举、侧平举、面拉、腿弯举、腿屈伸
+   * 每个 T2/T3 在这一轮里只出现一次。已经练过的位置从下一次训练起换成新动作，已有记录仍按当时的动作回放。
    */
   function defaultDays() {
     return [
       { id: 'A1', name: '下肢蹲主导', slots: [
         slot('A1_1', 'T1', '杠铃深蹲', pct('squat', 0.85), 't1l', false, 'squat'),
         slot('A1_2', 'T2', '前蹲', pct('squat', 0.6), 't2l'),
-        slot('A1_3', 'T2', '上斜卧推', pct('bench', 0.55), 't2u'),
-        slot('A1_4', 'T3', '高位下拉', fixed(30), 't3u', true),
-        slot('A1_5', 'T3', '俯卧腿弯举', fixed(20), 't3l', false)
+        slot('A1_3', 'T2', '高位下拉', pct('bench', 0.55), 't2u'),
+        slot('A1_4', 'T3', '坐姿腿屈伸', pct('squat', 0.35), 't3l', false),
+        slot('A1_5', 'T3', '俯卧腿弯举', pct('squat', 0.3), 't3l', false)
       ] },
       { id: 'B1', name: '垂直推主导', slots: [
         slot('B1_1', 'T1', '站姿实力推', pct('ohp', 0.85), 't1u', false, 'ohp'),
         slot('B1_2', 'T2', '坐姿哑铃推肩', pct('ohp', 0.6), 't2u'),
-        slot('B1_3', 'T2', '罗马尼亚硬拉', pct('deadlift', 0.6), 't2l'),
-        slot('B1_4', 'T3', '引体向上', fixed(0), 't3u', true),
+        slot('B1_3', 'T2', '引体向上', fixed(0), 't2u', true),
+        slot('B1_4', 'T3', '面拉', fixed(15), 't3u', true),
         slot('B1_5', 'T3', '哑铃侧平举', fixed(8), 't3u', true)
       ] },
       { id: 'A2', name: '水平推主导', slots: [
         slot('A2_1', 'T1', '平板卧推', pct('bench', 0.85), 't1u', false, 'bench'),
         slot('A2_2', 'T2', '窄距卧推', pct('bench', 0.65), 't2u'),
-        slot('A2_3', 'T2', '杠铃深蹲', pct('squat', 0.7), 't2l'),
+        slot('A2_3', 'T2', '箱式深蹲', pct('squat', 0.65), 't2l'),
         slot('A2_4', 'T3', '杠铃弯举', fixed(20), 't3u', true),
-        slot('A2_5', 'T3', '绳索三头屈伸', pct('bench', 0.5), 't3u', true)
+        slot('A2_5', 'T3', '绳索三头屈伸', pct('bench', 0.25), 't3u', true)
       ] },
-      { id: 'B2', name: '水平拉主导', slots: [
+      { id: 'B2', name: '髋铰链主导', slots: [
         slot('B2_1', 'T1', '传统硬拉', pct('deadlift', 0.85), 't1l', false, 'deadlift'),
-        slot('B2_2', 'T2', '潘德雷划船', pct('deadlift', 0.55), 't2u'),
-        slot('B2_3', 'T2', '坐姿划船', fixed(35), 't2u'),
-        slot('B2_4', 'T3', '面拉', fixed(15), 't3u', true),
+        slot('B2_2', 'T2', '潘德雷划船', pct('bench', 0.55), 't2u'),
+        slot('B2_3', 'T2', '罗马尼亚硬拉', pct('deadlift', 0.6), 't2l'),
+        slot('B2_4', 'T3', '坐姿腿弯举', pct('squat', 0.3), 't3l', false),
         slot('B2_5', 'T3', '哑铃弯举', fixed(12), 't3u', true)
       ] }
     ];
@@ -1289,6 +1320,53 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return { version: VERSION, daysVersion: DAYS_VERSION, params: defaultParams(), days: defaultDays(), records: withSeed === false ? [] : excelSeedRecords() };
   }
 
+  /** 升级模板前，记下每个动作下一次该用的重量，换槽位时带着走。 */
+  function nextExerciseWeights(db) {
+    var map = {};
+    var rp = replay(db);
+    db.days.forEach(function (d) {
+      var wk = (rp.counts[d.id] || 0) + 1;
+      d.slots.forEach(function (s) {
+        var ef = effectiveSlot(db, s, wk, rp.hist);
+        map[ef.slot.name] = startState(s, rp.states[s.id], ef, wk, progressionOf(db, s)).weight;
+      });
+    });
+    return map;
+  }
+  /** 把一套 GZCLP 训练日对齐到当前模板。练过的槽位不改历史动作名，只从下一次训练起更换。 */
+  function applyGzclpTemplate(db, days, pid, weightMap) {
+    var fresh = defaultDays(), counts = {};
+    (db.records || []).forEach(function (r) {
+      if (recPid(r) !== pid || !r.day) return;
+      counts[r.day] = (counts[r.day] || 0) + 1;
+    });
+    days.forEach(function (d) {
+      var nd = fresh.filter(function (x) { return x.id === d.id; })[0];
+      if (!nd) return;
+      if (nd.name) d.name = nd.name;
+      d.slots.forEach(function (s) {
+        if (s.changes && s.changes.length) return;
+        var ns = nd.slots.filter(function (x) { return x.id === s.id; })[0];
+        if (!ns) return;
+        if (ns.name === s.name) {
+          s.tier = ns.tier; s.step = ns.step; s.roundProg = ns.roundProg;
+          return;
+        }
+        var done = counts[d.id] || 0;
+        if (!done) {
+          s.name = ns.name; s.equip = ns.equip; s.tier = ns.tier;
+          s.init = ns.init; s.step = ns.step; s.roundProg = ns.roundProg; s.lift = ns.lift;
+          if (weightMap && weightMap[ns.name] !== undefined && !isNaN(Number(weightMap[ns.name]))) s.init = { type: 'fixed', value: Number(weightMap[ns.name]) };
+          return;
+        }
+        s.tier = ns.tier; s.step = ns.step; s.roundProg = ns.roundProg;
+        var w = weightMap && weightMap[ns.name];
+        if (w === undefined || w === null || isNaN(Number(w))) w = initWeight(ns, db.params);
+        s.changes = [{ fromWeek: done + 1, name: ns.name, equip: ns.equip, weight: Number(w), tier: ns.tier, step: ns.step }];
+      });
+    });
+  }
+
   function normalize(db) {
     if (!db || !db.params || !db.days) return defaults(true);
     var p = defaultParams();
@@ -1318,20 +1396,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     db.days.forEach(function (d) { d.slots.forEach(function (s) { s.equip = equipOf(s.name, s.equip); }); });
     // 最近一次填写体重时，自动作为负重动作的推算体重
     sortRecords(db.records).forEach(function (r) { if (Number(r.bw) > 0) db.params.bodyWeight = Number(r.bw); });
-    // 动作库刷新迁移：把未被用户永久更换过（无 changes）的 T2/T3 槽位同步为最新默认动作，
-    // 保留用户已手动更换的槽位；T1 四大项默认不变。记录按槽位 ID 存储，不受动作名变化影响。
+    // 模板升级：未手动更换的槽位对齐最新编排。已经练过的位置保留原动作名，从下一次训练起换成新动作，避免把旧记录回放成另一个动作。
     if (db.daysVersion !== DAYS_VERSION) {
-      var fresh = defaultDays();
-      db.days.forEach(function (d) {
-        var nd = fresh.filter(function (x) { return x.id === d.id; })[0];
-        if (!nd) return;
-        d.slots.forEach(function (s) {
-          if (s.changes && s.changes.length) return; // 用户已永久更换，保留
-          var ns = nd.slots.filter(function (x) { return x.id === s.id; })[0];
-          if (!ns) return;
-          s.name = ns.name; s.equip = ns.equip; s.tier = ns.tier;
-          s.init = ns.init; s.step = ns.step; s.roundProg = ns.roundProg; s.lift = ns.lift;
-        });
+      var carried = nextExerciseWeights(db);
+      applyGzclpTemplate(db, db.days, activePid(db), carried);
+      (db.programs || []).forEach(function (p) {
+        if (!p.snap || !p.snap.days || p.progression !== 'gzclp') return;
+        applyGzclpTemplate(db, p.snap.days, p.id, carried);
+        p.snap.daysVersion = DAYS_VERSION;
       });
       db.daysVersion = DAYS_VERSION;
     }
@@ -2006,32 +2078,34 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    *     有利于肌肉各区域均衡增长与最大力量，而随意、过于频繁的轮换反而有害；Fonseca 2014（JSCR 28:3085）
    *     显示轮换动作组股四头肌四个头都增长、且深蹲 1RM 提升最大。所以：一轮内固定，换轮才换，不做每次随机。
    *  3. 同一位置只在「同一动作模式 / 同一目标肌群」的候选池里轮换，保证每周推、拉、蹲、髋铰链的比例与训练量不变。
-   *  4. 不与上一轮重复；优先选最久没练过的动作（最近最少使用），同一轮内每个动作只出现一次。
+   *  4. 每个位置按候选池的顺序轮换：第二轮用下一个，第三轮再下一个，用完回到第一个。
+   *     不与该位置上一轮重复；同一轮内每个动作只出现一次。不按「全局最久没用」来抢别的位置刚练过的动作。
    *  5. 候选池优先纳入「拉长位」动作（坐姿腿弯举 Maeo 2021、过头臂屈伸 Maeo 2023），其增肌效果有直接 MRI 证据。
    */
   var ROTATION = {
     A1_2: { role: '深蹲变式', why: '保持「蹲」模式，变换杠位与躯干角度，补强 T1 深蹲的薄弱环节', pool: ['前蹲', '泽奇深蹲', '箱式深蹲'] },
-    A2_3: { role: '深蹲（次主项）', why: '支援深蹲主项；在迁移度较高的杠铃深蹲变式间切换', pool: ['杠铃深蹲', '箱式深蹲', '前蹲', '泽奇深蹲'] },
-    A1_3: { role: '上斜推', why: '上胸与三角肌前束；杠铃与哑铃交替，兼顾负荷与活动范围', pool: ['上斜卧推', '上斜哑铃卧推', '哑铃卧推'] },
-    A2_2: { role: '卧推变式', why: '针对卧推锁定段（窄距/臂屈伸练三头）与触胸段（暂停）', pool: ['窄距卧推', '暂停卧推', '负重双杠臂屈伸', '哑铃卧推'] },
+    A2_3: { role: '深蹲变式', why: '另一天再练一次蹲。顺序和 A1 错开，同一轮不会两个位置做同一个变式', pool: ['箱式深蹲', '腿举', '哈克深蹲', '泽奇深蹲'] },
+    A1_3: { role: '垂直拉', why: '高位下拉是复合动作，三轮依次换握法，不进孤立组', pool: ['高位下拉', '对握高位下拉', '反握高位下拉'] },
+    A2_2: { role: '卧推变式', why: '窄距、暂停、上斜和臂屈伸，分别补锁定段、触胸段和上胸', pool: ['窄距卧推', '暂停卧推', '上斜卧推', '上斜哑铃卧推', '负重双杠臂屈伸', '哑铃卧推'] },
     B1_2: { role: '垂直推', why: '支援站姿实力推；哑铃与杠铃交替改善左右力量平衡', pool: ['坐姿哑铃推肩', '杠铃推举', '阿诺德推举'] },
-    B1_3: { role: '髋铰链', why: '支援硬拉的后链：腘绳肌、臀大肌、竖脊肌', pool: ['罗马尼亚硬拉', '赤字硬拉', '杠铃早安式', '臀推'] },
-    B2_2: { role: '水平拉', why: '背部厚度，平衡卧推带来的推拉比例', pool: ['潘德雷划船', '杠铃划船', 'T杠划船'] },
-    B2_3: { role: '背部容量', why: '水平拉与垂直拉交替，覆盖背阔不同纤维走向', pool: ['坐姿划船', '单臂哑铃划船', '负重引体向上', 'T杠划船'] },
-    A1_4: { role: '垂直拉', why: '背阔宽度；改变握法以分散肘关节负担', pool: ['高位下拉', '对握高位下拉', '直臂下压'] },
-    B1_4: { role: '垂直拉（自重）', why: '自重拉力；正握、反握与器械下拉交替', pool: ['引体向上', '反握引体向上', '对握高位下拉', '高位下拉'] },
-    A1_5: { role: '腘绳肌', why: '屈膝动作在俯卧与坐姿间交替；坐姿（拉长位）增肌更优（Maeo 2021）', pool: ['俯卧腿弯举', '坐姿腿弯举', '山羊挺身'] },
+    B1_3: { role: '垂直拉', why: '引体向上是复合动作，作为垂直拉的变式放在 T2', pool: ['引体向上', '反握引体向上', '负重引体向上'] },
+    B2_2: { role: '水平拉', why: '划船是复合动作，平衡卧推带来的推拉比例', pool: ['潘德雷划船', '杠铃划船', 'T杠划船', '坐姿划船', '单臂哑铃划船'] },
+    B2_3: { role: '髋铰链', why: '硬拉的变式：腘绳肌、臀大肌、竖脊肌', pool: ['罗马尼亚硬拉', '赤字硬拉', '杠铃早安式', '臀推', '山羊挺身'] },
+    A1_4: { role: '股四头', why: '单关节伸膝。第一轮双侧，第二轮单侧，之后交替', pool: ['坐姿腿屈伸', '单腿腿屈伸'] },
+    B1_4: { role: '后束 / 肩袖', why: '平衡大量推类动作，维护肩关节', pool: ['面拉', '反向飞鸟'] },
+    A1_5: { role: '腘绳肌', why: '屈膝孤立；坐姿（拉长位）增肌更优（Maeo 2021）', pool: ['俯卧腿弯举', '坐姿腿弯举'] },
     B1_5: { role: '三角肌中束', why: '哑铃与绳索交替：绳索在动作底部仍保持张力', pool: ['哑铃侧平举', '绳索侧平举'] },
     A2_4: { role: '肱二头', why: '改变握法与肩位：锤式练肱桡肌，上斜位拉长二头长头', pool: ['杠铃弯举', 'EZ杆弯举', '锤式弯举', '上斜哑铃弯举'] },
     B2_5: { role: '肱二头', why: '与 A2 的二头动作错开，每轮两种不同刺激', pool: ['哑铃弯举', '上斜哑铃弯举', '锤式弯举', 'EZ杆弯举'] },
-    A2_5: { role: '肱三头', why: '过头位拉长三头长头，增肌优于下压（Maeo 2023）', pool: ['绳索三头屈伸', '过头绳索臂屈伸', '仰卧臂屈伸'] }, // 绳索下压与绳索三头屈伸同属下压，刺激重复，不入池,
-    B2_4: { role: '后束 / 肩袖', why: '平衡大量推类动作，维护肩关节健康', pool: ['面拉', '反向飞鸟'] }
+    A2_5: { role: '肱三头', why: '过头位拉长三头长头，增肌优于下压（Maeo 2023）', pool: ['绳索三头屈伸', '过头绳索臂屈伸', '仰卧臂屈伸'] },
+    B2_4: { role: '腘绳肌', why: '和 A1 的腿弯举错开，俯卧与坐姿交替', pool: ['坐姿腿弯举', '俯卧腿弯举'] }
   };
   var ROTATION_PRINCIPLES = [
+    { t: 'T1 主项，T2 变式，T3 孤立', d: 'T1 只放深蹲、卧推、硬拉、实力推。T2 放这些主项的变式，以及引体、下拉、划船这类复合动作。T3 只放单关节孤立，例如弯举、侧平举、面拉、腿弯举。' },
     { t: 'T1 四大项不轮换', d: '力量具有专项性（SAID 原则），深蹲、卧推、硬拉、实力推需要持续重复练习才能进步。' },
     { t: 'T2/T3 每轮换一次，一轮内固定', d: '系统综述显示：有计划的动作变化有利于肌肉均衡增长和最大力量，随意、过于频繁地换动作反而有害（Kassiano 等 2022，JSCR）。轮换动作组股四头肌四个头都增长、深蹲 1RM 提升最大（Fonseca 2014，JSCR）。' },
-    { t: '同一位置只在同一动作模式内轮换', d: '每个位置都有固定的「角色」（如深蹲变式、髋铰链、垂直拉），保证每周推/拉/蹲/髋铰链的比例与训练量不变。' },
-    { t: '不重复上一轮，优先最久没练的', d: '同一位置不会连续两轮用同一个动作；同一轮内每个动作只出现一次；候选里优先选最久没练过的。' },
+    { t: '同一位置只在同一动作模式内轮换', d: '每个位置都有固定的角色（如深蹲变式、垂直拉、腘绳肌），保证每周推、拉、蹲、髋铰链的比例不变。' },
+    { t: '按顺序轮换，第二轮、第三轮照同一分层', d: '每个位置的候选就是它的轮换顺序：第二轮用下一个，第三轮再下一个，用完回到第一个。不和上一轮相同，也不和本轮其他位置重复。T2 始终是复合变式，T3 始终是孤立。' },
     { t: '优先纳入拉长位动作', d: '坐姿腿弯举比俯卧腿弯举、过头臂屈伸比下压有更多肌肉增长（Maeo 2021 MSSE；Maeo 2023 EJSS，MRI 测量）。' },
     { t: '新动作重新进阶', d: 'T2 从 3×10、T3 从 3×15+ 开始；起始重量取「按当前估算 1RM 推算」与「该动作上次重量 × 90%」中较大者。' }
   ];
@@ -2041,7 +2115,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var def = ROTATION[s.id], pool = def ? def.pool.slice() : [];
     var first = libFindIn(db, pool[0] || s.name), part = first ? first.part : '';
     if (!def && part) libAll(db).forEach(function (x) { if (x.tier === s.tier && x.part === part && pool.indexOf(x.name) < 0) pool.push(x.name); });
-    ((db && db.customLib) || []).forEach(function (x) { if (x.tier === s.tier && part && x.part === part && pool.indexOf(x.name) < 0) pool.push(x.name); });
+    ((db && db.customLib) || []).forEach(function (x) {
+      if (!part || x.part !== part || pool.indexOf(x.name) >= 0) return;
+      if (!x.tier || x.tier === s.tier) pool.push(x.name);
+    });
     return pool.filter(function (n) { return !!libFindIn(db, n); });
   }
   // 槽位编排顺序：先 T2 后 T3（T2 候选少、约束多，先排），同层按训练日顺序
@@ -2061,29 +2138,29 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    * 纯函数（只看动作配置，不看训练记录），所以未来任意一轮都能提前预览。
    */
   function planCycles(db, upto) {
-    var P = db.params, N = cycleLen(P), slots = rotationSlots(db), lastUse = {}, planned = [null], actual = [null];
+    var P = db.params, N = cycleLen(P), slots = rotationSlots(db), planned = [null], actual = [null];
     for (var k = 1; k <= upto; k++) {
-      var start = cycleStartWeek(k, P), end = start + N - 1, pl = {}, act = {}, used = {}, prev = actual[k - 1], prevSet = {};
-      if (prev) Object.keys(prev).forEach(function (id) { prevSet[prev[id]] = 1; });
+      var start = cycleStartWeek(k, P), end = start + N - 1, pl = {}, act = {}, used = {}, prev = actual[k - 1];
       slots.forEach(function (s) {
         var name;
         if (k === 1 || !rotationOn(P, s)) {
           var c0 = latestChange(s, 1, k === 1 ? end : start - 1);
           name = c0 ? c0.name : s.name;
         } else {
-          var pool = rotationPool(db, s), prevName = prev[s.id];
-          var cands = pool.filter(function (n) { return n !== prevName && !used[n]; });
-          var fresh = cands.filter(function (n) { return !prevSet[n]; });
-          var list = fresh.length ? fresh : cands;
-          list.sort(function (x, y) { return ((lastUse[x] || 0) - (lastUse[y] || 0)) || (pool.indexOf(x) - pool.indexOf(y)); });
-          name = list.length ? list[0] : prevName;
+          var pool = rotationPool(db, s), prevName = prev[s.id], at = pool.indexOf(prevName);
+          name = prevName;
+          for (var i = 1; i <= pool.length; i++) {
+            var n = pool[at < 0 ? i - 1 : (at + i) % pool.length];
+            if (!n || n === prevName || used[n]) continue;
+            name = n;
+            break;
+          }
         }
         pl[s.id] = name;
         var inCyc = latestChange(s, k === 1 ? 1 : start, end);
         act[s.id] = inCyc ? inCyc.name : name;
         used[act[s.id]] = 1;
       });
-      Object.keys(act).forEach(function (id) { lastUse[act[id]] = k; });
       planned.push(pl); actual.push(act);
     }
     return { planned: planned, actual: actual };
@@ -2114,7 +2191,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (auto && (!ch || ch.fromWeek < auto.fromWeek)) ch = auto;
     if (!ch) return { slot: s, change: null, resetNow: false };
     var lib = libFindIn(db, ch.name);
-    return { slot: Object.assign({}, s, { name: ch.name, equip: ch.equip || (lib ? lib.equip : '') }), change: ch, resetNow: ch.fromWeek === week, auto: !!ch.auto };
+    var slot = Object.assign({}, s, { name: ch.name, equip: ch.equip || (lib ? lib.equip : '') });
+    if (ch.tier) slot.tier = ch.tier;
+    if (ch.step) slot.step = ch.step;
+    return { slot: slot, change: ch, resetNow: ch.fromWeek === week, auto: !!ch.auto };
   }
   /**
    * 某训练日第 week 次开练时的起始状态：
@@ -2123,7 +2203,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    */
   function startState(s, st, ef, week, prog) {
     prog = prog || PROGRESSIONS.gzclp;
-    var out = ef.resetNow ? prog.freshState(s, ef.change.weight) : st;
+    var out = ef.resetNow ? prog.freshState(ef.slot, ef.change.weight) : st;
     var adj = null;
     (s.adjusts || []).forEach(function (a) { if (a.fromWeek === week) adj = a; });
     if (adj) out = Object.assign({}, out, { weight: adj.weight });
@@ -2341,7 +2421,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var maxDoneWeek = Math.max.apply(null, [0].concat(db.days.map(function (d) { return rp.counts[d.id] || 0; })));
     var curCycle = cycleOf(rec.week, P).cycle;
     var dataCycle = cycleOf(Math.max(maxDoneWeek, 1), P).cycle;
-    var maxCycle = Math.max(curCycle, dataCycle) + 1; // 允许向后预览一轮
+    var maxCycle = Math.max(curCycle, dataCycle) + 2; // 向后可看第二轮、第三轮
     var cycle = Math.min(Math.max(opts.cycle || curCycle, 1), maxCycle);
     var base = cycleStartWeek(cycle, P);
     var rows = [];
@@ -2658,7 +2738,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
     if (!s) return null;
     var lib = libFindIn(db, name);
-    if (s.tier === 'T1' && (!lib || lib.tier !== 'T1')) return { error: 'T1 严格限定四大项，不能更换为其他动作' };
+    if (progressionOf(db, s).id === 'gzclp' && s.tier === 'T1' && (!lib || ['杠铃深蹲', '传统硬拉', '平板卧推', '站姿实力推'].indexOf(name) < 0)) return { error: '主项只在深蹲、卧推、硬拉、实力推之间更换' };
     var rp = replay(db), fromWeek = (rp.counts[dayId] || 0) + 1;
     var w = weight === null || weight === undefined || weight === '' || isNaN(Number(weight)) ? null : fix(Number(weight));
     s.changes = (s.changes || []).filter(function (c) { return c.fromWeek < fromWeek; });
@@ -2704,36 +2784,108 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (!s) return null;
     var vm = buildTrain(db, { day: dayId }), it = vm.items.filter(function (x) { return x.slotId === slotId; })[0];
     var fromWeek = (rp.counts[dayId] || 0) + 1, roundWeek = roundInfo(db, rp).week;
-    var cyc = cycleOf(fromWeek, P).cycle, plan = planCycles(db, cyc + 1), def = ROTATION[s.id];
+    var cyc = cycleOf(fromWeek, P).cycle, plan = planCycles(db, cyc + 1), cat = slotCategory(db, s, it.name);
     return { dayId: dayId, dayName: d.name, slotId: slotId, tier: s.tier, name: it.name, equip: it.equip, unitText: it.unitText,
       weight: it.weight, weightText: it.weightText, repsText: it.repsText, stage: it.stage, canAdjust: it.canAdjust, wStep: it.wStep,
-      role: s.tier === 'T1' ? '主项' : def ? def.role : '', why: def ? def.why : '',
-      rotTier: s.tier !== 'T1', autoRotate: P.autoRotate !== false, locked: !!s.noRotate,
+      role: cat.label, why: cat.hint, category: cat,
+      rotTier: progressionOf(db, s).id === 'gzclp' && s.tier !== 'T1', autoRotate: P.autoRotate !== false, locked: !!s.noRotate,
       nextCycle: cyc + 1, nextName: s.tier === 'T1' ? '' : plan.actual[cyc + 1][s.id],
       fromWeek: fromWeek, when: fromWeek === roundWeek ? '本周' : '下周', weekText: weekText(fromWeek, P),
       adjusted: (s.adjusts || []).some(function (a) { return a.fromWeek === fromWeek; }) };
   }
-  /** 动作库列表（更换弹层 / 动作库页面共用） */
+  /** 这个槽位在当前计划里的分类。动作库本身不再使用 T1/T2/T3。 */
+  function slotCategory(db, slot, name) {
+    var prog = progressionOf(db, slot), ex = libFindIn(db, name || slot.name), part = ex ? ex.part : '';
+    var rot = ROTATION[slot.id];
+    if (prog.id === 'gzclp') {
+      if (slot.tier === 'T1') return { key: 'main', label: '主项', hint: '只在深蹲、卧推、硬拉、实力推之间换。', names: ['杠铃深蹲', '传统硬拉', '平板卧推', '站姿实力推'], part: part, locked: true };
+      if (rot) {
+        var head = libFindIn(db, rot.pool[0]);
+        return { key: slot.id, label: rot.role, hint: rot.why, names: rot.pool.slice(), part: head ? head.part : part, locked: false };
+      }
+      return { key: roleOf(slot.tier), label: ROLE_NAME[roleOf(slot.tier)] || '动作', hint: '', names: null, part: part, locked: false };
+    }
+    var label = prog.id === 'fixed' ? 'BBB' : (prog.id === 'w531' || prog.id === 'linear' ? '主项' : (ROLE_NAME[roleOf(slot.tier)] || '动作'));
+    var hint = prog.id === 'fixed' ? '同一主动作的固定容量。' : prog.id === 'w531' ? '百分比波浪的主项。' : prog.id === 'linear' ? '完成规定次数就加重。' : '全部做到区间上限才加重。';
+    return { key: prog.id + ':' + label, label: label, hint: hint, names: (prog.id === 'fixed' || prog.id === 'w531') ? [name || slot.name] : null, part: part, locked: false };
+  }
+  function libRow(db, x, cur, tierHint) {
+    var rc = recommendWeight(db, x.name, tierHint || x.tier || 'T3', { preferLast: false });
+    var pat = patternOfPart(x.part);
+    return { name: x.name, tier: x.tier || '', pattern: pat.id, patternLabel: pat.label, part: x.part, equip: x.equip, desc: x.desc, custom: !!x.custom, current: x.name === cur,
+      last: '', rec: rc.text, recUnit: rc.unit, recNote: rc.note, isBW: x.equip === '自重' };
+  }
+  function matchQuery(x, q) {
+    if (!q) return true;
+    return x.name.indexOf(q) >= 0 || (x.part || '').indexOf(q) >= 0 || (x.equip || '').indexOf(q) >= 0 || patternOfPart(x.part).label.indexOf(q) >= 0 || (x.desc || '').indexOf(q) >= 0;
+  }
+  function inPlanCategory(x, cat, fit) {
+    if (!cat) return true;
+    if (cat.locked) return (cat.names || []).indexOf(x.name) >= 0;
+    if (fit === 'all') return true;
+    if (fit === 'part') return !!cat.part && x.part === cat.part;
+    if (cat.names && cat.names.indexOf(x.name) >= 0) return true;
+    if (x.custom && cat.part && x.part === cat.part) return true;
+    return !cat.names && !!cat.part && x.part === cat.part;
+  }
+  /** 动作库列表。传 tier 时保持旧的 T1/T2/T3 切页（小程序）；网页动作库用 catalog，计划内更换用 category。 */
   function buildLibrary(db, opts) {
     opts = opts || {};
-    var tier = opts.tier || 'T1', q = String(opts.q || '').trim(), cur = opts.current || '', lastW = lastWeights(replay(db));
-    var counts = { T1: 0, T2: 0, T3: 0 };
-    var all = libAll(db);
-    all.forEach(function (x) { counts[x.tier] = (counts[x.tier] || 0) + 1; });
+    var q = String(opts.q || '').trim(), cur = opts.current || '', lastW = lastWeights(replay(db));
+    if (!opts.catalog && !opts.category) {
+      var tier = opts.tier || 'T1';
+      var counts = { T1: 0, T2: 0, T3: 0 };
+      var allTier = libAll(db);
+      allTier.forEach(function (x) { if (x.tier) counts[x.tier] = (counts[x.tier] || 0) + 1; });
+      var list0 = allTier.filter(function (x) {
+        if (tier === 'T1' && x.tier !== 'T1') return false;
+        if (q) return x.name.indexOf(q) >= 0 || (x.part || '').indexOf(q) >= 0 || (x.equip || '').indexOf(q) >= 0;
+        return x.tier === tier;
+      }).map(function (x) {
+        var row = libRow(db, x, cur, x.tier);
+        row.last = lastW[x.name] !== undefined ? fmtW(lastW[x.name]) : '';
+        return row;
+      });
+      var eqCount = {}; EQUIPS.forEach(function (e) { eqCount[e] = 0; });
+      allTier.filter(function (x) { return x.tier === tier; }).forEach(function (x) { eqCount[x.equip] = (eqCount[x.equip] || 0) + 1; });
+      return { tier: tier, q: q, list: list0, counts: counts, equipCounts: EQUIPS.map(function (e) { return { id: e, n: eqCount[e] || 0 }; }), tiers: ['T1', 'T2', 'T3'].map(function (t) { return { id: t, n: counts[t] || 0 }; }),
+        customCount: ((db && db.customLib) || []).length };
+    }
+    var all = libUnique(db), cat = opts.category || null, fit = opts.fit || 'plan';
+    var pattern = opts.pattern || '', part = opts.part || '', equip = opts.equip || '';
     var list = all.filter(function (x) {
-      // T1 是安全边界：即使搜索也不能跨层级混入非四大项；T2/T3 搜索仍可跨层查找替代动作
-      if (tier === 'T1' && x.tier !== 'T1') return false;
-      if (q) return x.name.indexOf(q) >= 0 || (x.part || '').indexOf(q) >= 0 || (x.equip || '').indexOf(q) >= 0;
-      return x.tier === tier;
+      if (cat) return inPlanCategory(x, cat, fit) && matchQuery(x, q);
+      if (pattern && patternOfPart(x.part).id !== pattern) return false;
+      if (part && x.part !== part) return false;
+      if (equip && x.equip !== equip) return false;
+      return matchQuery(x, q);
     }).map(function (x) {
-      var rc = recommendWeight(db, x.name, x.tier, { preferLast: false });
-      return { name: x.name, tier: x.tier, part: x.part, equip: x.equip, desc: x.desc, custom: !!x.custom, current: x.name === cur,
-        last: lastW[x.name] !== undefined ? fmtW(lastW[x.name]) : '',
-        rec: rc.text, recUnit: rc.unit, recNote: rc.note, isBW: x.equip === '自重' };
+      var row = libRow(db, x, cur, cat && cat.locked ? 'T1' : (x.tier || 'T3'));
+      row.last = lastW[x.name] !== undefined ? fmtW(lastW[x.name]) : '';
+      return row;
     });
-    var eqCount = {}; EQUIPS.forEach(function (e) { eqCount[e] = 0; });
-    all.filter(function (x) { return x.tier === tier; }).forEach(function (x) { eqCount[x.equip] = (eqCount[x.equip] || 0) + 1; });
-    return { tier: tier, q: q, list: list, counts: counts, equipCounts: EQUIPS.map(function (e) { return { id: e, n: eqCount[e] || 0 }; }), tiers: ['T1', 'T2', 'T3'].map(function (t) { return { id: t, n: counts[t] }; }),
+    if (cat && cat.names) {
+      list.sort(function (a, b) {
+        var ia = cat.names.indexOf(a.name), ib = cat.names.indexOf(b.name);
+        if (ia < 0 && ib < 0) return a.name < b.name ? -1 : 1;
+        if (ia < 0) return 1;
+        if (ib < 0) return -1;
+        return ia - ib;
+      });
+    }
+    var pCount = {}, partCount = {}, eCount = {};
+    all.forEach(function (x) {
+      var pid = patternOfPart(x.part).id;
+      pCount[pid] = (pCount[pid] || 0) + 1;
+      if (!pattern || pid === pattern) partCount[x.part] = (partCount[x.part] || 0) + 1;
+      if ((!pattern || pid === pattern) && (!part || x.part === part)) eCount[x.equip] = (eCount[x.equip] || 0) + 1;
+    });
+    var partIds = pattern ? (PATTERNS.filter(function (p) { return p.id === pattern; })[0] || { parts: [] }).parts : Object.keys(partCount);
+    var parts = [];
+    partIds.forEach(function (id) { if (partCount[id]) parts.push({ id: id, label: id, n: partCount[id] }); });
+    return { q: q, list: list, category: cat, fit: fit,
+      patterns: PATTERNS.filter(function (p) { return pCount[p.id]; }).map(function (p) { return { id: p.id, label: p.label, n: pCount[p.id] }; }),
+      parts: parts, equips: EQUIPS.filter(function (e) { return eCount[e]; }).map(function (e) { return { id: e, n: eCount[e] }; }),
       customCount: ((db && db.customLib) || []).length };
   }
   /** 某槽位“下一次”的更换上下文（弹层用） */
@@ -2742,7 +2894,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     d.slots.forEach(function (x) { if (x.id === slotId) s = x; });
     var rp = replay(db), wk = (rp.counts[dayId] || 0) + 1, ef = effectiveSlot(db, s, wk, rp.hist), lastW = lastWeights(rp);
     var curW = startState(s, rp.states[s.id], ef, wk, progressionOf(db)).weight;
-    return { rotates: rotationOn(db.params, s), dayId: dayId, slotId: slotId, tier: s.tier, name: ef.slot.name, week: wk, weight: curW, weightText: fmtW(curW), lastW: lastW, base: wk === 1 };
+    var cat = slotCategory(db, s, ef.slot.name);
+    return { rotates: rotationOn(db.params, s), dayId: dayId, slotId: slotId, tier: s.tier, name: ef.slot.name, week: wk, weight: curW, weightText: fmtW(curW), lastW: lastW, base: wk === 1, category: cat };
   }
 
   // ---------- 记录操作 ----------
@@ -3040,7 +3193,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     evaluate: evaluate, replay: replay, recommend: recommend, isDeloadWeek: isDeloadWeek, dayById: dayById,
     blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
     saveRecord: saveRecord, deleteRecord: deleteRecord, clearRecords: clearRecords, replaceDb: replaceDb, mergeDb: mergeDb, sameDb: sameDb, stampConfig: stampConfig, cfgPart: cfgPart, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
-    libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
+    libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, PATTERNS: PATTERNS, patternOfPart: patternOfPart, slotCategory: slotCategory, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
@@ -4374,11 +4527,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
     { id: 'review', title: '回顾' }, { id: 'settings', title: '设置' }
   ];
-  var TIER_TIP = {
-    T1: 'T1 严格限定四大项：杠铃深蹲、平板卧推、传统硬拉、站姿实力推。不能添加其他 T1 动作。',
-    T2: 'T2 次主项：中等重量，按 3×10 → 3×8 → 3×6 退阶',
-    T3: 'T3 辅助项：小重量高次数，末组达阈值加重'
-  };
   function libNames(db) {
     var m = { T1: [], T2: [], T3: [] };
     GZ.libAll(db).forEach(function (x) { if (m[x.tier].indexOf(x.name) < 0) m[x.tier].push(x.name); });
@@ -4387,16 +4535,26 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function libRows(lib, opts) {
     if (!lib.list.length) return '<div class="empty-tip">' + (opts.empty || '没有找到相关动作') + '</div>';
     return lib.list.map(function (x) {
-      var tierTag = (opts.showTier || (opts.slotTier && x.tier !== opts.slotTier)) ? '<span class="tier t-' + x.tier + ' lib-t">' + x.tier + '</span>' : '';
       var right = opts.pick
         ? (x.current ? '<span class="lib-cur">当前</span>' : '') + (opts.sel === x.name ? '<span class="lib-ck">✓</span>' : '')
         : (x.custom ? '<span class="lib-del" data-act="libdel" data-name="' + esc(x.name) + '">删除</span>' : '');
       return '<div class="cell ' + (opts.pick ? 'tap ' : '') + 'lib-row ' + (opts.sel === x.name ? 'sel' : '') + '"' + (opts.pick ? ' data-act="swappick" data-name="' + esc(x.name) + '"' : '') + '>' +
-        '<div class="flex1"><div class="lib-n">' + esc(x.name) + equipTag(x.equip) + tierTag + (x.custom ? '<span class="lib-c">自定义</span>' : '') + '</div>' +
-        '<div class="lib-s">' + esc(x.part) + (x.last ? ' · ' + (opts.pick ? '上次 ' : '最近 ') + x.last + ' ' + esc(x.recUnit) : '') + '</div>' +
+        '<div class="flex1"><div class="lib-n">' + esc(x.name) + equipTag(x.equip) + (x.custom ? '<span class="lib-c">自定义</span>' : '') + '</div>' +
+        '<div class="lib-s">' + esc(x.patternLabel || '') + (x.part ? ' · ' + esc(x.part) : '') + (x.last ? ' · ' + (opts.pick ? '上次 ' : '最近 ') + x.last + ' ' + esc(x.recUnit) : '') + '</div>' +
         (opts.pick ? '' : '<div class="lib-d">' + esc(x.desc || '') + '</div>') +
         '<div class="lib-rec">推荐 ' + esc(x.rec) + (x.recUnit === '自重' ? '' : ' ' + esc(x.recUnit)) + ' · ' + esc(x.recNote) + '</div></div>' + right + '</div>';
     }).join('');
+  }
+  function chips(items, act) {
+    return '<div class="chip-row">' + items.map(function (it) {
+      return '<div class="chip' + (it.on ? ' on' : '') + '" data-act="' + act + '" data-k="' + it.k + '" data-v="' + esc(it.id) + '">' + esc(it.label) + (it.n ? '<span class="chip-n">' + it.n + '</span>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
+  function fitChoices(cat) {
+    var items = [{ html: cat.label, on: false, data: ' data-f="plan"' }];
+    if (cat.names && cat.names.length) items.push({ html: '同模式', on: false, data: ' data-f="part"' });
+    items.push({ html: '全部', on: false, data: ' data-f="all"' });
+    return items;
   }
 
   function rawLoad() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
@@ -4587,7 +4745,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     tab: 'train',
     train: { day: null, draft: null, recordId: null, deload: undefined, date: GZ.today(), bw: '', note: '', result: null, createdAt: null },
     view: { pid: null },
-    plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '' }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', tier: 'T1', q: '', add: null }
+    plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '' }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', pattern: '', part: '', equip: '', q: '', add: null }
   };
   var rest = { show: false, left: 0, total: 0, name: '', timer: null };
 
@@ -4802,7 +4960,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'editLocked': startEdit(ds.id); return true;
       case 'openswap': openSwap(ds.slot); return true;
       case 'closeswap': t.swap.show = false; return true;
-      case 'swaptier': if (t.swap.slotTier === 'T1') return false; t.swap.tier = ds.t; return true;
+      case 'swapfit': if (t.swap.category && t.swap.category.locked) return false; t.swap.fit = ds.f; return true;
       case 'swapq': t.swap.q = el.value; updateSwapList(); return false;
       case 'swappick':
         var sw = t.swap;
@@ -4899,32 +5057,33 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function openSwap(slot) {
     var t = S.train, vm = trainVM(), it = vm.items.filter(function (x) { return x.slotId === slot; })[0];
     var ctx = GZ.swapContext(load(), t.day, slot);
-    t.swap = { show: true, slotId: slot, dayId: t.day, slotTier: it.tier, tier: it.tier, q: '', sel: '', scope: 'once', curName: it.name, planName: it.planName,
+    t.swap = { show: true, slotId: slot, dayId: t.day, category: ctx.category, fit: 'plan', q: '', sel: '', scope: 'once', curName: it.name, planName: it.planName,
       isSub: it.sub, editing: !!t.recordId, rotates: ctx.rotates, week: ctx.week, weight: ctx.weightText, ctxW: ctx.weight, lastW: ctx.lastW };
   }
-  function swapLib() { var sw = S.train.swap; return GZ.buildLibrary(load(), { tier: sw.tier, q: sw.q, current: sw.curName }); }
+  function swapLib() { var sw = S.train.swap; return GZ.buildLibrary(load(), { category: sw.category, fit: sw.fit, q: sw.q, current: sw.curName }); }
   function updateSwapList() {
     var el = document.getElementById('swapList'), sw = S.train.swap; if (!el) return;
-    el.innerHTML = '<div class="list">' + libRows(swapLib(), { pick: true, sel: sw.sel, slotTier: sw.slotTier, showTier: !!sw.q, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div>';
+    el.innerHTML = '<div class="list">' + libRows(swapLib(), { pick: true, sel: sw.sel, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div>';
     var sg = document.getElementById('swapSeg'); if (sg) sg.style.display = sw.q ? 'none' : '';
   }
   function renderSwap() {
-    var sw = S.train.swap, lib = swapLib(), h = '';
+    var sw = S.train.swap, lib = swapLib(), cat = sw.category, h = '';
     h += '<div class="mask" data-act="closeswap"><div class="sheet swap-sheet" data-stop="1"><div class="grabber"></div>' +
-      '<span class="sheet-cap">' + sw.slotTier + ' · 当前 ' + esc(sw.curName) + (sw.planName !== sw.curName ? '（原 ' + esc(sw.planName) + '）' : '') + '</span>' +
+      '<span class="sheet-cap">' + esc(cat.label) + ' · 当前 ' + esc(sw.curName) + (sw.planName !== sw.curName ? '（原 ' + esc(sw.planName) + '）' : '') + '</span>' +
       '<div class="row between"><div class="sheet-title">更换动作</div>' + (sw.isSub ? '<span class="link" data-act="swaprestore">恢复 ' + esc(sw.planName) + '</span>' : '') + '</div>' +
       '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="swapq" value="' + esc(sw.q) + '" placeholder="搜索动作、部位或器械"></div>' +
-      (sw.slotTier === 'T1'
-        ? '<div class="sec-f t1-only">T1 严格限定四大项，只能在深蹲、卧推、硬拉、实力推之间选择。</div>'
-        : '<div id="swapSeg"' + (sw.q ? ' style="display:none"' : '') + '>' + seg(lib.tiers.map(function (x) { return { html: x.id + '<span class="seg-n">' + x.n + '</span>', on: sw.tier === x.id, data: ' data-t="' + x.id + '"' }; }), -1, 'swaptier') + '</div>') +
-      '<div class="lib-list" id="swapList"><div class="list">' + libRows(lib, { pick: true, sel: sw.sel, slotTier: sw.slotTier, showTier: !!sw.q, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div></div>';
+      (cat.locked
+        ? '<div class="sec-f t1-only">' + esc(cat.hint) + '</div>'
+        : '<div id="swapSeg"' + (sw.q ? ' style="display:none"' : '') + '>' + seg(fitChoices(cat).map(function (x) { x.on = (x.data.indexOf('"' + sw.fit + '"') >= 0); return x; }), -1, 'swapfit') + '</div>' +
+          (cat.hint ? '<div class="sec-f">' + esc(cat.hint) + '</div>' : '')) +
+      '<div class="lib-list" id="swapList"><div class="list">' + libRows(lib, { pick: true, sel: sw.sel, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div></div>';
     if (sw.sel) {
       if (!sw.editing) h += seg([{ html: '仅本次', on: sw.scope === 'once', data: ' data-s="once"' }, { html: '以后都用', on: sw.scope === 'perm', data: ' data-s="perm"' }], -1, 'swapscope', 'swap-scope');
       h += '<div class="swap-rec">' + equipTag(sw.selEquip) + '<div><div class="swap-rec-v">推荐 ' + esc(sw.recText) + (sw.recUnit === '自重' ? '' : ' ' + esc(sw.recUnit)) + '</div><div class="swap-rec-n">' + esc(sw.recNote) + '</div></div></div>';
       if (sw.scope === 'perm' && !sw.editing && sw.selEquip !== '自重') h += '<div class="list"><div class="cell"><span class="flex1">起始重量</span><input class="cell-in num" inputmode="decimal" data-act="swapw" value="' + esc(sw.weight) + '"><span class="unit">' + esc(sw.recUnit) + '</span></div></div>';
       h += '<div class="sec-f">' + (sw.scope === 'once' || sw.editing
         ? '本次用推荐重量练「' + esc(sw.sel) + '」，记录容量，不改变「' + esc(sw.planName) + '」的阶段和重量。'
-        : '从第 ' + sw.week + ' 周起，' + sw.dayId + ' 的这个位置改为「' + esc(sw.sel) + '」，按 ' + sw.slotTier + ' 规则从起始重量重新进阶；历史记录保持不变。' + (sw.rotates ? '下一轮仍按轮换计划自动编排（可在设置里锁定这个位置）。' : '')) + '</div>' +
+        : '从第 ' + sw.week + ' 周起，这个位置改为「' + esc(sw.sel) + '」，仍按「' + esc(sw.category.label) + '」进阶；历史记录保持不变。' + (sw.rotates ? '下一轮仍按轮换计划自动编排（可在设置里锁定这个位置）。' : '')) + '</div>' +
         '<button class="btn-primary swap-ok" data-act="swapok">确认更换</button>';
     }
     return h + '</div></div>';
@@ -5041,18 +5200,20 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function slotState(dayId, slotId) {
     var info = GZ.slotInfo(load(), dayId, slotId);
     if (!info) return null;
-    return { day: dayId, slot: slotId, info: info, mode: 'info', w: String(info.weight), q: '' };
+    return { day: dayId, slot: slotId, info: info, mode: 'info', w: String(info.weight), q: '', fit: 'plan' };
   }
   function renderSlotSheet() {
     var sl = S.plan.slot; if (!sl) return '';
     var info = sl.info, h = '', pick = sl.mode === 'pick';
     h += '<div class="mask" data-act="slotclose"><div class="sheet slot-sheet" data-stop="1"><div class="grabber"></div>' +
       '<div class="row between"><span class="sheet-cap">' + info.dayId + ' · ' + esc(info.dayName) + '</span><span class="link" data-act="slotclose">关闭</span></div>' +
-      '<div class="slot-head">' + tier(info.tier) + '<span class="slot-name">' + esc(pick ? '更换动作 · 当前 ' + info.name : info.name) + '</span>' + (pick ? '' : equipTag(info.equip)) + '</div>';
+      '<div class="slot-head">' + (info.category ? '<span class="tier">' + esc(info.category.label) + '</span>' : tier(info.tier)) + '<span class="slot-name">' + esc(pick ? '更换动作 · 当前 ' + info.name : info.name) + '</span>' + (pick ? '' : equipTag(info.equip)) + '</div>';
     if (pick) {
+      var cat = info.category;
       h += '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="slotq" value="' + esc(sl.q) + '" placeholder="搜索动作、部位或器械"></div>' +
-        '<div class="sec-f">选中后从现在' + info.when + '这次开始用新动作，按 ' + info.tier + ' 规则从推荐重量重新进阶。原动作的历史记录不受影响。</div>' +
-        '<div class="lib-list"><div class="list">' + libRows(GZ.buildLibrary(load(), { tier: info.tier, q: sl.q, current: info.name }), { pick: true, sel: '', slotTier: info.tier, empty: '没有找到' }) + '</div></div>';
+        (cat && !cat.locked ? seg(fitChoices(cat).map(function (x) { x.on = x.data.indexOf('"' + (sl.fit || 'plan') + '"') >= 0; return x; }), -1, 'slotfit') : '') +
+        '<div class="sec-f">' + esc(cat && cat.hint ? cat.hint : '') + '选中后从现在' + info.when + '这次开始用新动作。原动作的历史记录不受影响。</div>' +
+        '<div class="lib-list"><div class="list">' + libRows(GZ.buildLibrary(load(), { category: cat, fit: sl.fit || 'plan', q: sl.q, current: info.name }), { pick: true, empty: '没有找到' }) + '</div></div>';
       return h + '</div></div>';
     }
     h += '<div class="slot-now"><div class="slot-wbox"><span class="num slot-wv">' + (info.canAdjust ? info.weightText : '自重') + '</span><span class="slot-wu">' + (info.canAdjust ? esc(info.unitText) : '') + '</span></div>' +
@@ -5064,13 +5225,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         '<div class="st-btn" data-act="swstep" data-d="1">+</div></div></div></div>' +
         '<div class="sec-f">只改重量，阶段和失败次数都不变，也不会改动已有记录，之后照常按规则加重。</div>';
     }
-    if (info.rotTier) {
+    if (info.category && !info.category.locked) {
       h += '<div class="list"><div class="cell tap" data-act="slotpick"><span class="flex1">更换动作</span><span class="val">' +
-        esc(info.nextCycle ? '第 ' + info.nextCycle + ' 轮换成 ' + info.nextName : '') + '</span><span class="chev">›</span></div>' +
-        '<div class="cell"><span class="flex1">锁定，不参与自动轮换</span><label class="ios-sw green"><input type="checkbox" data-act="slotlock" ' + (info.locked ? 'checked' : '') + '><i></i></label></div></div>' +
-        '<div class="sec-f">' + esc(info.why) + '。锁定后这个位置每轮都用同一个动作，除非你手动更换。</div>';
+        esc(info.rotTier && info.nextName ? '第 ' + info.nextCycle + ' 轮换成 ' + info.nextName : info.category.label) + '</span><span class="chev">›</span></div>' +
+        (info.rotTier ? '<div class="cell"><span class="flex1">锁定，不参与自动轮换</span><label class="ios-sw green"><input type="checkbox" data-act="slotlock" ' + (info.locked ? 'checked' : '') + '><i></i></label></div>' : '') +
+        '</div>' +
+        '<div class="sec-f">' + esc(info.why || info.category.hint) + (info.rotTier ? '。锁定后这个位置每轮都用同一个动作，除非你手动更换。' : '') + '</div>';
     } else {
-      h += '<div class="sec-f">T1 主项固定在本训练日，不参与轮换，训练时可以临时替换。</div>';
+      h += '<div class="sec-f">主项固定在本训练日，不参与轮换，训练时可以临时替换。</div>';
     }
     var changed = Math.abs((Number(sl.w) || 0) - info.weight) > 0.01;
     h += '<button class="btn-primary slot-ok" data-act="slotsw">' + (changed ? '改成 ' + (Number(sl.w) || 0) + (info.canAdjust ? ' ' + esc(info.unitText) : '') : '完成') + '</button>';
@@ -5109,6 +5271,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     h += '<div class="card"><div class="row between"><span class="tpl-days">' + esc(prev.daysLabel) + '</span>' + stPill(inst ? inst.status : '') + '</div><div class="tpl-blurb">' + esc(prev.blurb) + '</div>';
     if (inst) h += '<div class="hold-s">这套' + (inst.status === 'active' ? '正在进行' : '已暂停') + (inst.sessions ? '，已练 ' + inst.sessions + ' 次' : '') + '。</div>';
     h += '<div class="plan-ops">' + browseOps(inst, prev.id) + '</div></div>';
+    h += planCycleCard(db, prev.id, prev.days.length);
     prev.days.forEach(function (d) {
       h += '<div class="card"><div class="card-title"><span class="t"><span class="num">' + esc(d.id) + '</span> ' + esc(d.name) + '</span></div>';
       d.slots.forEach(function (s) {
@@ -5119,6 +5282,49 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     });
     h += '<div class="sec-f">起始重量按现在的 1RM 估算。开始之后，这套计划才会计入训练记录。</div>';
     return h;
+  }
+  function cycleSource(db, tpl) {
+    var inst = openInstance(db, tpl);
+    if (inst && inst.active) return db.params;
+    if (inst) {
+      var raw = GZ.programById(db, inst.id);
+      if (raw && raw.snap && raw.snap.params) return raw.snap.params;
+    }
+    var def = GZ.templateDef(db, tpl);
+    return Object.assign({}, GZ.defaultParams(), (def && def.params) || {}, (S.plan.tune || {})[tpl] || {});
+  }
+  function writePlanCycle(tpl, fn, tip) {
+    var db = load(), inst = openInstance(db, tpl);
+    var prog = (inst && inst.progression) || ((GZ.templateDef(db, tpl) || {}).progression) || 'gzclp';
+    if (inst && inst.active) { fn(db.params, prog); save(db); toast(tip || '已更新，数据已重算'); return true; }
+    if (inst) {
+      var raw = GZ.programById(db, inst.id);
+      if (!raw || !raw.snap || !raw.snap.params) return false;
+      fn(raw.snap.params, prog); save(db); toast(tip || '已更新这套计划'); return true;
+    }
+    var next = Object.assign({}, cycleSource(db, tpl));
+    fn(next, prog);
+    S.plan.tune = S.plan.tune || {};
+    S.plan.tune[tpl] = { weeksPerCycle: next.weeksPerCycle, totalWeeks: next.totalWeeks, deloadEnabled: next.deloadEnabled, deloadEvery: next.deloadEvery, autoRotate: next.autoRotate };
+    toast('开始这套计划时会用这些设置'); return true;
+  }
+  function planCycleCard(db, tpl, dayCount) {
+    var P = cycleSource(db, tpl), inst = openInstance(db, tpl);
+    var prog = (inst && inst.progression) || ((GZ.templateDef(db, tpl) || {}).progression) || 'gzclp';
+    var gz = prog === 'gzclp', wave = prog === 'w531', weeks = P.weeksPerCycle || P.totalWeeks || 8;
+    var inp = function (k, v, unit) { return '<input class="f-in num" inputmode="numeric" data-act="plannum" data-id="' + tpl + '" data-k="' + k + '" value="' + v + '"><span class="f-u">' + unit + '</span>'; };
+    var h = '<div class="sec-h">这套计划的周期</div><div class="list"><div class="cell"><span class="flex1">每轮周数</span>' + inp('len', weeks, '周 / 轮') + '</div>';
+    if (wave) h += '<div class="cell"><span class="flex1">计划总周数</span>' + inp('span', P.totalWeeks || weeks, '周') + '</div>';
+    if (gz) {
+      h += '<div class="cell"><span class="flex1">减载周</span><label class="ios-sw green"><input type="checkbox" data-act="plandel" data-id="' + tpl + '" ' + (P.deloadEnabled ? 'checked' : '') + '><i></i></label></div>';
+      if (P.deloadEnabled) h += '<div class="cell"><span class="flex1">每轮第</span>' + inp('every', P.deloadEvery || 6, '周减载') + '</div>';
+      h += '<div class="cell"><span class="flex1">每轮自动轮换辅助动作</span><label class="ios-sw green"><input type="checkbox" data-act="planrot" data-id="' + tpl + '" ' + (P.autoRotate !== false ? 'checked' : '') + '><i></i></label></div>';
+    }
+    h += '</div><div class="sec-f">';
+    if (gz) h += (P.autoRotate !== false ? '每进入新一轮，辅助动作会在同一模式里换成上一轮没练过的，主项不变。' : '') + '完成一轮（' + weeks + ' 周 × ' + dayCount + ' 日）后进入下一轮。' + (P.deloadEnabled ? '每轮第 ' + (P.deloadEvery || 6) + ' 周减载：主项 −50%、辅助 −40%、配件少 1 组。' : '这套计划目前不安排减载周。');
+    else if (wave) h += '5/3/1 每 ' + weeks + ' 周一个波浪，第 4 周本身就是减载。计划总长度 ' + (P.totalWeeks || weeks) + ' 周。';
+    else h += '这套计划每 ' + weeks + ' 周一轮，按自己的进阶加重，不使用 GZCLP 的减载周和动作轮换。';
+    return h + '</div>';
   }
   function browseOps(inst, tpl) {
     if (!inst) return '<div class="btn-ghost solid" data-act="starttpl" data-id="' + tpl + '">开始</div>';
@@ -5159,6 +5365,17 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (act === 'libback') { p.view = ''; return true; }
     if (act === 'backlib') { p.view = 'lib'; return true; }
     if (act === 'browse') { p.tpl = ds.id; p.view = 'browse'; return true; }
+    if (act === 'plannum') {
+      var n = parseInt(el.value, 10);
+      if (!n || n < 1 || n > 52) { toast('请填 1 到 52 周'); return true; }
+      return writePlanCycle(ds.id || p.tpl, function (params, prog) {
+        if (ds.k === 'span') params.totalWeeks = n;
+        else if (ds.k === 'every') params.deloadEvery = Math.min(n, params.weeksPerCycle || params.totalWeeks || n);
+        else { params.weeksPerCycle = n; if (prog !== 'w531') params.totalWeeks = n; }
+      });
+    }
+    if (act === 'plandel') return writePlanCycle(ds.id || p.tpl, function (params) { params.deloadEnabled = !!el.checked; });
+    if (act === 'planrot') return writePlanCycle(ds.id || p.tpl, function (params) { params.autoRotate = !!el.checked; }, el.checked ? '已开启：每轮自动轮换辅助动作' : '已关闭自动轮换');
     if (act === 'pausecur') {
       var cur = GZ.activeProgram(load());
       if (!cur || cur.status !== 'active') return false;
@@ -5201,7 +5418,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       confirmBox('开始「' + cat.name + '」？', note, function () {
         var dbn = load(), def = GZ.templateDef(dbn, ds.id);
         if (!def) { toast('没有这套计划'); return; }
-        GZ.startProgram(dbn, def); save(dbn); resetTrain(); S.plan.view = ''; S.tab = 'plan'; toast('已开始 ' + def.name); render();
+        var tune = (S.plan.tune || {})[ds.id];
+        if (tune) def.params = Object.assign({}, def.params, tune);
+        GZ.startProgram(dbn, def); save(dbn); if (S.plan.tune) delete S.plan.tune[ds.id]; resetTrain(); S.plan.view = ''; S.tab = 'plan'; toast('已开始 ' + def.name); render();
       });
       return false;
     }
@@ -5213,9 +5432,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (act === 'slotsheet') { p.slot = slotState(ds.day, ds.slot); return true; }
     if (act === 'slotclose') { p.slot = null; return true; }
     if (act === 'slotpick') {
-      if (p.slot.info.tier === 'T1') { toast('T1 只能在训练时临时替换'); return false; }
-      p.slot.mode = 'pick'; p.slot.q = ''; return true;
+      if (p.slot.info.category && p.slot.info.category.locked) { toast('主项只能在训练时临时替换'); return false; }
+      p.slot.mode = 'pick'; p.slot.q = ''; p.slot.fit = 'plan'; return true;
     }
+    if (act === 'slotfit') { p.slot.fit = ds.f; return true; }
     if (act === 'slotq') { p.slot.q = el.value; return true; }
     if (act === 'swstep') {
       var inf = p.slot.info, cur = Number(p.slot.w) || 0;
@@ -5636,13 +5856,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   // ================= 设置 =================
   function lastBackup() { return Number(localStorage.getItem(BK) || 0); }
   function renderLibrary() {
-    var db = load(), st = S.settings, lib = GZ.buildLibrary(db, { tier: st.tier, q: st.q }), h = '';
+    var db = load(), st = S.settings, lib = GZ.buildLibrary(db, { catalog: true, pattern: st.pattern, part: st.part, equip: st.equip, q: st.q }), h = '';
     h += '<div class="lib-back" data-act="libback">‹ 设置</div><div class="pg-title">动作库</div>';
     h += '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="libq" value="' + esc(st.q) + '" placeholder="搜索动作、部位或器械"></div>';
-    h += '<div id="libSeg"' + (st.q ? ' style="display:none"' : '') + '>' + seg(lib.tiers.map(function (x) { return { html: x.id + '<span class="seg-n">' + x.n + '</span>', on: st.tier === x.id, data: ' data-t="' + x.id + '"' }; }), -1, 'libtier') +
-      '<div class="sec-f tier-tip">' + TIER_TIP[st.tier] + '</div></div>';
-    h += '<div id="libList"><div class="list">' + libRows(lib, { showTier: !!st.q }) + '</div></div>';
-    h += '<button class="btn-primary add-btn" data-act="libadd">添加自定义动作</button><div class="sec-f" style="text-align:center">在训练页点动作卡片上的「更换」，即可从动作库选择替换</div>';
+    h += '<div class="filter-lab">动作模式</div>' + chips([{ id: '', k: 'pattern', label: '全部', on: !st.pattern }].concat(lib.patterns.map(function (x) { return { id: x.id, k: 'pattern', label: x.label, n: x.n, on: st.pattern === x.id }; })), 'libfilter');
+    h += '<div class="filter-lab">部位</div>' + chips([{ id: '', k: 'part', label: '全部', on: !st.part }].concat(lib.parts.map(function (x) { return { id: x.id, k: 'part', label: x.label, n: x.n, on: st.part === x.id }; })), 'libfilter');
+    h += '<div class="filter-lab">器械</div>' + chips([{ id: '', k: 'equip', label: '全部', on: !st.equip }].concat(lib.equips.map(function (x) { return { id: x.id, k: 'equip', label: x.id, n: x.n, on: st.equip === x.id }; })), 'libfilter');
+    h += '<div id="libList"><div class="list">' + libRows(lib, {}) + '</div></div>';
+    h += '<button class="btn-primary add-btn" data-act="libadd">添加自定义动作</button><div class="sec-f" style="text-align:center">动作不区分 T1 / T2 / T3。换动作时，按当前计划给这个位置定的分类来选。</div>';
     if (st.add) {
       var a = st.add;
       h += '<div class="mask" data-act="addclose"><div class="sheet" data-stop="1"><div class="grabber"></div><div class="sheet-title">添加动作</div><div class="list">' +
@@ -5650,8 +5871,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         '<label class="cell tap pick-cell"><span class="f-l">部位</span><span class="f-v val">' + esc(a.part) + '</span><span class="chev">›</span><select data-act="addpart">' + GZ.PARTS.map(function (x) { return '<option ' + (x === a.part ? 'selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
         '<label class="cell tap pick-cell"><span class="f-l">器械</span><span class="f-v val">' + esc(a.equip) + '</span><span class="chev">›</span><select data-act="addequip">' + GZ.EQUIPS.map(function (x) { return '<option ' + (x === a.equip ? 'selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
         '<div class="cell"><span class="f-l">说明</span><input class="f-v" data-act="adddesc" maxlength="30" value="' + esc(a.desc) + '" placeholder="可选"></div></div>' +
-        '<div class="sec-h">层级</div>' + seg(['T2', 'T3'].map(function (x) { return { html: x, on: a.tier === x, data: ' data-t="' + x + '"' }; }), -1, 'addtier') +
-        '<div class="sec-f">' + TIER_TIP[a.tier] + '</div>' +
+        '<div class="sec-f">部位决定它在动作库里的模式。计划里的主项、辅助或 T1，由那个训练位置决定，不写在动作上。</div>' +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="addclose">取消</div><div class="btn-ghost solid" data-act="adddo">添加</div></div></div></div>';
     }
     return h;
@@ -5698,12 +5918,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     h += '<div class="sec-h">判定规则</div>' + seg([{ html: '完整三阶', on: P.ruleMode === 'full', data: ' data-v="full"' }, { html: '严格按表格', on: P.ruleMode === 'excel', data: ' data-v="excel"' }], -1, 'mode', 'mode-seg') +
       (P.ruleMode === 'full' ? '<div class="list"><div class="cell"><span class="flex1">按末组次数自适应加重</span><label class="ios-sw green"><input type="checkbox" data-act="adaptsw" ' + (P.adaptive !== false ? 'checked' : '') + '><i></i></label></div></div>' : '') +
       '<div class="sec-f">' + (P.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (P.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。') + '</div>';
-    h += '\u0000cycle\u0000';
-    h += '<div class="sec-h">周期</div><div class="list"><div class="cell"><span class="flex1">每轮周数</span>' + inp('totalWeeks', P.totalWeeks, '周 / 轮') + '</div>' +
-      '<div class="cell"><span class="flex1">减载周</span><label class="ios-sw green"><input type="checkbox" data-act="dlen" ' + (P.deloadEnabled ? 'checked' : '') + '><i></i></label></div>' +
-      (P.deloadEnabled ? '<div class="cell"><span class="flex1">每轮第</span>' + inp('deloadEvery', P.deloadEvery, '周减载') + '</div>' : '') +
-      '<div class="cell"><span class="flex1">每轮自动轮换 T2/T3</span><label class="ios-sw green"><input type="checkbox" data-act="rotsw" ' + (P.autoRotate !== false ? 'checked' : '') + '><i></i></label></div></div>' +
-      '<div class="sec-f">' + (P.autoRotate !== false ? '每进入新一轮，T2/T3 会在同一动作模式内自动换成上一轮没练过的动作，T1 四大项不变。' : '') + '完成一轮（' + P.totalWeeks + ' 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内周序计算' + (P.deloadEnabled ? '（每轮第 ' + P.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : '') + '。</div>';
     h += '\u0000act\u0000';
     h += '<div class="sec-h">动作</div><div class="list"><div class="cell tap" data-act="openlib"><span class="flex1">动作库</span><span class="val">' + GZ.libAll(db).length + ' 个' +
       (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div>' +
@@ -5746,7 +5960,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var parts = {}, cur0 = 'base';
     h.split('\u0000').forEach(function (x, i) { if (i % 2 === 1) cur0 = x; else parts[cur0] = (parts[cur0] || '') + x; });
     var advHead = '<div class="list adv-head"><div class="cell tap" data-act="advtoggle"><span class="flex1">高级设置</span><span class="val">加重步幅 · 取整 · 判定规则</span><span class="chev">' + (st.adv ? '⌃' : '›') + '</span></div></div>';
-    return (parts.base || '') + (parts.sync || '') + (parts.cycle || '') + (parts.act || '') + (parts.data || '') + advHead + (st.adv ? '<div class="adv-body">' + (parts.adv || '') + '</div>' : '') + (parts.danger || '');
+    return (parts.base || '') + (parts.sync || '') + (parts.act || '') + (parts.data || '') + advHead + (st.adv ? '<div class="adv-body">' + (parts.adv || '') + '</div>' : '') + (parts.danger || '');
   }
   function setPath(o, p, v) { var ks = p.split('.'); for (var i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks[ks.length - 1]] = v; }
   function mutate(fn, tip) { var db = load(); fn(db); save(db); if (tip !== false) toast(tip || '已更新，数据已重算'); return true; }
@@ -5794,31 +6008,32 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'param': var v = parseFloat(el.value); if (isNaN(v) || v < 0) return true; if (ds.pct) v = v / 100; return mutate(function (db) { setPath(db.params, ds.k, v); });
       case 'mode': return mutate(function (db) { db.params.ruleMode = ds.v; }, ds.v === 'full' ? '已切换：完整三阶规则' : '已切换：严格按表格公式');
       case 'adaptsw': return mutate(function (db) { db.params.adaptive = el.checked; }, el.checked ? '已开启：按末组次数自适应加重' : '已关闭：固定步幅加重');
-      case 'dlen': return mutate(function (db) { db.params.deloadEnabled = el.checked; });
-      case 'rotsw': return mutate(function (db) { db.params.autoRotate = el.checked; }, el.checked ? '已开启：每轮自动轮换 T2/T3' : '已关闭自动轮换');
       case 'openlib': st.view = 'lib'; st.q = ''; render(); return false;
       case 'libback': st.view = ''; st.add = null; render(); return false;
-      case 'libtier': st.tier = ds.t; return true;
+      case 'libfilter':
+        if (ds.k === 'pattern') {
+          st.pattern = ds.v;
+          if (ds.v && st.part && GZ.patternOfPart(st.part).id !== ds.v) st.part = '';
+        } else st[ds.k] = ds.v;
+        return true;
       case 'libq':
         st.q = el.value;
-        var ll = document.getElementById('libList'); if (ll) ll.innerHTML = '<div class="list">' + libRows(GZ.buildLibrary(load(), { tier: st.tier, q: st.q }), { showTier: !!st.q }) + '</div>';
-        var lsg = document.getElementById('libSeg'); if (lsg) lsg.style.display = st.q ? 'none' : '';
+        var ll = document.getElementById('libList'); if (ll) ll.innerHTML = '<div class="list">' + libRows(GZ.buildLibrary(load(), { catalog: true, pattern: st.pattern, part: st.part, equip: st.equip, q: st.q }), {}) + '</div>';
         return false;
       case 'libdel':
         confirmBox('删除「' + ds.name + '」？', '已经练过的记录会保留；正在使用它的训练位置仍按原名显示。', function () { var dbd = load(); GZ.removeCustomEx(dbd, ds.name); save(dbd); render(true); });
         return false;
-      case 'libadd': st.add = { name: '', desc: '', tier: (st.q || st.tier === 'T1') ? 'T3' : st.tier, part: '其他', equip: '杠铃' }; return true;
+      case 'libadd': st.add = { name: '', desc: '', part: st.part || '上肢·水平推', equip: st.equip || '杠铃' }; return true;
       case 'addclose': st.add = null; return true;
       case 'addname': st.add.name = el.value; return false;
       case 'adddesc': st.add.desc = el.value; return false;
       case 'addpart': st.add.part = el.value; return true;
       case 'addequip': st.add.equip = el.value; return true;
-      case 'addtier': syncAddInputs(); st.add.tier = ds.t; return true;
       case 'adddo':
         syncAddInputs();
         var dba = load(), err = GZ.addCustomEx(dba, st.add);
         if (err) { toast(err); return false; }
-        save(dba); st.tier = st.add.tier; st.q = ''; st.add = null; render(); toast('已添加'); return false;
+        save(dba); st.pattern = GZ.patternOfPart(st.add.part).id; st.part = st.add.part; st.equip = ''; st.q = ''; st.add = null; render(); toast('已添加'); return false;
       case 'advtoggle': st.adv = !st.adv; return true;
       case 'goplan': S.tab = 'plan'; render(); return false;
       case 'export': exportFile(); return false;

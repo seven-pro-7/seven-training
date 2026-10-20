@@ -426,6 +426,12 @@ css.append(r"""
 .app .lib-more { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--label); }
 .app .lib-back { font-size: 15px; color: var(--accent); font-weight: 500; margin: 0 0 4px; }
 .app .lib-entry { display: flex; align-items: center; font-size: 16px; font-weight: 600; color: var(--label); }
+.app .chip-row { display: flex; gap: 8px; overflow-x: auto; padding: 0 0 8px; }
+.app .chip-row::-webkit-scrollbar { display: none; }
+.app .chip { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 6px 12px; background: var(--fill); color: var(--label); font-size: 13px; font-weight: 600; }
+.app .chip.on { background: var(--accent); color: #fff; }
+.app .chip-n { margin-left: 4px; font-weight: 500; opacity: .72; }
+.app .filter-lab { font-size: 12px; color: var(--label2); margin: 8px 2px 4px; }
 """)
 
 
