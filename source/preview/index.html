@@ -971,6 +971,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .lib-card { display: block; }
 .app .lib-more { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--label); }
 .app .lib-back { font-size: 15px; color: var(--accent); font-weight: 500; margin: 0 0 4px; }
+.app .lib-entry { display: flex; align-items: center; font-size: 16px; font-weight: 600; color: var(--label); }
 </style></head>
 <body>
 
@@ -4630,10 +4631,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return '<div class="head"><div class="large-title">' + esc(cur.name) + '</div></div>' +
       '<div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
       '<div class="hold-t">' + (paused ? '这套计划暂停了' : '这套计划已经结束') + '</div>' +
-      '<div class="hold-s">' + (paused ? '进度和记录都还在。继续之后才能记新的训练。' : '不能再往这套里记训练。记录仍可在数据和回顾里查看。') + '</div>' +
-      '<div class="plan-ops">' +
-      (paused ? '<div class="btn-ghost solid" data-act="resumetrain">继续这套</div>' : '') +
-      '<div class="btn-ghost" data-act="toplan">去计划</div></div></div>';
+      '<div class="hold-s">' + (paused ? '要继续或结束，打开计划库里的这套计划。' : '不能再往这套里记训练。要换一套，去计划库里开始。') + '</div>' +
+      '<div class="plan-ops"><div class="btn-ghost" data-act="opendetail">打开这套计划</div></div></div>';
   }
   function renderTrain() {
     var db0 = load(), cur0 = GZ.activeProgram(db0);
@@ -4863,14 +4862,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'rest': beginRest(Number(ds.rest), ds.name); return false;
       case 'cancelEdit': t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; return true;
       case 'submit': submit(); return false;
-      case 'resumetrain':
-        confirmBox('继续这套计划？', '继续后可以记新的训练。', function () {
-          var dbr = load();
-          try { GZ.resumeProgram(dbr); } catch (err) { toast(err.message || '无法继续'); return; }
-          save(dbr); resetTrain(); toast('已继续'); render();
-        });
-        return false;
-      case 'toplan': S.tab = 'plan'; S.plan.view = ''; render(); return false;
+      case 'opendetail':
+        var curOpen = GZ.activeProgram(load());
+        S.tab = 'plan'; S.plan.view = 'browse'; S.plan.tpl = curOpen ? GZ.templateKey(curOpen.template) : '';
+        render(); return false;
       case 'closeResult': t.result = null; return true;
       case 'gotoStats': t.result = null; S.tab = 'stats'; return true;
     }
@@ -4991,7 +4986,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         '<div class="prog"><div class="row between"><span class="cap">本轮进度（' + vm.weeksPerCycle + ' 周 / 轮）</span><span class="cap"><span class="num strong">' + vm.cycleDone + '</span> / ' + vm.cyclePlanned + ' 次 · ' + vm.cycleProgress + '%</span></div>' +
         '<div class="bar"><div class="bar-in" style="width:' + vm.cycleProgress + '%"></div></div><span class="cap total-cap">累计已完成 ' + vm.done + ' 次训练</span></div></div>';
     } else {
-      h += '<div class="card hold-card"><div class="hold-t">' + (holding ? '暂停中，训练进度停在这里' : '已结束，下面是这套计划的记录') + '</div><div class="hold-s">' + (holding ? '继续之后才能记新的训练。' : '不能再往这套里记训练。') + '</div></div>';
+      h += '<div class="card hold-card"><div class="hold-t">' + (holding ? '已暂停' : '已结束') + '</div><div class="hold-s">' + (holding ? '训练进度停在这里。要继续或结束，请到计划库打开这套计划。' : '这套计划已结束，下面是当时的记录。') + '</div></div>';
     }
     var wide = vm.days.length > 4, gz = (db.params.progression || 'gzclp') === 'gzclp';
     h += '<div class="card"><div class="card-title"><div class="cyc-nav"><span class="cyc-btn ' + (vm.canPrev ? '' : 'off') + '" data-act="cycle" data-d="-1">‹</span>' +
@@ -5092,12 +5087,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   function planStatusCard(cur) {
     if (!cur) return '';
-    var h = '<div class="card"><div class="row between"><div class="prog-name">' + esc(cur.name) + '</div>' + stPill(cur.status) + '</div>';
-    h += '<div class="plan-ops">';
-    if (cur.status === 'active') h += '<div class="btn-ghost" data-act="pausecur">暂停</div><div class="btn-ghost op-end" data-act="endcur">结束</div>';
-    else if (cur.status === 'paused') h += '<div class="btn-ghost solid" data-act="resumecur">继续</div><div class="btn-ghost op-end" data-act="endcur">结束</div>';
-    h += '<div class="btn-ghost" data-act="openlib">计划库</div></div></div>';
-    return h;
+    return '<div class="card"><div class="row between"><div class="prog-name">' + esc(cur.name) + '</div>' + stPill(cur.status) + '</div></div>' +
+      '<div class="card tap lib-entry" data-act="openlib"><span class="flex1">计划库</span><span class="chev">›</span></div>';
   }
   function renderPlanLib() {
     var db = load(), h = '<div class="lib-back" data-act="libback">‹ 计划</div><div class="pg-title">计划库</div>';

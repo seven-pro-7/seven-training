@@ -425,6 +425,7 @@ css.append(r"""
 .app .lib-card { display: block; }
 .app .lib-more { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--label); }
 .app .lib-back { font-size: 15px; color: var(--accent); font-weight: 500; margin: 0 0 4px; }
+.app .lib-entry { display: flex; align-items: center; font-size: 16px; font-weight: 600; color: var(--label); }
 """)
 
 
