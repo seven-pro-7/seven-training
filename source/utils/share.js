@@ -140,6 +140,21 @@
       gender: g, showWeight: p.showWeight === true };
   }
   function hasEntry(e, deload) { return !!e && !e.skip && (!!deload || (e.v !== null && e.v !== undefined && e.v !== '')); }
+  function cnDate(date) {
+    if (!date || String(date).length < 10) return '';
+    return (+String(date).slice(5, 7)) + '月' + (+String(date).slice(8, 10)) + '日';
+  }
+  /** 对不上时说明原因：同一天已被另一次训练占用，或快照里根本没有这一天 */
+  function watchGap(watch, date, matched) {
+    if (matched || !watch || !(watch.workouts || []).length) return '';
+    var same = (watch.workouts || []).some(function (w) { return w.date === date; });
+    if (same) return '这次训练在手表里没有对应的力量训练记录。这一天的手表记录已经对应到另一次训练。';
+    var edge = Badges.watchLatest(watch);
+    var latest = edge ? cnDate(edge.date) : '';
+    var mine = cnDate(date);
+    if (latest && mine && latest !== mine) return '这次训练在手表里没有对应的力量训练记录。这次是 ' + mine + '，快照里最近一次是 ' + latest + '。';
+    return '这次训练在手表里没有对应的力量训练记录';
+  }
   function dates(db) {
     var set = {};
     (db.records || []).forEach(function (r) {
@@ -247,7 +262,9 @@
     });
     // 手表：同一天按先后与训练记录一一对应；没对上就不显示任何身体数据
     var life = allFacts(db), meLife = life.filter(function (f) { return f.id === pick.id; })[0] || me;
-    var wk = Badges.watchFor(db.params && db.params.watch, life, meLife);
+    var watch = db.params && db.params.watch;
+    var wk = Badges.watchFor(watch, life, meLife);
+    var watchNote = watchGap(watch, selected, !!wk);
     var state = badgeStateFrom(db, life), cands = state.bySession[pick.id] || [];
     // 卡片只展示一枚：用户手选优先（可取消为 0 枚）；否则按「训练 id + 换一个次数」稳定随机
     var chosen = [];
@@ -271,7 +288,7 @@
       sessions: 1, days: pick.day + ' ' + pick.dayName, trainingDays: pick.seq, weight: p.showWeight && bw !== null ? bw : null,
       fun: fun, funEmoji: fn.e, funTag: fn.tag, funBasis: fn.basis, funIndex: fn.index, funTotal: fn.total,
       badges: chosen.map(function (id) { return badgeBrief(state, id); }), badgeCands: cands.map(function (id) { return badgeBrief(state, id); }),
-      badgeEarned: state.earnedCount, badgeAll: state.total, watchBody: wk ? { min: wk.min, sets: wk.sets, avgHr: wk.avgHr, kcal: wk.kcal } : null, bodyLine: bodyLine,
+      badgeEarned: state.earnedCount, badgeAll: state.total, watchBody: wk ? { min: wk.min, sets: wk.sets, avgHr: wk.avgHr, kcal: wk.kcal } : null, watchNote: watchNote, bodyLine: bodyLine,
       caption: (p.name || '训练者') + (p.handle ? ' ' + p.handle : '') + ' · ' + selected + ' · ' + pick.day + ' ' + pick.dayName + ' · 第 ' + pick.seq + ' 次训练\n' +
         rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' +
         (chosen.length ? '里程碑：' + chosen.map(function (id) { return state.byId[id].title; }).join('、') + '\n' : '') + (bodyLine ? bodyLine + '\n' : '') +

@@ -19,12 +19,18 @@ import re
 import sys
 import urllib.error
 import urllib.request
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 MCP_URL = os.environ.get('COROS_MCP_URL', 'https://mcp.coros.com/mcp')
 WATCH_FILE = 'training-watch.json'
 LEGACY_FILE = 'gzclp-watch.json'
 STRENGTH = 402
+SHANGHAI = timezone(timedelta(hours=8))
+
+
+def today_local():
+    """日历日用北京时间。定时任务在 UTC 23:30 触发，这时 UTC 的「今天」还是前一天。"""
+    return datetime.now(SHANGHAI).date()
 
 
 def request(url, method, headers, body=None):
@@ -107,8 +113,20 @@ def ymd(d):
     return d.strftime('%Y%m%d')
 
 
+def unescape_text(text):
+    """COROS 有时把换行当成两个字符的 \\n 返回。不展开的话，整段会被当成一条，日期还会误用查询范围的起始日。"""
+    text = text or ''
+    if text.count('\n') < 2 and '\\n' in text:
+        text = text.replace('\\r\\n', '\n').replace('\\n', '\n').replace('\\t', '\t')
+    return text.replace('\r\n', '\n')
+
+
+def shanghai_day(ts):
+    return datetime.fromtimestamp(int(ts), SHANGHAI).date().isoformat()
+
+
 def chunks(days=180, size=30):
-    end = date.today()
+    end = today_local()
     start = end - timedelta(days=days - 1)
     cur = start
     while cur <= end:
@@ -131,8 +149,15 @@ def minutes_of(part):
 
 def parse_sports(text):
     workouts = []
-    for part in re.split(r'\n(?=\d+\. )', text):
-        date_m = re.search(r'—\s*(\d{4}-\d{2}-\d{2})', part)
+    text = unescape_text(text)
+    for part in re.split(r'\n(?=\d+\.\s)', text):
+        title = ''
+        for line in part.splitlines():
+            if re.match(r'\d+\.\s', line):
+                title = line
+                break
+        # 日期只认「1. Strength — 2026-10-20」这种标题，不认「查询范围 — 起始日 to 结束日」
+        date_m = re.search(r'—\s*(\d{4}-\d{2}-\d{2})', title)
         start_m = re.search(r'startTimestamp=(\d+)', part)
         sets_m = re.search(r'Sets:\s*(\d+)', part)
         if not (date_m and start_m and sets_m):
@@ -142,9 +167,13 @@ def parse_sports(text):
         minutes = minutes_of(part)
         if minutes is None:
             continue
+        start = int(start_m.group(1))
+        day = date_m.group(1)
+        if shanghai_day(start) != day:
+            continue
         workouts.append({
-            'date': date_m.group(1),
-            'start': int(start_m.group(1)),
+            'date': day,
+            'start': start,
             'min': minutes,
             'sets': int(sets_m.group(1)),
             'avgHr': int(hr_m.group(1)) if hr_m else 0,
@@ -155,6 +184,7 @@ def parse_sports(text):
 
 def parse_sleep(text):
     sleep = {}
+    text = unescape_text(text)
     for block in re.split(r'\n(?=\d{4}-\d{2}-\d{2}\n)', '\n' + text):
         date_m = re.search(r'(\d{4}-\d{2}-\d{2})', block)
         score_m = re.search(r'Sleep Score:\s*(\d+)', block)
@@ -173,6 +203,11 @@ def merge(old, incoming_workouts, incoming_sleep):
     workouts = []
     for item in (base.get('workouts') or []) + incoming_workouts:
         if not isinstance(item, dict):
+            continue
+        try:
+            if shanghai_day(item.get('start')) != item.get('date'):
+                continue
+        except (TypeError, ValueError, OSError):
             continue
         key = '%s|%s' % (item.get('date'), item.get('start'))
         if key in seen:
@@ -218,7 +253,7 @@ def load_cloud(token, owner, repo):
 
 def save_cloud(token, owner, repo, snapshot, sha):
     body = {
-        'message': '同步手表数据 · %s' % date.today().isoformat(),
+        'message': '同步手表数据 · %s' % today_local().isoformat(),
         'content': base64.b64encode(json.dumps(snapshot, ensure_ascii=False, indent=2).encode()).decode(),
     }
     if sha:
@@ -255,7 +290,14 @@ Daily Sleep: 6h 49min (incl. naps)
     assert workouts[0]['min'] == 46 and workouts[0]['sets'] == 14 and workouts[0]['kcal'] == 169
     assert workouts[1]['min'] == 61
     assert nights['2026-10-16'] == {'score': 85, 'min': 6 * 60 + 49}
-    merged_w, merged_s = merge({'workouts': [workouts[0]], 'sleep': {'2026-10-15': {'score': 80, 'min': 400}}}, workouts, nights)
+    collapsed = sport.replace('\n', '\\n')
+    collapsed = 'Sport Records — 2026-10-01 to 2026-10-22 (2 records)\n========================\n\n' + collapsed
+    collapsed = collapsed.replace('\n', '\\n')
+    repaired = parse_sports(collapsed)
+    assert [w['date'] for w in repaired] == ['2026-10-20', '2026-10-16'], repaired
+    bogus = {'date': '2026-10-01', 'start': 1792470652, 'min': 46, 'sets': 14, 'avgHr': 106, 'kcal': 169}
+    merged_w, merged_s = merge({'workouts': [workouts[0], bogus], 'sleep': {'2026-10-15': {'score': 80, 'min': 400}}}, workouts, nights)
+    assert all(w['date'] != '2026-10-01' for w in merged_w)
     assert len(merged_w) == 2
     assert merged_s['2026-10-15']['score'] == 80
     print('self-test ok')
@@ -290,7 +332,7 @@ def main():
     snapshot = {
         'schema': 'training-watch-v1',
         'source': 'COROS',
-        'generatedAt': datetime.now(timezone.utc).isoformat(),
+        'generatedAt': datetime.now(SHANGHAI).isoformat(timespec='seconds'),
         'workouts': merged_w,
         'sleep': merged_s,
     }

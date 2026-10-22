@@ -178,7 +178,7 @@
         var meta = null; try { meta = JSON.parse(b64dec(g.json.content)).generatedAt; } catch (e) {}
         c.watchErr = ''; c.watchAt = Date.now(); c.watchGen = meta || c.watchGen || ''; setCfg(c);
         var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
-        if (manual) toast(changed ? '已拉取最新手表数据' : '手表数据已是最新');
+        if (manual) toast((changed ? '已拉取手表数据' : '云端快照没有新内容') + watchLatestText(merged));
         if (!typing && (changed || S.tab === 'settings')) render(true);
         return changed;
       });
@@ -209,6 +209,11 @@
     function disconnect() { clearTimeout(timer); setCfg(null); }
     return { cfg: cfg, on: on, run: run, schedule: schedule, connect: connect, disconnect: disconnect, pullWatch: pullWatch };
   })();
+  function mdDate(d) { return d && String(d).length >= 10 ? (+String(d).slice(5, 7)) + '月' + (+String(d).slice(8, 10)) + '日' : ''; }
+  function watchLatestText(w) {
+    var edge = Badges.watchLatest ? Badges.watchLatest(w) : null;
+    return edge ? '，最近一次力量训练是 ' + mdDate(edge.date) : '';
+  }
   function ago(ts) {
     if (!ts) return '从未';
     var s = Math.floor((Date.now() - ts) / 1000);
@@ -1326,7 +1331,7 @@
     var w = data.watch;
     var watchBlock = w
       ? '<div class="ss-watch"><div class="ss-watch-t"><b>卡片显示手表记录</b><span>力量训练 ' + w.hours + ' 小时 · ' + w.sets + ' 组' + (w.kcal ? ' · ' + w.kcal.toLocaleString('zh-CN') + ' 千卡' : '') + '</span></div><label class="ios-sw green"><input type="checkbox" data-act="bodytoggle" ' + (sh.body ? 'checked' : '') + ' aria-label="卡片显示手表记录"><i></i></label></div>'
-      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? '这个月在手表里没有力量训练记录' : '导入 COROS 手表快照后，可显示本月训练时长、组数，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
+      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? esc(data.watchNote || '这个月在手表里没有力量训练记录') : '导入 COROS 手表快照后，可显示本月训练时长、组数，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
     var delta = data.volDelta === null ? '这是第一个有记录的月份' : '比 ' + data.prevMon + (data.volDelta >= 0 ? '多 ' : '少 ') + Math.abs(data.volDelta) + '%（' + data.prevMon + ' ' + (data.prev.volume / 1000).toFixed(2) + ' t）';
     var progRows = data.prog.length ? '<div class="ex-rows">' + data.prog.map(function (p) {
       return '<div class="ex-row"><span class="ex-d">' + tier(p.tier, p.badge) + '</span><span class="ex-m"><b>' + esc(p.name) + '</b><i>' + (p.prior === null ? '本月首次记录' : p.delta > 0 ? '较上月 +' + p.delta + ' kg（+' + p.pct + '%）' : p.delta < 0 ? '较上月 ' + p.delta + ' kg' : '与上月持平') + '</i></span><span class="ex-e"><b class="num">' + p.e1 + '</b><i>kg 估算 1RM</i></span></div>';
@@ -1374,7 +1379,7 @@
     var hasWatch = !!(load().params.watch && (load().params.watch.workouts || []).length);
     var watchBlock = data.watchBody
       ? '<div class="ss-watch"><div class="ss-watch-t"><b>卡片显示手表记录</b><span>用时 ' + data.watchBody.min + ' 分' + (data.watchBody.avgHr ? ' · 平均心率 ' + data.watchBody.avgHr : '') + (data.watchBody.kcal ? ' · ' + data.watchBody.kcal + ' 千卡' : '') + '</span></div><label class="ios-sw green"><input type="checkbox" data-act="bodytoggle" ' + (sh.body ? 'checked' : '') + ' aria-label="卡片显示手表记录"><i></i></label></div>'
-      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? '这次训练在手表里没有对应的力量训练记录' : '导入 COROS 手表快照后，可显示用时、心率、消耗，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
+      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? esc(data.watchNote || '这次训练在手表里没有对应的力量训练记录') : '导入 COROS 手表快照后，可显示用时、心率、消耗，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
     return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div>' +
         '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
@@ -1624,8 +1629,9 @@
       '<div class="cell tap" data-act="editdir"><span class="flex1">' + (dirSum ? esc(dirSum) : '尚未填写') + '</span><span class="val">修改</span><span class="chev">›</span></div></div>' +
       '<div class="sec-f">目标、经验、每周天数与器械只作档案记录，不会自动更换当前计划。</div>';
     var wd = P.watch, wn = wd && wd.workouts ? wd.workouts.length : 0, wsn = wd && wd.sleep ? Object.keys(wd.sleep).length : 0;
+    var wEdge = Badges.watchLatest ? Badges.watchLatest(wd) : null;
     h += '<div class="sec-h" id="watchSec">手表数据</div><div class="list">' +
-      '<div class="cell"><span class="flex1">' + esc((wd && wd.source) || 'COROS') + '</span><span class="val">' + (wn || wsn ? esc(wn + ' 次训练 · ' + wsn + ' 晚睡眠') : '未导入') + '</span></div>' +
+      '<div class="cell"><span class="flex1">' + esc((wd && wd.source) || 'COROS') + '</span><span class="val">' + (wn || wsn ? esc((wEdge ? mdDate(wEdge.date) + ' · ' : '') + wn + ' 次训练 · ' + wsn + ' 晚睡眠') : '未导入') + '</span></div>' +
       (Sync.on() ? (function () {
         var wc = Sync.cfg(), gen = wc.watchGen ? Date.parse(wc.watchGen) : 0;
         var val = wc.watchErr ? '<span class="red">' + esc(wc.watchErr) + '</span>' : gen ? '<span class="green">✓ 云端更新于 ' + ago(gen) + '</span>' : wc.watchAt ? '云端暂无手表文件' : '等待首次拉取';
@@ -1637,7 +1643,7 @@
       '<div class="cell tap" data-act="watchpaste"><span class="flex1 accent">粘贴快照文本</span><span class="chev">' + (st.wpaste ? '⌃' : '›') + '</span></div>' +
       (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
       (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
-      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天会把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json，打开页面时自动拉取。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
+      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天早上把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json。立即拉取只读取这份快照，不会直接连接手表；分享卡片按训练日期对上快照里的力量训练。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +

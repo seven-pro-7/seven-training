@@ -112,6 +112,12 @@
         watch = { n: ws.length, min: mins, hours: r1(mins / 60), sets: sets, kcal: kcal, avgHr: hrMin ? Math.round(hrSum / hrMin) : 0 };
       }
     }
+    var watchNote = '';
+    if (!watch && wd && (wd.workouts || []).length) {
+      var edge = Badges.watchLatest ? Badges.watchLatest(wd) : null;
+      var latest = edge && edge.date && edge.date.length >= 10 ? (+edge.date.slice(5, 7)) + '月' + (+edge.date.slice(8, 10)) + '日' : '';
+      watchNote = latest ? '这个月在手表快照里没有对得上的力量训练，最近一次是 ' + latest + '。' : '这个月在手表里没有力量训练记录';
+    }
     var bodyLine = opts.body === true && watch ? '手表记录 · 力量训练 ' + watch.hours + ' 小时 · ' + watch.sets + ' 组' + (watch.kcal ? ' · ' + H.num(watch.kcal, 0) + ' 千卡' : '') : '';
 
     // 趣味换算：本月容量对照 + 月度数据彩蛋，每条一个 emoji
@@ -146,7 +152,7 @@
     return { ym: ym, title: title, mon: monText(ym), ongoing: ongoing, profile: p, name: p.name || '训练者', hasName: !!p.name,
       n: t.n, days: t.days, daysInMonth: dim, volume: t.volume, volumeText: (t.volume / 1000).toFixed(2), reps: t.reps, sets: t.sets, adds: t.adds,
       prev: pt, prevMon: monText(pm), volDelta: volDelta, calendar: calendar, best: best ? { date: best.date, day: best.day, volume: Math.round(best.volume) } : null,
-      topEx: topEx.slice(0, 3), prog: progRows, milestones: msShow, milestoneCount: milestoneCount, watch: watch, bodyLine: bodyLine,
+      topEx: topEx.slice(0, 3), prog: progRows, milestones: msShow, milestoneCount: milestoneCount, watch: watch, watchNote: watchNote, bodyLine: bodyLine,
       fun: fp.text, funEmoji: fp.e, funTag: fp.tag, funBasis: fp.basis, funIndex: fi, funTotal: nFun, copy: summary, caption: caption, months: ms };
   }
 

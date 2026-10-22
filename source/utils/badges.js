@@ -109,13 +109,25 @@
     var sl = Object.assign({}, base.sleep || {}, incoming.sleep || {});
     return { source: incoming.source || base.source || 'COROS', importedAt: Date.now(), workouts: ws, sleep: sl };
   }
+  /** 快照里最近一次力量训练（按日期，同一天再按开始时间） */
+  function watchLatest(watch) {
+    var best = null;
+    (watch && watch.workouts || []).forEach(function (w) {
+      if (!w || !w.date) return;
+      if (!best || w.date > best.date || (w.date === best.date && (w.start || 0) > (best.start || 0))) best = w;
+    });
+    return best;
+  }
   /** 找出某次训练对应的手表训练：同一天按开始先后一一对应 */
   function watchFor(watch, sessions, session) {
-    if (!watch || !watch.workouts || !session) return null;
+    if (!watch || !watch.workouts || !session || !session.date) return null;
     var day = watch.workouts.filter(function (w) { return w.date === session.date; }).sort(function (a, b) { return a.start - b.start; });
     if (!day.length) return null;
-    var same = sessions.filter(function (s) { return s.date === session.date; }).sort(function (a, b) { return a.order - b.order; });
+    var same = (sessions || []).filter(function (s) { return s && s.date === session.date; });
+    if (!same.some(function (s) { return s.id === session.id; })) same.push(session);
+    same.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
     var idx = same.map(function (s) { return s.id; }).indexOf(session.id);
+    if (idx < 0) return day.length === 1 ? day[0] : null;
     return day[idx] || null;
   }
 
@@ -254,5 +266,5 @@
     return sorted[(h + (Number(variant) || 0)) % sorted.length];
   }
 
-  return { GROUPS: GROUPS, defs: defs, compute: compute, pickOne: pickOne, sanitizeWatch: sanitizeWatch, mergeWatch: mergeWatch, watchFor: watchFor, groupRank: groupRank, SLEEP_SCORE: SLEEP_SCORE };
+  return { GROUPS: GROUPS, defs: defs, compute: compute, pickOne: pickOne, sanitizeWatch: sanitizeWatch, mergeWatch: mergeWatch, watchFor: watchFor, watchLatest: watchLatest, groupRank: groupRank, SLEEP_SCORE: SLEEP_SCORE };
 });

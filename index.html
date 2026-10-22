@@ -4032,13 +4032,25 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var sl = Object.assign({}, base.sleep || {}, incoming.sleep || {});
     return { source: incoming.source || base.source || 'COROS', importedAt: Date.now(), workouts: ws, sleep: sl };
   }
+  /** 快照里最近一次力量训练（按日期，同一天再按开始时间） */
+  function watchLatest(watch) {
+    var best = null;
+    (watch && watch.workouts || []).forEach(function (w) {
+      if (!w || !w.date) return;
+      if (!best || w.date > best.date || (w.date === best.date && (w.start || 0) > (best.start || 0))) best = w;
+    });
+    return best;
+  }
   /** 找出某次训练对应的手表训练：同一天按开始先后一一对应 */
   function watchFor(watch, sessions, session) {
-    if (!watch || !watch.workouts || !session) return null;
+    if (!watch || !watch.workouts || !session || !session.date) return null;
     var day = watch.workouts.filter(function (w) { return w.date === session.date; }).sort(function (a, b) { return a.start - b.start; });
     if (!day.length) return null;
-    var same = sessions.filter(function (s) { return s.date === session.date; }).sort(function (a, b) { return a.order - b.order; });
+    var same = (sessions || []).filter(function (s) { return s && s.date === session.date; });
+    if (!same.some(function (s) { return s.id === session.id; })) same.push(session);
+    same.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
     var idx = same.map(function (s) { return s.id; }).indexOf(session.id);
+    if (idx < 0) return day.length === 1 ? day[0] : null;
     return day[idx] || null;
   }
 
@@ -4177,7 +4189,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return sorted[(h + (Number(variant) || 0)) % sorted.length];
   }
 
-  return { GROUPS: GROUPS, defs: defs, compute: compute, pickOne: pickOne, sanitizeWatch: sanitizeWatch, mergeWatch: mergeWatch, watchFor: watchFor, groupRank: groupRank, SLEEP_SCORE: SLEEP_SCORE };
+  return { GROUPS: GROUPS, defs: defs, compute: compute, pickOne: pickOne, sanitizeWatch: sanitizeWatch, mergeWatch: mergeWatch, watchFor: watchFor, watchLatest: watchLatest, groupRank: groupRank, SLEEP_SCORE: SLEEP_SCORE };
 });
 </script>
 <script>/* 动作洞察：每个动作的历史曲线、容量与估算 1RM。纯数据，不改训练记录。 */
@@ -4490,6 +4502,21 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       gender: g, showWeight: p.showWeight === true };
   }
   function hasEntry(e, deload) { return !!e && !e.skip && (!!deload || (e.v !== null && e.v !== undefined && e.v !== '')); }
+  function cnDate(date) {
+    if (!date || String(date).length < 10) return '';
+    return (+String(date).slice(5, 7)) + '月' + (+String(date).slice(8, 10)) + '日';
+  }
+  /** 对不上时说明原因：同一天已被另一次训练占用，或快照里根本没有这一天 */
+  function watchGap(watch, date, matched) {
+    if (matched || !watch || !(watch.workouts || []).length) return '';
+    var same = (watch.workouts || []).some(function (w) { return w.date === date; });
+    if (same) return '这次训练在手表里没有对应的力量训练记录。这一天的手表记录已经对应到另一次训练。';
+    var edge = Badges.watchLatest(watch);
+    var latest = edge ? cnDate(edge.date) : '';
+    var mine = cnDate(date);
+    if (latest && mine && latest !== mine) return '这次训练在手表里没有对应的力量训练记录。这次是 ' + mine + '，快照里最近一次是 ' + latest + '。';
+    return '这次训练在手表里没有对应的力量训练记录';
+  }
   function dates(db) {
     var set = {};
     (db.records || []).forEach(function (r) {
@@ -4597,7 +4624,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     });
     // 手表：同一天按先后与训练记录一一对应；没对上就不显示任何身体数据
     var life = allFacts(db), meLife = life.filter(function (f) { return f.id === pick.id; })[0] || me;
-    var wk = Badges.watchFor(db.params && db.params.watch, life, meLife);
+    var watch = db.params && db.params.watch;
+    var wk = Badges.watchFor(watch, life, meLife);
+    var watchNote = watchGap(watch, selected, !!wk);
     var state = badgeStateFrom(db, life), cands = state.bySession[pick.id] || [];
     // 卡片只展示一枚：用户手选优先（可取消为 0 枚）；否则按「训练 id + 换一个次数」稳定随机
     var chosen = [];
@@ -4621,7 +4650,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       sessions: 1, days: pick.day + ' ' + pick.dayName, trainingDays: pick.seq, weight: p.showWeight && bw !== null ? bw : null,
       fun: fun, funEmoji: fn.e, funTag: fn.tag, funBasis: fn.basis, funIndex: fn.index, funTotal: fn.total,
       badges: chosen.map(function (id) { return badgeBrief(state, id); }), badgeCands: cands.map(function (id) { return badgeBrief(state, id); }),
-      badgeEarned: state.earnedCount, badgeAll: state.total, watchBody: wk ? { min: wk.min, sets: wk.sets, avgHr: wk.avgHr, kcal: wk.kcal } : null, bodyLine: bodyLine,
+      badgeEarned: state.earnedCount, badgeAll: state.total, watchBody: wk ? { min: wk.min, sets: wk.sets, avgHr: wk.avgHr, kcal: wk.kcal } : null, watchNote: watchNote, bodyLine: bodyLine,
       caption: (p.name || '训练者') + (p.handle ? ' ' + p.handle : '') + ' · ' + selected + ' · ' + pick.day + ' ' + pick.dayName + ' · 第 ' + pick.seq + ' 次训练\n' +
         rows.length + ' 项动作 / ' + (estimated ? '估算 ' : '') + Math.round(reps) + ' 次 / ' + (estimated ? '估算' : '累计') + '容量 ' + Math.round(volume) + ' kg\n' +
         (chosen.length ? '里程碑：' + chosen.map(function (id) { return state.byId[id].title; }).join('、') + '\n' : '') + (bodyLine ? bodyLine + '\n' : '') +
@@ -4882,6 +4911,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         watch = { n: ws.length, min: mins, hours: r1(mins / 60), sets: sets, kcal: kcal, avgHr: hrMin ? Math.round(hrSum / hrMin) : 0 };
       }
     }
+    var watchNote = '';
+    if (!watch && wd && (wd.workouts || []).length) {
+      var edge = Badges.watchLatest ? Badges.watchLatest(wd) : null;
+      var latest = edge && edge.date && edge.date.length >= 10 ? (+edge.date.slice(5, 7)) + '月' + (+edge.date.slice(8, 10)) + '日' : '';
+      watchNote = latest ? '这个月在手表快照里没有对得上的力量训练，最近一次是 ' + latest + '。' : '这个月在手表里没有力量训练记录';
+    }
     var bodyLine = opts.body === true && watch ? '手表记录 · 力量训练 ' + watch.hours + ' 小时 · ' + watch.sets + ' 组' + (watch.kcal ? ' · ' + H.num(watch.kcal, 0) + ' 千卡' : '') : '';
 
     // 趣味换算：本月容量对照 + 月度数据彩蛋，每条一个 emoji
@@ -4916,7 +4951,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return { ym: ym, title: title, mon: monText(ym), ongoing: ongoing, profile: p, name: p.name || '训练者', hasName: !!p.name,
       n: t.n, days: t.days, daysInMonth: dim, volume: t.volume, volumeText: (t.volume / 1000).toFixed(2), reps: t.reps, sets: t.sets, adds: t.adds,
       prev: pt, prevMon: monText(pm), volDelta: volDelta, calendar: calendar, best: best ? { date: best.date, day: best.day, volume: Math.round(best.volume) } : null,
-      topEx: topEx.slice(0, 3), prog: progRows, milestones: msShow, milestoneCount: milestoneCount, watch: watch, bodyLine: bodyLine,
+      topEx: topEx.slice(0, 3), prog: progRows, milestones: msShow, milestoneCount: milestoneCount, watch: watch, watchNote: watchNote, bodyLine: bodyLine,
       fun: fp.text, funEmoji: fp.e, funTag: fp.tag, funBasis: fp.basis, funIndex: fi, funTotal: nFun, copy: summary, caption: caption, months: ms };
   }
 
@@ -5236,7 +5271,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         var meta = null; try { meta = JSON.parse(b64dec(g.json.content)).generatedAt; } catch (e) {}
         c.watchErr = ''; c.watchAt = Date.now(); c.watchGen = meta || c.watchGen || ''; setCfg(c);
         var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
-        if (manual) toast(changed ? '已拉取最新手表数据' : '手表数据已是最新');
+        if (manual) toast((changed ? '已拉取手表数据' : '云端快照没有新内容') + watchLatestText(merged));
         if (!typing && (changed || S.tab === 'settings')) render(true);
         return changed;
       });
@@ -5267,6 +5302,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     function disconnect() { clearTimeout(timer); setCfg(null); }
     return { cfg: cfg, on: on, run: run, schedule: schedule, connect: connect, disconnect: disconnect, pullWatch: pullWatch };
   })();
+  function mdDate(d) { return d && String(d).length >= 10 ? (+String(d).slice(5, 7)) + '月' + (+String(d).slice(8, 10)) + '日' : ''; }
+  function watchLatestText(w) {
+    var edge = Badges.watchLatest ? Badges.watchLatest(w) : null;
+    return edge ? '，最近一次力量训练是 ' + mdDate(edge.date) : '';
+  }
   function ago(ts) {
     if (!ts) return '从未';
     var s = Math.floor((Date.now() - ts) / 1000);
@@ -6384,7 +6424,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var w = data.watch;
     var watchBlock = w
       ? '<div class="ss-watch"><div class="ss-watch-t"><b>卡片显示手表记录</b><span>力量训练 ' + w.hours + ' 小时 · ' + w.sets + ' 组' + (w.kcal ? ' · ' + w.kcal.toLocaleString('zh-CN') + ' 千卡' : '') + '</span></div><label class="ios-sw green"><input type="checkbox" data-act="bodytoggle" ' + (sh.body ? 'checked' : '') + ' aria-label="卡片显示手表记录"><i></i></label></div>'
-      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? '这个月在手表里没有力量训练记录' : '导入 COROS 手表快照后，可显示本月训练时长、组数，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
+      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? esc(data.watchNote || '这个月在手表里没有力量训练记录') : '导入 COROS 手表快照后，可显示本月训练时长、组数，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
     var delta = data.volDelta === null ? '这是第一个有记录的月份' : '比 ' + data.prevMon + (data.volDelta >= 0 ? '多 ' : '少 ') + Math.abs(data.volDelta) + '%（' + data.prevMon + ' ' + (data.prev.volume / 1000).toFixed(2) + ' t）';
     var progRows = data.prog.length ? '<div class="ex-rows">' + data.prog.map(function (p) {
       return '<div class="ex-row"><span class="ex-d">' + tier(p.tier, p.badge) + '</span><span class="ex-m"><b>' + esc(p.name) + '</b><i>' + (p.prior === null ? '本月首次记录' : p.delta > 0 ? '较上月 +' + p.delta + ' kg（+' + p.pct + '%）' : p.delta < 0 ? '较上月 ' + p.delta + ' kg' : '与上月持平') + '</i></span><span class="ex-e"><b class="num">' + p.e1 + '</b><i>kg 估算 1RM</i></span></div>';
@@ -6432,7 +6472,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var hasWatch = !!(load().params.watch && (load().params.watch.workouts || []).length);
     var watchBlock = data.watchBody
       ? '<div class="ss-watch"><div class="ss-watch-t"><b>卡片显示手表记录</b><span>用时 ' + data.watchBody.min + ' 分' + (data.watchBody.avgHr ? ' · 平均心率 ' + data.watchBody.avgHr : '') + (data.watchBody.kcal ? ' · ' + data.watchBody.kcal + ' 千卡' : '') + '</span></div><label class="ios-sw green"><input type="checkbox" data-act="bodytoggle" ' + (sh.body ? 'checked' : '') + ' aria-label="卡片显示手表记录"><i></i></label></div>'
-      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? '这次训练在手表里没有对应的力量训练记录' : '导入 COROS 手表快照后，可显示用时、心率、消耗，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
+      : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? esc(data.watchNote || '这次训练在手表里没有对应的力量训练记录') : '导入 COROS 手表快照后，可显示用时、心率、消耗，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
     return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div>' +
         '<div class="share-toolbar"><span class="sheet-title">训练战报</span><button class="share-close" data-act="shareclose" aria-label="关闭分享预览">×</button></div>' +
@@ -6682,8 +6722,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       '<div class="cell tap" data-act="editdir"><span class="flex1">' + (dirSum ? esc(dirSum) : '尚未填写') + '</span><span class="val">修改</span><span class="chev">›</span></div></div>' +
       '<div class="sec-f">目标、经验、每周天数与器械只作档案记录，不会自动更换当前计划。</div>';
     var wd = P.watch, wn = wd && wd.workouts ? wd.workouts.length : 0, wsn = wd && wd.sleep ? Object.keys(wd.sleep).length : 0;
+    var wEdge = Badges.watchLatest ? Badges.watchLatest(wd) : null;
     h += '<div class="sec-h" id="watchSec">手表数据</div><div class="list">' +
-      '<div class="cell"><span class="flex1">' + esc((wd && wd.source) || 'COROS') + '</span><span class="val">' + (wn || wsn ? esc(wn + ' 次训练 · ' + wsn + ' 晚睡眠') : '未导入') + '</span></div>' +
+      '<div class="cell"><span class="flex1">' + esc((wd && wd.source) || 'COROS') + '</span><span class="val">' + (wn || wsn ? esc((wEdge ? mdDate(wEdge.date) + ' · ' : '') + wn + ' 次训练 · ' + wsn + ' 晚睡眠') : '未导入') + '</span></div>' +
       (Sync.on() ? (function () {
         var wc = Sync.cfg(), gen = wc.watchGen ? Date.parse(wc.watchGen) : 0;
         var val = wc.watchErr ? '<span class="red">' + esc(wc.watchErr) + '</span>' : gen ? '<span class="green">✓ 云端更新于 ' + ago(gen) + '</span>' : wc.watchAt ? '云端暂无手表文件' : '等待首次拉取';
@@ -6695,7 +6736,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       '<div class="cell tap" data-act="watchpaste"><span class="flex1 accent">粘贴快照文本</span><span class="chev">' + (st.wpaste ? '⌃' : '›') + '</span></div>' +
       (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
       (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
-      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天会把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json，打开页面时自动拉取。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
+      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天早上把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json。立即拉取只读取这份快照，不会直接连接手表；分享卡片按训练日期对上快照里的力量训练。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
