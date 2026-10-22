@@ -4,8 +4,8 @@
   var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly;
   var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', WATCH_KEY = 'gzclp_watch_v1', BK_DISMISS = 'gzclp_bk_dismiss';
   var TABS = [
-    { id: 'train', title: '训练' }, { id: 'plan', title: '计划' }, { id: 'stats', title: '数据' },
-    { id: 'review', title: '回顾' }, { id: 'settings', title: '设置' }
+    { id: 'train', title: '训练' }, { id: 'stats', title: '数据' }, { id: 'tools', title: '工具' },
+    { id: 'plan', title: '计划总览' }, { id: 'settings', title: '我的' }
   ];
   function libNames(db) {
     var m = { T1: [], T2: [], T3: [] };
@@ -225,7 +225,7 @@
     tab: 'train',
     train: { day: null, draft: null, recordId: null, deload: undefined, date: GZ.today(), bw: '', note: '', result: null, createdAt: null },
     view: { pid: null },
-    plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '' }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', pattern: '', part: '', equip: '', q: '', add: null },
+    plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '', from: '' }, stats: { lift: 0, day: 0, ex: null }, data: { seg: 1 }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', pattern: '', part: '', equip: '', q: '', add: null },
     onboard: { step: 1, force: false, returnTab: '' }
   };
   function gateOnboard() { return GZ.needsOnboarding(load()) || S.onboard.force; }
@@ -276,7 +276,7 @@
     return '<div class="head"><div class="large-title">' + esc(cur.name) + '</div></div>' +
       '<div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
       '<div class="hold-t">' + (paused ? '这套计划暂停了' : '这套计划已经结束') + '</div>' +
-      '<div class="hold-s">' + (paused ? '要继续或结束，打开计划库里的这套计划。' : '不能再往这套里记训练。要换一套，去计划库里开始。') + '</div>' +
+      '<div class="hold-s">' + (paused ? '要继续或结束，打开工具里计划库中的这套计划。' : '不能再往这套里记训练。要换一套，去工具里的计划库开始。') + '</div>' +
       '<div class="plan-ops"><div class="btn-ghost" data-act="opendetail">打开这套计划</div></div></div>';
   }
   function renderTrain() {
@@ -295,6 +295,7 @@
       var rd = vm.round;
       h += '<div class="wk-prog"><div class="wk-bar"><div class="wk-in" style="width:' + rd.pct + '%"></div></div><span class="wk-t">本周 <span class="num strong">' + rd.done + '/' + rd.total + '</span>' +
         (rd.left ? ' · 完成 ' + rd.leftText + ' 后进入' + rd.nextWeekText : '') + '</span></div>';
+      h += '<div class="card tap lib-entry" data-act="overview"><span class="flex1">计划总览</span><span class="cap" style="margin-right:8px">周期与动作编排</span><span class="chev">›</span></div>';
     }
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
@@ -393,7 +394,7 @@
     if (t.result) {
       var r = t.result;
       h += '<div class="mask" data-act="closeResult"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + r.day + ' ' + r.dayName + ' · ' + r.weekText + '</span><div class="sheet-title">' + (r.cycleDone ? '第 ' + r.cycle + ' 轮完成' : r.weekDone ? '本周完成' : '训练完成') + '</div>' +
-        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在「计划」查看本轮编排与依据</div>' : '')
+        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在训练页的「计划总览」查看本轮编排与依据</div>' : '')
           : r.weekDone ? '<div class="wk-done">本周训练日全部完成，已进入' + r.nextWeekText + (r.nextDeload ? '（减载周）' : '') + '</div>'
           : (r.leftText ? '<div class="wk-left">本周还剩 ' + r.leftText + '</div>' : '')) +
         '<div class="res-kpi"><div class="rk"><span class="num rk-v">' + r.volume + '</span><span class="rk-l">容量 kg</span></div><div class="rk"><span class="num rk-v accent">' + r.adds + '</span><span class="rk-l">项加重</span></div></div>' +
@@ -503,12 +504,13 @@
       case 'rest': beginRest(Number(ds.rest), ds.name); return false;
       case 'cancelEdit': t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; return true;
       case 'submit': submit(); return false;
+      case 'overview': S.tab = 'plan'; S.plan.view = ''; S.plan.from = 'train'; S.plan.slot = null; S.plan.detail = null; render(); return false;
       case 'opendetail':
         var curOpen = GZ.activeProgram(load());
-        S.tab = 'plan'; S.plan.view = 'browse'; S.plan.tpl = curOpen ? GZ.templateKey(curOpen.template) : '';
+        S.tab = 'tools'; S.plan.view = 'browse'; S.plan.tpl = curOpen ? GZ.templateKey(curOpen.template) : '';
         render(); return false;
       case 'closeResult': t.result = null; return true;
-      case 'gotoStats': t.result = null; S.tab = 'stats'; return true;
+      case 'gotoStats': t.result = null; S.tab = 'stats'; S.data.seg = 1; return true;
     }
   }
   function submit() {
@@ -546,7 +548,7 @@
   function swapLib() { var sw = S.train.swap; return GZ.buildLibrary(load(), { category: sw.category, fit: sw.fit, q: sw.q, current: sw.curName }); }
   function updateSwapList() {
     var el = document.getElementById('swapList'), sw = S.train.swap; if (!el) return;
-    el.innerHTML = '<div class="list">' + libRows(swapLib(), { pick: true, sel: sw.sel, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div>';
+    el.innerHTML = '<div class="list">' + libRows(swapLib(), { pick: true, sel: sw.sel, empty: '没有找到，可在「我的 → 动作库」添加自定义动作' }) + '</div>';
     var sg = document.getElementById('swapSeg'); if (sg) sg.style.display = sw.q ? 'none' : '';
   }
   function renderSwap() {
@@ -559,7 +561,7 @@
         ? '<div class="sec-f t1-only">' + esc(cat.hint) + '</div>'
         : '<div id="swapSeg"' + (sw.q ? ' style="display:none"' : '') + '>' + seg(fitChoices(cat).map(function (x) { x.on = (x.data.indexOf('"' + sw.fit + '"') >= 0); return x; }), -1, 'swapfit') + '</div>' +
           (cat.hint ? '<div class="sec-f">' + esc(cat.hint) + '</div>' : '')) +
-      '<div class="lib-list" id="swapList"><div class="list">' + libRows(lib, { pick: true, sel: sw.sel, empty: '没有找到，可在「设置 → 动作库」添加自定义动作' }) + '</div></div>';
+      '<div class="lib-list" id="swapList"><div class="list">' + libRows(lib, { pick: true, sel: sw.sel, empty: '没有找到，可在「我的 → 动作库」添加自定义动作' }) + '</div></div>';
     if (sw.sel) {
       if (!sw.editing) h += seg([{ html: '仅本次', on: sw.scope === 'once', data: ' data-s="once"' }, { html: '以后都用', on: sw.scope === 'perm', data: ' data-s="perm"' }], -1, 'swapscope', 'swap-scope');
       h += '<div class="swap-rec">' + equipTag(sw.selEquip) + '<div><div class="swap-rec-v">推荐 ' + esc(sw.recText) + (sw.recUnit === '自重' ? '' : ' ' + esc(sw.recUnit)) + '</div><div class="swap-rec-n">' + esc(sw.recNote) + '</div></div></div>';
@@ -621,6 +623,7 @@
     if (p.view === 'browse') return renderPlanBrowse();
     var db = load(), cur = GZ.activeProgram(db), vm = GZ.buildPlan(db, { cycle: p.cycle }), h = '';
     var live = !cur || cur.status === 'active', holding = cur && cur.status === 'paused', closed = cur && cur.status === 'ended';
+    h += '<div class="lib-back" data-act="overviewback">‹ 训练</div><div class="pg-title">计划总览</div>';
     h += planStatusCard(cur);
     if (live) {
       h += '<div class="card next-card"><div class="row"><div class="flex1"><span class="cap">下一次训练</span><div class="next-t"><span class="num accent">' + vm.next.day + '</span> ' + vm.next.name + '</div>' +
@@ -628,7 +631,7 @@
         '<div class="prog"><div class="row between"><span class="cap">本轮进度（' + vm.weeksPerCycle + ' 周 / 轮）</span><span class="cap"><span class="num strong">' + vm.cycleDone + '</span> / ' + vm.cyclePlanned + ' 次 · ' + vm.cycleProgress + '%</span></div>' +
         '<div class="bar"><div class="bar-in" style="width:' + vm.cycleProgress + '%"></div></div><span class="cap total-cap">累计已完成 ' + vm.done + ' 次训练</span></div></div>';
     } else {
-      h += '<div class="card hold-card"><div class="hold-t">' + (holding ? '已暂停' : '已结束') + '</div><div class="hold-s">' + (holding ? '训练进度停在这里。要继续或结束，请到计划库打开这套计划。' : '这套计划已结束，下面是当时的记录。') + '</div></div>';
+      h += '<div class="card hold-card"><div class="hold-t">' + (holding ? '已暂停' : '已结束') + '</div><div class="hold-s">' + (holding ? '训练进度停在这里。要继续或结束，请到工具里的计划库打开这套计划。' : '这套计划已结束，下面是当时的记录。') + '</div></div>';
     }
     var wide = vm.days.length > 4, gz = (db.params.progression || 'gzclp') === 'gzclp';
     h += '<div class="card"><div class="card-title"><div class="cyc-nav"><span class="cyc-btn ' + (vm.canPrev ? '' : 'off') + '" data-act="cycle" data-d="-1">‹</span>' +
@@ -732,8 +735,7 @@
   }
   function planStatusCard(cur) {
     if (!cur) return '';
-    return '<div class="card"><div class="row between"><div class="prog-name">' + esc(cur.name) + '</div>' + stPill(cur.status) + '</div></div>' +
-      '<div class="card tap lib-entry" data-act="openlib"><span class="flex1">计划库</span><span class="chev">›</span></div>';
+    return '<div class="card"><div class="row between"><div class="prog-name">' + esc(cur.name) + '</div>' + stPill(cur.status) + '</div></div>';
   }
   var FOCUS_LABEL = { strength: '力量', physique: '形体', function: '功能', fat_loss: '减脂' };
   var LEAN_LABEL = { male: '偏推拉', female: '偏臀腿' };
@@ -752,7 +754,10 @@
       '<div class="tpl-blurb">' + esc(c.blurb) + '</div><div class="lib-more">查看安排 <span class="chev">›</span></div></div>';
   }
   function renderPlanLib() {
-    var db = load(), h = '<div class="lib-back" data-act="libback">‹ 计划</div><div class="pg-title">计划库</div>';
+    return '<div class="lib-back" data-act="libback">‹ 工具</div><div class="pg-title">计划库</div>' + renderPlanLibBody();
+  }
+  function renderPlanLibBody() {
+    var db = load(), h = '';
     h += '<div class="sec-f lib-lead">按训练目标分组。点进任意一套就能看每天练什么，没开始也能看。</div>';
     var goal = db.onboarding && db.onboarding.direction ? db.onboarding.direction.goal : '';
     var order = GZ.ONBOARD_GOAL.slice().sort(function (a, b) {
@@ -789,6 +794,19 @@
     h += '<div class="sec-f">起始重量按现在的 1RM 估算。开始之后，这套计划才会计入训练记录。</div>';
     return h;
   }
+  // ================= 工具：计划库 + 以后的计算器 =================
+  function renderTools() {
+    var p = S.plan;
+    if (p.view === 'browse') return renderPlanBrowse();
+    var h = '<div class="sec-h" style="padding-top:6px">计划库</div>';
+    h += renderPlanLibBody();
+    h += '<div class="sec-h">计算器</div><div class="list">' +
+      '<div class="cell"><span class="flex1">1RM 计算</span><span class="val">即将推出</span></div>' +
+      '<div class="cell"><span class="flex1">BMI 计算</span><span class="val">即将推出</span></div></div>' +
+      '<div class="sec-f">以后常用的健身小工具会放在这里，算完只看结果，不会改动你的计划和记录。</div>';
+    return h;
+  }
+  function toolsAct(act, ds, el) { return planAct(act, ds, el); }
   function cycleSource(db, tpl) {
     var inst = openInstance(db, tpl);
     if (inst && inst.active) return db.params;
@@ -867,8 +885,9 @@
       p.cycle = next; return true;
     }
     if (act === 'go') { if (!goTrain(ds.day)) return false; return true; }
+    if (act === 'overviewback') { S.tab = 'train'; p.from = ''; p.slot = null; p.detail = null; render(); return false; }
     if (act === 'openlib') { p.view = 'lib'; return true; }
-    if (act === 'libback') { p.view = ''; return true; }
+    if (act === 'libback') { p.view = ''; if (S.tab === 'plan') { S.tab = 'tools'; } return true; }
     if (act === 'backlib') { p.view = 'lib'; return true; }
     if (act === 'browse') { p.tpl = ds.id; p.view = 'browse'; return true; }
     if (act === 'plannum') {
@@ -909,7 +928,7 @@
       var eid = act === 'endtpl' ? ds.id : GZ.activePid(load());
       var ep = GZ.programList(load()).filter(function (x) { return x.id === eid; })[0];
       if (!ep || ep.status === 'ended') return false;
-      confirmBox('结束「' + ep.name + '」？', '结束后不能再练这套，也不能恢复。记录仍可在数据和回顾里查看。', function () {
+      confirmBox('结束「' + ep.name + '」？', '结束后不能再练这套，也不能恢复。记录仍可在数据里查看。', function () {
         var dbe = load();
         try { GZ.endProgram(dbe, eid); } catch (err) { toast(err.message || '无法结束'); return; }
         save(dbe); resetTrain(); toast('已结束'); render();
@@ -926,7 +945,7 @@
         if (!def) { toast('没有这套计划'); return; }
         var tune = (S.plan.tune || {})[ds.id];
         if (tune) def.params = Object.assign({}, def.params, tune);
-        GZ.startProgram(dbn, def); save(dbn); if (S.plan.tune) delete S.plan.tune[ds.id]; resetTrain(); S.plan.view = ''; S.tab = 'plan'; toast('已开始 ' + def.name); render();
+        GZ.startProgram(dbn, def); save(dbn); if (S.plan.tune) delete S.plan.tune[ds.id]; resetTrain(); S.plan.view = ''; S.plan.from = 'train'; S.tab = 'plan'; toast('已开始 ' + def.name); render();
       });
       return false;
     }
@@ -969,8 +988,8 @@
   }
 
   // ================= 数据 =================
-  function renderStats() {
-    var s = GZ.buildStats(viewDb()), st = S.stats, k = s.kpi, cur = s.e1rm[st.lift], h = planBar();
+  function renderStats(skipBar) {
+    var s = GZ.buildStats(viewDb()), st = S.stats, k = s.kpi, cur = s.e1rm[st.lift], h = skipBar ? '' : planBar();
     S._stats = s;
     h += '<div class="kpis"><div class="kpi"><span class="k-l">训练次数</span><div><span class="num kv">' + k.sessions + '</span><span class="ku">/ ' + k.planned + '</span></div><div class="kbar"><div class="kin" style="width:' + k.progress + '%"></div></div></div>' +
       '<div class="kpi"><span class="k-l">累计容量</span><span class="num kv">' + k.volume + '</span><span class="ks">' + k.reps + ' 次</span></div>' +
@@ -1086,11 +1105,11 @@
     if (act === 'exclose') { S.stats.ex = null; return true; }
   }
 
-  // ================= 回顾 =================
-  function renderReview() {
-    var vm = GZ.buildReview(viewDb()), r = S.review, h = planBar(), gzReview = (viewDb().params.progression || 'gzclp') === 'gzclp';
+  // ================= 数据：记录 / 趋势 / 小结（原回顾按分段并入） =================
+  function renderReview(part) {
+    var vm = GZ.buildReview(viewDb()), r = S.review, h = '', gzReview = (viewDb().params.progression || 'gzclp') === 'gzclp';
     S._review = vm;
-    h += seg([{ html: '总结' }, { html: '周报' }, { html: '日志' }], r.tab, 'rtab');
+    if (part !== 'log') {
     var sd = Share.build(viewDb());
     if (sd) h += '<div class="card share-entry"><span class="cap">' + (sd.isToday ? '今日战报' : '最近一次 · ' + sd.date.slice(5).replace('-', '月') + '日') + '</span><div class="share-entry-title">把努力，晒成一张卡。</div><div class="share-entry-meta">' + sd.day + ' ' + esc(sd.dayName) + ' · ' + sd.rows.length + ' 项动作 · ' + sd.volumeText + ' t 训练容量</div><button class="btn-primary" data-act="shareopen" data-id="' + sd.recordId + '">生成分享卡片</button></div>';
     else h += '<div class="card share-entry"><div class="share-entry-title">第一张训练战报，等你完成。</div><div class="sec-f">记录一次训练后，可生成高清分享卡片。</div></div>';
@@ -1098,7 +1117,8 @@
     var mths = Monthly.months(viewDb());
     h += '<div class="list wall-entry">' + (mths.length ? '<div class="cell tap" data-act="monthopen" data-ym="' + mths[0] + '"><span class="flex1">月报</span><span class="val">' + esc(Monthly.ymText(mths[0])) + '</span><span class="chev">›</span></div>' : '') + '<div class="cell tap" data-act="wallopen"><span class="flex1">里程碑</span><span class="val">已获得 ' + bs.earnedCount + ' / ' + bs.total + ' 枚</span><span class="chev">›</span></div>' +
       (bs.nextGoals[0] ? (function () { var g = bs.nextGoals[0], d = bs.byId[g.id], p = bs.prog[g.id]; return '<div class="cell tap wall-goal" data-act="wallopen"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>下一个：' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>'; })() : '') + '</div>';
-    if (r.tab === 0) {
+    }
+    if (part === 'summary' || (!part && r.tab === 0)) {
       h += '<div class="card lt-card"><div class="card-title"><span class="t">主项进度</span><span class="s">起始 → 下次</span></div>' +
         '<div class="lt-head"><span class="lt-c1">主项</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
         vm.liftTable.map(function (x) {
@@ -1116,7 +1136,8 @@
           GZ.GENERAL_RULES.map(function (g) { return '<div class="gen">' + g + '</div>'; }).join('');
       } else h += '<span class="cap">T1 三阶进阶、T2 退阶重置、T3 阈值加重与通用规则</span>';
       h += '</div>';
-    } else if (r.tab === 1) {
+    }
+    if (part === 'summary' || (!part && r.tab === 1)) {
       if (!vm.weeks.length) h += '<div class="empty-tip">完成第一次训练后生成周报</div>';
       vm.weeks.forEach(function (w) {
         h += '<div class="card wk"><div class="row between"><div class="row"><span class="wk-n">第 ' + w.week + ' 周</span>' + (w.deload ? '<span class="dltag">减载</span>' : '') + '</div><div class="row dflags">' +
@@ -1126,7 +1147,8 @@
           '<div class="wkk"><span class="num kv ' + (w.warns ? 'amber' : '') + '">' + w.warns + '</span><span class="ks">预警</span></div></div>' +
           w.t1.map(function (t) { return '<div class="t1row"><span class="num t1d">' + t.day + '</span><span class="t1n">' + t.name + '</span><span class="num t1w">' + t.w + ' kg × ' + (t.input === null ? '—' : t.input) + '</span><span class="jtag" style="color:' + t.color + '">' + t.j + '</span></div>'; }).join('') + '</div>';
       });
-    } else {
+    }
+    if (part === 'log' || (!part && r.tab !== 0 && r.tab !== 1)) {
       if (!vm.logs.length) h += '<div class="empty-tip">暂无记录</div>';
       else {
         h += '<div class="list">';
@@ -1148,6 +1170,19 @@
     if (r.share) h += renderShareSheet();
     if (r.wall) h += renderBadgeWall();
     return h;
+  }
+  function renderData() {
+    var h = planBar();
+    h += seg([{ html: '记录' }, { html: '趋势' }, { html: '小结' }], S.data.seg, 'dseg');
+    if (S.data.seg === 1) h += renderStats(true);
+    else if (S.data.seg === 0) h += renderReview('log');
+    else h += renderReview('summary');
+    return h;
+  }
+  function dataAct(act, ds, el) {
+    if (act === 'dseg') { S.data.seg = Number(ds.i); return true; }
+    var r = statsAct(act, ds, el); if (r !== undefined) return r;
+    return reviewAct(act, ds, el);
   }
   function reviewAct(act, ds, el) {
     var va = viewAct(act, el); if (va !== null) return va;
@@ -1226,7 +1261,7 @@
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">01 · 月份与名片</span><button class="ss-act" data-act="shareprofile">编辑名片 ›</button></div>' +
         '<label class="ss-pick"><span class="ss-pick-l">哪个月</span><select data-act="monthpick" aria-label="选择月份">' + data.months.map(function (m) { return '<option value="' + m + '" ' + (m === data.ym ? 'selected' : '') + '>' + esc(Monthly.ymText(m)) + '</option>'; }).join('') + '</select></label>' +
         '<div class="ss-row">' + ava + '<div class="ss-who"><span class="ss-name">' + esc(data.name) + '</span><span class="ss-sub">' + esc(who) + '</span></div></div>' +
-        (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
+        (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「我的 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 本月纵览</span></div>' +
         '<div class="ss-metrics"><span><b class="num">' + data.n + '</b>次训练</span><span><b class="num">' + data.days + '</b>个训练日</span><span><b class="num">' + data.adds + '</b>项加重</span></div>' +
         '<p class="ss-load">累计 ' + esc(data.volumeText) + ' t · ' + data.volume.toLocaleString('zh-CN') + ' kg · ' + esc(delta) + (data.ongoing ? ' · 本月进行中' : '') + '</p></div>' +
@@ -1271,7 +1306,7 @@
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">01 · 个人名片</span><button class="ss-act" data-act="shareprofile">编辑名片 ›</button></div>' +
         '<div class="ss-row">' + ava + '<div class="ss-who"><span class="ss-name">' + esc(data.name) + '</span><span class="ss-sub">' + esc(who) + '</span></div></div>' +
         (data.profile.signature ? '<p class="ss-sig">' + esc(data.profile.signature) + '</p>' : '') +
-        (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「设置 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
+        (data.hasName ? '' : '<button class="share-profile-tip" data-act="shareprofile">还没有名片：去「我的 → 分享名片」填写头像和昵称，会显示在卡片顶部 ›</button>') + '</div>' +
       // 二、里程碑
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">02 · 里程碑</span><span class="ss-acts">' + badgeAct + '</span></div>' + badgeBlock + '</div>' +
       // 三、纵览与趣味
@@ -1322,7 +1357,7 @@
     return '<div class="mask share-mask" data-act="wallclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title">里程碑</span><button class="share-close" data-act="wallclose" aria-label="关闭徽章墙">×</button></div>' +
       '<p class="wall-sum">已获得 <b class="num">' + st.earnedCount + '</b> / ' + st.total + ' 枚 · 彩色是已获得，灰色带进度条</p></div>' +
-      '<div class="ss-body">' + nearBlock + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「设置 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。主项重量按 T1 工作重量统计，需完成目标（加重或保持）才算。</p></div></div></div>';
+      '<div class="ss-body">' + nearBlock + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「我的 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。主项重量按 T1 工作重量统计，需完成目标（加重或保持）才算。</p></div></div></div>';
   }
   async function paintSharePreview() {
     var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;
@@ -1541,8 +1576,8 @@
     h += '\u0000act\u0000';
     h += '<div class="sec-h">动作</div><div class="list"><div class="cell tap" data-act="openlib"><span class="flex1">动作库</span><span class="val">' + GZ.libAll(db).length + ' 个' +
       (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div>' +
-      '<div class="cell tap" data-act="goplan"><span class="flex1">调整动作与重量</span><span class="val">在计划页</span><span class="chev">›</span></div></div>' +
-      '<div class="sec-f">每个训练日练什么、每个动作多重，都在「计划 → 动作编排」里调整，点任意一行即可改重量或换动作，与该训练日的下一次训练一致。</div>';
+      '<div class="cell tap" data-act="goplan"><span class="flex1">调整动作与重量</span><span class="val">计划总览</span><span class="chev">›</span></div></div>' +
+      '<div class="sec-f">每个训练日练什么、每个动作多重，都在训练页的「计划总览 → 动作编排」里调整，点任意一行即可改重量或换动作，与该训练日的下一次训练一致。</div>';
     h += '\u0000sync\u0000';
     var sc = Sync.cfg();
     h += '<div class="sec-h" id="syncSec">云同步</div>';
@@ -1659,7 +1694,7 @@
         if (err) { toast(err); return false; }
         save(dba); st.pattern = GZ.patternOfPart(st.add.part).id; st.part = st.add.part; st.equip = ''; st.q = ''; st.add = null; render(); toast('已添加'); return false;
       case 'advtoggle': st.adv = !st.adv; return true;
-      case 'goplan': S.tab = 'plan'; render(); return false;
+      case 'goplan': S.tab = 'plan'; S.plan.view = ''; S.plan.from = 'train'; render(); return false;
       case 'export': exportFile(); return false;
       case 'syncconnect':
         if (st.connecting) return false;
@@ -1696,8 +1731,9 @@
   }
 
   // ================= 框架 =================
-  var RENDER = { train: renderTrain, plan: renderPlan, stats: renderStats, review: renderReview, settings: renderSettings };
-  var ACT = { train: trainAct, plan: planAct, stats: statsAct, review: reviewAct, settings: settingsAct };
+  var RENDER = { train: renderTrain, plan: renderPlan, stats: renderData, tools: renderTools, settings: renderSettings };
+  var ACT = { train: trainAct, plan: planAct, stats: dataAct, tools: toolsAct, settings: settingsAct };
+  var PGCLS = { train: 'pg-train', plan: 'pg-plan', stats: 'pg-stats pg-review', tools: 'pg-tools pg-plan', settings: 'pg-settings' };
   function render(keepScroll) {
     var body = document.getElementById('body'), y = body.scrollTop;
     var tb = document.getElementById('tabbar');
@@ -1711,17 +1747,18 @@
       return;
     }
     if (tb) tb.style.display = '';
-    var planSub = S.tab === 'plan' && S.plan.view;
-    var planTitle = S.plan.view === 'lib' ? '计划库' : '计划详情';
-    document.getElementById('navTitle').textContent = S.tab === 'settings' && S.settings.view === 'lib' ? '动作库' : planSub ? planTitle : TABS.filter(function (t) { return t.id === S.tab; })[0].title;
+    var title = TABS.filter(function (t) { return t.id === S.tab; })[0].title;
     var isLib = S.tab === 'settings' && S.settings.view === 'lib';
-    var bigTitle = S.tab === 'train' || isLib || planSub ? '' : '<div class="pg-title">' + TABS.filter(function (t) { return t.id === S.tab; })[0].title + '</div>';
-    body.innerHTML = '<div class="pg-' + S.tab + '"><div class="page">' + bigTitle + RENDER[S.tab]() + '</div></div>';
+    var toolsBrowse = S.tab === 'tools' && S.plan.view === 'browse';
+    document.getElementById('navTitle').textContent = isLib ? '动作库' : toolsBrowse ? '计划详情' : title;
+    var bigTitle = S.tab === 'train' || S.tab === 'plan' || isLib || toolsBrowse ? '' : '<div class="pg-title">' + title + '</div>';
+    body.innerHTML = '<div class="' + (PGCLS[S.tab] || ('pg-' + S.tab)) + '"><div class="page">' + bigTitle + RENDER[S.tab]() + '</div></div>';
     body.scrollTop = keepScroll ? y : 0;
     navState();
-    document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === S.tab); });
+    var hl = S.tab === 'plan' ? 'train' : S.tab;
+    document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === hl); });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
-    if (S.tab === 'review' && S.review.share) paintSharePreview();
+    if (S.tab === 'stats' && S.review.share) paintSharePreview();
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
   function navState() {
@@ -1750,11 +1787,12 @@
     body.addEventListener('scroll', navState, { passive: true });
     document.getElementById('tabbar').addEventListener('click', function (e) {
       var it = e.target.closest('.tb-item'); if (!it) return;
-      if (S.tab === it.dataset.tab) { body.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      if (S.tab === it.dataset.tab || (it.dataset.tab === 'train' && S.tab === 'plan')) { body.scrollTo({ top: 0, behavior: 'smooth' }); return; }
       var prevTab = S.tab;
       S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
-      if (S.tab === 'review' && S.review.returnTo && prevTab === 'settings') {
+      if (S.tab === 'stats' && S.review.returnTo && prevTab === 'settings') {
         var back = S.review.returnTo; S.review.returnTo = null;
+        S.data.seg = 2;
         S.review.share = shareRestore(back);
         render();
       }

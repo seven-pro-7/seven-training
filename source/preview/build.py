@@ -225,7 +225,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 }
 """
 
-tabs = [('train', 'train', '训练'), ('plan', 'plan', '计划'), ('stats', 'stats', '数据'), ('review', 'review', '回顾'), ('settings', 'me', '设置')]
+tabs = [('train', 'train', '训练'), ('stats', 'stats', '数据'), ('tools', 'plan', '工具'), ('settings', 'me', '我的')]
 tabbar = ''.join(
     f'<div class="tb-item" data-tab="{tid}"><img class="off-i" src="{icons[ic]}" alt=""><img class="on-i" src="{icons[ic + "-on"]}" alt="">{txt}</div>'
     for tid, ic, txt in tabs)
@@ -235,15 +235,14 @@ side = """
   <h1>训练<span>手记</span></h1>
   <div>8 周 · A1 → B1 → A2 → B2 循环</div>
   <ul>
-    <li><b>训练</b>：只填末组次数或是否完成，下次重量自动算出</li>
-    <li><b>计划</b>：下一次训练、8 周矩阵、当前状态</li>
-    <li><b>数据</b>：e1RM 回归、重量走势、容量、判定分布</li>
-    <li><b>回顾</b>：训练小结、周报、日志（可改可删，自动重算）</li>
-    <li><b>设置</b>：1RM、步幅、规则、动作替换、备份</li>
+    <li><b>训练</b>：今天这一练；当前计划的周期与编排从「计划总览」进入</li>
+    <li><b>数据</b>：记录、趋势与小结，看重量、容量和这一路的进步</li>
+    <li><b>工具</b>：计划库在这里；1RM、BMI 等计算器以后也放这里</li>
+    <li><b>我的</b>：个人资料、云同步、备份和进阶参数</li>
   </ul>
   <div>手机打开此链接 → 分享 → <b>添加到主屏幕</b>，即可全屏使用。</div>
   <div style="margin-top:14px">
-  <span class="tag">参数设置 → 设置</span><span class="tag">A1/B1/A2/B2 → 训练</span><span class="tag">状态总览 → 计划</span><span class="tag">图表 → 数据</span><span class="tag">规则备查 → 回顾</span>
+  <span class="tag">个人资料与设置 → 我的</span><span class="tag">今天练什么 → 训练</span><span class="tag">计划总览 → 训练</span><span class="tag">图表与日志 → 数据</span><span class="tag">计划库 → 工具</span>
   </div>
 </div>
 """
