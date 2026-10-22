@@ -4,7 +4,8 @@ const store = require('../../utils/store.js');
 const TIER_TIP = {
   T1: 'T1 严格限定四大项：杠铃深蹲、平板卧推、传统硬拉、站姿实力推。不能添加其他 T1 动作。',
   T2: 'T2 次主项：中等重量，按 3×10 → 3×8 → 3×6 退阶',
-  T3: 'T3 辅助项：小重量高次数，末组达阈值加重'
+  T3: 'T3 辅助项：小重量高次数，末组达阈值加重',
+  C: '有氧只记分钟，不记重量。跑步机、单车、椭圆机、划船机、楼梯机。'
 };
 
 Page({
@@ -20,7 +21,13 @@ Page({
       success: (r) => { if (!r.confirm) return; const db = store.load(); GZ.removeCustomEx(db, name); store.save(db); this.refresh(); }
     });
   },
-  openAdd() { const t = this.data.q || this.data.tier === 'T1' ? 'T3' : this.data.tier; this.setData({ add: { show: true, name: '', desc: '', tier: t, partIdx: GZ.PARTS.length - 1, equipIdx: 0 } }); },
+  openAdd() {
+    const onCardio = this.data.tier === 'C';
+    const t = onCardio || this.data.q || this.data.tier === 'T1' ? 'T3' : this.data.tier;
+    const partIdx = onCardio ? Math.max(0, GZ.PARTS.indexOf('有氧·跑步')) : GZ.PARTS.length - 1;
+    const equipIdx = onCardio ? Math.max(0, GZ.EQUIPS.indexOf('有氧')) : 0;
+    this.setData({ add: { show: true, name: '', desc: '', tier: t, partIdx: partIdx, equipIdx: equipIdx } });
+  },
   closeAdd() { this.setData({ 'add.show': false }); },
   addName(e) { this.setData({ 'add.name': e.detail.value }); },
   addDesc(e) { this.setData({ 'add.desc': e.detail.value }); },
@@ -32,7 +39,8 @@ Page({
     const err = GZ.addCustomEx(db, { name: a.name, tier: a.tier, part: GZ.PARTS[a.partIdx], equip: GZ.EQUIPS[a.equipIdx], desc: a.desc });
     if (err) return wx.showToast({ title: err, icon: 'none' });
     store.save(db);
-    this.setData({ 'add.show': false, tier: a.tier, q: '' }, () => this.refresh());
+    const stay = GZ.EQUIPS[a.equipIdx] === '有氧' ? 'C' : a.tier;
+    this.setData({ 'add.show': false, tier: stay, q: '' }, () => this.refresh());
     wx.showToast({ title: '已添加', icon: 'success' });
   },
   noop() {}

@@ -43,7 +43,7 @@
     T3: { '3×15+': { sets: 3, reps: 15 } }
   };
   var FIRST_STAGE = { T1: '5×3+', T2: '3×10', T3: '3×15+' };
-  var REST = { T1: 180, T2: 150, T3: 75 }; // 组间休息（秒）：T1 3~5min / T2 2~3min / T3 60~90s
+  var REST = { T1: 180, T2: 150, T3: 75, C: 0 }; // 组间休息（秒）：T1 3~5min / T2 2~3min / T3 60~90s；C 为有氧，无组间休息
   var DAY_ORDER = ['A1', 'B1', 'A2', 'B2'];
 
   // Apple 系统色
@@ -52,7 +52,7 @@
     '降阶': '#AF52DE', '退阶': '#AF52DE', '重置': '#FF3B30', '减载': '#5AC8FA', '跳过': '#C7C7CC', '替换': '#5856D6',
     '减轻': '#FF9F0A', '未完成': '#FF9F0A', '纪录': '#E65A00', '完成': '#34C759'
   };
-  var TIER_COLORS = { T1: '#E65A00', T2: '#007AFF', T3: '#6C6C70' };
+  var TIER_COLORS = { T1: '#E65A00', T2: '#007AFF', T3: '#6C6C70', C: '#34C759' };
   var JUDGE_ICON = { '加重': '↑', '建议负重': '＋', '保持': '=', '建议降阶': '!', '降阶': '↓', '退阶': '↓', '重置': '↺', '减载': '~', '跳过': '–', '替换': '⇄', '减轻': '↓', '未完成': '!', '纪录': '↑', '完成': '=' };
   var INS_ICON = { info: 'i', up: '↑', warn: '!', tip: '→', trend: '↗' };
   function dateLabel(d) {
@@ -142,7 +142,14 @@
     ['T3', '反向飞鸟', '肩·后束', '哑铃', '三角肌后束；单只≈卧推的 12%', 'bench', 0.12, 1],
     ['T3', '哑铃耸肩', '肩·斜方', '哑铃', '斜方肌容量；单只≈硬拉的 30%', 'deadlift', 0.3, 2],
     ['T3', '卷腹', '核心·屈曲', '自重', '腹直肌；以体重做次数', 'squat', 0, 0],
-    ['T3', '悬垂举腿', '核心·屈髋', '自重', '下腹与髋屈肌；以体重做次数', 'squat', 0, 0]
+    ['T3', '悬垂举腿', '核心·屈髋', '自重', '下腹与髋屈肌；以体重做次数', 'squat', 0, 0],
+    // ---- 有氧：健身房稳态有氧，只记分钟，不记重量，不挂 1RM ----
+    ['', '跑步机匀速', '有氧·跑步', '有氧', '能完整说话的配速匀速跑；记实际分钟', 'bench', 0, 0],
+    ['', '跑步机坡走', '有氧·跑步', '有氧', '加坡度快走，能说话但略喘；记实际分钟', 'bench', 0, 0],
+    ['', '单车', '有氧·骑行', '有氧', '匀速骑行，能完整说话；记实际分钟', 'bench', 0, 0],
+    ['', '椭圆机', '有氧·椭圆', '有氧', '匀速踩踏，能完整说话；记实际分钟', 'bench', 0, 0],
+    ['', '划船机', '有氧·划船', '有氧', '匀速划船，能完整说话；记实际分钟', 'bench', 0, 0],
+    ['', '楼梯机', '有氧·台阶', '有氧', '匀速登阶，能说话但略喘；记实际分钟', 'bench', 0, 0]
   ].map(function (r) { return { tier: r[0], name: r[1], part: r[2], equip: r[3], desc: r[4], base: r[5], ratio: r[6], inc: r[7] }; });
 
   function libFind(name) {
@@ -151,7 +158,8 @@
   }
   var PARTS = ['下肢·蹲', '下肢·髋铰链', '下肢·髋伸', '下肢·屈膝', '下肢·伸膝', '下肢·单腿', '下肢·踝', '下肢·髋外展',
     '上肢·水平推', '上肢·水平内收', '上肢·垂直推', '上肢·水平拉', '上肢·垂直拉', '上肢·屈肘', '上肢·伸肘',
-    '肩·中束', '肩·后束', '肩·斜方', '下背·伸髋', '核心·屈曲', '核心·屈髋', '核心', '其他'];
+    '肩·中束', '肩·后束', '肩·斜方', '下背·伸髋', '核心·屈曲', '核心·屈髋', '核心',
+    '有氧·跑步', '有氧·骑行', '有氧·划船', '有氧·椭圆', '有氧·台阶', '其他'];
   /** 动作库的筛选模式。部位仍保留，用来在同一个模式里再收窄。 */
   var PATTERNS = [
     { id: 'squat', label: '蹲', parts: ['下肢·蹲', '下肢·单腿'] },
@@ -164,6 +172,7 @@
     { id: 'arm', label: '手臂', parts: ['上肢·屈肘', '上肢·伸肘'] },
     { id: 'shoulder', label: '肩', parts: ['肩·中束', '肩·后束', '肩·斜方'] },
     { id: 'core', label: '核心', parts: ['核心·屈曲', '核心·屈髋', '核心'] },
+    { id: 'cardio', label: '有氧', parts: ['有氧·跑步', '有氧·骑行', '有氧·划船', '有氧·椭圆', '有氧·台阶'] },
     { id: 'other', label: '其他', parts: ['其他'] }
   ];
   function patternOfPart(part) {
@@ -171,14 +180,15 @@
     return PATTERNS[PATTERNS.length - 1];
   }
   function stampLib(x) { if (x && !x.pattern) x.pattern = patternOfPart(x.part).id; return x; }
-  var EQUIPS = ['杠铃', '哑铃', '自重', '负重', '器械'];
+  var EQUIPS = ['杠铃', '哑铃', '自重', '负重', '器械', '有氧'];
   // 器械类别说明（显示在动作库顶部与标签 tooltip）
   var EQUIP_NOTE = {
     '杠铃': '杠铃动作 · 重量=杠铃总重（含杆）',
     '哑铃': '哑铃动作 · 重量=单只哑铃',
     '自重': '自重动作 · 以体重做次数，无外加重量',
     '负重': '负重动作 · 重量=外加重量（腰带/背心），不含体重',
-    '器械': '固定器械/绳索 · 重量=配重片'
+    '器械': '固定器械/绳索 · 重量=配重片',
+    '有氧': '有氧 · 记分钟，不记重量'
   };
   // 旧数据迁移：历史自定义动作里的 绳索/自重/负重/壶铃/其他 归并到新分类
   function normEquip(e) {
@@ -194,7 +204,8 @@
     '哑铃': { base: 'bench', ratio: 0.15, inc: 1 },
     '自重': { base: 'bench', ratio: 0, inc: 0 },
     '负重': { base: 'bench', ratio: 0.1, inc: 2.5 },
-    '器械': { base: 'bench', ratio: 0.3, inc: 2.5 }
+    '器械': { base: 'bench', ratio: 0.3, inc: 2.5 },
+    '有氧': { base: 'bench', ratio: 0, inc: 0 }
   };
   // 动作库 = 内置 + 自定义
   function libAll(db) {
@@ -503,7 +514,8 @@
     '哑铃': { inc: 1, step: 1, incL: 2, stepL: 2 },
     '器械': { inc: 2.5, step: 2.5, incL: 5, stepL: 5 },
     '负重': { inc: 1.25, step: 1.25, incL: 2.5, stepL: 2.5 },
-    '自重': { inc: 0, step: 0, incL: 0, stepL: 0 }
+    '自重': { inc: 0, step: 0, incL: 0, stepL: 0 },
+    '有氧': { inc: 0, step: 0, incL: 0, stepL: 0 }
   };
   // 动作的真实器械类别：以动作库为准，库里没有的（旧数据/自定义）归并到新分类
   function equipOf(name, fallback) {
@@ -606,6 +618,7 @@
     opts = opts || {};
     var P = db.params, lb = libFindIn(db, name);
     var equip = (lb && lb.equip) || normEquip(opts.equip);
+    if (equip === '有氧') return { weight: 0, unit: '分钟', text: '—', source: 'cardio', equip: equip, inc: 0, note: '记分钟，不记重量' };
     if (opts.preferLast !== false) {
       var last = lastWeights(opts.rp || replay(db))[name];
       if (last !== undefined && last !== null && equip !== '自重') {
@@ -620,7 +633,7 @@
   }
   /** 重量单位：哑铃按单只，负重按外加，自重无重量 */
   function unitOf(equip) {
-    return equip === '哑铃' ? 'kg 单只' : equip === '负重' ? 'kg 外加' : equip === '自重' ? '自重' : 'kg';
+    return equip === '哑铃' ? 'kg 单只' : equip === '负重' ? 'kg 外加' : equip === '自重' ? '自重' : equip === '有氧' ? '分钟' : 'kg';
   }
   function linreg(points) {
     var n = points.length;
@@ -643,6 +656,7 @@
   /** 这一项是否已经填完。双重进阶看每一组次数，固定组次看是否标记完成。 */
   function logged(s, e) {
     if (!e || e.skip) return false;
+    if (s.prog === 'cardio' || equipOf(e.ex || s.name, s.equip) === '有氧') return hasValue(e) && !isNaN(Number(e.v));
     if (s.prog === 'dual') {
       var n = (s.scheme && s.scheme.sets) || 0, arr = e.sets || [], i;
       if (!n) return false;
@@ -970,6 +984,7 @@
   /** T1/T2/T3 只是 GZCLP 的层级名。其他计划按自己的进阶显示主项、辅助、配件或 BBB。 */
   function slotBadge(s) {
     var prog = (s && s.prog) || '';
+    if (prog === 'cardio') return '有氧';
     if (!prog || prog === 'gzclp') return (s && s.tier) || '';
     if (prog === 'fixed') return 'BBB';
     if (prog === 'w531') return '主项';
@@ -1113,6 +1128,23 @@
     r.input = '完成'; r.judgment = '完成'; r.volume = fix(w * sets * sc.reps);
     return r;
   }
+  function cardioMinutes(s, st) {
+    var m = st && st.stage ? parseInt(st.stage, 10) : NaN;
+    if (isNaN(m) || m <= 0) m = (s && s.scheme && Number(s.scheme.minutes)) || 20;
+    return Math.max(1, Math.round(m));
+  }
+  function cardioEvaluate(s, st, e) {
+    var planned = cardioMinutes(s, st), r = resultBase(s, st, 0);
+    r.inputMode = 'cardio'; r.sets = 1; r.reps = planned; r.autoWeight = 0;
+    r.stage = planned + ' 分钟'; r.nextStage = r.stage; r.nextWeight = 0; r.weight = 0;
+    if (e && e.skip) { r.judgment = '跳过'; return r; }
+    var mins = e && e.v !== null && e.v !== undefined && e.v !== '' ? Number(e.v) : null;
+    if (mins === null || isNaN(mins)) { r.judgment = '跳过'; return r; }
+    mins = Math.max(0, Math.round(mins));
+    r.input = mins; r.minutes = mins;
+    r.judgment = mins >= planned ? '完成' : '未完成';
+    return r;
+  }
   function progShell(id, name, desc, evaluateFn, first) {
     return registerProgression({
       id: id, name: name, desc: desc,
@@ -1132,6 +1164,15 @@
       amrapLast: function () { return id === 'linear' || id === 'w531'; }
     });
   }
+  registerProgression({
+    id: 'cardio', name: '有氧', desc: '记实际分钟。达到计划分钟算完成，下次分钟不变，不记重量、不计容量。',
+    firstStage: function (s) { return cardioMinutes(s, null) + ' 分钟'; },
+    stageDef: function (tier, stage) { var m = parseInt(stage, 10); if (isNaN(m) || m <= 0) m = 20; return { sets: 1, reps: m, add: m, hold: 0, next: null }; },
+    initState: function (s) { return { stage: cardioMinutes(s, null) + ' 分钟', weight: 0, fail: 0, cycleMiss: 0 }; },
+    freshState: function (s) { return { stage: cardioMinutes(s, null) + ' 分钟', weight: 0, fail: 0, cycleMiss: 0 }; },
+    evaluate: cardioEvaluate,
+    amrapLast: function () { return false; }
+  });
   progShell('dual', '双重进阶', '全部组到达次数上限后加重并回到下限；任一组低于下限 2 次则减轻。', dualEvaluate, '8–12');
   progShell('linear', '线性加重', '完成规定次数就加重。连续 3 次完不成，工作重量减 10%。', linearEvaluate, '5+');
   progShell('w531', '5/3/1', '按训练最大重量的四周百分比训练。规定组都完成才提高 TM；连续两轮没完成则 TM × 0.9。', waveEvaluate, '第1周');
@@ -1301,15 +1342,25 @@
     }
     st = startState(s, st, ef, week, prog);
     var res;
+    // 换上的动作是有氧时按分钟记：原生有氧槽位用自己的计划分钟，临时或永久换入的默认 20 分钟
+    function evalSlot(slot, state, entry) {
+      var lb = libFindIn(db, slot.name);
+      if (lb && lb.equip === '有氧') {
+        var mins = slot.prog === 'cardio' ? cardioMinutes(slot, state) : ((slot.scheme && Number(slot.scheme.minutes)) || 20);
+        var cslot = Object.assign({}, slot, { prog: 'cardio', scheme: Object.assign({}, slot.scheme || {}, { minutes: mins }) });
+        return PROGRESSIONS.cardio.evaluate(cslot, { stage: mins + ' 分钟', weight: 0, fail: state.fail || 0 }, entry, db.params, deload, week);
+      }
+      return prog.evaluate(slot, state, entry, db.params, deload, week);
+    }
     if (e && e.ex && e.ex !== ef.slot.name) {
       var lib = libFindIn(db, e.ex);
-      res = prog.evaluate(Object.assign({}, ef.slot, { name: e.ex, equip: lib ? lib.equip : '' }), st, e, db.params, deload, week);
+      res = evalSlot(Object.assign({}, ef.slot, { name: e.ex, equip: lib ? lib.equip : '' }), st, e);
       // 仅本次替换：记录容量，但不推进原动作的阶段与重量
       if (!res.deload && res.judgment !== '跳过') { res.judgment = '替换'; res.e1rm = null; }
       res.nextStage = st.stage; res.nextWeight = st.weight; res.nextFail = st.fail || 0; res.delta = 0;
       res.sub = true; res.origName = ef.slot.name;
     } else {
-      res = prog.evaluate(ef.slot, st, e, db.params, deload, week);
+      res = evalSlot(ef.slot, st, e);
     }
     res.changed = !!ef.change;
     return { res: res, st: st, eff: ef, prog: prog };
@@ -1398,9 +1449,9 @@
     return { id: s.rec.id, date: s.rec.date, dateText: dateLabel(s.rec.date), day: s.rec.day, dayName: s.dayName, week: s.week, note: s.rec.note || '', bw: s.rec.bw || '',
       deload: !!s.rec.deload, vol: Math.round(s.volume),
       items: s.items.map(function (it) {
-        return { tier: it.tier, badge: it.badge, tierColor: TIER_COLORS[it.tier], name: it.name, stage: it.stage, sub: !!it.sub, origName: it.origName || '',
-          w: fmtW(it.deload ? it.dWeight : it.weight), manual: !!it.manual && !it.sub, planned: fmtW(it.planned), input: it.input === null ? '—' : it.input,
-          j: it.judgment, color: JUDGE_COLORS[it.judgment] || '#6C6C70', next: it.deload || it.judgment === '跳过' ? '' : it.sub ? '替代 ' + it.origName + '，不影响进阶' : '下次 ' + fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage };
+        return { tier: it.tier, badge: it.badge, tierColor: TIER_COLORS[it.tier], name: it.name, stage: it.stage, sub: !!it.sub, origName: it.origName || '', isCardio: it.inputMode === 'cardio',
+          w: it.inputMode === 'cardio' ? '' : fmtW(it.deload ? it.dWeight : it.weight), manual: !!it.manual && !it.sub, planned: fmtW(it.planned), input: it.input === null ? '—' : it.input,
+          j: it.judgment, color: JUDGE_COLORS[it.judgment] || '#6C6C70', next: it.deload || it.judgment === '跳过' ? '' : it.sub ? '替代 ' + it.origName + '，不影响进阶' : it.inputMode === 'cardio' ? '下次 ' + it.nextStage : '下次 ' + fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage };
       }) };
   }
 
@@ -1458,18 +1509,18 @@
         unitText: unitOf(equipOf(res.name, res.equip)), isBW: equipOf(res.name, res.equip) === '自重',
         planName: s.name, sub: !!res.sub, changed: !!run.eff.change, changeNew: !!run.eff.resetNow,
         autoNew: !!(run.eff.auto && run.eff.resetNow), autoPrev: run.eff.auto && run.eff.change ? run.eff.change.prev : '',
-        stage: st.stage, sets: showSets, reps: def.reps, weight: showW,
-        weightText: equipOf(res.name, res.equip) === '自重' ? '自重' : fmtW(showW),
-        canAdjust: equipOf(res.name, res.equip) !== '自重' && res.inputMode !== 'wave',
+        stage: st.stage, sets: showSets, reps: def.reps, weight: showW, isCardio: res.inputMode === 'cardio',
+        weightText: res.inputMode === 'cardio' ? String(def.reps) : equipOf(res.name, res.equip) === '自重' ? '自重' : fmtW(showW),
+        canAdjust: equipOf(res.name, res.equip) !== '自重' && res.inputMode !== 'wave' && res.inputMode !== 'cardio',
         plates: platesFor(showW, P, equipOf(res.name, res.equip)), fail: res.sub ? 0 : (st.fail || 0),
         restText: fmtRest(REST[s.tier]),
         manual: res.sub ? manualW(e) !== subDefault : res.manual, autoWeight: res.sub ? subDefault : res.autoWeight, autoText: fmtW(res.sub ? subDefault : res.autoWeight), wStep: incOf(Object.assign({}, s, { name: res.name, equip: equipOf(res.name, res.equip) }), P) || 1, editW: !!e.editW,
-        repsText: res.inputMode === 'sets' && s.scheme ? (res.sets + '×' + s.scheme.repMin + '–' + s.scheme.repMax) : (res.loads ? res.loads.map(function (ld) { return (ld.pct ? Math.round(ld.pct * 100) + '%×' : '') + ld.reps + (ld.amrap ? '+' : ''); }).join(' · ') : showSets + '×' + def.reps + (res.inputMode === 'linear' || (s.tier !== 'T2' && !deload && !res.inputMode) ? '+' : '')),
+        repsText: res.inputMode === 'cardio' ? (def.reps + ' 分钟') : res.inputMode === 'sets' && s.scheme ? (res.sets + '×' + s.scheme.repMin + '–' + s.scheme.repMax) : (res.loads ? res.loads.map(function (ld) { return (ld.pct ? Math.round(ld.pct * 100) + '%×' : '') + ld.reps + (ld.amrap ? '+' : ''); }).join(' · ') : showSets + '×' + def.reps + (res.inputMode === 'linear' || (s.tier !== 'T2' && !deload && !res.inputMode) ? '+' : '')),
         inputType: res.inputMode || (deload ? 'deload' : s.tier === 'T2' ? 'done' : 'amrap'),
         loads: res.loads || null,
         scheme: s.scheme || null,
-        amrapHint: res.inputMode === 'sets' && s.scheme ? ('全部做到 ' + s.scheme.repMax + ' 次加重，有一组 ≤ ' + (s.scheme.repMin - 2) + ' 次减轻') : res.inputMode === 'linear' && s.scheme ? ('末组至少 ' + s.scheme.reps + ' 次加重，连续 3 次失败减 10%') : res.inputMode === 'wave' ? '规定次数没完成，这一轮不加训练最大重量' : res.inputMode === 'fixed' ? '重量固定为训练最大重量的 50%，不自动加重' : (s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + (equipOf(res.name, res.equip) === '自重' ? ' 建议切换负重版' : ' 加重')) : ''),
-        amrapTarget: deload ? null : s.tier === 'T1' ? def.add : s.tier === 'T3' ? P.t3Threshold : null,
+        amrapHint: res.inputMode === 'cardio' ? ('填实际分钟，达到 ' + def.reps + ' 分钟算完成') : res.inputMode === 'sets' && s.scheme ? ('全部做到 ' + s.scheme.repMax + ' 次加重，有一组 ≤ ' + (s.scheme.repMin - 2) + ' 次减轻') : res.inputMode === 'linear' && s.scheme ? ('末组至少 ' + s.scheme.reps + ' 次加重，连续 3 次失败减 10%') : res.inputMode === 'wave' ? '规定次数没完成，这一轮不加训练最大重量' : res.inputMode === 'fixed' ? '重量固定为训练最大重量的 50%，不自动加重' : (s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + (equipOf(res.name, res.equip) === '自重' ? ' 建议切换负重版' : ' 加重')) : ''),
+        amrapTarget: res.inputMode === 'cardio' ? def.reps : deload ? null : s.tier === 'T1' ? def.add : s.tier === 'T3' ? P.t3Threshold : null,
         value: e.v, setsIn: e.sets || null, miss: !!e.miss, logged: doneLog, reps2: e.reps, skip: !!e.skip, new5RM: e.new5RM || '', done: e.done || 0, dots: dots,
         need5RM: s.tier === 'T1' && P.ruleMode !== 'excel' && st.stage === '10×1+',
         rest: REST[s.tier],
@@ -1557,8 +1608,8 @@
         } else if (s.scheme && s.scheme.link && rp.states[s.scheme.link]) {
           showW = ceilTo(rp.states[s.scheme.link].weight * (s.scheme.pct || 0.5), (s.scheme && s.scheme.inc) || 2.5);
         }
-        return { id: s.id, changed: !!ef.change, tier: s.tier, badge: slotBadge(s), tierColor: TIER_COLORS[s.tier], name: s.name, stage: st.stage, weight: fmtW(showW),
-          gain: st.weight - start > 0 ? '+' + fmtW(fix(st.weight - start)) : '', fail: st.fail,
+        return { id: s.id, changed: !!ef.change, tier: s.tier, badge: slotBadge(s), tierColor: TIER_COLORS[s.tier], name: s.name, stage: st.stage, isCardio: s.prog === 'cardio', weight: s.prog === 'cardio' ? st.stage : fmtW(showW),
+          gain: s.prog !== 'cardio' && st.weight - start > 0 ? '+' + fmtW(fix(st.weight - start)) : '', fail: st.fail,
           last: last ? last.judgment : '—', lastColor: last ? JUDGE_COLORS[last.judgment] : '#C7C7CC' };
       }) };
     });
@@ -1685,10 +1736,10 @@
         var arr = [];
         for (var w = 1; w <= Math.max(P.totalWeeks, weeks); w++) arr.push(null);
         S.forEach(function (s2) {
-          if (s2.rec.day === d.id) { var it = s2.items[si]; if (!it.sub && it.judgment !== '跳过') arr[s2.week - 1] = it.weight; }
+          if (s2.rec.day === d.id) { var it = s2.items[si]; if (!it.sub && it.judgment !== '跳过' && it.inputMode !== 'cardio') arr[s2.week - 1] = it.weight; }
         });
         var cnt = rp.counts[d.id] || 0, ef = effectiveSlot(db, s, cnt + 1, rp.hist);
-        if (cnt < arr.length) arr[cnt] = startState(s, rp.states[s.id], ef, cnt + 1, progressionOf(db)).weight; // 下一次计划重量
+        if (cnt < arr.length && s.prog !== 'cardio') arr[cnt] = startState(s, rp.states[s.id], ef, cnt + 1, progressionOf(db)).weight; // 下一次计划重量
         return { name: ef.slot.name, tier: s.tier, badge: slotBadge(ef.slot.prog ? ef.slot : s), data: arr };
       });
       return { day: d.id, name: d.name, cols: cols, nextIdx: rp.counts[d.id] || 0 };
@@ -1701,7 +1752,7 @@
     // 个人纪录：按实际做过的动作统计（含替换、更换后的动作）
     var prMap = {}, prs = [];
     S.forEach(function (s2) { s2.items.forEach(function (it) {
-      if (it.deload || it.judgment === '跳过') return;
+      if (it.deload || it.judgment === '跳过' || it.inputMode === 'cardio' || !(it.weight > 0)) return;
       var cur = prMap[it.name];
       if (!cur || it.weight > cur.weight) prMap[it.name] = { weight: it.weight, tier: it.tier, badge: it.badge, day: s2.rec.day, date: s2.rec.date };
     }); });
@@ -1889,6 +1940,7 @@
       }
       return { key: roleOf(slot.tier), label: ROLE_NAME[roleOf(slot.tier)] || '动作', hint: '', names: null, part: part, locked: false };
     }
+    if (prog.id === 'cardio') return { key: 'cardio', label: '有氧', hint: '只记分钟，不记重量。', names: null, part: part, locked: false };
     var label = prog.id === 'fixed' ? 'BBB' : (prog.id === 'w531' || prog.id === 'linear' ? '主项' : (ROLE_NAME[roleOf(slot.tier)] || '动作'));
     var hint = prog.id === 'fixed' ? '同一主动作的固定容量。' : prog.id === 'w531' ? '百分比波浪的主项。' : prog.id === 'linear' ? '完成规定次数就加重。' : '全部做到区间上限才加重。';
     return { key: prog.id + ':' + label, label: label, hint: hint, names: (prog.id === 'fixed' || prog.id === 'w531') ? [name || slot.name] : null, part: part, locked: false };
@@ -1922,6 +1974,10 @@
       var allTier = libAll(db);
       allTier.forEach(function (x) { if (x.tier) counts[x.tier] = (counts[x.tier] || 0) + 1; });
       var list0 = allTier.filter(function (x) {
+        if (tier === 'C') {
+          if (x.equip !== '有氧') return false;
+          return !q || x.name.indexOf(q) >= 0 || (x.part || '').indexOf(q) >= 0 || (x.equip || '').indexOf(q) >= 0;
+        }
         if (tier === 'T1' && x.tier !== 'T1') return false;
         if (q) return x.name.indexOf(q) >= 0 || (x.part || '').indexOf(q) >= 0 || (x.equip || '').indexOf(q) >= 0;
         return x.tier === tier;
@@ -1931,8 +1987,9 @@
         return row;
       });
       var eqCount = {}; EQUIPS.forEach(function (e) { eqCount[e] = 0; });
-      allTier.filter(function (x) { return x.tier === tier; }).forEach(function (x) { eqCount[x.equip] = (eqCount[x.equip] || 0) + 1; });
-      return { tier: tier, q: q, list: list0, counts: counts, equipCounts: EQUIPS.map(function (e) { return { id: e, n: eqCount[e] || 0 }; }), tiers: ['T1', 'T2', 'T3'].map(function (t) { return { id: t, n: counts[t] || 0 }; }),
+      allTier.filter(function (x) { return tier === 'C' ? x.equip === '有氧' : x.tier === tier; }).forEach(function (x) { eqCount[x.equip] = (eqCount[x.equip] || 0) + 1; });
+      counts.C = allTier.filter(function (x) { return x.equip === '有氧'; }).length;
+      return { tier: tier, q: q, list: list0, counts: counts, equipCounts: EQUIPS.map(function (e) { return { id: e, n: eqCount[e] || 0 }; }), tiers: [{ id: 'T1', label: 'T1' }, { id: 'T2', label: 'T2' }, { id: 'T3', label: 'T3' }, { id: 'C', label: '有氧' }].map(function (t) { return { id: t.id, label: t.label, n: counts[t.id] || 0 }; }),
         customCount: ((db && db.customLib) || []).length };
     }
     var all = libUnique(db), cat = opts.category || null, fit = opts.fit || 'plan';
@@ -2123,6 +2180,9 @@
     var bw = equipOf(name) === '自重';
     return libSlot(id, tier, name, 'dual', { sets: sets, repMin: lo, repMax: hi, step: bw ? 0 : step, weight: seedFixed(db, name, tier) }, lift || null);
   }
+  function cardioSlot(id, name, minutes) {
+    return libSlot(id, 'C', name, 'cardio', { minutes: minutes, weight: 0 }, null);
+  }
   function linSlot(db, id, tier, name, sets, reps, step, lift) {
     return libSlot(id, tier, name, 'linear', { sets: sets, reps: reps, step: step, inc: 2.5, weight: seedFixed(db, name, 'T1') }, lift || null);
   }
@@ -2302,6 +2362,76 @@
       ] }
     ];
   }
+  /** 力量后有氧：短的全身力量，最后 15 分钟有氧，约占一次训练的三分之一。 */
+  function mix3Days(db) {
+    return [
+      { id: 'MA', name: '全身 A · 力量后有氧', slots: [
+        dualSlot(db, 'MA1', 'T1', '杠铃深蹲', 3, 6, 10, 2.5, 'squat'),
+        dualSlot(db, 'MA2', 'T1', '平板卧推', 3, 6, 10, 2.5, 'bench'),
+        dualSlot(db, 'MA3', 'T2', '杠铃划船', 3, 8, 12, 2.5),
+        cardioSlot('MA4', '单车', 15)
+      ] },
+      { id: 'MB', name: '全身 B · 力量后有氧', slots: [
+        dualSlot(db, 'MB1', 'T2', '罗马尼亚硬拉', 3, 8, 12, 2.5, 'deadlift'),
+        dualSlot(db, 'MB2', 'T1', '站姿实力推', 3, 6, 10, 2.5, 'ohp'),
+        dualSlot(db, 'MB3', 'T2', '高位下拉', 3, 8, 12, 2.5),
+        cardioSlot('MB4', '跑步机坡走', 15)
+      ] },
+      { id: 'MC', name: '全身 C · 力量后有氧', slots: [
+        dualSlot(db, 'MC1', 'T2', '腿举', 3, 10, 15, 5),
+        dualSlot(db, 'MC2', 'T2', '上斜哑铃卧推', 3, 8, 12, 2),
+        dualSlot(db, 'MC3', 'T2', '单臂哑铃划船', 3, 8, 12, 2),
+        cardioSlot('MC4', '椭圆机', 15)
+      ] }
+    ];
+  }
+  /** 有氧为主：四五个复合动作保住肌肉，再加 30 分钟有氧，有氧时间不少于力量。 */
+  function cut3Days(db) {
+    return [
+      { id: 'CA', name: '全身 A · 有氧为主', slots: [
+        dualSlot(db, 'CA1', 'T1', '杠铃深蹲', 3, 6, 10, 2.5, 'squat'),
+        dualSlot(db, 'CA2', 'T1', '平板卧推', 3, 6, 10, 2.5, 'bench'),
+        dualSlot(db, 'CA3', 'T2', '杠铃划船', 3, 8, 12, 2.5),
+        dualSlot(db, 'CA4', 'T2', '臀推', 3, 8, 12, 2.5),
+        cardioSlot('CA5', '跑步机坡走', 30)
+      ] },
+      { id: 'CB', name: '全身 B · 有氧为主', slots: [
+        dualSlot(db, 'CB1', 'T2', '罗马尼亚硬拉', 3, 8, 12, 2.5, 'deadlift'),
+        dualSlot(db, 'CB2', 'T1', '站姿实力推', 3, 6, 10, 2.5, 'ohp'),
+        dualSlot(db, 'CB3', 'T2', '高位下拉', 3, 8, 12, 2.5),
+        dualSlot(db, 'CB4', 'T2', '腿举', 3, 10, 15, 5),
+        cardioSlot('CB5', '单车', 30)
+      ] },
+      { id: 'CC', name: '全身 C · 有氧为主', slots: [
+        dualSlot(db, 'CC1', 'T2', '腿举', 3, 10, 15, 5),
+        dualSlot(db, 'CC2', 'T2', '上斜哑铃卧推', 3, 8, 12, 2),
+        dualSlot(db, 'CC3', 'T2', '单臂哑铃划船', 3, 8, 12, 2),
+        dualSlot(db, 'CC4', 'T2', '臀推', 3, 8, 12, 2.5),
+        cardioSlot('CC5', '椭圆机', 30)
+      ] }
+    ];
+  }
+  /** 有氧日：两天短力量、两天只做有氧，每次 40 分钟。 */
+  function cut4Days(db) {
+    return [
+      { id: 'KA', name: '力量 A', slots: [
+        dualSlot(db, 'KA1', 'T1', '杠铃深蹲', 3, 6, 10, 2.5, 'squat'),
+        dualSlot(db, 'KA2', 'T1', '平板卧推', 3, 6, 10, 2.5, 'bench'),
+        dualSlot(db, 'KA3', 'T2', '杠铃划船', 3, 8, 12, 2.5)
+      ] },
+      { id: 'KB', name: '有氧 A', slots: [
+        cardioSlot('KB1', '跑步机坡走', 40)
+      ] },
+      { id: 'KC', name: '力量 B', slots: [
+        dualSlot(db, 'KC1', 'T2', '罗马尼亚硬拉', 3, 8, 12, 2.5, 'deadlift'),
+        dualSlot(db, 'KC2', 'T1', '站姿实力推', 3, 6, 10, 2.5, 'ohp'),
+        dualSlot(db, 'KC3', 'T2', '高位下拉', 3, 8, 12, 2.5)
+      ] },
+      { id: 'KD', name: '有氧 B', slots: [
+        cardioSlot('KD1', '单车', 40)
+      ] }
+    ];
+  }
   /** 上肢下肢塑形：全程肥大区间，肩、臀、核心配件更多。 */
   function ul4Days(db) {
     return [
@@ -2473,6 +2603,7 @@
     if (s.prog === 'dual') return (sc.sets || 3) + '×' + sc.repMin + '–' + sc.repMax;
     if (s.prog === 'w531') return '百分比波浪 · 末组尽量多';
     if (s.prog === 'fixed') return (sc.sets || 5) + '×' + (sc.reps || 10) + (sc.pct ? ' · 训练最大重量 ' + Math.round(sc.pct * 100) + '%' : '');
+    if (s.prog === 'cardio') return (sc.minutes || 20) + ' 分钟';
     if (s.tier === 'T1') return '5×3+ → 6×2+ → 10×1+';
     if (s.tier === 'T2') return '3×10 → 3×8 → 3×6';
     return '3×15+';
@@ -2490,7 +2621,10 @@
       { id: 'ul4', name: '上肢下肢 · 塑形', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'physique', goals: ['reshape', 'muscle_gain', 'recomp'], blurb: '上肢、下肢各两次，全程用肥大次数。肩、臀和核心的配件比力量计划更多。' },
       { id: 'glute4', name: '臀腿优先 · 塑形', days: '每周 4 练', daysFit: ['4'], lean: 'female', focus: 'physique', goals: ['reshape', 'muscle_gain'], blurb: '下肢每周两次，臀推、髋铰链和外展放在前面；上肢保持姿态和平衡，不把容量全压在卧推上。' },
       { id: 'lul3', name: '下 · 上 · 下', days: '每周 3 练', daysFit: ['2_3'], lean: 'female', focus: 'physique', goals: ['reshape', 'recomp'], blurb: '三天里两天练下肢。想优先臀腿体态、又只有三天时间时用。' },
-      { id: 'fb3', name: '全身 · 减脂向', days: '每周 3 练', daysFit: ['2_3'], lean: 'unisex', focus: 'fat_loss', goals: ['fat_loss', 'recomp'], blurb: '三次全身训练，复合动作为主，用来在减脂时保住肌肉。饮食和有氧不写进这套动作里。' }
+      { id: 'fb3', name: '全身 · 减脂向', days: '每周 3 练', daysFit: ['2_3'], lean: 'unisex', focus: 'fat_loss', goals: ['fat_loss', 'recomp'], blurb: '三次全身训练，复合动作为主，用来在减脂时保住肌肉。这套只练力量，有氧另排。' },
+      { id: 'mix3', name: '力量后有氧', days: '每周 3 练', daysFit: ['2_3'], lean: 'unisex', focus: 'fat_loss', goals: ['reshape', 'recomp'], blurb: '三次全身力量，最后加 15 分钟单车、坡走或椭圆机。有氧约占一次训练的三分之一，力量仍是主体。' },
+      { id: 'cut3', name: '有氧为主', days: '每周 3 练', daysFit: ['2_3'], lean: 'unisex', focus: 'fat_loss', goals: ['fat_loss'], blurb: '每次四五个复合动作保住肌肉，再加 30 分钟有氧。有氧时间不少于力量，减脂优先。' },
+      { id: 'cut4', name: '有氧日', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'fat_loss', goals: ['fat_loss'], blurb: '两天短力量、两天只做 40 分钟有氧。一周里有氧占大头，力量用来保住肌肉。' }
     ];
   }
   function recommendTemplates(db) {
@@ -2500,6 +2634,7 @@
     function score(c) {
       var s = 0;
       if (days && (c.daysFit || []).indexOf(days) >= 0) s += 10;
+      if (goal === 'fat_loss' && (c.id === 'cut3' || c.id === 'cut4')) s += 4;
       if (gender === 'female' && c.lean === 'female') s += 3;
       if (gender === 'male' && c.lean === 'male') s += 3;
       return s;
@@ -2518,7 +2653,7 @@
       return { id: d.id, name: d.name, slots: d.slots.map(function (s) {
         var w = initWeight(s, P), bw = equipOf(s.name, s.equip) === '自重';
         if (s.scheme && s.scheme.link && byId[s.scheme.link]) w = ceilTo(initWeight(byId[s.scheme.link], P) * (s.scheme.pct || 0.5), (s.scheme.inc) || 2.5);
-        var weight = bw ? '自重' : (s.prog === 'w531' && w > 0 ? 'TM ' + fmtW(w) + ' kg' : (w > 0 ? fmtW(w) + ' kg' : ''));
+        var weight = s.prog === 'cardio' ? ((s.scheme && s.scheme.minutes || 20) + ' 分钟') : bw ? '自重' : (s.prog === 'w531' && w > 0 ? 'TM ' + fmtW(w) + ' kg' : (w > 0 ? fmtW(w) + ' kg' : ''));
         return { tier: s.tier, badge: slotBadge(s), name: s.name, equip: equipOf(s.name, s.equip), text: schemeText(s), weight: weight };
       }) };
     }) };
@@ -2535,6 +2670,9 @@
       nsb: ['新手全身力量', 'linear', nsbDays, 8],
       ath3: ['功能表现 · 全身', 'dual', athDays, 8],
       fb3: ['全身 · 减脂向', 'dual', fb3Days, 8],
+      mix3: ['力量后有氧', 'dual', mix3Days, 8],
+      cut3: ['有氧为主', 'dual', cut3Days, 8],
+      cut4: ['有氧日', 'dual', cut4Days, 8],
       ul4: ['上肢下肢 · 塑形', 'dual', ul4Days, 8],
       glute4: ['臀腿优先 · 塑形', 'dual', gluteDays, 8],
       lul3: ['下 · 上 · 下', 'dual', lulDays, 8],

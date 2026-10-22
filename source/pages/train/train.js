@@ -78,20 +78,29 @@ Page({
   onStep(e) {
     const { slot, d } = e.currentTarget.dataset, en = this.entry(slot);
     const it = this.data.vm.items.find((x) => x.slotId === slot);
-    let v = en.v === null || en.v === '' || en.v === undefined ? (Number(d) > 0 ? it.reps : 0) : Number(en.v) + Number(d);
-    en.v = Math.max(0, Math.min(60, v));
+    const target = it.inputType === 'cardio' ? (it.amrapTarget || it.reps) : it.reps;
+    let v = en.v === null || en.v === '' || en.v === undefined ? (Number(d) > 0 ? target : Math.max(0, target - 1)) : Number(en.v) + Number(d);
+    en.v = Math.max(0, Math.min(it.inputType === 'cardio' ? 300 : 60, v));
     wx.vibrateShort && wx.vibrateShort({ type: 'light' });
     this.refresh();
   },
   onAmrap(e) {
     const en = this.entry(e.currentTarget.dataset.slot), raw = e.detail.value;
-    en.v = raw === '' ? null : Math.max(0, Math.min(60, parseInt(raw, 10) || 0));
+    const it = this.data.vm.items.find((x) => x.slotId === e.currentTarget.dataset.slot);
+    en.v = raw === '' ? null : Math.max(0, Math.min(it && it.inputType === 'cardio' ? 300 : 60, parseInt(raw, 10) || 0));
     this.refresh();
   },
   on5RM(e) { this.entry(e.currentTarget.dataset.slot).new5RM = e.detail.value; this.refresh(); },
   onDone(e) {
     const { slot, v } = e.currentTarget.dataset, en = this.entry(slot);
     en.v = en.v === v ? null : v;
+    this.refresh();
+  },
+  onCardioDone(e) {
+    const slot = e.currentTarget.dataset.slot, en = this.entry(slot);
+    const it = this.data.vm.items.find((x) => x.slotId === slot);
+    const goalMin = Number(it && (it.amrapTarget || it.reps)) || 0;
+    en.v = en.v !== null && en.v !== '' && Number(en.v) >= goalMin ? null : goalMin;
     this.refresh();
   },
   onReps(e) { this.entry(e.currentTarget.dataset.slot).reps = e.detail.value; this.refresh(); },
@@ -234,8 +243,8 @@ Page({
       leftText: this.recordId ? '' : rd.leftText, nextDeload: weekDone && GZ.isDeloadWeek(rd.week, db.params),
       adds: s.items.filter((x) => x.judgment === '加重').length,
       items: s.items.map((it) => ({
-        tier: it.tier, tierColor: GZ.TIER_COLORS[it.tier], name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment],
-        next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : GZ.fmtW(it.nextWeight) + ' kg · ' + it.nextStage
+        tier: it.tier, badge: it.badge, tierColor: GZ.TIER_COLORS[it.tier], name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment],
+        next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : it.inputMode === 'cardio' ? it.nextStage : GZ.fmtW(it.nextWeight) + ' kg · ' + it.nextStage
       }))
     } : null;
     // 重置为下一次推荐训练

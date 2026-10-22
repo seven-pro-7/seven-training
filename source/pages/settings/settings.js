@@ -3,7 +3,7 @@ const store = require('../../utils/store.js');
 
 function libNames(db) {
   const m = { T1: [], T2: [], T3: [] };
-  GZ.libAll(db).forEach((x) => { if (m[x.tier].indexOf(x.name) < 0) m[x.tier].push(x.name); });
+  GZ.libAll(db).forEach((x) => { if (!m[x.tier] || m[x.tier].indexOf(x.name) >= 0) return; m[x.tier].push(x.name); });
   return m;
 }
 const LIFT_NAMES = GZ.LIFT_ORDER.map((k) => GZ.LIFTS[k]);

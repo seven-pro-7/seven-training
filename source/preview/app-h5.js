@@ -12,7 +12,7 @@
   ];
   function libNames(db) {
     var m = { T1: [], T2: [], T3: [] };
-    GZ.libAll(db).forEach(function (x) { if (m[x.tier].indexOf(x.name) < 0) m[x.tier].push(x.name); });
+    GZ.libAll(db).forEach(function (x) { if (!m[x.tier] || m[x.tier].indexOf(x.name) >= 0) return; m[x.tier].push(x.name); });
     return m;
   }
   function libRows(lib, opts) {
@@ -25,7 +25,9 @@
         '<div class="flex1"><div class="lib-n">' + esc(x.name) + equipTag(x.equip) + (x.custom ? '<span class="lib-c">自定义</span>' : '') + '</div>' +
         '<div class="lib-s">' + esc(x.patternLabel || '') + (x.part ? ' · ' + esc(x.part) : '') + (x.last ? ' · ' + (opts.pick ? '上次 ' : '最近 ') + x.last + ' ' + esc(x.recUnit) : '') + '</div>' +
         (opts.pick ? '' : '<div class="lib-d">' + esc(x.desc || '') + '</div>') +
-        '<div class="lib-rec">推荐 ' + esc(x.rec) + (x.recUnit === '自重' ? '' : ' ' + esc(x.recUnit)) + ' · ' + esc(x.recNote) + '</div></div>' + right + '</div>';
+        (x.equip === '有氧'
+          ? '<div class="lib-rec">' + esc(x.recNote) + '</div>'
+          : '<div class="lib-rec">推荐 ' + esc(x.rec) + (x.recUnit === '自重' ? '' : ' ' + esc(x.recUnit)) + ' · ' + esc(x.recNote) + '</div>') + '</div>' + right + '</div>';
     }).join('');
   }
   function chips(items, act) {
@@ -355,7 +357,7 @@
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
       h += '<div class="card locked"><div class="lk-head"><div class="lk-ic">✓</div><div class="flex1"><div class="lk-t">本周 ' + vm.day + ' 已完成</div><div class="lk-s">' + L.dateText + ' · 容量 ' + L.vol + ' kg</div></div></div>' +
-        L.items.map(function (it) { return '<div class="lk-row">' + tier(it.tier, it.badge) + '<span class="lk-n">' + it.name + '</span><span class="lk-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag lk-j" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
+        L.items.map(function (it) { return '<div class="lk-row">' + tier(it.tier, it.badge) + '<span class="lk-n">' + it.name + '</span><span class="lk-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + (it.isCardio ? it.input + ' 分钟' : it.w + ' × ' + it.input) + '</span><span class="jtag lk-j" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
         '<div class="lk-tip">下周的 ' + vm.day + ' 会在本周 ' + vm.round.leftText + ' 完成后开放</div>' +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="editLocked" data-id="' + L.id + '">修改这次</div><div class="btn-ghost solid" data-act="day" data-day="' + vm.recommended + '">去练 ' + vm.recommended + '</div></div></div>';
     }
@@ -386,7 +388,8 @@
       if (it.slotId !== t.focus) {
         var p0 = it.preview, right;
         if (it.skip) right = '<span class="exr-st">已跳过</span>';
-        else if (p0) right = '<span class="exr-st" style="color:' + p0.color + '">' + p0.icon + ' ' + p0.judgment + '</span>' + (p0.sub || p0.judgment === '减载' ? '' : '<span class="exr-nx num">下次 ' + p0.nextWeight + '</span>');
+        else if (p0) right = '<span class="exr-st" style="color:' + p0.color + '">' + p0.icon + ' ' + p0.judgment + '</span>' + (p0.sub || p0.judgment === '减载' ? '' : '<span class="exr-nx num">下次 ' + (it.inputType === 'cardio' ? esc(p0.nextStage) : p0.nextWeight) + '</span>');
+        else if (it.isCardio) right = '<span class="exr-w num">' + esc(it.repsText) + '</span>';
         else right = '<span class="exr-w num">' + (!it.isBW ? it.weightText + '<span class="exr-u"> ' + esc(it.unitText) + '</span>' : '自重') + '</span><span class="exr-r num">' + it.repsText + '</span>';
         restBuf += '<div class="ex-row g ' + (finished(it) ? 'is-fin ' : '') + (it.skip ? 'skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '">' + tier(it.tier, it.badge) +
           '<span class="exr-n">' + esc(it.name) + '</span><span class="exr-right">' + right + '</span><span class="exr-chev">›</span></div>';
@@ -401,7 +404,7 @@
         '<span class="ex-skip" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</span></div>';
       h += '<div class="ex-main">' + (!it.isBW
         ? '<div class="wbox ' + (it.editW ? 'editing' : '') + '"' + (it.canAdjust ? ' data-act="editW" data-slot="' + it.slotId + '"' : '') + '><span class="w-num num ' + (it.manual ? 'manual' : '') + '">' + it.weightText + '</span><span class="w-unit">' + esc(it.unitText) + '</span>' + (it.canAdjust ? '<span class="w-edit">' + (it.editW ? '完成' : '调整') + '</span>' : '') + '</div>'
-        : '<div class="wbox bw-only"><span class="w-num bw-text">自重</span></div>') + '<span class="reps num">' + it.repsText + '</span></div>';
+        : '<div class="wbox bw-only"><span class="w-num bw-text">自重</span></div>') + '<span class="reps num">' + (it.isCardio ? '' : it.repsText) + '</span></div>';
       if (it.manual || it.plates || it.fail > 0) h += '<div class="ex-sub">' + (it.manual ? '<span class="accent">已手动调整 · 建议 ' + it.autoText + ' kg' + (it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.plates || '') + (it.fail > 0 ? '<span class="amber">' + (it.plates ? ' · ' : '') + '已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
       if (it.editW) {
         h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
@@ -410,7 +413,7 @@
           (it.manual ? '<span class="link we-reset" data-act="wreset" data-slot="' + it.slotId + '">恢复 ' + it.autoText + '</span>' : '') + '</div>';
       }
       if (!it.skip) {
-        if (it.inputType !== 'sets' && it.inputType !== 'fixed') {
+        if (it.inputType !== 'sets' && it.inputType !== 'fixed' && it.inputType !== 'cardio') {
           h += '<div class="dots">' + it.dots.map(function (d) {
             return '<div class="dot ' + (d.on ? 'on ' : '') + (d.amrap ? 'amrap' : '') + '" data-act="dot" data-slot="' + it.slotId + '" data-i="' + d.i + '" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">' + (d.amrap ? (d.i + 1) + '+' : d.i + 1) + '</div>';
           }).join('') + '<div class="rest-btn" data-act="rest" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">休息 ' + it.restText + '</div></div>';
@@ -418,6 +421,7 @@
         if (it.inputType === 'sets') h += setsBlock(it);
         else if (it.inputType === 'linear' || it.inputType === 'wave') h += repBlock(it);
         else if (it.inputType === 'fixed') h += fixedBlock(it);
+        else if (it.inputType === 'cardio') h += cardioBlock(it);
         else if (it.inputType === 'amrap') {
           h += '<div class="inrow"><div class="flex1"><div class="in-label">末组次数</div><div class="in-hint">目标 ' + it.amrapHint + '</div></div><div class="stepper">' +
             '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null || it.value === undefined ? '' : it.value) + '" placeholder="' + (it.amrapTarget || '') + '">' +
@@ -433,7 +437,7 @@
         if (it.preview) {
           var p = it.preview;
           h += '<div class="verdict"><div class="v-ic" style="background:' + p.color + '">' + p.icon + '</div><span class="v-j" style="color:' + p.color + '">' + p.judgment + '</span>' +
-            (p.sub ? '<span class="v-l">不影响 ' + esc(p.origName) + ' 的进阶</span>' : p.judgment !== '减载' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + p.nextWeight + '</span><span class="v-u">kg</span>' + (p.stageChanged ? '<span class="v-stage">· ' + p.nextStage + '</span>' : '') + '</div>' : '<span class="v-l">按减载重量完成</span>') + '</div>' +
+            (p.sub ? '<span class="v-l">不影响 ' + esc(p.origName) + ' 的进阶</span>' : it.inputType === 'cardio' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + esc(p.nextStage) + '</span></div>' : p.judgment !== '减载' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + p.nextWeight + '</span><span class="v-u">kg</span>' + (p.stageChanged ? '<span class="v-stage">· ' + p.nextStage + '</span>' : '') + '</div>' : '<span class="v-l">按减载重量完成</span>') + '</div>' +
             (p.boost && p.adaptNote ? '<div class="v-adapt"><span class="v-adapt-t">多加一档</span>' + esc(p.adaptNote) + '</div>' : '');
         }
       }
@@ -485,6 +489,13 @@
     h += '<div class="inrow"><div class="flex1"><div class="in-label">前面的规定组没完成</div></div><label class="ios-sw"><input type="checkbox" data-act="miss" data-slot="' + it.slotId + '" ' + (it.miss ? 'checked' : '') + '><i></i></label></div>';
     return h;
   }
+  function cardioBlock(it) {
+    var hit = it.value !== null && it.value !== undefined && it.value !== '' && Number(it.value) >= Number(it.amrapTarget || 0);
+    return '<div class="inrow col"><div class="seg seg-done"><div class="seg-i ' + (hit ? 'on ok' : '') + '" data-act="cardiodone" data-slot="' + it.slotId + '">完成</div></div></div>' +
+      '<div class="inrow"><div class="flex1"><div class="in-label">实际分钟</div><div class="in-hint">' + esc(it.amrapHint) + '</div></div><div class="stepper">' +
+      '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null || it.value === undefined ? '' : it.value) + '" placeholder="' + (it.amrapTarget || '') + '">' +
+      '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="1">+</div></div></div>';
+  }
   function fixedBlock(it) {
     return '<div class="inrow col"><div class="in-hint">' + esc(it.amrapHint) + '</div><div class="seg seg-done"><div class="seg-i ' + (it.value === '完成' ? 'on ok' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="完成">全部完成</div></div>' +
       '<div class="rest-btn" data-act="rest" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">休息 ' + it.restText + '</div></div>';
@@ -520,10 +531,16 @@
         var it = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
         var tg = it.amrapTarget || it.reps;
         var v = en.v === null || en.v === '' || en.v === undefined ? (Number(ds.d) > 0 ? tg : tg - 1) : Number(en.v) + Number(ds.d);
-        en.v = Math.max(0, Math.min(60, v)); if (navigator.vibrate) navigator.vibrate(8); return true;
-      case 'amrap': en = entry(ds.slot); en.v = el.value === '' ? null : Math.max(0, Math.min(60, parseInt(el.value, 10) || 0)); return true;
+        en.v = Math.max(0, Math.min(it.inputType === 'cardio' ? 300 : 60, v)); if (navigator.vibrate) navigator.vibrate(8); return true;
+      case 'amrap': en = entry(ds.slot); vm = trainVM(); var ait = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0]; en.v = el.value === '' ? null : Math.max(0, Math.min(ait && ait.inputType === 'cardio' ? 300 : 60, parseInt(el.value, 10) || 0)); return true;
       case '5rm': entry(ds.slot).new5RM = el.value; return true;
       case 'done': en = entry(ds.slot); en.v = en.v === ds.v ? null : ds.v; return true;
+      case 'cardiodone':
+        en = entry(ds.slot); vm = trainVM();
+        var cit = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
+        var goalMin = Number(cit && (cit.amrapTarget || cit.reps)) || 0;
+        en.v = en.v !== null && en.v !== '' && Number(en.v) >= goalMin ? null : goalMin;
+        return true;
       case 'setrep':
         en = entry(ds.slot); vm = trainVM();
         var its = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
@@ -588,7 +605,7 @@
       t.result = s ? { rotated: rotated, day: s.rec.day, dayName: s.dayName, week: s.week, weekText: GZ.weekText(s.week, db.params),
         cycle: dCyc, weeksPerCycle: GZ.cycleLen(db.params), cycleDone: cDone, nextWeekText: GZ.weekText(rdn.week, db.params), volume: Math.round(s.volume),
         weekDone: wDone, leftText: t.recordId ? '' : rdn.leftText, nextDeload: wDone && GZ.isDeloadWeek(rdn.week, db.params), adds: s.items.filter(function (x) { return x.judgment === '加重'; }).length,
-        items: s.items.map(function (it) { return { tier: it.tier, badge: it.badge, name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment], next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : GZ.fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage }; }) } : null;
+        items: s.items.map(function (it) { return { tier: it.tier, badge: it.badge, name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment], next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : it.inputMode === 'cardio' ? it.nextStage : GZ.fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage }; }) } : null;
       dropTrainDay(t.day);
       t.recordId = null; t.deload = undefined; t.day = GZ.recommend(db).day; t.draft = null; t.focus = null; t.focusKey = ''; t.bw = ''; t.note = ''; t.date = GZ.today();
       render();
@@ -726,12 +743,12 @@
       seg(vm.overview.map(function (o) { return { html: '<span class="num">' + o.day + '</span>' }; }), p.ov, 'ov') +
       ov.slots.map(function (s) {
         return '<div class="ov-row">' + tier(s.tier, s.badge) + '<div class="ov-main"><span class="ovn">' + s.name + '</span><span class="ov-sub">' + s.stage + (s.fail > 0 ? '<span class="amber"> · 预警 ' + s.fail + '</span>' : '') + '</span></div>' +
-          '<div class="ov-right"><span class="num ov-w">' + s.weight + '<span class="ov-u"> kg</span></span><span class="ov-last"><span style="color:' + s.lastColor + '">' + s.last + '</span>' + (s.gain ? '<span class="green"> ' + s.gain + '</span>' : '') + '</span></div></div>';
+          '<div class="ov-right"><span class="num ov-w">' + s.weight + (s.isCardio ? '' : '<span class="ov-u"> kg</span>') + '</span><span class="ov-last"><span style="color:' + s.lastColor + '">' + s.last + '</span>' + (s.gain ? '<span class="green"> ' + s.gain + '</span>' : '') + '</span></div></div>';
       }).join('') + '</div>';
     if (p.detail) {
       var d = p.detail;
       h += '<div class="mask" data-act="closeDetail"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + d.dateText + ' · 第 ' + d.week + ' 次 · 容量 ' + d.vol + ' kg</span><div class="sheet-title">' + d.day + ' ' + d.dayName + '</div>' +
-        '<div class="list">' + d.items.map(function (it) { return '<div class="cell d-row">' + tier(it.tier, it.badge) + '<div class="d-main"><span>' + it.name + '</span><span class="d-sub">' + it.w + ' kg × ' + it.input + (it.manual ? '<span class="accent"> · 手动</span>' : '') + '</span></div><div class="d-right"><span class="jtag" style="color:' + it.color + '">' + it.j + '</span><span class="d-sub">' + it.next + '</span></div></div>'; }).join('') + '</div>' +
+        '<div class="list">' + d.items.map(function (it) { return '<div class="cell d-row">' + tier(it.tier, it.badge) + '<div class="d-main"><span>' + it.name + '</span><span class="d-sub">' + (it.isCardio ? it.input + ' 分钟' : it.w + ' kg × ' + it.input + (it.manual ? '<span class="accent"> · 手动</span>' : '')) + '</span></div><div class="d-right"><span class="jtag" style="color:' + it.color + '">' + it.j + '</span><span class="d-sub">' + it.next + '</span></div></div>'; }).join('') + '</div>' +
         (d.note ? '<div class="note-box">' + esc(d.note) + '</div>' : '') +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="edit" data-id="' + d.id + '">修改这次</div><div class="btn-ghost solid" data-act="closeDetail">完成</div></div></div></div>';
     }
@@ -822,9 +839,12 @@
       return 0;
     });
     var cats = GZ.templateCatalog();
+    var ranked = GZ.recommendTemplates(db), rank = {};
+    ranked.forEach(function (c, i) { rank[c.id] = i; });
     order.forEach(function (g) {
       var items = cats.filter(function (c) { return (c.goals || []).indexOf(g.id) >= 0; });
       if (!items.length) return;
+      if (g.id === goal) items.sort(function (a, b) { return (rank[a.id] === undefined ? 99 : rank[a.id]) - (rank[b.id] === undefined ? 99 : rank[b.id]); });
       h += '<div class="sec-h">' + esc(g.label) + (g.id === goal ? ' · 符合你的目标' : '') + '</div>';
       items.forEach(function (c) { h += planCard(db, c); });
     });

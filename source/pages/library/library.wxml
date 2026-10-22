@@ -1,7 +1,7 @@
 <view class="page">
   <view class="search"><text class="search-ic">⌕</text><input class="search-in" value="{{q}}" placeholder="搜索动作、部位或器械" placeholder-class="ph" bindinput="onQ" /></view>
   <view class="seg" wx:if="{{!q}}">
-    <view wx:for="{{lib.tiers}}" wx:key="id" class="seg-i {{tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="onTier">{{item.id}}<text class="seg-n">{{item.n}}</text></view>
+    <view wx:for="{{lib.tiers}}" wx:key="id" class="seg-i {{tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="onTier">{{item.label}}<text class="seg-n">{{item.n}}</text></view>
   </view>
   <view class="sec-f tier-tip" wx:if="{{!q}}">{{tierTip[tier]}}</view>
 
@@ -11,7 +11,8 @@
         <view class="lib-n">{{item.name}}<text class="equip-tag eq-{{item.equip}}">{{item.equip}}{{item.equip === '哑铃' ? '·单只' : item.equip === '负重' ? '·外加' : ''}}</text><text class="tier t-{{item.tier}} lib-t" wx:if="{{q}}">{{item.tier}}</text><text class="lib-c" wx:if="{{item.custom}}">自定义</text></view>
         <view class="lib-s">{{item.part}}{{item.last ? ' · 最近 ' + item.last + ' ' + item.recUnit : ''}}</view>
         <view class="lib-d">{{item.desc}}</view>
-        <view class="lib-rec">推荐 {{item.rec}}{{item.recUnit === '自重' ? '' : ' ' + item.recUnit}} · {{item.recNote}}</view>
+        <view class="lib-rec" wx:if="{{item.equip === '有氧'}}">{{item.recNote}}</view>
+        <view class="lib-rec" wx:else>推荐 {{item.rec}}{{item.recUnit === '自重' ? '' : ' ' + item.recUnit}} · {{item.recNote}}</view>
       </view>
       <text class="lib-del" wx:if="{{item.custom}}" data-name="{{item.name}}" bindtap="onDel">删除</text>
     </view>

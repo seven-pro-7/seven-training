@@ -70,7 +70,10 @@
       <text class="ex-skip" data-slot="{{item.slotId}}" bindtap="onSkip">{{item.skip ? '恢复' : '跳过'}}</text>
     </view>
 
-    <view class="ex-main">
+    <view class="ex-main" wx:if="{{item.isCardio}}">
+      <view class="wbox"><text class="w-num num">{{item.weightText}}</text><text class="w-unit">分钟</text></view>
+    </view>
+    <view class="ex-main" wx:else>
       <view class="wbox {{item.editW ? 'editing' : ''}}" data-slot="{{item.slotId}}" bindtap="onEditW" wx:if="{{item.canAdjust}}">
         <text class="w-num num {{item.manual ? 'manual' : ''}}">{{item.weightText}}</text><text class="w-unit">{{item.unitText}}</text>
         <text class="w-edit">{{item.editW ? '完成' : '调整'}}</text>
@@ -95,12 +98,28 @@
     </view>
 
     <block wx:if="{{!item.skip}}">
-      <view class="dots">
+      <view class="dots" wx:if="{{item.inputType !== 'cardio'}}">
         <view wx:for="{{item.dots}}" wx:for-item="d" wx:key="i" class="dot {{d.on ? 'on' : ''}} {{d.amrap ? 'amrap' : ''}}"
           data-slot="{{item.slotId}}" data-i="{{d.i}}" data-rest="{{item.rest}}" data-name="{{item.name}}" bindtap="onDot">{{d.amrap ? '+' : d.i + 1}}</view>
         <view class="rest-btn" data-rest="{{item.rest}}" data-name="{{item.name}}" bindtap="startRest">休息 {{item.restText}}</view>
       </view>
 
+      <view class="inrow col" wx:if="{{item.inputType === 'cardio'}}">
+        <view class="seg seg-done">
+          <view class="seg-i {{item.value !== null && item.value !== '' && item.value >= item.amrapTarget ? 'on ok' : ''}}" data-slot="{{item.slotId}}" bindtap="onCardioDone">完成</view>
+        </view>
+      </view>
+      <view class="inrow" wx:if="{{item.inputType === 'cardio'}}">
+        <view class="flex1">
+          <view class="in-label">实际分钟</view>
+          <view class="in-hint">{{item.amrapHint}}</view>
+        </view>
+        <view class="stepper">
+          <view class="st-btn" data-slot="{{item.slotId}}" data-d="-1" bindtap="onStep">−</view>
+          <input class="st-val num" type="number" value="{{item.value === null ? '' : item.value}}" placeholder="{{item.amrapTarget}}" placeholder-class="ph" data-slot="{{item.slotId}}" bindinput="onAmrap" />
+          <view class="st-btn" data-slot="{{item.slotId}}" data-d="1" bindtap="onStep">+</view>
+        </view>
+      </view>
       <view class="inrow" wx:if="{{item.inputType === 'amrap'}}">
         <view class="flex1">
           <view class="in-label">末组次数</view>
@@ -132,6 +151,10 @@
         <view class="v-ic" style="background: {{item.preview.color}}">{{item.preview.icon}}</view>
         <text class="v-j" style="color: {{item.preview.color}}">{{item.preview.judgment}}</text>
         <text class="v-l" wx:if="{{item.preview.sub}}">不影响 {{item.preview.origName}} 的进阶</text>
+        <view class="v-next" wx:elif="{{item.isCardio}}">
+          <text class="v-l">下次</text>
+          <text class="num v-w">{{item.preview.nextStage}}</text>
+        </view>
         <view class="v-next" wx:elif="{{item.preview.judgment !== '减载'}}">
           <text class="v-l">下次</text>
           <text class="num v-w">{{item.preview.nextWeight}}</text><text class="v-u">kg</text>
@@ -165,7 +188,7 @@
       <view class="row between"><view class="sheet-title">更换动作</view><text class="link" wx:if="{{swap.isSub}}" bindtap="swapRestore">恢复 {{swap.planName}}</text></view>
       <view class="search"><text class="search-ic">⌕</text><input class="search-in" value="{{swap.q}}" placeholder="搜索动作、部位或器械" placeholder-class="ph" bindinput="swapQ" /></view>
       <view class="seg" wx:if="{{!swap.q && swap.slotTier !== 'T1'}}">
-        <view wx:for="{{swap.lib.tiers}}" wx:key="id" class="seg-i {{swap.tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="swapTier">{{item.id}}<text class="seg-n">{{item.n}}</text></view>
+        <view wx:for="{{swap.lib.tiers}}" wx:key="id" class="seg-i {{swap.tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="swapTier">{{item.label}}<text class="seg-n">{{item.n}}</text></view>
       </view>
       <view class="sec-f t1-only" wx:if="{{swap.slotTier === 'T1'}}">T1 严格限定四大项，只能在深蹲、卧推、硬拉、实力推之间选择。</view>
       <scroll-view scroll-y class="lib-list">
@@ -174,7 +197,8 @@
             <view class="flex1">
               <view class="lib-n">{{item.name}}<text class="tier t-{{item.tier}} lib-t" wx:if="{{swap.q || item.tier !== swap.slotTier}}">{{item.tier}}</text><text class="lib-c" wx:if="{{item.custom}}">自定义</text></view>
               <view class="lib-s"><text class="equip-tag eq-{{item.equip}}">{{item.equip}}{{item.equip === '哑铃' ? '·单只' : item.equip === '负重' ? '·外加' : ''}}</text>{{item.part}}{{item.last ? ' · 上次 ' + item.last + ' ' + item.recUnit : ''}}</view>
-              <view class="lib-rec">推荐 {{item.rec}}{{item.recUnit === '自重' ? '' : ' ' + item.recUnit}} · {{item.recNote}}</view>
+              <view class="lib-rec" wx:if="{{item.equip === '有氧'}}">{{item.recNote}}</view>
+              <view class="lib-rec" wx:else>推荐 {{item.rec}}{{item.recUnit === '自重' ? '' : ' ' + item.recUnit}} · {{item.recNote}}</view>
             </view>
             <text class="lib-cur" wx:if="{{item.current}}">当前</text>
             <text class="lib-ck" wx:if="{{swap.sel === item.name}}">✓</text>

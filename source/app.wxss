@@ -55,7 +55,7 @@ page {
 .tier { display: inline-flex; align-items: center; justify-content: center; height: 38rpx; padding: 0 12rpx; border-radius: 10rpx; font-size: 22rpx; font-weight: 700; flex-shrink: 0; box-sizing: border-box; }
 .t-T1 { color: #E65A00; background: rgba(230,90,0,0.12); }
 .t-T2 { color: #007AFF; background: rgba(0,122,255,0.12); }
-.t-T3 { color: #6C6C70; background: rgba(108,108,112,0.14); }
+.t-T3, .t-C { color: #6C6C70; background: rgba(108,108,112,0.14); }
 /* 器械类型：所有动作都必须有且只有一个明确标签 */
 .equip-tag { display: inline-flex; align-items: center; height: 34rpx; padding: 0 10rpx; border-radius: 9rpx; font-size: 19rpx; font-weight: 600; line-height: 34rpx; flex-shrink: 0; }
 .eq-杠铃 { color: #5856D6; background: rgba(88,86,214,0.11); }
@@ -63,6 +63,7 @@ page {
 .eq-自重 { color: #248A3D; background: rgba(52,199,89,0.12); }
 .eq-负重 { color: #C93400; background: rgba(255,107,26,0.12); }
 .eq-器械 { color: #636366; background: rgba(142,142,147,0.14); }
+.eq-有氧 { color: #007AFF; background: rgba(0,122,255,0.10); }
 .lib-rec { font-size: 22rpx; color: var(--accent); margin-top: 5rpx; line-height: 1.4; }
 .jtag { font-size: 26rpx; font-weight: 600; }
 
