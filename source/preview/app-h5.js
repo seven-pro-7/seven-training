@@ -368,7 +368,7 @@
     }
     if (!vm.locked) {
     if (vm.deloadSuggest || vm.deload) {
-      h += '<div class="card deload"><div class="dl-ic">↓</div><div class="flex1"><div class="dl-t">减载周</div><div class="dl-s">T1 −50% · T2 −40% · T3 少 1 组</div></div>' +
+      h += '<div class="card deload"><div class="dl-ic">↓</div><div class="flex1"><div class="dl-t">减载周</div><div class="dl-s">' + esc(vm.deloadTip || '减载周 · 降低负荷恢复') + '</div></div>' +
         '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
     }
     // 专注模式：只展开「当前动作」，其余收成一行。焦点只在换训练日 / 首次进入时自动定位到第一个未完成的动作，
@@ -458,7 +458,7 @@
     if (t.result) {
       var r = t.result;
       h += '<div class="mask" data-act="closeResult"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + r.day + ' ' + r.dayName + ' · ' + r.weekText + '</span><div class="sheet-title">' + (r.cycleDone ? '第 ' + r.cycle + ' 轮完成' : r.weekDone ? '本周完成' : '训练完成') + '</div>' +
-        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在训练页的「计划总览」查看本轮编排与依据</div>' : '')
+        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">' + ((vm.progression || 'gzclp') === 'gzclp' ? '已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在训练页的「计划总览」查看本轮编排与依据' : '已按计划更换辅助动作。可在训练页的「计划总览」查看本轮编排') + '</div>' : '')
           : r.weekDone ? '<div class="wk-done">本周训练日全部完成，已进入' + r.nextWeekText + (r.nextDeload ? '（减载周）' : '') + '</div>'
           : (r.leftText ? '<div class="wk-left">本周还剩 ' + r.leftText + '</div>' : '')) +
         '<div class="res-kpi"><div class="rk"><span class="num rk-v">' + r.volume + '</span><span class="rk-l">容量 kg</span></div><div class="rk"><span class="num rk-v accent">' + r.adds + '</span><span class="rk-l">项加重</span></div></div>' +
@@ -727,7 +727,7 @@
     var rt = vm.rotation;
     if (rt) {
       h += '<div class="card rot-card"><div class="card-title"><span class="t">' + vm.cycleText + '动作编排</span><span class="s">' +
-        (!rt.enabled ? '自动轮换已关闭' : rt.cycle === 1 ? '起始动作' : '换了 ' + rt.changed + ' / ' + rt.total + ' 个') + '</span></div>' +
+        (gz ? (!rt.enabled ? '自动轮换已关闭' : rt.cycle === 1 ? '起始动作' : '换了 ' + rt.changed + ' / ' + rt.total + ' 个') : '点动作可微调') + '</span></div>' +
         '<div class="rot-tip">' + (gz ? (rt.isCur ? '点任意一行可调整重量或更换动作，从该训练日的下一次训练起生效。' : 'T1 四大项固定；T2/T3 每轮在同一动作模式内换一次，一轮 ' + vm.weeksPerCycle + ' 周内保持不变。') : '点任意一行可调整重量或更换动作，从该训练日的下一次训练起生效。') + (rt.isFuture ? '这一轮还没开始，以下为预排。' : '') + '</div>' +
         rt.days.map(function (d) {
           return '<div class="rot-day"><div class="rot-dh"><span class="num rot-did">' + d.id + '</span><span class="rot-dn">' + esc(d.name) + '</span></div>' +
@@ -1213,12 +1213,16 @@
         }).join('') + '</div>';
       h += '<div class="card"><div class="card-title"><span class="t">训练小结</span><span class="link" data-act="copy">复制</span></div>' +
         vm.insights.map(function (i) { return '<div class="ins"><div class="ins-ic ' + i.type + '">' + i.icon + '</div><span class="ins-t">' + esc(i.text) + '</span></div>'; }).join('') + '</div>';
-      h += '<div class="card"><div class="card-title rules-h" data-act="rules"><span class="t">' + (gzReview ? '规则速查' : '这套计划的进阶') + '</span>' + (gzReview ? '<span class="link">' + (r.rules ? '收起' : '展开') + '</span>' : '') + '</div>';
-      if (!gzReview) h += '<span class="cap">' + esc((GZ.progressionOf(viewDb()).desc) || '') + '</span>';
-      else if (r.rules) {
-        h += GZ.RULES.map(function (g) { return '<div class="rg"><div class="rg-t">' + g.title + '</div>' + g.rows.map(function (x) { return '<div class="rr"><span class="r1 num">' + x[0] + '</span><span class="r2">' + x[1] + '</span><span class="r3">' + x[2] + '</span></div>'; }).join('') + '</div>'; }).join('') +
-          GZ.GENERAL_RULES.map(function (g) { return '<div class="gen">' + g + '</div>'; }).join('');
-      } else h += '<span class="cap">T1 三阶进阶、T2 退阶重置、T3 阈值加重与通用规则</span>';
+      var rTitle = vm.ruleTitle || (gzReview ? 'GZCLP 规则速查' : '这套计划的进阶规则');
+      h += '<div class="card"><div class="card-title rules-h" data-act="rules"><span class="t">' + esc(rTitle) + '</span><span class="link">' + (r.rules ? '收起' : '展开') + '</span></div>';
+      if (r.rules) {
+        var rList = vm.rules || GZ.progressionRules(viewDb().params.progression).rules;
+        var gList = vm.generalRules || GZ.progressionRules(viewDb().params.progression).general;
+        h += rList.map(function (g) { return '<div class="rg"><div class="rg-t">' + esc(g.title) + '</div>' + g.rows.map(function (x) { return '<div class="rr"><span class="r1 num">' + esc(x[0]) + '</span><span class="r2">' + esc(x[1]) + '</span><span class="r3">' + esc(x[2]) + '</span></div>'; }).join('') + '</div>'; }).join('') +
+          gList.map(function (g) { return '<div class="gen">' + esc(g) + '</div>'; }).join('');
+      } else {
+        h += '<span class="cap">' + esc(vm.ruleSummary || (GZ.progressionOf(viewDb()).desc) || '') + '</span>';
+      }
       h += '</div>';
     }
     if (part === 'summary' || (!part && r.tab === 1)) {
@@ -1644,20 +1648,27 @@
       (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
       (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
       '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天早上把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json。立即拉取只读取这份快照，不会直接连接手表；分享卡片按训练日期对上快照里的力量训练。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
+    var isCurGz = (P.progression || 'gzclp') === 'gzclp';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
       '<div class="cell"><span class="flex1">当前体重</span>' + inp('bodyWeight', P.bodyWeight || 70, 'kg') + '</div></div>' +
-      '<div class="sec-f">T1 以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
+      '<div class="sec-f">' + (isCurGz ? 'T1 以四大项 1RM 推算；' : '主项以四大项 1RM 推算；') + '哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
     h += '\u0000adv\u0000';
     h += '<div class="sec-h">加重步幅</div><div class="list">' +
       GZ.STEP_KEYS.map(function (s) { return '<div class="cell"><span class="flex1">' + s.label + '</span>' + inp('steps.' + s.key, P.steps[s.key], 'kg') + '</div>'; }).join('') +
-      '<div class="cell"><span class="flex1">T3 加重阈值</span>' + inp('t3Threshold', P.t3Threshold, '次') + '</div>' +
+      (isCurGz ? '<div class="cell"><span class="flex1">T3 加重阈值</span>' + inp('t3Threshold', P.t3Threshold, '次') + '</div>' : '') +
       '<div class="cell"><span class="flex1">取整档位</span>' + inp('rounding', P.rounding, 'kg') + '</div>' +
       '<div class="cell"><span class="flex1">杠铃杆重</span>' + inp('barWeight', P.barWeight, 'kg') + '</div></div>';
-    h += '<div class="sec-h">判定规则</div>' + seg([{ html: '完整三阶', on: P.ruleMode === 'full', data: ' data-v="full"' }, { html: '严格按表格', on: P.ruleMode === 'excel', data: ' data-v="excel"' }], -1, 'mode', 'mode-seg') +
-      (P.ruleMode === 'full' ? '<div class="list"><div class="cell"><span class="flex1">按末组次数自适应加重</span><label class="ios-sw green"><input type="checkbox" data-act="adaptsw" ' + (P.adaptive !== false ? 'checked' : '') + '><i></i></label></div></div>' : '') +
-      '<div class="sec-f">' + (P.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (P.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。') + '</div>';
+    if (isCurGz) {
+      h += '<div class="sec-h">判定规则</div>' + seg([{ html: '完整三阶', on: P.ruleMode === 'full', data: ' data-v="full"' }, { html: '严格按表格', on: P.ruleMode === 'excel', data: ' data-v="excel"' }], -1, 'mode', 'mode-seg') +
+        (P.ruleMode === 'full' ? '<div class="list"><div class="cell"><span class="flex1">按末组次数自适应加重</span><label class="ios-sw green"><input type="checkbox" data-act="adaptsw" ' + (P.adaptive !== false ? 'checked' : '') + '><i></i></label></div></div>' : '') +
+        '<div class="sec-f">' + (P.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (P.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。') + '</div>';
+    } else {
+      var pRules = GZ.progressionRules(P.progression);
+      h += '<div class="sec-h">当前计划进阶</div><div class="list"><div class="cell"><span class="flex1">策略</span><span class="val">' + esc(pRules.name) + '</span></div></div>' +
+        '<div class="sec-f">' + esc(pRules.summary) + '</div>';
+    }
     h += '\u0000act\u0000';
     h += '<div class="sec-h">动作</div><div class="list"><div class="cell tap" data-act="openlib"><span class="flex1">动作库</span><span class="val">' + GZ.libAll(db).length + ' 个' +
       (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div>' +

@@ -50,7 +50,7 @@
     <view class="dl-ic">↓</view>
     <view class="flex1">
       <view class="dl-t">减载周</view>
-      <view class="dl-s">T1 −50% · T2 −40% · T3 少 1 组</view>
+      <view class="dl-s">{{vm.deloadTip || '减载周 · 降低负荷恢复'}}</view>
     </view>
     <switch checked="{{vm.deload}}" color="#FF6B1A" bindchange="onDeload" />
   </view>
@@ -190,7 +190,7 @@
       <view class="seg" wx:if="{{!swap.q && swap.slotTier !== 'T1'}}">
         <view wx:for="{{swap.lib.tiers}}" wx:key="id" class="seg-i {{swap.tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="swapTier">{{item.label}}<text class="seg-n">{{item.n}}</text></view>
       </view>
-      <view class="sec-f t1-only" wx:if="{{swap.slotTier === 'T1'}}">T1 严格限定四大项，只能在深蹲、卧推、硬拉、实力推之间选择。</view>
+      <view class="sec-f t1-only" wx:if="{{swap.slotTier === 'T1'}}">{{vm.progression === 'gzclp' ? 'T1 严格限定四大项，只能在深蹲、卧推、硬拉、实力推之间选择。' : '当前为主项，建议选择同模式的复合大重量动作。'}}</view>
       <scroll-view scroll-y class="lib-list">
         <view class="list">
           <view wx:for="{{swap.lib.list}}" wx:key="name" class="cell tap lib-row {{swap.sel === item.name ? 'sel' : ''}}" data-name="{{item.name}}" bindtap="swapPick">
@@ -242,7 +242,7 @@
       <text class="sheet-cap">{{result.day}} {{result.dayName}} · {{result.weekText}}</text>
       <view class="sheet-title">{{result.cycleDone ? '第 ' + result.cycle + ' 轮完成' : result.weekDone ? '本周完成' : '训练完成'}}</view>
       <view class="wk-done" wx:if="{{result.cycleDone}}">第 {{result.cycle}} 轮 {{result.weeksPerCycle}} 周全部完成，进入第 {{result.cycle + 1}} 轮{{result.nextDeload ? '（含减载周）' : ''}}</view>
-      <view class="wk-left" wx:if="{{result.cycleDone && result.rotated}}">已按轮换计划更换 {{result.rotated}} 个 T2/T3 动作，T1 四大项不变。可在「计划」查看本轮编排与依据</view>
+      <view class="wk-left" wx:if="{{result.cycleDone && result.rotated}}">{{vm.progression === 'gzclp' ? '已按轮换计划更换 ' + result.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在「计划」查看本轮编排与依据' : '已按计划更换辅助动作。可在「计划」查看本轮编排'}}</view>
       <view class="wk-done" wx:elif="{{result.weekDone}}">A1 · B1 · A2 · B2 全部完成，已进入{{result.nextWeekText}}{{result.nextDeload ? '（减载周）' : ''}}</view>
       <view class="wk-left" wx:elif="{{result.leftText}}">本周还剩 {{result.leftText}}</view>
       <view class="res-kpi">

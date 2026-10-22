@@ -6,7 +6,10 @@ Page({
   data: { tab: 0, vm: null, open: {}, showRules: false, rules: GZ.RULES, general: GZ.GENERAL_RULES },
   toggleRules() { this.setData({ showRules: !this.data.showRules }); },
   onShow() { this.refresh(); },
-  refresh() { this.setData({ vm: GZ.buildReview(store.load()) }); },
+  refresh() {
+    const vm = GZ.buildReview(store.load());
+    this.setData({ vm, rules: vm.rules || GZ.RULES, general: vm.generalRules || GZ.GENERAL_RULES });
+  },
   onTab(e) { this.setData({ tab: Number(e.currentTarget.dataset.t) }); },
   toggle(e) { const id = e.currentTarget.dataset.id; this.setData({ ['open.' + id]: !this.data.open[id] }); },
   edit(e) { app.globalData.editRecordId = e.currentTarget.dataset.id; wx.switchTab({ url: '/pages/train/train' }); },
@@ -19,7 +22,7 @@ Page({
   },
   copySummary() {
     const v = this.data.vm;
-    const lines = ['【GZCLP 训练小结】'].concat(v.insights.map((i) => '· ' + i.text));
+    const lines = ['【' + (v.ruleTitle || '训练小结') + '】'].concat(v.insights.map((i) => '· ' + i.text));
     v.weeks.slice().reverse().forEach((w) => lines.push('W' + w.week + '：' + w.sessions + '/' + w.total + ' 次，容量 ' + w.volText + (w.dv ? '（' + w.dv + '）' : '') + '，加重 ' + w.adds + ' 项'));
     wx.setClipboardData({ data: lines.join('\n') });
   }

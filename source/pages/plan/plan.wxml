@@ -24,7 +24,7 @@
         <text class="t cyc-label">{{vm.cycleText}}{{vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : ''}}</text>
         <text class="cyc-btn {{vm.canNext ? '' : 'off'}}" data-d="1" bindtap="onCycle">›</text>
       </view>
-      <text class="s">T1 重量 kg</text>
+      <text class="s">{{vm.progression === 'w531' ? '顶组 kg' : vm.progression === 'gzclp' ? 'T1 重量 kg' : '主项重量 kg'}}</text>
     </view>
     <view class="grid-head">
       <text class="gw"></text>

@@ -41,8 +41,11 @@ Page({
         stepText: eq === '自重' ? '达阈值后改负重' : GZ.stepOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg · 按 ' + GZ.incOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg 档'
       }; })
     }));
+    const curProg = P.progression || 'gzclp';
+    const isGz = curProg === 'gzclp';
+    const pRules = GZ.progressionRules ? GZ.progressionRules(curProg) : { name: curProg, summary: '' };
     this.setData({
-      p: P, days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
+      p: P, isGz, progName: pRules.name, progSummary: pRules.summary, days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
       lifts: GZ.LIFT_ORDER.map((k) => ({ key: k, name: GZ.LIFTS[k], oneRM: P.oneRM[k], tm: GZ.fmtW(GZ.tm(P, k)) })),
       steps: GZ.STEP_KEYS.map((s) => ({ key: s.key, label: s.label, note: s.note, v: P.steps[s.key] }))
     });

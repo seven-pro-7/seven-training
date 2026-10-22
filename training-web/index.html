@@ -2012,16 +2012,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (!id && db && db.programs) { var p = activeProgram(db); id = p && p.progression; }
     return PROGRESSIONS[id] || PROGRESSIONS.gzclp;
   }
-  var ROLES = { T1: 'main', T2: 'assist', T3: 'accessory' };
-  var ROLE_NAME = { main: '主项', assist: '辅助', accessory: '配件' };
+  var ROLES = { T1: 'main', T2: 'assist', T3: 'accessory', C: 'cardio' };
+  var ROLE_NAME = { main: '主项', assist: '辅助', accessory: '配件', cardio: '有氧' };
   function roleOf(tier) { return ROLES[tier] || 'accessory'; }
-  /** T1/T2/T3 只是 GZCLP 的层级名。其他计划按自己的进阶显示主项、辅助、配件或 BBB。 */
-  function slotBadge(s) {
-    var prog = (s && s.prog) || '';
-    if (prog === 'cardio') return '有氧';
-    if (!prog || prog === 'gzclp') return (s && s.tier) || '';
+  /** T1/T2/T3 只是 GZCLP 的层级名。其他计划按自己的进阶显示主项、辅助、配件、有氧或 BBB。 */
+  function slotBadge(s, progHint) {
+    var prog = (s && s.prog) || progHint || '';
+    if (prog === 'cardio' || (s && s.tier === 'C')) return '有氧';
     if (prog === 'fixed') return 'BBB';
     if (prog === 'w531') return '主项';
+    if (prog === 'gzclp') return (s && s.tier) || '';
     return ROLE_NAME[roleOf(s && s.tier)] || '动作';
   }
 
@@ -2497,6 +2497,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
 
   function buildTrain(db, opts) {
+    opts = opts || {};
     var P = db.params, rp = replay(db, { untilId: opts.recordId || null });
     var full = opts.recordId ? replay(db) : rp, round = roundInfo(db, full), rec = { day: round.next, week: round.week };
     var dayId = opts.day || rec.day, day = dayById(db, dayId);
@@ -2567,10 +2568,18 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       };
     });
     var cyc = cycleOf(week, P);
+    var curProg = progressionOf(db);
+    var deloadTip = '';
+    if (deload) {
+      if (curProg.id === 'gzclp') deloadTip = 'T1 −50% · T2 −40% · T3 少 1 组';
+      else if (curProg.id === 'w531') deloadTip = '第 4 周减载 · 40% / 50% / 60% 恢复周';
+      else deloadTip = '减载周 · 降低工作负荷，促进身体恢复';
+    }
     return {
+      progression: curProg.id, progressionName: curProg.name,
       day: dayId, dayName: day.name, week: week, totalWeeks: P.totalWeeks, recommended: rec.day,
       cycle: cyc.cycle, weekInCycle: cyc.wc, weeksPerCycle: cyc.N, weekText: weekText(week, P),
-      deload: deload, deloadSuggest: deloadSuggest, items: items, filled: filled, total: total,
+      deload: deload, deloadSuggest: deloadSuggest, deloadTip: deloadTip, items: items, filled: filled, total: total,
       days: round.days.map(function (d) { return { id: d.id, name: d.name, done: d.done, rec: !d.done && d.id === rec.day }; }),
       round: { week: round.week, done: round.done, total: round.total, leftText: round.leftText, left: round.left.length, nextWeek: round.week + 1, nextWeekText: weekText(round.week + 1, P), pct: Math.round(round.done / round.total * 100) },
       locked: !!locked, lockedInfo: lockedInfo,
@@ -2653,7 +2662,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var cycDone = rp.sessions.filter(function (s) { return s.week >= curBase && s.week < curBase + N; }).length;
     var cycPlanned = N * nd;
     var recCyc = cycleOf(rec.week, P);
-    return { rotation: buildRotation(db, cycle, rp), rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
+    var curProg = progressionOf(db);
+    var rot = buildRotation(db, cycle, rp);
+    return { progression: curProg.id, progressionName: curProg.name, rotation: rot, rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
       done: done, planned: P.totalWeeks * nd, progress: Math.min(100, Math.round(done / (P.totalWeeks * nd) * 100)),
       cycle: cycle, curCycle: curCycle, maxCycle: maxCycle, weeksPerCycle: N,
       cycleText: '第 ' + cycle + ' 轮', isCurCycle: cycle === curCycle, isFuture: cycle > curCycle,
@@ -2668,32 +2679,39 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var P = db.params; rp = rp || replay(db);
     var cur = cycleOf(recommend(db, rp).week, P).cycle;
     cycle = Math.max(1, cycle || cur);
-    var plan = planCycles(db, cycle), act = plan.actual[cycle], prev = cycle > 1 ? plan.actual[cycle - 1] : null, changed = 0;
+    var curProg = progressionOf(db);
+    var isGZ = curProg.id === 'gzclp';
+    var plan = isGZ ? planCycles(db, cycle) : null;
+    var act = plan ? plan.actual[cycle] : null;
+    var prev = (plan && cycle > 1) ? plan.actual[cycle - 1] : null;
+    var changed = 0;
     var isCur = cycle === cur;
     var days = db.days.map(function (d) {
       var items = {};
       if (isCur) buildTrain(db, { day: d.id }).items.forEach(function (it) { items[it.slotId] = it; });
       return { id: d.id, name: d.name, slots: d.slots.map(function (s) {
-        if (s.tier === 'T1') {
-          var t1 = items[s.id], n1 = t1 ? t1.name : effectiveSlot(db, s, cycleStartWeek(cycle, P), rp.hist).slot.name;
-          return { id: s.id, tier: 'T1', name: n1, equip: equipOf(n1, ''), prev: '', isNew: false, locked: false, fixed: true, role: '主项 · 四大项不轮换', why: '', startW: '',
-            cur: t1 ? (t1.canAdjust ? t1.weightText + ' ' + t1.unitText : '自重') + ' · ' + t1.repsText : '' };
-        }
         var it0 = items[s.id];
-        var name = it0 ? it0.name : act[s.id], pv = prev ? prev[s.id] : '', isNew = !!prev && name !== pv, eq = equipOf(name, '');
+        var ef = effectiveSlot(db, s, isGZ ? cycleStartWeek(cycle, P) : 1, rp.hist);
+        var name = it0 ? it0.name : (act && act[s.id] ? act[s.id] : ef.slot.name);
+        var eq = equipOf(name, s.equip);
+        var def = isGZ ? ROTATION[s.id] : null;
+        var b = slotBadge(s, curProg.id);
+        var role = isGZ ? (s.tier === 'T1' ? '主项 · 四大项不轮换' : (def ? def.role : '辅助')) : (b + ' · ' + (s.prog === 'cardio' ? '有氧' : s.prog === 'linear' ? '线性加重' : s.prog === 'w531' ? '5/3/1波浪' : s.prog === 'fixed' ? 'BBB固定' : '双重进阶'));
+        var pv = prev ? prev[s.id] : '';
+        var isNew = isGZ && !!prev && name !== pv;
         if (isNew) changed++;
-        var def = ROTATION[s.id], startW = '';
-        if (isNew && cycle >= cur) {
-          var w = autoStartWeight(db, s, name, rp.hist);
-          startW = eq === '自重' ? '自重' : fmtW(w) + ' ' + unitOf(eq);
-        }
-        return { id: s.id, tier: s.tier, badge: slotBadge(s), name: name, equip: eq, prev: pv, isNew: isNew, locked: !rotationOn(P, s),
-          role: def ? def.role : '', why: def ? def.why : '', startW: it0 ? '' : startW,
-          cur: it0 ? (it0.canAdjust ? it0.weightText + ' ' + it0.unitText : '自重') + ' · ' + it0.repsText : '' };
+        return {
+          id: s.id, tier: s.tier, badge: b, name: name, equip: eq, prev: pv, isNew: isNew,
+          locked: isGZ ? !rotationOn(P, s) : false, fixed: isGZ && s.tier === 'T1',
+          role: role, why: def ? def.why : '', startW: '',
+          cur: it0 ? (it0.canAdjust ? it0.weightText + ' ' + it0.unitText : (s.prog === 'cardio' ? it0.weightText + ' 分钟' : '自重')) + ' · ' + it0.repsText : ''
+        };
       }) };
     });
-    return { cycle: cycle, curCycle: cur, enabled: P.autoRotate !== false, changed: changed, total: rotationSlots(db).length,
-      isFuture: cycle > cur, isCur: isCur, days: days, principles: ROTATION_PRINCIPLES };
+    return {
+      cycle: cycle, curCycle: cur, enabled: isGZ && P.autoRotate !== false, changed: changed, total: isGZ ? rotationSlots(db).length : 0,
+      isFuture: cycle > cur, isCur: isCur, days: days, principles: isGZ ? ROTATION_PRINCIPLES : []
+    };
   }
 
   // ---------- 视图模型：数据统计 ----------
@@ -2855,7 +2873,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     // 总结洞察（教练口吻）
     var insights = [];
     var k = stats.kpi;
-    if (!S.length) insights.push({ type: 'info', text: '还没有训练记录。去「训练」页完成第一次 A1，数据会自动长出来。' });
+    var curProg = progressionOf(db);
+    var isGZ = curProg.id === 'gzclp';
+    var firstDayName = (db.days[0] && db.days[0].name) || '第一次';
+    if (!S.length) insights.push({ type: 'info', text: '还没有训练记录。去「训练」页完成' + firstDayName + '，数据会自动长出来。' });
     else {
       insights.push({ type: 'info', text: '已完成 ' + k.sessions + '/' + k.planned + ' 次训练（' + k.progress + '%），累计容量 ' + k.volume + '，共 ' + k.adds + ' 次加重。' + (k.warns ? '' : '目前没有预警，节奏正常。') });
       var lifts = liftSlots(db);
@@ -2868,18 +2889,27 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         var gain = fix(lastIt.nextWeight - first.weight);
         if (streak >= 2) insights.push({ type: 'up', text: info.name + ' 连续 ' + streak + ' 次加重，' + fmtW(first.weight) + '→' + fmtW(lastIt.nextWeight) + 'kg，节奏在线。' });
         // 单次加重已在「主项进度」表里展示，这里不再重复
-        if (lastIt.judgment === '建议降阶') insights.push({ type: 'warn', text: info.name + ' 末组没到 ' + progressionOf(db).stageDef('T1', lastIt.stage).hold + ' 次。下次同重量再冲，连续两次未达标才降阶，先睡好吃好。' });
-        if (lastIt.judgment === '降阶') insights.push({ type: 'warn', text: info.name + ' 已切到 ' + lastIt.nextStage + '，重量保持 ' + fmtW(lastIt.nextWeight) + 'kg，用更少次数顶住强度。' });
-        if (lastIt.judgment === '重置') insights.push({ type: 'warn', text: info.name + ' 完成一轮三阶，已重置回 5×3+ @ ' + fmtW(lastIt.nextWeight) + 'kg。' });
+        if (lastIt.judgment === '建议降阶') {
+          var hold = isGZ ? curProg.stageDef('T1', lastIt.stage).hold : 3;
+          insights.push({ type: 'warn', text: info.name + ' 末组没到 ' + hold + ' 次。下次同重量再冲，先睡好吃好。' });
+        }
+        if (lastIt.judgment === '降阶') {
+          insights.push({ type: 'warn', text: info.name + ' 已切到 ' + lastIt.nextStage + '，重量保持 ' + fmtW(lastIt.nextWeight) + 'kg，用更少次数顶住强度。' });
+        }
+        if (lastIt.judgment === '重置') {
+          insights.push({ type: 'warn', text: isGZ ? (info.name + ' 完成一轮三阶，已重置回 5×3+ @ ' + fmtW(lastIt.nextWeight) + 'kg。') : (info.name + ' 进入新一轮周期，重量重置为 ' + fmtW(lastIt.nextWeight) + 'kg。') });
+        }
       });
-      // T2 退阶 / T3 接近阈值
-      var lastBySlot = {};
-      S.forEach(function (s) { s.items.forEach(function (it) { if (it.judgment !== '跳过' && !it.deload && !it.sub) lastBySlot[it.slotId] = it; }); });
-      Object.keys(lastBySlot).forEach(function (id) {
-        var it = lastBySlot[id], dn = id.split('_')[0] + ' ';
-        if (it.tier === 'T2' && it.judgment === '退阶') insights.push({ type: 'warn', text: dn + it.name + ' 没吃下 ' + it.stage + '，下次降到 ' + it.nextStage + '，重量不变。' });
-        if (it.tier === 'T3' && it.judgment === '保持' && Number(it.input) >= P.t3Threshold - 4) insights.push({ type: 'tip', text: dn + it.name + ' 末组 ' + it.input + ' 次，距离 ' + P.t3Threshold + ' 次加重只差 ' + (P.t3Threshold - it.input) + ' 次，下次冲一把。' });
-      });
+      // 辅助退阶 / 阈值（仅 GZCLP 适用）
+      if (isGZ) {
+        var lastBySlot = {};
+        S.forEach(function (s) { s.items.forEach(function (it) { if (it.judgment !== '跳过' && !it.deload && !it.sub) lastBySlot[it.slotId] = it; }); });
+        Object.keys(lastBySlot).forEach(function (id) {
+          var it = lastBySlot[id], dn = id.split('_')[0] + ' ';
+          if (it.tier === 'T2' && it.judgment === '退阶') insights.push({ type: 'warn', text: dn + it.name + ' 没吃下 ' + it.stage + '，下次降到 ' + it.nextStage + '，重量不变。' });
+          if (it.tier === 'T3' && it.judgment === '保持' && Number(it.input) >= P.t3Threshold - 4) insights.push({ type: 'tip', text: dn + it.name + ' 末组 ' + it.input + ' 次，距离 ' + P.t3Threshold + ' 次加重只差 ' + (P.t3Threshold - it.input) + ' 次，下次冲一把。' });
+        });
+      }
       stats.e1rm.forEach(function (e) {
         if (e.n >= 2 && e.slope !== '—') insights.push({ type: 'trend', text: e.name + ' e1RM 回归斜率 ' + e.slope + ' kg/周，按此趋势第 ' + P.totalWeeks + ' 周约 ' + e.predict + 'kg' + (e.n < 4 ? '（样本少，参考）' : '') + '。' });
       });
@@ -2888,12 +2918,19 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         if (lw.dv) insights.push({ type: lw.dvUp ? 'up' : 'tip', text: '第 ' + lw.week + ' 周容量 ' + lw.volText + '，环比 ' + lw.dv + '。' });
       }
       var rec = recommend(db, rp);
-      if (isDeloadWeek(rec.week, P)) insights.push({ type: 'tip', text: '下一轮是第 ' + rec.week + ' 周减载周：T1 -50%、T2 -40%、T3 少 1 组，不影响进阶链。' });
+      if (isDeloadWeek(rec.week, P)) {
+        var dTip = isGZ ? '下一周是第 ' + rec.week + ' 周减载周：T1 −50%、T2 −40%、T3 少 1 组，不影响进阶链。' : curProg.id === 'w531' ? '下一周是第 4 周减载周（40%/50%/60%），促进恢复蓄力。' : '下一周是减载周，降低负荷与容量，促进充分恢复。';
+        insights.push({ type: 'tip', text: dTip });
+      }
     }
 
     var logs = S.slice().reverse().map(logView);
     insights.forEach(function (i) { i.icon = INS_ICON[i.type] || 'i'; });
-    return { insights: insights, liftTable: liftTable, weeks: weekCards.reverse(), logs: logs, kpi: k };
+    var pRules = progressionRules(curProg.id);
+    return {
+      progression: curProg.id, rules: pRules.rules, generalRules: pRules.general, ruleTitle: pRules.name, ruleSummary: pRules.summary,
+      insights: insights, liftTable: liftTable, weeks: weekCards.reverse(), logs: logs, kpi: k
+    };
   }
 
   // ---------- 动作库 / 更换动作 ----------
@@ -3172,27 +3209,114 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return rp.sessions.filter(function (s) { return s.rec.id === id; })[0] || null;
   }
 
-  var RULES = [
-    { title: 'T1 主项 · 三阶进阶', rows: [
-      ['5×3+', '末组 AMRAP ≥ 6', '加重，继续 5×3+'], ['5×3+', '3 ≤ AMRAP < 6', '重量不变，巩固'], ['5×3+', '连续 2 次 AMRAP < 3', '进入 6×2+，重量不变'],
-      ['6×2+', '末组 AMRAP ≥ 4', '加重，继续 6×2+'], ['6×2+', '2 ≤ AMRAP < 4', '重量不变，巩固'], ['6×2+', '连续 2 次 AMRAP < 2', '进入 10×1+，重量不变'],
-      ['10×1+', '末组 AMRAP ≥ 2', '加重，继续 10×1+'], ['10×1+', 'AMRAP < 2', '测新 5RM，取 90% 为新 TM，重置 5×3+']] },
-    { title: 'T2 次主项 · 退阶重置', rows: [
-      ['3×10', '全部完成', '加重，继续 3×10'], ['3×10', '无法完成', '降为 3×8，重量不变'],
-      ['3×8', '全部完成', '加重，回到 3×10（表格公式）'], ['3×8', '无法完成', '降为 3×6，重量不变'], ['3×6', '完成 / 未完成', '加重，重置回 3×10']] },
-    { title: 'T3 辅助项', rows: [['3×15+', '末组 AMRAP ≥ 阈值(25)', '加重，回到 3×15+'], ['3×15+', '末组 AMRAP < 阈值', '重量不变']] }
-  ];
-  var GENERAL_RULES = [
-    '循环顺序：A1 → B1 → A2 → B2 依次滚动，不固定星期几',
-    '组间休息：T1 3~5 分钟，T2 2~3 分钟，T3 60~90 秒',
-    '减载：每 6 周 1 次，T1 -50%，T2 -40%，T3 减 1 组（不改变进阶链）',
-    'T1 降阶：需连续 2 次未达标，单次失败只预警',
-    '推荐重量：T1=1RM×76.5%；T2≈1RM×动作系数×65%；T3≈1RM×动作系数×50%',
-    '器械取整：杠铃按 2.5kg；哑铃按单只 1~2kg；负重按外加重量；自重只记次数；固定器械按配重档',
-    '自适应加重：末组次数远超加重线时多加 1~2 档（T1 按 Epley 估算的差距取一半，最多 3 档；T3 超过阈值 10 次加 2 档）；只会多加，不会少加；「严格按表格」模式不启用',
-    '动作轮换：T1 四大项固定；T2/T3 每轮（8 周）在同一动作模式内自动换一次，不与上一轮重复，一轮内保持不变',
-    '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
-  ];
+  var PROGRESSION_RULES = {
+    gzclp: {
+      name: 'GZCLP · 线性三阶进阶',
+      summary: '主项从 5×3+ 开始，失败则降阶到 6×2+ 与 10×1+；辅助每轮在同模式内轮换；配件高次数积累。',
+      rules: [
+        { title: 'T1 主项 · 三阶进阶', rows: [
+          ['5×3+', '末组 AMRAP ≥ 6', '加重，继续 5×3+'], ['5×3+', '3 ≤ AMRAP < 6', '重量不变，巩固'], ['5×3+', '连续 2 次 AMRAP < 3', '进入 6×2+，重量不变'],
+          ['6×2+', '末组 AMRAP ≥ 4', '加重，继续 6×2+'], ['6×2+', '2 ≤ AMRAP < 4', '重量不变，巩固'], ['6×2+', '连续 2 次 AMRAP < 2', '进入 10×1+，重量不变'],
+          ['10×1+', '末组 AMRAP ≥ 2', '加重，继续 10×1+'], ['10×1+', 'AMRAP < 2', '测新 5RM，取 90% 为新 TM，重置 5×3+']] },
+        { title: 'T2 次主项 · 退阶重置', rows: [
+          ['3×10', '全部完成', '加重，继续 3×10'], ['3×10', '无法完成', '降为 3×8，重量不变'],
+          ['3×8', '全部完成', '加重，回到 3×10（表格公式）'], ['3×8', '无法完成', '降为 3×6，重量不变'], ['3×6', '完成 / 未完成', '加重，重置回 3×10']] },
+        { title: 'T3 辅助项', rows: [['3×15+', '末组 AMRAP ≥ 阈值(25)', '加重，回到 3×15+'], ['3×15+', '末组 AMRAP < 阈值', '重量不变']] },
+        { title: '减载周规则', rows: [['第 6 周', '计划内减载', 'T1 −50%，T2 −40%，T3 少 1 组，不打乱进阶链']] }
+      ],
+      general: [
+        '循环顺序：A1 → B1 → A2 → B2 依次滚动，不固定星期几',
+        '组间休息：T1 3~5 分钟，T2 2~3 分钟，T3 60~90 秒',
+        '减载：每 6 周 1 次，T1 −50%，T2 −40%，T3 减 1 组（不改变进阶链）',
+        'T1 降阶：需连续 2 次未达标，单次失败只预警',
+        '推荐重量：T1=1RM×76.5%；T2≈1RM×动作系数×65%；T3≈1RM×动作系数×50%',
+        '动作轮换：T1 四大项固定；T2/T3 每轮（8 周）在同一动作模式内自动换一次，不与上一轮重复，一轮内保持不变',
+        '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
+      ]
+    },
+    w531: {
+      name: '5/3/1 · Wendler 经典百分比波浪',
+      summary: '以训练最大重量（TM = 1RM × 90%）为计算基准。主项 4 周波浪，BBB 辅助 5×10 固定积累容量。',
+      rules: [
+        { title: '主项四周百分比波浪', rows: [
+          ['第 1 周 (3×5+)', '65%×5, 75%×5, 85%×5+', '末组 AMRAP 尽量多做，突破次数'],
+          ['第 2 周 (3×3+)', '70%×3, 80%×3, 90%×3+', '中高强度，冲刺大重量次数'],
+          ['第 3 周 (5/3/1+)', '75%×5, 85%×3, 95%×1+', '极限周，冲 1+ 爆发力与信心'],
+          ['第 4 周 (减载)', '40%×5, 50%×5, 60%×5', '减载恢复，不冲 AMRAP，促进神经修复']] },
+        { title: '进阶与周期判定', rows: [
+          ['深蹲 / 硬拉', '完成一轮 4 周', '下轮 TM +5 kg（下肢）'],
+          ['卧推 / 实力推', '完成一轮 4 周', '下轮 TM +2.5 kg（上肢）'],
+          ['未达标保护', 'W3 未能完成 1 次', 'TM 下调 10%（TM × 0.9），从头循环']] },
+        { title: 'BBB 辅助与配件', rows: [
+          ['BBB (Boring But Big)', '主项后同动作 5×10', '重量固定为当前 TM 的 50%，专注肌肉量'],
+          ['配件动作', '推、拉、单腿/核心', '每类每天 25~50 次总量，双重进阶（8–12 次）']] }
+      ],
+      general: [
+        'TM 原则：永远不要高估 TM，宁轻勿重；慢速而持续的进步才是力量王道',
+        '休息时间：主项重组 3~5 分钟，BBB 组 90~120 秒，配件 60 秒',
+        '第 4 周减载：必须严格减载，即使感觉良好也不要冲重量，为下一轮蓄力'
+      ]
+    },
+    linear: {
+      name: '线性加重进阶 (Linear Progression)',
+      summary: '每次训练达标即加重。连续 3 次未能完成规定次数则卸重 10%，重新向上攀登。',
+      rules: [
+        { title: '主项线性进阶', rows: [
+          ['规定组次全部完成', '达到目标次数（如 3×5+）', '下次训练加重（上肢 +2.5kg，下肢 +2.5~5kg）'],
+          ['末组 AMRAP', '最后一组尽力多做', '次数多于 5 次记为巩固；自适应模式下可适当多加'],
+          ['连续 3 次未达标', '同一重量 3 次失败', '卸重 10%（工作重量 × 0.9），重新线性累积']] },
+        { title: '辅助与配件进阶', rows: [
+          ['双重进阶', '区间 8–12 或 15–20 次', '所有组达到上限时加重回到下限；某组低于下限降重']] }
+      ],
+      general: [
+        '加重步幅：上肢动作 2.5kg（哑铃 1~2kg），下肢深蹲硬拉 2.5~5kg',
+        '安全与动作质量：末组 AMRAP 保持动作标准，保留 1 次余力（RPE 9），切忌力竭变形',
+        '三大项高频：深蹲每周 2~3 次高频刺激，强化神经募集'
+      ]
+    },
+    dual: {
+      name: '双重进阶 (Dual Progression)',
+      summary: '先在固定重量下增加次数（做满区间上限），再增加重量回到次数下限，持续循环。',
+      rules: [
+        { title: '双重进阶判定', rows: [
+          ['满组满次', '所有组均达到次数上限（如 12/12/12）', '下次训练加重，次数回到区间下限（如 8 次）'],
+          ['区间内累积', '各组在区间内（如 12/10/9）', '重量保持不变，下次继续争取多做 1~2 次'],
+          ['跌破下限', '任一组低于次数下限 2 次以上', '下次降低一档重量，避免动作代偿变形']] },
+        { title: '常用次数区间', rows: [
+          ['大肌群复合 (6–10)', '主项、推胸、划船、深蹲变式', '兼顾机械张力与力量增长'],
+          ['肥大辅助 (8–12)', '哑铃推举、引体、分腿蹲、下拉', '肌肥大黄金区间，代谢压力与泵感'],
+          ['孤立配件 (10–15 / 12–20)', '侧平举、面拉、弯举、腿屈伸', '单关节孤立，保护关节，高泵感']] }
+      ],
+      general: [
+        '加重不要激进：加重幅度越小（杠铃 2.5kg，哑铃 1~2kg，绳索 2.5kg），平台期越少',
+        '控制离心：离心 2~3 秒下落，向心充分发力，最大化肌纤维破坏与机械张力',
+        '各计划保持固定动作编排，不强制自动轮换，专注该周期的渐进超负荷'
+      ]
+    },
+    cardio: {
+      name: '有氧训练 (Cardio)',
+      summary: '以目标分钟为单位。稳态有氧（LISS）或高低间歇（HIIT），记录运动时长与消耗。',
+      rules: [
+        { title: '判定与记录', rows: [
+          ['完成判定', '实际运动时长 ≥ 目标分钟', '打勾完成；不计入力量吨位，不推算 1RM'],
+          ['渐进超负荷', '体能适应后', '每周增加 2~5 分钟，或增加坡度/阻力/配速']] },
+        { title: '常见健身房有氧模式', rows: [
+          ['跑步机坡走', '坡度 8~12，速度 4.5~5.5 km/h', '低冲击、高燃脂、保护膝盖'],
+          ['健身单车', '阻力中等，踏频 70~80 rpm', '下肢血液循环、关节友好'],
+          ['椭圆机 / 楼梯机', '全身体能、核心稳定', '热量消耗大，适合高效减脂']] }
+      ],
+      general: [
+        '力量优先：减脂期力量在前保住肌肉，有氧在后清空糖原加速燃脂',
+        '心率区间：减脂推荐最大心率 60%~75%（能够连续说话但不喘）',
+        '恢复与补水：有氧后补充水分与电解质，避免过度脱水'
+      ]
+    }
+  };
+  function progressionRules(progId) {
+    return PROGRESSION_RULES[progId] || PROGRESSION_RULES.dual;
+  }
+  var RULES = PROGRESSION_RULES.gzclp.rules;
+  var GENERAL_RULES = PROGRESSION_RULES.gzclp.general;
 
   function liftRM(db, lift) {
     var p = oneRMProfile(db)[lift] || {};
@@ -3319,11 +3443,38 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     function bbb(id, name, link, lift) {
       return libSlot(id, 'T2', name, 'fixed', { sets: 5, reps: 10, pct: 0.5, inc: 2.5, link: link, halfOnDeload: true, weight: 0 }, lift);
     }
+    function acc(id, tier, name, sets, lo, hi, step) {
+      return dualSlot(db, id, tier, name, sets, lo, hi, step);
+    }
     return [
-      { id: 'F1', name: '实力推', slots: [main('F1M', '站姿实力推', 'ohp', 2.5), bbb('F1B', '站姿实力推', 'F1M', 'ohp')] },
-      { id: 'F2', name: '硬拉', slots: [main('F2M', '传统硬拉', 'deadlift', 5), bbb('F2B', '传统硬拉', 'F2M', 'deadlift')] },
-      { id: 'F3', name: '卧推', slots: [main('F3M', '平板卧推', 'bench', 2.5), bbb('F3B', '平板卧推', 'F3M', 'bench')] },
-      { id: 'F4', name: '深蹲', slots: [main('F4M', '杠铃深蹲', 'squat', 5), bbb('F4B', '杠铃深蹲', 'F4M', 'squat')] }
+      { id: 'F1', name: '实力推', slots: [
+        main('F1M', '站姿实力推', 'ohp', 2.5),
+        bbb('F1B', '站姿实力推', 'F1M', 'ohp'),
+        acc('F1A1', 'T2', '高位下拉', 3, 8, 12, 2.5),
+        acc('F1A2', 'T3', '绳索下压', 3, 10, 15, 2.5),
+        acc('F1A3', 'T3', '悬垂举腿', 3, 10, 15, 0)
+      ] },
+      { id: 'F2', name: '硬拉', slots: [
+        main('F2M', '传统硬拉', 'deadlift', 5),
+        bbb('F2B', '传统硬拉', 'F2M', 'deadlift'),
+        acc('F2A1', 'T2', '上斜哑铃卧推', 3, 8, 12, 2),
+        acc('F2A2', 'T2', '单臂哑铃划船', 3, 8, 12, 2),
+        acc('F2A3', 'T3', '卷腹', 3, 12, 15, 0)
+      ] },
+      { id: 'F3', name: '卧推', slots: [
+        main('F3M', '平板卧推', 'bench', 2.5),
+        bbb('F3B', '平板卧推', 'F3M', 'bench'),
+        acc('F3A1', 'T2', '杠铃划船', 3, 8, 12, 2.5),
+        acc('F3A2', 'T3', '哑铃侧平举', 3, 12, 15, 1),
+        acc('F3A3', 'T3', '面拉', 3, 12, 15, 2.5)
+      ] },
+      { id: 'F4', name: '深蹲', slots: [
+        main('F4M', '杠铃深蹲', 'squat', 5),
+        bbb('F4B', '杠铃深蹲', 'F4M', 'squat'),
+        acc('F4A1', 'T2', '高位下拉', 3, 8, 12, 2.5),
+        acc('F4A2', 'T2', '保加利亚分腿蹲', 3, 8, 12, 2),
+        acc('F4A3', 'T3', '卷腹', 3, 12, 15, 0)
+      ] }
     ];
   }
   /** 新手全身力量：三个全身日，主项线性加重。 */
@@ -3332,20 +3483,23 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       { id: 'NA', name: '全身 A', slots: [
         linSlot(db, 'NA1', 'T1', '杠铃深蹲', 3, 5, 2.5, 'squat'),
         linSlot(db, 'NA2', 'T1', '平板卧推', 3, 5, 2.5, 'bench'),
-        dualSlot(db, 'NA3', 'T2', '杠铃划船', 3, 8, 12, 2.5),
-        dualSlot(db, 'NA4', 'T3', '卷腹', 3, 10, 15, 0)
+        dualSlot(db, 'NA3', 'T2', '杠铃划船', 3, 6, 10, 2.5),
+        dualSlot(db, 'NA4', 'T3', '哑铃侧平举', 3, 12, 15, 1),
+        dualSlot(db, 'NA5', 'T3', '卷腹', 3, 12, 15, 0)
       ] },
       { id: 'NB', name: '全身 B', slots: [
-        linSlot(db, 'NB1', 'T1', '传统硬拉', 3, 5, 5, 'deadlift'),
+        linSlot(db, 'NB1', 'T1', '传统硬拉', 1, 5, 5, 'deadlift'),
         linSlot(db, 'NB2', 'T1', '站姿实力推', 3, 5, 2.5, 'ohp'),
-        dualSlot(db, 'NB3', 'T2', '高位下拉', 3, 8, 12, 2.5),
-        dualSlot(db, 'NB4', 'T3', '哑铃侧平举', 3, 10, 15, 1)
+        dualSlot(db, 'NB3', 'T2', '高位下拉', 3, 6, 10, 2.5),
+        dualSlot(db, 'NB4', 'T3', '俯卧腿弯举', 3, 10, 15, 2.5),
+        dualSlot(db, 'NB5', 'T3', '面拉', 3, 12, 15, 2.5)
       ] },
       { id: 'NC', name: '全身 C', slots: [
-        dualSlot(db, 'NC1', 'T2', '前蹲', 3, 6, 10, 2.5, 'squat'),
-        dualSlot(db, 'NC2', 'T2', '上斜卧推', 3, 6, 10, 2.5, 'bench'),
-        dualSlot(db, 'NC3', 'T2', '罗马尼亚硬拉', 3, 8, 12, 2.5, 'deadlift'),
-        dualSlot(db, 'NC4', 'T3', '面拉', 3, 12, 15, 2.5)
+        linSlot(db, 'NC1', 'T1', '杠铃深蹲', 3, 5, 2.5, 'squat'),
+        dualSlot(db, 'NC2', 'T2', '上斜哑铃卧推', 3, 8, 12, 2),
+        dualSlot(db, 'NC3', 'T2', '坐姿划船', 3, 8, 12, 2.5),
+        dualSlot(db, 'NC4', 'T3', '哑铃弯举', 3, 10, 15, 1),
+        dualSlot(db, 'NC5', 'T3', '绳索三头屈伸', 3, 10, 15, 2.5)
       ] }
     ];
   }
@@ -3354,22 +3508,24 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return [
       { id: 'AA', name: '蹲与推', slots: [
         linSlot(db, 'AA1', 'T1', '杠铃深蹲', 3, 5, 2.5, 'squat'),
-        dualSlot(db, 'AA2', 'T2', '保加利亚分腿蹲', 3, 6, 10, 2),
-        linSlot(db, 'AA3', 'T1', '平板卧推', 3, 5, 2.5, 'bench'),
-        dualSlot(db, 'AA4', 'T3', '悬垂举腿', 3, 8, 12, 0)
+        linSlot(db, 'AA2', 'T1', '站姿实力推', 3, 5, 2.5, 'ohp'),
+        dualSlot(db, 'AA3', 'T2', '引体向上', 3, 6, 10, 0),
+        dualSlot(db, 'AA4', 'T2', '保加利亚分腿蹲', 3, 8, 10, 2),
+        dualSlot(db, 'AA5', 'T3', '悬垂举腿', 3, 10, 15, 0)
       ] },
       { id: 'AB', name: '铰链与拉', slots: [
-        dualSlot(db, 'AB1', 'T1', '罗马尼亚硬拉', 3, 6, 10, 2.5, 'deadlift'),
-        dualSlot(db, 'AB2', 'T2', '臀推', 3, 8, 12, 2.5),
+        linSlot(db, 'AB1', 'T1', '传统硬拉', 3, 5, 5, 'deadlift'),
+        linSlot(db, 'AB2', 'T1', '平板卧推', 3, 5, 2.5, 'bench'),
         dualSlot(db, 'AB3', 'T2', '杠铃划船', 3, 6, 10, 2.5),
-        dualSlot(db, 'AB4', 'T2', '山羊挺身', 3, 10, 15, 0)
+        dualSlot(db, 'AB4', 'T2', '臀推', 3, 8, 12, 2.5),
+        dualSlot(db, 'AB5', 'T3', '山羊挺身', 3, 10, 15, 0)
       ] },
-      { id: 'AC', name: '混合', slots: [
-        linSlot(db, 'AC1', 'T1', '传统硬拉', 3, 5, 5, 'deadlift'),
-        dualSlot(db, 'AC2', 'T2', '高脚杯深蹲', 3, 8, 12, 2),
-        linSlot(db, 'AC3', 'T1', '站姿实力推', 3, 5, 2.5, 'ohp'),
-        dualSlot(db, 'AC4', 'T3', '反向飞鸟', 3, 12, 15, 1),
-        dualSlot(db, 'AC5', 'T3', '卷腹', 3, 10, 15, 0)
+      { id: 'AC', name: '功能整合', slots: [
+        dualSlot(db, 'AC1', 'T2', '罗马尼亚硬拉', 3, 6, 10, 2.5, 'deadlift'),
+        dualSlot(db, 'AC2', 'T2', '上斜哑铃卧推', 3, 8, 12, 2),
+        dualSlot(db, 'AC3', 'T2', '单臂哑铃划船', 3, 8, 12, 2),
+        dualSlot(db, 'AC4', 'T2', '高脚杯深蹲', 3, 8, 12, 2),
+        dualSlot(db, 'AC5', 'T3', '面拉', 3, 12, 15, 2.5)
       ] }
     ];
   }
@@ -3683,12 +3839,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (!cat || !def) return null;
     var P = Object.assign(defaultParams(), def.params || {}), byId = {};
     def.days.forEach(function (d) { d.slots.forEach(function (s) { byId[s.id] = s; }); });
-    return { id: cat.id, name: cat.name, daysLabel: cat.days, blurb: cat.blurb, days: def.days.map(function (d) {
+    var tplProg = def.progression || (id === 'gzclp' ? 'gzclp' : 'dual');
+    return { id: cat.id, name: cat.name, daysLabel: cat.days, blurb: cat.blurb, progression: tplProg, days: def.days.map(function (d) {
       return { id: d.id, name: d.name, slots: d.slots.map(function (s) {
         var w = initWeight(s, P), bw = equipOf(s.name, s.equip) === '自重';
         if (s.scheme && s.scheme.link && byId[s.scheme.link]) w = ceilTo(initWeight(byId[s.scheme.link], P) * (s.scheme.pct || 0.5), (s.scheme.inc) || 2.5);
         var weight = s.prog === 'cardio' ? ((s.scheme && s.scheme.minutes || 20) + ' 分钟') : bw ? '自重' : (s.prog === 'w531' && w > 0 ? 'TM ' + fmtW(w) + ' kg' : (w > 0 ? fmtW(w) + ' kg' : ''));
-        return { tier: s.tier, badge: slotBadge(s), name: s.name, equip: equipOf(s.name, s.equip), text: schemeText(s), weight: weight };
+        return { tier: s.tier, badge: slotBadge(s, tplProg), name: s.name, equip: equipOf(s.name, s.equip), text: schemeText(s), weight: weight };
       }) };
     }) };
   }
@@ -3731,6 +3888,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
     PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, slotBadge: slotBadge, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, recommendTemplates: recommendTemplates, ceilTo: ceilTo,
+    PROGRESSION_RULES: PROGRESSION_RULES, progressionRules: progressionRules,
     LEGACY_PID: LEGACY_PID, BASE_KEYS: BASE_KEYS, PLAN_KEYS: PLAN_KEYS, PROGRAM_STATUS: PROGRAM_STATUS, recPid: recPid, activePid: activePid, activeProgram: activeProgram, programById: programById,
     canTrain: canTrain, planView: planView, switchProgram: switchProgram, pauseProgram: pauseProgram, resumeProgram: resumeProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile,
     ONBOARD_GENDER: ONBOARD_GENDER, ONBOARD_GOAL: ONBOARD_GOAL, ONBOARD_EXPERIENCE: ONBOARD_EXPERIENCE, ONBOARD_DAYS: ONBOARD_DAYS, ONBOARD_EQUIP: ONBOARD_EQUIP,
@@ -5461,7 +5619,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     }
     if (!vm.locked) {
     if (vm.deloadSuggest || vm.deload) {
-      h += '<div class="card deload"><div class="dl-ic">↓</div><div class="flex1"><div class="dl-t">减载周</div><div class="dl-s">T1 −50% · T2 −40% · T3 少 1 组</div></div>' +
+      h += '<div class="card deload"><div class="dl-ic">↓</div><div class="flex1"><div class="dl-t">减载周</div><div class="dl-s">' + esc(vm.deloadTip || '减载周 · 降低负荷恢复') + '</div></div>' +
         '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
     }
     // 专注模式：只展开「当前动作」，其余收成一行。焦点只在换训练日 / 首次进入时自动定位到第一个未完成的动作，
@@ -5551,7 +5709,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (t.result) {
       var r = t.result;
       h += '<div class="mask" data-act="closeResult"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + r.day + ' ' + r.dayName + ' · ' + r.weekText + '</span><div class="sheet-title">' + (r.cycleDone ? '第 ' + r.cycle + ' 轮完成' : r.weekDone ? '本周完成' : '训练完成') + '</div>' +
-        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在训练页的「计划总览」查看本轮编排与依据</div>' : '')
+        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">' + ((vm.progression || 'gzclp') === 'gzclp' ? '已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在训练页的「计划总览」查看本轮编排与依据' : '已按计划更换辅助动作。可在训练页的「计划总览」查看本轮编排') + '</div>' : '')
           : r.weekDone ? '<div class="wk-done">本周训练日全部完成，已进入' + r.nextWeekText + (r.nextDeload ? '（减载周）' : '') + '</div>'
           : (r.leftText ? '<div class="wk-left">本周还剩 ' + r.leftText + '</div>' : '')) +
         '<div class="res-kpi"><div class="rk"><span class="num rk-v">' + r.volume + '</span><span class="rk-l">容量 kg</span></div><div class="rk"><span class="num rk-v accent">' + r.adds + '</span><span class="rk-l">项加重</span></div></div>' +
@@ -5820,7 +5978,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var rt = vm.rotation;
     if (rt) {
       h += '<div class="card rot-card"><div class="card-title"><span class="t">' + vm.cycleText + '动作编排</span><span class="s">' +
-        (!rt.enabled ? '自动轮换已关闭' : rt.cycle === 1 ? '起始动作' : '换了 ' + rt.changed + ' / ' + rt.total + ' 个') + '</span></div>' +
+        (gz ? (!rt.enabled ? '自动轮换已关闭' : rt.cycle === 1 ? '起始动作' : '换了 ' + rt.changed + ' / ' + rt.total + ' 个') : '点动作可微调') + '</span></div>' +
         '<div class="rot-tip">' + (gz ? (rt.isCur ? '点任意一行可调整重量或更换动作，从该训练日的下一次训练起生效。' : 'T1 四大项固定；T2/T3 每轮在同一动作模式内换一次，一轮 ' + vm.weeksPerCycle + ' 周内保持不变。') : '点任意一行可调整重量或更换动作，从该训练日的下一次训练起生效。') + (rt.isFuture ? '这一轮还没开始，以下为预排。' : '') + '</div>' +
         rt.days.map(function (d) {
           return '<div class="rot-day"><div class="rot-dh"><span class="num rot-did">' + d.id + '</span><span class="rot-dn">' + esc(d.name) + '</span></div>' +
@@ -6306,12 +6464,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         }).join('') + '</div>';
       h += '<div class="card"><div class="card-title"><span class="t">训练小结</span><span class="link" data-act="copy">复制</span></div>' +
         vm.insights.map(function (i) { return '<div class="ins"><div class="ins-ic ' + i.type + '">' + i.icon + '</div><span class="ins-t">' + esc(i.text) + '</span></div>'; }).join('') + '</div>';
-      h += '<div class="card"><div class="card-title rules-h" data-act="rules"><span class="t">' + (gzReview ? '规则速查' : '这套计划的进阶') + '</span>' + (gzReview ? '<span class="link">' + (r.rules ? '收起' : '展开') + '</span>' : '') + '</div>';
-      if (!gzReview) h += '<span class="cap">' + esc((GZ.progressionOf(viewDb()).desc) || '') + '</span>';
-      else if (r.rules) {
-        h += GZ.RULES.map(function (g) { return '<div class="rg"><div class="rg-t">' + g.title + '</div>' + g.rows.map(function (x) { return '<div class="rr"><span class="r1 num">' + x[0] + '</span><span class="r2">' + x[1] + '</span><span class="r3">' + x[2] + '</span></div>'; }).join('') + '</div>'; }).join('') +
-          GZ.GENERAL_RULES.map(function (g) { return '<div class="gen">' + g + '</div>'; }).join('');
-      } else h += '<span class="cap">T1 三阶进阶、T2 退阶重置、T3 阈值加重与通用规则</span>';
+      var rTitle = vm.ruleTitle || (gzReview ? 'GZCLP 规则速查' : '这套计划的进阶规则');
+      h += '<div class="card"><div class="card-title rules-h" data-act="rules"><span class="t">' + esc(rTitle) + '</span><span class="link">' + (r.rules ? '收起' : '展开') + '</span></div>';
+      if (r.rules) {
+        var rList = vm.rules || GZ.progressionRules(viewDb().params.progression).rules;
+        var gList = vm.generalRules || GZ.progressionRules(viewDb().params.progression).general;
+        h += rList.map(function (g) { return '<div class="rg"><div class="rg-t">' + esc(g.title) + '</div>' + g.rows.map(function (x) { return '<div class="rr"><span class="r1 num">' + esc(x[0]) + '</span><span class="r2">' + esc(x[1]) + '</span><span class="r3">' + esc(x[2]) + '</span></div>'; }).join('') + '</div>'; }).join('') +
+          gList.map(function (g) { return '<div class="gen">' + esc(g) + '</div>'; }).join('');
+      } else {
+        h += '<span class="cap">' + esc(vm.ruleSummary || (GZ.progressionOf(viewDb()).desc) || '') + '</span>';
+      }
       h += '</div>';
     }
     if (part === 'summary' || (!part && r.tab === 1)) {
@@ -6737,20 +6899,27 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
       (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
       '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天早上把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json。立即拉取只读取这份快照，不会直接连接手表；分享卡片按训练日期对上快照里的力量训练。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
+    var isCurGz = (P.progression || 'gzclp') === 'gzclp';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
       '<div class="cell"><span class="flex1">当前体重</span>' + inp('bodyWeight', P.bodyWeight || 70, 'kg') + '</div></div>' +
-      '<div class="sec-f">T1 以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
+      '<div class="sec-f">' + (isCurGz ? 'T1 以四大项 1RM 推算；' : '主项以四大项 1RM 推算；') + '哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
     h += '\u0000adv\u0000';
     h += '<div class="sec-h">加重步幅</div><div class="list">' +
       GZ.STEP_KEYS.map(function (s) { return '<div class="cell"><span class="flex1">' + s.label + '</span>' + inp('steps.' + s.key, P.steps[s.key], 'kg') + '</div>'; }).join('') +
-      '<div class="cell"><span class="flex1">T3 加重阈值</span>' + inp('t3Threshold', P.t3Threshold, '次') + '</div>' +
+      (isCurGz ? '<div class="cell"><span class="flex1">T3 加重阈值</span>' + inp('t3Threshold', P.t3Threshold, '次') + '</div>' : '') +
       '<div class="cell"><span class="flex1">取整档位</span>' + inp('rounding', P.rounding, 'kg') + '</div>' +
       '<div class="cell"><span class="flex1">杠铃杆重</span>' + inp('barWeight', P.barWeight, 'kg') + '</div></div>';
-    h += '<div class="sec-h">判定规则</div>' + seg([{ html: '完整三阶', on: P.ruleMode === 'full', data: ' data-v="full"' }, { html: '严格按表格', on: P.ruleMode === 'excel', data: ' data-v="excel"' }], -1, 'mode', 'mode-seg') +
-      (P.ruleMode === 'full' ? '<div class="list"><div class="cell"><span class="flex1">按末组次数自适应加重</span><label class="ios-sw green"><input type="checkbox" data-act="adaptsw" ' + (P.adaptive !== false ? 'checked' : '') + '><i></i></label></div></div>' : '') +
-      '<div class="sec-f">' + (P.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (P.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。') + '</div>';
+    if (isCurGz) {
+      h += '<div class="sec-h">判定规则</div>' + seg([{ html: '完整三阶', on: P.ruleMode === 'full', data: ' data-v="full"' }, { html: '严格按表格', on: P.ruleMode === 'excel', data: ' data-v="excel"' }], -1, 'mode', 'mode-seg') +
+        (P.ruleMode === 'full' ? '<div class="list"><div class="cell"><span class="flex1">按末组次数自适应加重</span><label class="ios-sw green"><input type="checkbox" data-act="adaptsw" ' + (P.adaptive !== false ? 'checked' : '') + '><i></i></label></div></div>' : '') +
+        '<div class="sec-f">' + (P.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (P.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。') + '</div>';
+    } else {
+      var pRules = GZ.progressionRules(P.progression);
+      h += '<div class="sec-h">当前计划进阶</div><div class="list"><div class="cell"><span class="flex1">策略</span><span class="val">' + esc(pRules.name) + '</span></div></div>' +
+        '<div class="sec-f">' + esc(pRules.summary) + '</div>';
+    }
     h += '\u0000act\u0000';
     h += '<div class="sec-h">动作</div><div class="list"><div class="cell tap" data-act="openlib"><span class="flex1">动作库</span><span class="val">' + GZ.libAll(db).length + ' 个' +
       (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div>' +

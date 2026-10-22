@@ -15,7 +15,7 @@
       </view>
     </view>
     <view class="card">
-      <view class="card-title rules-h" bindtap="toggleRules"><text class="t">规则速查</text><text class="link">{{showRules ? '收起' : '展开'}}</text></view>
+      <view class="card-title rules-h" bindtap="toggleRules"><text class="t">{{vm.ruleTitle || '进阶规则速查'}}</text><text class="link">{{showRules ? '收起' : '展开'}}</text></view>
       <block wx:if="{{showRules}}">
         <view wx:for="{{rules}}" wx:key="title" wx:for-item="g" class="rg">
           <view class="rg-t">{{g.title}}</view>
@@ -25,7 +25,7 @@
         </view>
         <view class="gen" wx:for="{{general}}" wx:key="*this">{{item}}</view>
       </block>
-      <text class="cap" wx:else>T1 三阶进阶、T2 退阶重置、T3 阈值加重与通用规则</text>
+      <text class="cap" wx:else>{{vm.ruleSummary || '进阶规则与说明'}}</text>
     </view>
   </view>
 

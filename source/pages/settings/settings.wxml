@@ -18,7 +18,7 @@
       <text class="f-u">kg</text>
     </view>
   </view>
-  <view class="sec-f">T1 以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</view>
+  <view class="sec-f">{{isGz ? 'T1' : '主项'}}以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</view>
 
   <view class="sec-h">加重步幅</view>
   <view class="list">
@@ -27,29 +27,39 @@
       <input class="f-in num" type="digit" value="{{item.v}}" data-k="steps.{{item.key}}" bindblur="onParam" />
       <text class="f-u">kg</text>
     </view>
-    <view class="cell"><text class="flex1">T3 加重阈值</text><input class="f-in num" type="number" value="{{p.t3Threshold}}" data-k="t3Threshold" bindblur="onParam" /><text class="f-u">次</text></view>
+    <view class="cell" wx:if="{{isGz}}"><text class="flex1">T3 加重阈值</text><input class="f-in num" type="number" value="{{p.t3Threshold}}" data-k="t3Threshold" bindblur="onParam" /><text class="f-u">次</text></view>
     <view class="cell"><text class="flex1">取整档位</text><input class="f-in num" type="digit" value="{{p.rounding}}" data-k="rounding" bindblur="onParam" /><text class="f-u">kg</text></view>
     <view class="cell"><text class="flex1">杠铃杆重</text><input class="f-in num" type="digit" value="{{p.barWeight}}" data-k="barWeight" bindblur="onParam" /><text class="f-u">kg</text></view>
   </view>
 
-  <view class="sec-h">判定规则</view>
-  <view class="seg mode-seg">
-    <view class="seg-i {{p.ruleMode === 'full' ? 'on' : ''}}" data-v="full" bindtap="onMode">完整三阶</view>
-    <view class="seg-i {{p.ruleMode === 'excel' ? 'on' : ''}}" data-v="excel" bindtap="onMode">严格按表格</view>
-  </view>
-  <view class="list" wx:if="{{p.ruleMode === 'full'}}">
-    <view class="cell"><text class="flex1">按末组次数自适应加重</text><switch checked="{{p.adaptive !== false}}" color="#34C759" bindchange="onAdaptive" /></view>
-  </view>
-  <view class="sec-f">{{p.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (p.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。'}}</view>
+  <block wx:if="{{isGz}}">
+    <view class="sec-h">判定规则</view>
+    <view class="seg mode-seg">
+      <view class="seg-i {{p.ruleMode === 'full' ? 'on' : ''}}" data-v="full" bindtap="onMode">完整三阶</view>
+      <view class="seg-i {{p.ruleMode === 'excel' ? 'on' : ''}}" data-v="excel" bindtap="onMode">严格按表格</view>
+    </view>
+    <view class="list" wx:if="{{p.ruleMode === 'full'}}">
+      <view class="cell"><text class="flex1">按末组次数自适应加重</text><switch checked="{{p.adaptive !== false}}" color="#34C759" bindchange="onAdaptive" /></view>
+    </view>
+    <view class="sec-f">{{p.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (p.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。'}}</view>
+  </block>
+  <block wx:else>
+    <view class="sec-h">当前计划进阶</view>
+    <view class="list">
+      <view class="cell"><text class="flex1">策略</text><text class="val">{{progName}}</text></view>
+    </view>
+    <view class="sec-f">{{progSummary}}</view>
+  </block>
 
   <view class="sec-h">周期</view>
   <view class="list">
     <view class="cell"><text class="flex1">每轮周数</text><input class="f-in num" type="number" value="{{p.totalWeeks}}" data-k="totalWeeks" bindblur="onParam" /><text class="f-u">周 / 轮</text></view>
-    <view class="cell"><text class="flex1">减载周</text><switch checked="{{p.deloadEnabled}}" color="#34C759" bindchange="onDeload" /></view>
-    <view class="cell" wx:if="{{p.deloadEnabled}}"><text class="flex1">每轮第</text><input class="f-in num" type="number" value="{{p.deloadEvery}}" data-k="deloadEvery" bindblur="onParam" /><text class="f-u">周减载</text></view>
-    <view class="cell"><text class="flex1">每轮自动轮换 T2/T3</text><switch checked="{{p.autoRotate !== false}}" color="#34C759" bindchange="onRotate" /></view>
+    <view class="cell" wx:if="{{isGz}}"><text class="flex1">减载周</text><switch checked="{{p.deloadEnabled}}" color="#34C759" bindchange="onDeload" /></view>
+    <view class="cell" wx:if="{{isGz && p.deloadEnabled}}"><text class="flex1">每轮第</text><input class="f-in num" type="number" value="{{p.deloadEvery}}" data-k="deloadEvery" bindblur="onParam" /><text class="f-u">周减载</text></view>
+    <view class="cell" wx:if="{{isGz}}"><text class="flex1">每轮自动轮换辅助动作</text><switch checked="{{p.autoRotate !== false}}" color="#34C759" bindchange="onRotate" /></view>
   </view>
-  <view class="sec-f">{{p.autoRotate !== false ? '每进入新一轮，T2/T3 会在同一动作模式内自动换成上一轮没练过的动作，T1 四大项不变。' : ''}}完成一轮（{{p.totalWeeks}} 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内的周序计算{{p.deloadEnabled ? '（每轮第 ' + p.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : ''}}。</view>
+  <view class="sec-f" wx:if="{{isGz}}">{{p.autoRotate !== false ? '每进入新一轮，辅助动作会在同一模式里换成上一轮没练过的，主项不变。' : ''}}完成一轮（{{p.totalWeeks}} 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内的周序计算{{p.deloadEnabled ? '（每轮第 ' + p.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : ''}}。</view>
+  <view class="sec-f" wx:else>这套计划每 {{p.totalWeeks}} 周一轮，按自己的进阶加重，独立运作，不使用 GZCLP 的减载和动作轮换规则。</view>
 
   <view class="sec-h">动作</view>
   <view class="list">
