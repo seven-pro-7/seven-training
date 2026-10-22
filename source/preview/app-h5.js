@@ -263,10 +263,44 @@
   }
 
   // ================= 训练 =================
+  /** 切到别的训练日之前，把这一天已经填的组次、完成选择和减载记下来 */
+  function rememberTrain() {
+    var t = S.train;
+    if (!t.day || t.recordId) return;
+    if (!t.drafts) t.drafts = {};
+    if (t.draft) t.drafts[t.day] = t.draft;
+    if (!t.deloads) t.deloads = {};
+    if (t.deload) t.deloads[t.day] = true; else delete t.deloads[t.day];
+    if (!t.focusByDay) t.focusByDay = {};
+    if (t.focus) t.focusByDay[t.day] = t.focus; else delete t.focusByDay[t.day];
+  }
+  function takeTrainDay(day) {
+    var t = S.train, db = load();
+    if (!t.drafts) t.drafts = {};
+    t.day = day;
+    t.draft = t.drafts[day] || GZ.blankDraft(db, day);
+    t.drafts[day] = t.draft;
+    t.deload = t.deloads && t.deloads[day] ? true : undefined;
+    if (t.focusByDay && t.focusByDay[day]) { t.focus = t.focusByDay[day]; t.focusKey = day + '|'; }
+    else { t.focus = null; t.focusKey = ''; }
+  }
+  function dropTrainDay(day) {
+    var t = S.train;
+    if (t.drafts) delete t.drafts[day];
+    if (t.deloads) delete t.deloads[day];
+    if (t.focusByDay) delete t.focusByDay[day];
+  }
+  function clearTrainDays() {
+    var t = S.train;
+    t.drafts = {}; t.deloads = {}; t.focusByDay = {}; t.focus = null; t.focusKey = '';
+  }
   function trainVM() {
     var db = load(), t = S.train;
     if (!t.day || !GZ.dayById(db, t.day)) t.day = GZ.recommend(db).day;
-    if (!t.draft) t.draft = GZ.blankDraft(db, t.day);
+    if (!t.drafts) t.drafts = {};
+    if (!t.draft) t.draft = t.drafts[t.day] || GZ.blankDraft(db, t.day);
+    t.drafts[t.day] = t.draft;
+    if (t.deload === undefined && t.deloads && t.deloads[t.day]) t.deload = true;
     return GZ.buildTrain(db, { day: t.day, recordId: t.recordId, draft: t.draft, deload: t.deload });
   }
   function entry(slot) { var d = S.train.draft; return d[slot] || (d[slot] = { v: null, done: 0 }); }
@@ -457,7 +491,7 @@
       case 'swapw': t.swap.weight = el.value; return false;
       case 'swaprestore': en = entry(t.swap.slotId); delete en.ex; en.w = null; t.swap.show = false; return true;
       case 'swapok': return swapConfirm();
-      case 'day': if (t.recordId) return; t.day = ds.day; t.deload = undefined; t.draft = GZ.blankDraft(load(), ds.day); return true;
+      case 'day': if (t.recordId || !ds.day || ds.day === t.day) return; rememberTrain(); takeTrainDay(ds.day); return true;
       case 'deload': t.deload = el.checked; return true;
       case 'focus': t.focus = ds.slot; render(true); setTimeout(function () { var c = document.querySelector('.ex.is-focus'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 20); return false;
       case 'step':
@@ -534,7 +568,8 @@
         cycle: dCyc, weeksPerCycle: GZ.cycleLen(db.params), cycleDone: cDone, nextWeekText: GZ.weekText(rdn.week, db.params), volume: Math.round(s.volume),
         weekDone: wDone, leftText: t.recordId ? '' : rdn.leftText, nextDeload: wDone && GZ.isDeloadWeek(rdn.week, db.params), adds: s.items.filter(function (x) { return x.judgment === '加重'; }).length,
         items: s.items.map(function (it) { return { tier: it.tier, badge: it.badge, name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment], next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : GZ.fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage }; }) } : null;
-      t.recordId = null; t.deload = undefined; t.day = GZ.recommend(db).day; t.draft = GZ.blankDraft(db, t.day); t.bw = ''; t.note = ''; t.date = GZ.today();
+      dropTrainDay(t.day);
+      t.recordId = null; t.deload = undefined; t.day = GZ.recommend(db).day; t.draft = null; t.focus = null; t.focusKey = ''; t.bw = ''; t.note = ''; t.date = GZ.today();
       render();
     };
     if (missing.length) confirmBox('还有未填写的动作', missing.map(function (m) { return m.name; }).join('、') + ' 将按“跳过”保存，状态保持不变。', go); else go();
@@ -857,11 +892,14 @@
   }
   function goTrain(day) {
     if (!GZ.canTrain(load())) { toast('这套计划现在不能训练'); return false; }
-    var t = S.train; if (!t.recordId) { t.day = day; t.draft = GZ.blankDraft(load(), day); t.deload = undefined; } S.tab = 'train'; return true;
+    var t = S.train;
+    if (!t.recordId && day && day !== t.day) { rememberTrain(); takeTrainDay(day); }
+    S.tab = 'train'; return true;
   }
   function resetTrain() {
     var t = S.train;
     t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; t.focus = null; t.result = null; t.focusKey = '';
+    clearTrainDays();
     S.plan.cycle = 0; S.plan.ov = 0; S.plan.slot = null; S.plan.detail = null;
   }
   function planAct(act, ds, el) {
@@ -1635,7 +1673,7 @@
     markBackup(); render(true); toast('已下载备份文件');
   }
   function importText(txt) {
-    try { var inc = JSON.parse(txt); if (!inc || !inc.params || !inc.days) throw 0; save(GZ.replaceDb(load(), inc)); S.settings.imp = false; S.train.draft = null; S.train.day = null; toast('恢复成功'); render(true); }
+    try { var inc = JSON.parse(txt); if (!inc || !inc.params || !inc.days) throw 0; save(GZ.replaceDb(load(), inc)); S.settings.imp = false; S.train.draft = null; S.train.day = null; clearTrainDays(); toast('恢复成功'); render(true); }
     catch (e) { toast('文件内容不正确'); }
   }
   function importWatch(txt) {
@@ -1725,7 +1763,7 @@
       case 'watchclear': confirmBox('清除手表数据？', '只清除导入的手表快照；训练记录不受影响。手表系列的里程碑会重新变为未获得。', function () { mutate(function (db) { db.params.watch = null; var c = Sync.cfg(); if (c) { c.watchAt = 0; c.watchErr = ''; localStorage.setItem(SYNC_KEY, JSON.stringify(c)); } }, '已清除手表数据'); st.wpaste = false; render(true); }); return false;
       case 'imp': st.imp = !st.imp; return true;
       case 'doImp': importText(document.getElementById('impText').value); return false;
-      case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { GZ.clearRecords(db); }, '已清空'); S.train.draft = null; S.train.day = null; render(true); }); return false;
+      case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { GZ.clearRecords(db); }, '已清空'); S.train.draft = null; S.train.day = null; clearTrainDays(); render(true); }); return false;
       case 'restore': confirmBox('恢复 Excel 默认？', '参数、动作配置与记录将恢复为表格初始状态（含第 1 周 A1/B1 记录）。', function () { save(GZ.replaceDb(load(), GZ.defaults(true))); S.train = { day: null, draft: null, recordId: null, date: GZ.today(), bw: '', note: '', result: null }; render(true); toast('已恢复'); }); return false;
     }
   }

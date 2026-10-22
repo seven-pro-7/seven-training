@@ -7,7 +7,7 @@ function fmtSec(s) { s = Math.max(0, s); const m = Math.floor(s / 60), r = s % 6
 Page({
   data: { vm: null, date: '', dateText: '', bw: '', note: '', rest: { show: false }, result: null, swap: { show: false } },
 
-  onLoad() { this.day = null; this.draft = null; this.recordId = null; this.deload = undefined; this.setDate(GZ.today()); },
+  onLoad() { this.day = null; this.draft = null; this.drafts = {}; this.deloads = {}; this.recordId = null; this.deload = undefined; this.setDate(GZ.today()); },
   setDate(d) { this.setData({ date: d, dateText: GZ.dateLabel(d) }); },
 
   onShow() {
@@ -24,15 +24,31 @@ Page({
     const db = this.db();
     if (!this.day) this.day = GZ.recommend(db).day;
     if (!GZ.dayById(db, this.day)) this.day = db.days[0].id;
-    if (!this.draft) this.draft = GZ.blankDraft(db, this.day);
+    if (!this.drafts) this.drafts = {};
+    if (!this.draft) this.draft = this.drafts[this.day] || GZ.blankDraft(db, this.day);
+    this.drafts[this.day] = this.draft;
+    if (this.deload === undefined && this.deloads && this.deloads[this.day]) this.deload = true;
     const vm = GZ.buildTrain(db, { day: this.day, recordId: this.recordId, draft: this.draft, deload: this.deload });
     this.setData({ vm });
   },
 
+  rememberDay() {
+    if (!this.day || this.recordId) return;
+    if (!this.drafts) this.drafts = {};
+    if (this.draft) this.drafts[this.day] = this.draft;
+    if (!this.deloads) this.deloads = {};
+    if (this.deload) this.deloads[this.day] = true; else delete this.deloads[this.day];
+  },
   switchDay(day) {
     if (this.recordId) return;
-    this.day = day; this.deload = undefined;
-    this.draft = GZ.blankDraft(this.db(), day);
+    if (day && day !== this.day) {
+      this.rememberDay();
+      this.day = day;
+      if (!this.drafts) this.drafts = {};
+      this.draft = this.drafts[day] || GZ.blankDraft(this.db(), day);
+      this.drafts[day] = this.draft;
+      this.deload = this.deloads && this.deloads[day] ? true : undefined;
+    }
     this.refresh();
   },
 
@@ -223,8 +239,11 @@ Page({
       }))
     } : null;
     // 重置为下一次推荐训练
+    const doneDay = this.day;
+    if (this.drafts) delete this.drafts[doneDay];
+    if (this.deloads) delete this.deloads[doneDay];
     this.recordId = null; this.deload = undefined;
-    this.day = GZ.recommend(db).day; this.draft = GZ.blankDraft(db, this.day);
+    this.day = GZ.recommend(db).day; this.draft = null;
     this.setDate(GZ.today()); this.setData({ result, bw: '', note: '' });
     this.refresh();
   },
