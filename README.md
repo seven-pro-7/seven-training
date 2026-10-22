@@ -2,7 +2,7 @@
 
 基于《个人训练追踪 扩展容量版 8 周追踪表》做的网页版力量训练追踪工具，纯前端、零后端，数据保存在浏览器本地（localStorage）。
 
-**在线地址**：部署到 GitHub Pages 后为 `https://<你的用户名>.github.io/gzclp/`
+**在线地址**：https://seven-pro-7.github.io/seven-training/
 
 ## 功能
 - **训练**：按 A1 → B1 → A2 → B2 推荐当天训练，实时显示判定与下次重量，支持手动调整重量、更换动作、组间休息计时、配重片提示。
@@ -22,5 +22,7 @@
 
 ## 目录
 - `index.html` / `icon-*.png` / `manifest.webmanifest`：网页版（单文件自包含）
+- `training-web/`：同一份网页的发布目录
 - `source/`：原生微信小程序工程 + 网页版打包脚本（`source/preview/build.py`）
+- `scripts/sync_watch.py`：定时把 COROS 力量训练和睡眠写入私有仓库的 `training-watch.json`
 - 计算规则引擎：`source/utils/engine.js`（小程序与网页版共用）

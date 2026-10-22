@@ -2,12 +2,12 @@ import pathlib
 """把小程序 WXSS + engine/chart + H5 逻辑打包为单文件网页
 输出：
   preview/index.html            本地预览（桌面带手机外框，手机端全屏）
-  ../gzclp-web/index.html       发布目录（同内容 + manifest + 图标，可“添加到主屏幕”）
+  ../training-web/index.html    发布目录（同内容 + manifest + 图标，可“添加到主屏幕”）
 """
 import re, base64, json, pathlib, shutil
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-WEB = ROOT.parent / 'gzclp-web'
+WEB = ROOT.parent / 'training-web'
 
 
 def rpx(css):

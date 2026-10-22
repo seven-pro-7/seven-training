@@ -2,7 +2,10 @@
 (function () {
   'use strict';
   var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly;
-  var KEY = 'gzclp_db_v1', BK = 'gzclp_last_backup', SYNC_KEY = 'gzclp_sync_v1', WATCH_KEY = 'gzclp_watch_v1', BK_DISMISS = 'gzclp_bk_dismiss';
+  var KEY = 'training_db_v1', BK = 'training_last_backup', SYNC_KEY = 'training_sync_v1', WATCH_KEY = 'training_watch_v1', BK_DISMISS = 'training_bk_dismiss';
+  [['training_db_v1', 'gzclp_db_v1'], ['training_last_backup', 'gzclp_last_backup'], ['training_sync_v1', 'gzclp_sync_v1'], ['training_watch_v1', 'gzclp_watch_v1'], ['training_bk_dismiss', 'gzclp_bk_dismiss']].forEach(function (pair) {
+    try { if (localStorage.getItem(pair[0]) == null && localStorage.getItem(pair[1]) != null) localStorage.setItem(pair[0], localStorage.getItem(pair[1])); } catch (e) {}
+  });
   var TABS = [
     { id: 'train', title: '训练' }, { id: 'stats', title: '数据' }, { id: 'tools', title: '工具' },
     { id: 'plan', title: '计划总览' }, { id: 'settings', title: '我的' }
@@ -69,16 +72,22 @@
   /**
    * 离线优先：所有读写都先落本机 localStorage，同步只是在后台把本机与云端合并。
    * 云端是私有仓库里的一个 JSON 文件，通过 GitHub Contents API 读写（带 sha 防覆盖，冲突时重新合并再写）。
-   * 令牌只存在本机 gzclp_sync_v1，不进入备份文件，也不会被同步到云端。
+   * 令牌只存在本机 training_sync_v1，不进入备份文件，也不会被同步到云端。
    */
   var Sync = (function () {
     var API = 'https://api.github.com', busy = false, again = false, timer = null;
-    function cfg() { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || null; } catch (e) { return null; } }
+    function cfg() {
+      try {
+        var c = JSON.parse(localStorage.getItem(SYNC_KEY)) || null;
+        if (c && (!c.path || c.path === 'gzclp-data.json')) c.path = 'training-data.json';
+        return c;
+      } catch (e) { return null; }
+    }
     function setCfg(c) { if (c) localStorage.setItem(SYNC_KEY, JSON.stringify(c)); else localStorage.removeItem(SYNC_KEY); }
     function on() { var c = cfg(); return !!(c && c.token && c.owner && c.repo); }
     function b64enc(str) { var b = new TextEncoder().encode(str), bin = ''; for (var i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); }
     function b64dec(x) { var bin = atob(String(x).replace(/\s/g, '')), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
-    function filePath(c) { return '/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo) + '/contents/' + (c.path || 'gzclp-data.json').split('/').map(encodeURIComponent).join('/'); }
+    function filePath(c) { return '/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo) + '/contents/' + (c.path || 'training-data.json').split('/').map(encodeURIComponent).join('/'); }
     function req(c, method, path, body) {
       var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, t = ctl ? setTimeout(function () { ctl.abort(); }, 15000) : 0;
       var headers = { 'Authorization': 'Bearer ' + c.token, 'Accept': 'application/vnd.github+json' };
@@ -102,18 +111,27 @@
       if (busy) { again = true; return Promise.resolve(false); }
       busy = true; c.state = 'syncing'; setCfg(c); refresh();
       var attempt = function (n) {
-        return req(c, 'GET', filePath(c)).then(function (g) {
+        var read = req(c, 'GET', filePath(c)).then(function (g) {
+          if (g.status === 404 && (c.path || 'training-data.json') === 'training-data.json') {
+            return req(c, 'GET', filePath(Object.assign({}, c, { path: 'gzclp-data.json' }))).then(function (old) {
+              if (old.status === 200) old.legacyFile = true;
+              return old;
+            });
+          }
+          return g;
+        });
+        return read.then(function (g) {
           if (g.status !== 200 && g.status !== 404) throw g.status;
           var remote = null, sha = null;
           if (g.status === 200) {
-            sha = g.json.sha;
+            if (!g.legacyFile) sha = g.json.sha;
             try { remote = GZ.normalize(JSON.parse(b64dec(g.json.content))); } catch (e) { throw 'bad'; }
             if (remote.params.watch) { var ow = remote.params.watch; delete remote.params.watch; try { watchSave(Badges.mergeWatch(watchLoad(), { source: ow.source, workouts: ow.workouts || [], sleep: ow.sleep || {} })); } catch (e) {} }
           }
           var raw = rawLoad(), local = GZ.normalize(raw || GZ.defaults(false)), merged = GZ.mergeDb(local, remote);
           var pulled = !GZ.sameDb(merged, local);
           if (pulled || !raw) save(merged, { fromSync: true });
-          if (remote && GZ.sameDb(merged, remote)) return { pulled: pulled, pushed: false, n: merged.records.length };
+          if (remote && GZ.sameDb(merged, remote) && !g.legacyFile) return { pulled: pulled, pushed: false, n: merged.records.length };
           var body = { message: '同步训练数据 · ' + GZ.today() + ' · ' + merged.records.length + ' 条记录', content: b64enc(JSON.stringify(merged)) };
           if (sha) body.sha = sha;
           return req(c, 'PUT', filePath(c), body).then(function (pr) {
@@ -139,11 +157,14 @@
         return false;
       });
     }
-    /** 自动拉取手表数据：云端 gzclp-watch.json 由定时任务写入，这里只读、合并到本机，从不写回 */
+    /** 自动拉取手表数据：云端 training-watch.json 由定时任务写入，这里只读、合并到本机，从不写回 */
     function pullWatch(manual) {
       var c = cfg(); if (!c || !on()) return Promise.resolve(false);
-      var wp = Object.assign({}, c, { path: 'gzclp-watch.json' });
-      return req(c, 'GET', filePath(wp)).then(function (g) {
+      function grab(path) { return req(c, 'GET', filePath(Object.assign({}, c, { path: path }))); }
+      return grab('training-watch.json').then(function (g) {
+        if (g.status === 404) return grab('gzclp-watch.json');
+        return g;
+      }).then(function (g) {
         c = cfg(); if (!c) return false;
         if (g.status === 404) { c.watchErr = ''; c.watchGen = ''; c.watchAt = Date.now(); setCfg(c); if (manual) toast('云端还没有手表文件'); if (S.tab === 'settings') render(true); return false; }  // 还没有自动同步过：保持手动导入可用
         var fail = function (m) { c.watchErr = m; setCfg(c); if (manual) toast(m); if (S.tab === 'settings') render(true); return false; };
@@ -175,7 +196,7 @@
     }
     /** 首次连接：先确认仓库存在且是私有的，再做第一次同步 */
     function connect(owner, repo, token) {
-      var c = { owner: owner, repo: repo, token: token, path: 'gzclp-data.json' };
+      var c = { owner: owner, repo: repo, token: token, path: 'training-data.json' };
       return req(c, 'GET', '/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo)).then(function (r) {
         if (r.status !== 200) return errMsg(r.status);
         if (!r.json || r.json.private !== true) return errMsg('public');
@@ -1596,7 +1617,7 @@
       '<div class="cell tap" data-act="watchpaste"><span class="flex1 accent">粘贴快照文本</span><span class="chev">' + (st.wpaste ? '⌃' : '›') + '</span></div>' +
       (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
       (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
-      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，手表数据由定时任务写入你的私有仓库并自动拉取到这里；手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
+      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天会把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json，打开页面时自动拉取。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +

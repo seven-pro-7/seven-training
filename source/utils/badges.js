@@ -78,7 +78,7 @@
   /** 校验并规整导入的快照；格式不对直接抛错，调用方给用户提示 */
   function sanitizeWatch(raw) {
     if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (e) { throw new Error('文件不是有效的 JSON'); } }
-    if (!raw || typeof raw !== 'object' || raw.schema !== 'gzclp-watch-v1') throw new Error('这不是手表快照文件（缺少 gzclp-watch-v1 标识）');
+    if (!raw || typeof raw !== 'object' || (raw.schema !== 'training-watch-v1' && raw.schema !== 'gzclp-watch-v1')) throw new Error('这不是手表快照文件（缺少 training-watch-v1 标识）');
     var ws = Array.isArray(raw.workouts) ? raw.workouts : [], out = { source: String(raw.source || 'COROS').slice(0, 24), workouts: [], sleep: {} }, seen = {};
     if (ws.length > 3000) throw new Error('训练条数过多');
     ws.forEach(function (w) {
