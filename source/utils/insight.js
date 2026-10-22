@@ -61,7 +61,7 @@
         var last = it.tier === 'T2' ? null : (Number(it.input) || 0);
         var pt = {
           sid: s.rec.id, date: s.rec.date, md: md(s.rec.date), day: s.rec.day, week: s.week, order: idx,
-          tier: it.tier, stage: it.stage, equip: equip, bw: bw, weight: Number(it.weight) || 0,
+          tier: it.tier, badge: it.badge || it.tier, stage: it.stage, equip: equip, bw: bw, weight: Number(it.weight) || 0,
           sets: Number(it.sets) || 0, reps: repsOf(it), last: last, volume: bw ? 0 : (Number(it.volume) || 0),
           e1rm: est ? est.v : null, e1kind: est ? est.kind : '', e1conf: est ? est.conf : '', e1capped: est ? est.capped : false,
           judgment: it.judgment, input: it.input, lift: it.lift || '', sub: !!it.sub
@@ -99,7 +99,8 @@
     if (!pts || !pts.length) return null;
     var P = db.params || {}, first = pts[0], lastPt = pts[pts.length - 1];
     var bw = lastPt.bw, tiers = {}, days = {};
-    pts.forEach(function (p) { tiers[p.tier] = 1; days[p.day] = 1; });
+    var labelOf = {};
+    pts.forEach(function (p) { if (!labelOf[p.tier]) labelOf[p.tier] = p.badge || p.tier; tiers[p.tier] = 1; days[p.day] = 1; });
     var tierList = Object.keys(tiers).sort();
     var allE1 = pts.filter(function (p) { return p.e1rm; });
     // 同一个动作可能同时出现在 T1 和 T2（如杠铃深蹲）。估算 1RM 以最可靠的档位为准：T1 末组 AMRAP > T2 > T3；
@@ -127,7 +128,7 @@
     else if (!e1pts.length) tip = '这个动作还没有可以估算 1RM 的记录。';
     else if (e1pts.length < 2) tip = '再练一次就能看到估算 1RM 的变化。';
     else if (e1pts.length < 4) tip = '样本较少，趋势仅供参考。';
-    if (!bw && tierList.length > 1 && allE1.length) tip = (tip ? tip + ' ' : '') + '这个动作同时出现在 ' + tierList.join('、') + '，最佳值与趋势以 ' + primary + ' 为准，其他档位的点仅作参考。';
+    if (!bw && tierList.length > 1 && allE1.length) tip = (tip ? tip + ' ' : '') + '这个动作同时出现在 ' + tierList.map(function (t) { return labelOf[t] || t; }).join('、') + '，最佳值与趋势以 ' + (labelOf[primary] || primary) + ' 为准，其他档位的点仅作参考。';
     var capped = e1pts.some(function (p) { return p.e1capped; });
     function perfOf(p) { return bw ? (p.last !== null ? p.last : p.reps) : p.weight; }
     var byTier = {};
@@ -146,7 +147,7 @@
       reg: reg ? pts.map(function (p) { return p.e1rm && p.tier === primary ? r1(reg.predict((dayNum(p.date) - dayNum(e1pts[0].date)) / 7)) : null; }) : null
     };
     return {
-      name: name, tier: lastPt.tier, tiers: Object.keys(tiers).sort(), days: Object.keys(days), equip: lastPt.equip, bw: bw,
+      name: name, tier: lastPt.tier, tierLabel: labelOf, tiers: Object.keys(tiers).sort(), days: Object.keys(days), equip: lastPt.equip, bw: bw,
       unit: GZ.unitOf(lastPt.equip), n: pts.length, firstDate: first.date, lastDate: lastPt.date,
       bestWeight: bestW ? { v: bestW.weight, date: bestW.date } : null,
       lastWeight: lastPt.weight,

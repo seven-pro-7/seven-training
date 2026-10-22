@@ -1,0 +1,22 @@
+---
+description: UI/UX 技能路由。设计、打磨、提审、参考调研时先选对应 skill，不要凭感觉改界面。
+alwaysApply: false
+---
+
+# UI/UX 技能路由
+
+本项目已装：
+
+| 需求 | 先用 | 来源 |
+|---|---|---|
+| 设计/重构/抛光一个界面、视觉层级、间距字阶、动效 | `impeccable` | Cursor Marketplace 插件 `impeccable`（`pbakaus/impeccable`） |
+| 先看真实产品怎么做（健身/打卡/工具类流程与界面）再动手 | `refero-design` | Cursor Marketplace 插件 `refero`（`referodesign/refero_skill`）；实时检索需 Refero 付费账号，未登录时只用其 bundled craft references |
+| 按规范逐行查 UI 代码（无障碍、焦点、表单、触摸、安全区） | `web-design-guidelines` | 项目内 [.cursor/skills/web-design-guidelines](../skills/web-design-guidelines/SKILL.md)（Vercel，每次审查先拉最新 `command.md`） |
+| 可用性提审：能不能看懂、会不会点错、删改能不能撤 | `nielsen-heuristics-audit` + `ux-audit-rethink` | 项目内 `.cursor/skills/`（Nielsen 十启发式 0-4 严重度；后者做整体复盘） |
+
+## 约定
+
+- 提审只出报告（文件:行 + 严重度 + 改法），不在同一次任务里顺手改代码；要改另开任务并说明改哪几条。
+- 审查对象优先是源码 `source/preview/app-h5.js`、`source/preview/index.html`，不要直接改打包产物 `index.html` / `gzclp-web/`；改完跑 `source/preview/build.py`。
+- 涉及计划文案时仍守 [plan-base.mdc](plan-base.mdc)：`T1/T2/T3` 只属于 GZCLP，其余计划用 `slotBadge` 的角色名，审查时发现串名按严重问题报。
+- 结论要落到本项目尺度：单手操作、训练中湿手/大字、底部拇指区优先于桌面端规范冲突项，冲突时在报告里注明取舍。

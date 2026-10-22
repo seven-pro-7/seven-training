@@ -1,8 +1,8 @@
 /* ===== 设计令牌 · Apple HIG 风格（浅色） ===== */
 page {
   --bg: #F2F2F7; --card: #FFFFFF; --fill: rgba(118,118,128,0.12); --fill2: rgba(118,118,128,0.08);
-  --sep: rgba(60,60,67,0.12); --label: #1C1C1E; --label2: #8E8E93; --label3: #C7C7CC;
-  --accent: #FF6B1A; --accent-soft: rgba(255,107,26,0.12);
+  --sep: rgba(60,60,67,0.12); --label: #1C1C1E; --label2: #6C6C70; --label3: #8E8E93;
+  --accent: #E65A00; --accent-soft: rgba(230,90,0,0.12);
   --blue: #0A84FF; --green: #34C759; --amber: #FF9F0A; --red: #FF3B30; --purple: #AF52DE; --teal: #5AC8FA;
   background: var(--bg);
   color: var(--label);
@@ -53,9 +53,9 @@ page {
 
 /* 层级标签 */
 .tier { display: inline-flex; align-items: center; justify-content: center; height: 38rpx; padding: 0 12rpx; border-radius: 10rpx; font-size: 22rpx; font-weight: 700; flex-shrink: 0; box-sizing: border-box; }
-.t-T1 { color: #FF6B1A; background: rgba(255,107,26,0.12); }
-.t-T2 { color: #0A84FF; background: rgba(10,132,255,0.12); }
-.t-T3 { color: #8E8E93; background: rgba(142,142,147,0.14); }
+.t-T1 { color: #E65A00; background: rgba(230,90,0,0.12); }
+.t-T2 { color: #007AFF; background: rgba(0,122,255,0.12); }
+.t-T3 { color: #6C6C70; background: rgba(108,108,112,0.14); }
 /* 器械类型：所有动作都必须有且只有一个明确标签 */
 .equip-tag { display: inline-flex; align-items: center; height: 34rpx; padding: 0 10rpx; border-radius: 9rpx; font-size: 19rpx; font-weight: 600; line-height: 34rpx; flex-shrink: 0; }
 .eq-杠铃 { color: #5856D6; background: rgba(88,86,214,0.11); }

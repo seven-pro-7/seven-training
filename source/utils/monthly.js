@@ -80,7 +80,7 @@
       var mBest = 0; e.forEach(function (p) { if (p.e1rm > mBest) mBest = p.e1rm; });
       var before = pts.filter(function (p) { return p.date < start && p.e1rm; }), pBest = 0;
       before.forEach(function (p) { if (p.e1rm > pBest) pBest = p.e1rm; });
-      prog.push({ name: name, tier: inM[inM.length - 1].tier, e1: r1(mBest), prior: pBest ? r1(pBest) : null,
+      prog.push({ name: name, tier: inM[inM.length - 1].tier, badge: inM[inM.length - 1].badge, e1: r1(mBest), prior: pBest ? r1(pBest) : null,
         delta: pBest ? r1(mBest - pBest) : null, pct: pBest ? Math.round((mBest / pBest - 1) * 1000) / 10 : null });
     });
     topEx.sort(function (a, b) { return b.volume - a.volume; });

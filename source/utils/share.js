@@ -133,9 +133,11 @@
   function clean(v, n) { return String(v || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, n); }
   function profile(p) {
     p = p || {};
+    var g = p.gender;
+    if (g !== 'male' && g !== 'female' && g !== 'undisclosed') g = '';
     return { name: clean(p.name, 18), handle: clean(p.handle, 24), signature: clean(p.signature, 48),
       avatar: /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(p.avatar || '') && p.avatar.length < 180000 ? p.avatar : '',
-      showWeight: p.showWeight === true };
+      gender: g, showWeight: p.showWeight === true };
   }
   function hasEntry(e, deload) { return !!e && !e.skip && (!!deload || (e.v !== null && e.v !== undefined && e.v !== '')); }
   function dates(db) {

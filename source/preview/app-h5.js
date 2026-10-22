@@ -42,7 +42,7 @@
   function watchLoad() { try { return JSON.parse(localStorage.getItem(WATCH_KEY)) || null; } catch (e) { return null; } }
   function watchSave(w) { if (w) localStorage.setItem(WATCH_KEY, JSON.stringify(w)); else localStorage.removeItem(WATCH_KEY); }
   function load() {
-    var db = rawLoad(); if (!db) { db = GZ.defaults(true); save(db, { fromSync: true }); }
+    var db = rawLoad(); if (!db) { db = GZ.defaults(false); save(db, { fromSync: true }); }
     db = GZ.normalize(db);
     var w = watchLoad();
     // 旧版把手表数据放在 params.watch：并入独立存储后从主数据里拿掉
@@ -110,7 +110,7 @@
             try { remote = GZ.normalize(JSON.parse(b64dec(g.json.content))); } catch (e) { throw 'bad'; }
             if (remote.params.watch) { var ow = remote.params.watch; delete remote.params.watch; try { watchSave(Badges.mergeWatch(watchLoad(), { source: ow.source, workouts: ow.workouts || [], sleep: ow.sleep || {} })); } catch (e) {} }
           }
-          var raw = rawLoad(), local = GZ.normalize(raw || GZ.defaults(true)), merged = GZ.mergeDb(local, remote);
+          var raw = rawLoad(), local = GZ.normalize(raw || GZ.defaults(false)), merged = GZ.mergeDb(local, remote);
           var pulled = !GZ.sameDb(merged, local);
           if (pulled || !raw) save(merged, { fromSync: true });
           if (remote && GZ.sameDb(merged, remote)) return { pulled: pulled, pushed: false, n: merged.records.length };
@@ -210,7 +210,7 @@
   function fmtSec(s) { s = Math.max(0, s); var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
   function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove('show'); }, 1800); }
   function confirmBox(title, content, ok) { if (window.confirm(title + '\n\n' + content)) ok(); }
-  function tier(t) { return '<span class="tier t-' + t + '">' + t + '</span>'; }
+  function tier(t, badge) { return '<span class="tier t-' + t + '">' + esc(badge || t) + '</span>'; }
   function equipTag(e) {
     var suffix = e === '哑铃' ? '·单只' : e === '负重' ? '·外加' : '';
     return '<span class="equip-tag eq-' + esc(e) + '">' + esc(e + suffix) + '</span>';
@@ -225,8 +225,15 @@
     tab: 'train',
     train: { day: null, draft: null, recordId: null, deload: undefined, date: GZ.today(), bw: '', note: '', result: null, createdAt: null },
     view: { pid: null },
-    plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '' }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', pattern: '', part: '', equip: '', q: '', add: null }
+    plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '' }, stats: { lift: 0, day: 0, ex: null }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', pattern: '', part: '', equip: '', q: '', add: null },
+    onboard: { step: 1, force: false, returnTab: '' }
   };
+  function gateOnboard() { return GZ.needsOnboarding(load()) || S.onboard.force; }
+  function syncOnboardStep(db) {
+    if (S.onboard.force) return;
+    if (!GZ.profileReady(db)) S.onboard.step = 1;
+    else if (!GZ.directionReady(db)) S.onboard.step = 2;
+  }
   var rest = { show: false, left: 0, total: 0, name: '', timer: null };
 
   // ================= 多计划：数据与回顾默认看当前计划，可切换查看其他计划 =================
@@ -292,7 +299,7 @@
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
       h += '<div class="card locked"><div class="lk-head"><div class="lk-ic">✓</div><div class="flex1"><div class="lk-t">本周 ' + vm.day + ' 已完成</div><div class="lk-s">' + L.dateText + ' · 容量 ' + L.vol + ' kg</div></div></div>' +
-        L.items.map(function (it) { return '<div class="lk-row">' + tier(it.tier) + '<span class="lk-n">' + it.name + '</span><span class="lk-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag lk-j" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
+        L.items.map(function (it) { return '<div class="lk-row">' + tier(it.tier, it.badge) + '<span class="lk-n">' + it.name + '</span><span class="lk-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag lk-j" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
         '<div class="lk-tip">下周的 ' + vm.day + ' 会在本周 ' + vm.round.leftText + ' 完成后开放</div>' +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="editLocked" data-id="' + L.id + '">修改这次</div><div class="btn-ghost solid" data-act="day" data-day="' + vm.recommended + '">去练 ' + vm.recommended + '</div></div></div>';
     }
@@ -313,30 +320,26 @@
       var idx = vm.items.map(function (x) { return x.slotId; }).indexOf(cur), rest0 = vm.items.slice(idx + 1).concat(vm.items.slice(0, idx));
       var n = rest0.filter(function (x) { return !finished(x); })[0]; return n ? n.slotId : null;
     };
-    var t3buf = '', flushT3 = function () { if (t3buf) { h += '<div class="card t3-group">' + t3buf + '</div>'; t3buf = ''; } };
-    vm.items.forEach(function (it) {
-      if (it.slotId !== t.focus && it.tier === 'T3') {
-        var q0 = it.preview, rr;
-        if (it.skip) rr = '<span class="exr-st">已跳过</span>';
-        else if (q0) rr = '<span class="exr-st" style="color:' + q0.color + '">' + q0.icon + ' ' + q0.judgment + '</span>' + (q0.sub || q0.judgment === '减载' ? '' : '<span class="exr-nx num">下次 ' + q0.nextWeight + '</span>');
-        else rr = '<span class="exr-w num">' + (!it.isBW ? it.weightText + '<span class="exr-u"> ' + esc(it.unitText) + '</span>' : '自重') + '</span><span class="exr-r num">' + it.repsText + '</span>';
-        t3buf += '<div class="ex-row g ' + (finished(it) ? 'is-fin ' : '') + (it.skip ? 'skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '">' + tier(it.tier) +
-          '<span class="exr-n">' + esc(it.name) + '</span><span class="exr-right">' + rr + '</span><span class="exr-chev">›</span></div>';
-        return;
+    var restBuf = '', flushRest = function () {
+      if (restBuf) {
+        h += '<div class="card rest-group"><div class="rg-head">后续动作</div>' + restBuf + '</div>';
+        restBuf = '';
       }
-      flushT3();
+    };
+    vm.items.forEach(function (it) {
       if (it.slotId !== t.focus) {
         var p0 = it.preview, right;
         if (it.skip) right = '<span class="exr-st">已跳过</span>';
         else if (p0) right = '<span class="exr-st" style="color:' + p0.color + '">' + p0.icon + ' ' + p0.judgment + '</span>' + (p0.sub || p0.judgment === '减载' ? '' : '<span class="exr-nx num">下次 ' + p0.nextWeight + '</span>');
         else right = '<span class="exr-w num">' + (!it.isBW ? it.weightText + '<span class="exr-u"> ' + esc(it.unitText) + '</span>' : '自重') + '</span><span class="exr-r num">' + it.repsText + '</span>';
-        h += '<div class="card ex-row ' + (finished(it) ? 'is-fin ' : '') + (it.skip ? 'skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '">' + tier(it.tier) +
+        restBuf += '<div class="ex-row g ' + (finished(it) ? 'is-fin ' : '') + (it.skip ? 'skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '">' + tier(it.tier, it.badge) +
           '<span class="exr-n">' + esc(it.name) + '</span><span class="exr-right">' + right + '</span><span class="exr-chev">›</span></div>';
         return;
       }
+      flushRest();
       var nxt = nextOpen(it.slotId);
       h += '<div class="card ex is-focus ' + (it.skip ? 'skipped' : '') + '">';
-      h += '<div class="ex-head">' + tier(it.tier) + '<div class="ex-title"><span class="ex-name">' + esc(it.name) + '</span>' + equipTag(it.equip) +
+      h += '<div class="ex-head">' + tier(it.tier, it.badge) + '<div class="ex-title"><span class="ex-name">' + esc(it.name) + '</span>' + equipTag(it.equip) +
         (it.sub ? '<span class="ex-tag sub">替换 ' + esc(it.planName) + '</span>' : it.autoNew ? '<span class="ex-tag rot">本轮轮换 · 原 ' + esc(it.autoPrev) + '</span>' : it.changeNew ? '<span class="ex-tag new">新动作</span>' : '') + '</div>' +
         '<span class="ex-act" data-act="openswap" data-slot="' + it.slotId + '">更换</span>' +
         '<span class="ex-skip" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</span></div>';
@@ -381,7 +384,7 @@
       if ((it.preview || it.skip) && nxt) h += '<div class="ex-next" data-act="focus" data-slot="' + nxt + '">下一个动作<span class="exr-chev">›</span></div>';
       h += '</div>';
     });
-    flushT3();
+    flushRest();
     h += '<div class="list"><div class="cell"><span class="flex1">体重</span><input class="cell-in num" inputmode="decimal" data-act="bw" value="' + esc(t.bw) + '" placeholder="可选"><span class="unit">kg</span></div>' +
       '<div class="cell"><textarea class="note" data-act="note" rows="2" placeholder="备注：状态、睡眠、技术要点">' + esc(t.note) + '</textarea></div></div>';
     h += '<div class="submit-bar"><span class="sb-count num"><b>' + vm.filled + '</b> / ' + vm.total + '</span><button class="btn-primary sb-btn" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
@@ -394,7 +397,7 @@
           : r.weekDone ? '<div class="wk-done">本周训练日全部完成，已进入' + r.nextWeekText + (r.nextDeload ? '（减载周）' : '') + '</div>'
           : (r.leftText ? '<div class="wk-left">本周还剩 ' + r.leftText + '</div>' : '')) +
         '<div class="res-kpi"><div class="rk"><span class="num rk-v">' + r.volume + '</span><span class="rk-l">容量 kg</span></div><div class="rk"><span class="num rk-v accent">' + r.adds + '</span><span class="rk-l">项加重</span></div></div>' +
-        '<div class="list">' + r.items.map(function (x) { return '<div class="cell res-row">' + tier(x.tier) + '<span class="res-name flex1">' + x.name + '</span><div class="res-r"><span class="jtag" style="color:' + x.color + '">' + x.j + '</span><span class="res-next num">' + x.next + '</span></div></div>'; }).join('') + '</div>' +
+        '<div class="list">' + r.items.map(function (x) { return '<div class="cell res-row">' + tier(x.tier, x.badge) + '<span class="res-name flex1">' + x.name + '</span><div class="res-r"><span class="jtag" style="color:' + x.color + '">' + x.j + '</span><span class="res-next num">' + x.next + '</span></div></div>'; }).join('') + '</div>' +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="gotoStats">查看数据</div><div class="btn-ghost solid" data-act="closeResult">好</div></div></div></div>';
     }
     return h;
@@ -528,7 +531,7 @@
       t.result = s ? { rotated: rotated, day: s.rec.day, dayName: s.dayName, week: s.week, weekText: GZ.weekText(s.week, db.params),
         cycle: dCyc, weeksPerCycle: GZ.cycleLen(db.params), cycleDone: cDone, nextWeekText: GZ.weekText(rdn.week, db.params), volume: Math.round(s.volume),
         weekDone: wDone, leftText: t.recordId ? '' : rdn.leftText, nextDeload: wDone && GZ.isDeloadWeek(rdn.week, db.params), adds: s.items.filter(function (x) { return x.judgment === '加重'; }).length,
-        items: s.items.map(function (it) { return { tier: it.tier, name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment], next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : GZ.fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage }; }) } : null;
+        items: s.items.map(function (it) { return { tier: it.tier, badge: it.badge, name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment], next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : GZ.fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage }; }) } : null;
       t.recordId = null; t.deload = undefined; t.day = GZ.recommend(db).day; t.draft = GZ.blankDraft(db, t.day); t.bw = ''; t.note = ''; t.date = GZ.today();
       render();
     };
@@ -630,7 +633,7 @@
     var wide = vm.days.length > 4, gz = (db.params.progression || 'gzclp') === 'gzclp';
     h += '<div class="card"><div class="card-title"><div class="cyc-nav"><span class="cyc-btn ' + (vm.canPrev ? '' : 'off') + '" data-act="cycle" data-d="-1">‹</span>' +
       '<span class="t cyc-label">' + vm.cycleText + (vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : '') + '</span>' +
-      '<span class="cyc-btn ' + (vm.canNext ? '' : 'off') + '" data-act="cycle" data-d="1">›</span></div><span class="s">' + (db.params.progression === 'w531' ? '顶组 kg' : 'T1 重量 kg') + '</span></div><div class="grid-head' + (wide ? ' wide' : '') + '"><span class="gw"></span>' +
+      '<span class="cyc-btn ' + (vm.canNext ? '' : 'off') + '" data-act="cycle" data-d="1">›</span></div><span class="s">' + (db.params.progression === 'w531' ? '顶组 kg' : gz ? 'T1 重量 kg' : '主项重量 kg') + '</span></div><div class="grid-head' + (wide ? ' wide' : '') + '"><span class="gw"></span>' +
       vm.days.map(function (d) { return '<span class="gh num">' + d.id + '</span>'; }).join('') + '</div>';
     vm.rows.forEach(function (row) {
       h += '<div class="grid-row' + (wide ? ' wide' : '') + '"><div class="gw"><span class="num">W' + row.wc + '</span>' + (row.deload ? '<span class="dltag">减载</span>' : '') + '</div>' +
@@ -648,7 +651,7 @@
         rt.days.map(function (d) {
           return '<div class="rot-day"><div class="rot-dh"><span class="num rot-did">' + d.id + '</span><span class="rot-dn">' + esc(d.name) + '</span></div>' +
             d.slots.map(function (r) {
-              return '<div class="rot-row' + (rt.isCur && !closed ? ' tap' : '') + '"' + (rt.isCur && !closed ? ' data-act="slotsheet" data-day="' + d.id + '" data-slot="' + r.id + '"' : '') + '>' + tier(r.tier) +
+              return '<div class="rot-row' + (rt.isCur && !closed ? ' tap' : '') + '"' + (rt.isCur && !closed ? ' data-act="slotsheet" data-day="' + d.id + '" data-slot="' + r.id + '"' : '') + '>' + tier(r.tier, r.badge) +
                 '<div class="rot-main"><div class="rot-n">' + esc(r.name) + equipTag(r.equip) +
                 (r.isNew ? '<span class="rot-new">新</span>' : '') + (r.fixed ? '<span class="rot-lock">固定</span>' : r.locked ? '<span class="rot-lock">锁定</span>' : '') + '</div>' +
                 '<div class="rot-s">' + (rt.isCur && r.cur ? '<span class="num rot-cw">' + esc(r.cur) + '</span>' : '') + esc(r.role) + (r.isNew ? ' · 上一轮 ' + esc(r.prev) : '') + (r.startW ? ' · 起始 ' + esc(r.startW) : '') + '</div></div>' +
@@ -663,13 +666,13 @@
     h += '<div class="card"><div class="card-title"><span class="t">当前状态</span><span class="s">自动更新</span></div>' +
       seg(vm.overview.map(function (o) { return { html: '<span class="num">' + o.day + '</span>' }; }), p.ov, 'ov') +
       ov.slots.map(function (s) {
-        return '<div class="ov-row">' + tier(s.tier) + '<div class="ov-main"><span class="ovn">' + s.name + '</span><span class="ov-sub">' + s.stage + (s.fail > 0 ? '<span class="amber"> · 预警 ' + s.fail + '</span>' : '') + '</span></div>' +
+        return '<div class="ov-row">' + tier(s.tier, s.badge) + '<div class="ov-main"><span class="ovn">' + s.name + '</span><span class="ov-sub">' + s.stage + (s.fail > 0 ? '<span class="amber"> · 预警 ' + s.fail + '</span>' : '') + '</span></div>' +
           '<div class="ov-right"><span class="num ov-w">' + s.weight + '<span class="ov-u"> kg</span></span><span class="ov-last"><span style="color:' + s.lastColor + '">' + s.last + '</span>' + (s.gain ? '<span class="green"> ' + s.gain + '</span>' : '') + '</span></div></div>';
       }).join('') + '</div>';
     if (p.detail) {
       var d = p.detail;
       h += '<div class="mask" data-act="closeDetail"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + d.dateText + ' · 第 ' + d.week + ' 次 · 容量 ' + d.vol + ' kg</span><div class="sheet-title">' + d.day + ' ' + d.dayName + '</div>' +
-        '<div class="list">' + d.items.map(function (it) { return '<div class="cell d-row">' + tier(it.tier) + '<div class="d-main"><span>' + it.name + '</span><span class="d-sub">' + it.w + ' kg × ' + it.input + (it.manual ? '<span class="accent"> · 手动</span>' : '') + '</span></div><div class="d-right"><span class="jtag" style="color:' + it.color + '">' + it.j + '</span><span class="d-sub">' + it.next + '</span></div></div>'; }).join('') + '</div>' +
+        '<div class="list">' + d.items.map(function (it) { return '<div class="cell d-row">' + tier(it.tier, it.badge) + '<div class="d-main"><span>' + it.name + '</span><span class="d-sub">' + it.w + ' kg × ' + it.input + (it.manual ? '<span class="accent"> · 手动</span>' : '') + '</span></div><div class="d-right"><span class="jtag" style="color:' + it.color + '">' + it.j + '</span><span class="d-sub">' + it.next + '</span></div></div>'; }).join('') + '</div>' +
         (d.note ? '<div class="note-box">' + esc(d.note) + '</div>' : '') +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="edit" data-id="' + d.id + '">修改这次</div><div class="btn-ghost solid" data-act="closeDetail">完成</div></div></div></div>';
     }
@@ -687,7 +690,7 @@
     var info = sl.info, h = '', pick = sl.mode === 'pick';
     h += '<div class="mask" data-act="slotclose"><div class="sheet slot-sheet" data-stop="1"><div class="grabber"></div>' +
       '<div class="row between"><span class="sheet-cap">' + info.dayId + ' · ' + esc(info.dayName) + '</span><span class="link" data-act="slotclose">关闭</span></div>' +
-      '<div class="slot-head">' + (info.category ? '<span class="tier">' + esc(info.category.label) + '</span>' : tier(info.tier)) + '<span class="slot-name">' + esc(pick ? '更换动作 · 当前 ' + info.name : info.name) + '</span>' + (pick ? '' : equipTag(info.equip)) + '</div>';
+      '<div class="slot-head">' + (info.category ? '<span class="tier">' + esc(info.category.label) + '</span>' : tier(info.tier, info.badge)) + '<span class="slot-name">' + esc(pick ? '更换动作 · 当前 ' + info.name : info.name) + '</span>' + (pick ? '' : equipTag(info.equip)) + '</div>';
     if (pick) {
       var cat = info.category;
       h += '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="slotq" value="' + esc(sl.q) + '" placeholder="搜索动作、部位或器械"></div>' +
@@ -732,14 +735,37 @@
     return '<div class="card"><div class="row between"><div class="prog-name">' + esc(cur.name) + '</div>' + stPill(cur.status) + '</div></div>' +
       '<div class="card tap lib-entry" data-act="openlib"><span class="flex1">计划库</span><span class="chev">›</span></div>';
   }
+  var FOCUS_LABEL = { strength: '力量', physique: '形体', function: '功能', fat_loss: '减脂' };
+  var LEAN_LABEL = { male: '偏推拉', female: '偏臀腿' };
+  function tplTags(c) {
+    var bits = [];
+    if (c.focus && FOCUS_LABEL[c.focus]) bits.push(FOCUS_LABEL[c.focus]);
+    if (c.lean && LEAN_LABEL[c.lean]) bits.push(LEAN_LABEL[c.lean]);
+    if (!bits.length) return '';
+    return '<div class="tpl-tags">' + bits.map(function (t) { return '<span class="tpl-tag">' + esc(t) + '</span>'; }).join('') + '</div>';
+  }
+  function planCard(db, c) {
+    var inst = openInstance(db, c.id);
+    var ended = !inst && GZ.programList(db).some(function (p) { return GZ.templateKey(p.template) === c.id && p.status === 'ended'; });
+    return '<div class="card lib-card tap" data-act="browse" data-id="' + c.id + '"><div class="row between"><span class="tpl-name">' + esc(c.name) + '</span>' + stPill(inst ? inst.status : (ended ? 'ended' : '')) + '</div>' +
+      '<div class="tpl-days">' + esc(c.days) + (inst && inst.sessions ? ' · 已练 ' + inst.sessions + ' 次' : '') + '</div>' + tplTags(c) +
+      '<div class="tpl-blurb">' + esc(c.blurb) + '</div><div class="lib-more">查看安排 <span class="chev">›</span></div></div>';
+  }
   function renderPlanLib() {
     var db = load(), h = '<div class="lib-back" data-act="libback">‹ 计划</div><div class="pg-title">计划库</div>';
-    h += '<div class="sec-f lib-lead">点进任意一套就能看每天练什么。没开始也能看。</div>';
-    GZ.templateCatalog().forEach(function (c) {
-      var inst = openInstance(db, c.id);
-      var ended = !inst && GZ.programList(db).some(function (p) { return GZ.templateKey(p.template) === c.id && p.status === 'ended'; });
-      h += '<div class="card lib-card tap" data-act="browse" data-id="' + c.id + '"><div class="row between"><span class="tpl-name">' + esc(c.name) + '</span>' + stPill(inst ? inst.status : (ended ? 'ended' : '')) + '</div>' +
-        '<div class="tpl-days">' + esc(c.days) + (inst && inst.sessions ? ' · 已练 ' + inst.sessions + ' 次' : '') + '</div><div class="tpl-blurb">' + esc(c.blurb) + '</div><div class="lib-more">查看安排 <span class="chev">›</span></div></div>';
+    h += '<div class="sec-f lib-lead">按训练目标分组。点进任意一套就能看每天练什么，没开始也能看。</div>';
+    var goal = db.onboarding && db.onboarding.direction ? db.onboarding.direction.goal : '';
+    var order = GZ.ONBOARD_GOAL.slice().sort(function (a, b) {
+      if (a.id === goal) return -1;
+      if (b.id === goal) return 1;
+      return 0;
+    });
+    var cats = GZ.templateCatalog();
+    order.forEach(function (g) {
+      var items = cats.filter(function (c) { return (c.goals || []).indexOf(g.id) >= 0; });
+      if (!items.length) return;
+      h += '<div class="sec-h">' + esc(g.label) + (g.id === goal ? ' · 符合你的目标' : '') + '</div>';
+      items.forEach(function (c) { h += planCard(db, c); });
     });
     return h;
   }
@@ -755,7 +781,7 @@
     prev.days.forEach(function (d) {
       h += '<div class="card"><div class="card-title"><span class="t"><span class="num">' + esc(d.id) + '</span> ' + esc(d.name) + '</span></div>';
       d.slots.forEach(function (s) {
-        h += '<div class="ov-row">' + tier(s.tier) + '<div class="ov-main"><span class="ovn">' + esc(s.name) + '</span><span class="ov-sub">' + esc(s.text) + '</span></div>' +
+        h += '<div class="ov-row">' + tier(s.tier, s.badge) + '<div class="ov-main"><span class="ovn">' + esc(s.name) + '</span><span class="ov-sub">' + esc(s.text) + '</span></div>' +
           '<div class="ov-right"><span class="num ov-w">' + esc(s.weight) + '</span></div></div>';
       });
       h += '</div>';
@@ -949,7 +975,7 @@
     h += '<div class="kpis"><div class="kpi"><span class="k-l">训练次数</span><div><span class="num kv">' + k.sessions + '</span><span class="ku">/ ' + k.planned + '</span></div><div class="kbar"><div class="kin" style="width:' + k.progress + '%"></div></div></div>' +
       '<div class="kpi"><span class="k-l">累计容量</span><span class="num kv">' + k.volume + '</span><span class="ks">' + k.reps + ' 次</span></div>' +
       '<div class="kpi"><span class="k-l">加重</span><div><span class="num kv accent">' + k.adds + '</span><span class="ku">次</span></div><span class="ks">预警 ' + k.warns + '</span></div>' +
-      '<div class="kpi"><span class="k-l">T1 达标率</span>' + (k.t1Rate === null ? '<span class="kv-na">暂无</span>' : '<span class="num kv">' + k.t1Rate + '%</span>') + '<span class="ks">T2 完成 ' + (k.t2Rate === null ? '暂无' : k.t2Rate + '%') + '</span></div></div>';
+      '<div class="kpi"><span class="k-l">' + ((viewDb().params.progression || 'gzclp') === 'gzclp' ? 'T1 达标率' : '主项达标率') + '</span>' + (k.t1Rate === null ? '<span class="kv-na">暂无</span>' : '<span class="num kv">' + k.t1Rate + '%</span>') + '<span class="ks">' + ((viewDb().params.progression || 'gzclp') === 'gzclp' ? 'T2 完成 ' : '辅助完成 ') + (k.t2Rate === null ? '暂无' : k.t2Rate + '%') + '</span></div></div>';
     h += '<div class="card">' + seg(s.e1rm.map(function (e) { return { html: e.name }; }), st.lift, 'lift');
     if (cur) {
       h += '<span class="cap">最佳 e1RM</span><div class="hero"><span class="num hero-v">' + cur.best + '</span><span class="hero-u">' + (cur.n ? 'kg' : '') + '</span><span class="cap hero-d">' + cur.bestDate + '</span></div>';
@@ -973,7 +999,7 @@
     h += '<div class="card"><div class="card-title"><span class="t">判定分布</span><span class="s">全部训练日</span></div><div class="row"><canvas id="c_p" class="cv-sq"></canvas><div class="pie-list">' +
       (s.pie.length ? s.pie.map(function (x) { return '<div class="pl"><div class="sw" style="background:' + x.color + '"></div><span class="pl-l">' + x.label + '</span><span class="num pl-v">' + x.value + '</span><span class="pl-p num">' + x.pct + '%</span></div>'; }).join('') : '<div class="cap">暂无判定</div>') + '</div></div></div>';
     h += '<div class="sec-h">动作 · 最高重量</div><div class="list">' +
-      (s.prs.length ? s.prs.map(function (x) { return '<div class="cell pr tap" data-act="exopen" data-name="' + esc(x.name) + '" role="button" aria-label="查看' + esc(x.name) + '的详情">' + tier(x.tier) + '<div class="pr-main"><span>' + x.name + '</span><span class="pr-sub">' + x.day + ' · ' + x.date + '</span></div><span class="num pr-w">' + x.w + '<span class="pr-u"> kg</span></span><span class="chev">›</span></div>'; }).join('') : '<div class="empty-tip">完成训练后显示</div>') + '</div>' +
+      (s.prs.length ? s.prs.map(function (x) { return '<div class="cell pr tap" data-act="exopen" data-name="' + esc(x.name) + '" role="button" aria-label="查看' + esc(x.name) + '的详情">' + tier(x.tier, x.badge) + '<div class="pr-main"><span>' + x.name + '</span><span class="pr-sub">' + x.day + ' · ' + x.date + '</span></div><span class="num pr-w">' + x.w + '<span class="pr-u"> kg</span></span><span class="chev">›</span></div>'; }).join('') : '<div class="empty-tip">完成训练后显示</div>') + '</div>' +
       (s.prs.length ? '<div class="sec-f">点任意一个动作，查看它的重量曲线、容量和估算 1RM 趋势。</div>' : '');
     if (s.bw.length >= 2) h += '<div class="sec-h">体重</div><div class="card"><canvas id="c_bw" class="cv short"></canvas></div>';
     if (st.ex) h += renderExerciseSheet();
@@ -1034,17 +1060,17 @@
         (d.vsRef !== null ? '<div class="mi"><span class="num mi-v">' + (d.vsRef > 0 ? '+' : '') + d.vsRef + '%</span><span class="mi-l">对比录入 1RM</span></div>' : '') + '</div>';
       e1sec = '<div class="ss-sec"><div class="ss-h"><span class="ss-t">估算 1RM 趋势</span>' + (d.latestE1 ? '<span class="ex-src">' + esc(d.e1Kind) + '</span>' : '') + '</div>' +
         '<canvas id="c_ex_e" class="cv"></canvas>' +
-        '<div class="legend">' + (d.tiers.length > 1 ? d.tiers.map(function (t) { return '<div class="lg"><div class="sw" style="background:' + (TIER_HEX[t] || '#FF6B1A') + '"></div>' + t + (t === d.primary ? ' · 估算以此为准' : '') + '</div>'; }).join('') : '<div class="lg"><div class="sw" style="background:#FF6B1A"></div>估算 1RM</div>') + (d.slope !== null ? '<div class="lg"><div class="sw dash" style="border-color:#0A84FF"></div>回归趋势</div>' : '') + (d.ref && d.primary === 'T1' ? '<div class="lg"><div class="sw dash" style="border-color:#C7C7CC"></div>录入 1RM</div>' : '') + '</div>' +
+        '<div class="legend">' + (d.tiers.length > 1 ? d.tiers.map(function (t) { var lb = (d.tierLabel && d.tierLabel[t]) || t; return '<div class="lg"><div class="sw" style="background:' + (TIER_HEX[t] || '#FF6B1A') + '"></div>' + lb + (t === d.primary ? ' · 估算以此为准' : '') + '</div>'; }).join('') : '<div class="lg"><div class="sw" style="background:#FF6B1A"></div>估算 1RM</div>') + (d.slope !== null ? '<div class="lg"><div class="sw dash" style="border-color:#0A84FF"></div>回归趋势</div>' : '') + (d.ref && d.primary === 'T1' ? '<div class="lg"><div class="sw dash" style="border-color:#C7C7CC"></div>录入 1RM</div>' : '') + '</div>' +
         delta + (d.tip ? '<p class="ss-hint">' + esc(d.tip) + '</p>' : '') + '</div>';
     } else e1sec = '<div class="ss-sec"><div class="ss-h"><span class="ss-t">估算 1RM</span></div><p class="ss-empty">' + esc(d.tip) + '</p></div>';
-    var volsec = d.bw ? '' : '<div class="ss-sec"><div class="ss-h"><span class="ss-t">每次容量</span>' + (d.bestVolume ? '<span class="ex-src">最高 ' + d.bestVolume.v.toLocaleString('zh-CN') + ' kg</span>' : '') + '</div><canvas id="c_ex_v" class="cv"></canvas>' + (d.tiers.length > 1 ? '<div class="legend">' + d.tiers.map(function (t) { return '<div class="lg"><div class="sw" style="background:' + (TIER_HEX[t] || '#FF6B1A') + '"></div>' + t + '</div>'; }).join('') + '</div>' : '') + '</div>';
+    var volsec = d.bw ? '' : '<div class="ss-sec"><div class="ss-h"><span class="ss-t">每次容量</span>' + (d.bestVolume ? '<span class="ex-src">最高 ' + d.bestVolume.v.toLocaleString('zh-CN') + ' kg</span>' : '') + '</div><canvas id="c_ex_v" class="cv"></canvas>' + (d.tiers.length > 1 ? '<div class="legend">' + d.tiers.map(function (t) { return '<div class="lg"><div class="sw" style="background:' + (TIER_HEX[t] || '#FF6B1A') + '"></div>' + esc((d.tierLabel && d.tierLabel[t]) || t) + '</div>'; }).join('') + '</div>' : '') + '</div>';
     var rows = d.recent.map(function (p) {
       var main = d.bw ? (p.last !== null ? '末组 ' + p.last + ' 次' : '共 ' + p.reps + ' 次') : fmtKg(p.weight) + ' kg × ' + p.reps + ' 次';
       return '<div class="ex-row"><span class="ex-d num">' + p.md + '</span><span class="ex-m"><b>' + esc(main) + '</b><i>' + esc(p.day + ' · ' + p.stage + (p.volume ? ' · ' + Math.round(p.volume).toLocaleString('zh-CN') + ' kg' : '')) + '</i></span><span class="ex-e">' + (p.e1rm ? '<b class="num">' + fmtKg(p.e1rm) + '</b><i>1RM</i>' : '<i>—</i>') + '</span><span class="jtag" style="color:' + (GZ.JUDGE_COLORS ? GZ.JUDGE_COLORS[p.judgment] || '#8E8E93' : '#8E8E93') + '">' + esc(p.judgment) + '</span></div>';
     }).join('');
     return '<div class="mask share-mask" data-act="exclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title ex-title">' + esc(d.name) + '</span><button class="share-close" data-act="exclose" aria-label="关闭动作详情">×</button></div>' +
-      '<p class="ex-sub">' + d.tiers.map(function (t) { return tier(t); }).join(' ') + '<span>' + esc(d.equip) + ' · ' + esc(d.days.join(' / ')) + ' · ' + d.n + ' 次记录</span></p></div>' +
+      '<p class="ex-sub">' + d.tiers.map(function (t) { return tier(t, (d.tierLabel && d.tierLabel[t]) || t); }).join(' ') + '<span>' + esc(d.equip) + ' · ' + esc(d.days.join(' / ')) + ' · ' + d.n + ' 次记录</span></p></div>' +
       '<div class="ss-body">' + kpis +
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">' + perfLabel + '</span></div><canvas id="c_ex_w" class="cv"></canvas></div>' +
       e1sec + volsec +
@@ -1062,7 +1088,7 @@
 
   // ================= 回顾 =================
   function renderReview() {
-    var vm = GZ.buildReview(viewDb()), r = S.review, h = planBar();
+    var vm = GZ.buildReview(viewDb()), r = S.review, h = planBar(), gzReview = (viewDb().params.progression || 'gzclp') === 'gzclp';
     S._review = vm;
     h += seg([{ html: '总结' }, { html: '周报' }, { html: '日志' }], r.tab, 'rtab');
     var sd = Share.build(viewDb());
@@ -1083,8 +1109,9 @@
         }).join('') + '</div>';
       h += '<div class="card"><div class="card-title"><span class="t">训练小结</span><span class="link" data-act="copy">复制</span></div>' +
         vm.insights.map(function (i) { return '<div class="ins"><div class="ins-ic ' + i.type + '">' + i.icon + '</div><span class="ins-t">' + esc(i.text) + '</span></div>'; }).join('') + '</div>';
-      h += '<div class="card"><div class="card-title rules-h" data-act="rules"><span class="t">规则速查</span><span class="link">' + (r.rules ? '收起' : '展开') + '</span></div>';
-      if (r.rules) {
+      h += '<div class="card"><div class="card-title rules-h" data-act="rules"><span class="t">' + (gzReview ? '规则速查' : '这套计划的进阶') + '</span>' + (gzReview ? '<span class="link">' + (r.rules ? '收起' : '展开') + '</span>' : '') + '</div>';
+      if (!gzReview) h += '<span class="cap">' + esc((GZ.progressionOf(viewDb()).desc) || '') + '</span>';
+      else if (r.rules) {
         h += GZ.RULES.map(function (g) { return '<div class="rg"><div class="rg-t">' + g.title + '</div>' + g.rows.map(function (x) { return '<div class="rr"><span class="r1 num">' + x[0] + '</span><span class="r2">' + x[1] + '</span><span class="r3">' + x[2] + '</span></div>'; }).join('') + '</div>'; }).join('') +
           GZ.GENERAL_RULES.map(function (g) { return '<div class="gen">' + g + '</div>'; }).join('');
       } else h += '<span class="cap">T1 三阶进阶、T2 退阶重置、T3 阈值加重与通用规则</span>';
@@ -1108,7 +1135,7 @@
           h += '<div class="log"><div class="cell tap" data-act="toggle" data-id="' + l.id + '"><span class="num log-day">' + l.day + '</span><div class="log-meta"><span>' + l.dayName + ' · 第 ' + l.week + ' 次</span><span class="log-d">' + l.dateText + (l.deload ? ' · 减载' : '') + (l.bw ? ' · ' + l.bw + ' kg' : '') + '</span></div>' +
             '<span class="num log-v">' + l.vol + '<span class="log-u"> kg</span></span><span class="chev">' + (op ? '⌃' : '›') + '</span></div>';
           if (op) {
-            h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
+            h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier, it.badge) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
               (l.note ? '<div class="note-box">' + esc(l.note) + '</div>' : '') +
               '<div class="log-act"><span class="btn-small" data-act="shareopen" data-id="' + l.id + '">分享这次</span>' + (viewingOther() ? '' : '<span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span>') + '</div></div>';
           }
@@ -1188,7 +1215,7 @@
       : '<div class="ss-watch"><div class="ss-watch-t"><b>手表记录</b><span>' + (hasWatch ? '这个月在手表里没有力量训练记录' : '导入 COROS 手表快照后，可显示本月训练时长、组数，并解锁能量对照') + '</span></div>' + (hasWatch ? '' : '<button class="ss-act" data-act="watchgo">去导入 ›</button>') + '</div>';
     var delta = data.volDelta === null ? '这是第一个有记录的月份' : '比 ' + data.prevMon + (data.volDelta >= 0 ? '多 ' : '少 ') + Math.abs(data.volDelta) + '%（' + data.prevMon + ' ' + (data.prev.volume / 1000).toFixed(2) + ' t）';
     var progRows = data.prog.length ? '<div class="ex-rows">' + data.prog.map(function (p) {
-      return '<div class="ex-row"><span class="ex-d">' + tier(p.tier) + '</span><span class="ex-m"><b>' + esc(p.name) + '</b><i>' + (p.prior === null ? '本月首次记录' : p.delta > 0 ? '较上月 +' + p.delta + ' kg（+' + p.pct + '%）' : p.delta < 0 ? '较上月 ' + p.delta + ' kg' : '与上月持平') + '</i></span><span class="ex-e"><b class="num">' + p.e1 + '</b><i>kg 估算 1RM</i></span></div>';
+      return '<div class="ex-row"><span class="ex-d">' + tier(p.tier, p.badge) + '</span><span class="ex-m"><b>' + esc(p.name) + '</b><i>' + (p.prior === null ? '本月首次记录' : p.delta > 0 ? '较上月 +' + p.delta + ' kg（+' + p.pct + '%）' : p.delta < 0 ? '较上月 ' + p.delta + ' kg' : '与上月持平') + '</i></span><span class="ex-e"><b class="num">' + p.e1 + '</b><i>kg 估算 1RM</i></span></div>';
     }).join('') + '</div>' : '<p class="ss-empty">本月还没有可以估算 1RM 的记录。</p>';
     var chips = data.milestones.length ? '<div class="ss-cells">' + data.milestones.map(function (m) { return '<span class="ss-cell">' + esc(m.e) + ' ' + esc(m.title) + '</span>'; }).join('') + '</div><p class="ss-hint">本月共解锁 ' + data.milestoneCount + ' 枚，同一系列跨过多档时只展示最高一档，卡片上最多放 6 枚。</p>' : '<p class="ss-empty">本月没有新解锁的里程碑。</p>';
     return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1">' +
@@ -1333,6 +1360,113 @@
     };img.onerror=function(){toast('图片无法读取');};img.src=reader.result;};reader.readAsDataURL(file);
   }
 
+  // ================= 新用户切入：资料 → 训练方向 =================
+  function obPick(list, cur, act) {
+    return '<div class="ob-picks">' + list.map(function (x) {
+      return '<button type="button" class="ob-pick' + (cur === x.id ? ' on' : '') + '" data-act="' + act + '" data-v="' + esc(x.id) + '"><b>' + esc(x.label) + '</b>' +
+        (x.hint ? '<i>' + esc(x.hint) + '</i>' : '') + '</button>';
+    }).join('') + '</div>';
+  }
+  function renderOnboardProfile(db) {
+    var pp = Share.profile(db.params.shareProfile), bw = db.params.bodyWeight, ready = GZ.profileReady(db);
+    var av = pp.avatar
+      ? '<img src="' + pp.avatar + '" alt="头像">'
+      : '<span>' + esc((pp.name || '我').slice(0, 1)) + '</span>';
+    return '<div class="ob-step">第 1 步 · 共 2 步</div><div class="large-title">建立档案</div>' +
+      '<p class="ob-lead">头像、昵称和性别会用于你的训练名片；体重可先不填。</p>' +
+      '<div class="ob-ava-wrap"><label class="ob-ava">' + av + '<input type="file" accept="image/png,image/jpeg,image/webp" data-act="obavatar"></label>' +
+      '<div class="ob-ava-tip">' + (pp.avatar ? '点头像可更换' : '点此上传头像') + '</div></div>' +
+      '<div class="list profile-list">' +
+      '<div class="cell"><label for="obName" class="flex1">昵称</label><input id="obName" class="profile-in" data-act="obname" maxlength="18" value="' + esc(pp.name) + '" placeholder="怎么称呼你"></div>' +
+      '<div class="cell col"><span class="flex1" style="margin-bottom:8px">性别</span>' +
+      seg(GZ.ONBOARD_GENDER.map(function (g) { return { html: g.label, on: pp.gender === g.id, data: ' data-v="' + g.id + '"' }; }), -1, 'obgender', 'mode-seg') + '</div>' +
+      '<div class="cell"><label for="obBw" class="flex1">体重 <span class="ob-opt">选填</span></label><input id="obBw" class="profile-in num" inputmode="decimal" data-act="obbw" value="' + (bw ? esc(bw) : '') + '" placeholder="kg"><span class="f-u">kg</span></div></div>' +
+      '<div class="ob-foot"><button type="button" class="btn-primary" data-act="obnext"' + (ready ? '' : ' disabled') + '>下一步</button></div>';
+  }
+  function renderOnboardDirection(db) {
+    var d = (db.onboarding && db.onboarding.direction) || {}, ready = GZ.directionReady(db);
+    var forced = S.onboard.force;
+    return '<div class="ob-step">' + (forced ? '训练方向' : '第 2 步 · 共 2 步') + '</div><div class="large-title">' + (forced ? '调整训练方向' : '训练方向') + '</div>' +
+      '<p class="ob-lead">先记下你的目标与条件，本期只存答案；不会自动换计划。</p>' +
+      '<div class="ob-lab">训练目标</div>' + obPick(GZ.ONBOARD_GOAL, d.goal, 'obgoal') +
+      '<div class="ob-lab">训练经验</div>' + obPick(GZ.ONBOARD_EXPERIENCE, d.experience, 'obexp') +
+      '<div class="ob-lab">每周训练天数</div>' + obPick(GZ.ONBOARD_DAYS, d.daysPerWeek, 'obdays') +
+      '<div class="ob-lab">可用器械</div>' + obPick(GZ.ONBOARD_EQUIP, d.equipment, 'obequip') +
+      '<div class="ob-foot sheet-btns">' +
+      (forced ? '<div class="btn-ghost" data-act="obcancel">取消</div>' : '<div class="btn-ghost" data-act="obback">上一步</div>') +
+      '<div class="btn-ghost solid" data-act="obdone"' + (ready ? '' : ' style="opacity:.45;pointer-events:none"') + '>' + (forced ? '保存' : '开始训练') + '</div></div>';
+  }
+  function renderOnboarding() {
+    var db = load();
+    syncOnboardStep(db);
+    return S.onboard.step === 2 ? renderOnboardDirection(db) : renderOnboardProfile(db);
+  }
+  function setDirection(db, key, val) {
+    if (!db.onboarding) db.onboarding = { profileDone: false, directionDone: false, direction: {}, completedAt: '' };
+    if (!db.onboarding.direction) db.onboarding.direction = {};
+    db.onboarding.direction[key] = val;
+    GZ.normalize(db);
+  }
+  function readObBw(el) {
+    var raw = (el && el.value != null ? el.value : (document.getElementById('obBw') || {}).value || '').trim();
+    if (!raw) return { ok: true, v: null };
+    var v = parseFloat(raw);
+    if (isNaN(v) || v < 30 || v > 250) return { ok: false };
+    return { ok: true, v: Math.round(v * 10) / 10 };
+  }
+  function onboardAct(act, ds, el) {
+    switch (act) {
+      case 'obavatar': uploadShareAvatar(el.files && el.files[0]); return false;
+      case 'obname':
+        return mutate(function (db) {
+          var pp = Share.profile(db.params.shareProfile); pp.name = el.value; db.params.shareProfile = Share.profile(pp);
+          if (db.onboarding) db.onboarding.profileDone = GZ.profileReady(db);
+        }, false);
+      case 'obgender':
+        return mutate(function (db) {
+          var pp = Share.profile(db.params.shareProfile); pp.gender = ds.v; db.params.shareProfile = Share.profile(pp);
+          if (db.onboarding) db.onboarding.profileDone = GZ.profileReady(db);
+        }, false);
+      case 'obbw': return false;
+      case 'obnext': {
+        var bw1 = readObBw();
+        if (!bw1.ok) { toast('体重请填 30–250 kg，或留空'); return false; }
+        if (!GZ.profileReady(load())) { toast('请先填写头像、昵称和性别'); return false; }
+        mutate(function (db) {
+          if (bw1.v != null) db.params.bodyWeight = bw1.v;
+          if (!db.onboarding) db.onboarding = { profileDone: false, directionDone: false, direction: {}, completedAt: '' };
+          db.onboarding.profileDone = true;
+          GZ.normalize(db);
+        }, false);
+        S.onboard.step = 2; return true;
+      }
+      case 'obback': S.onboard.step = 1; return true;
+      case 'obcancel':
+        S.onboard.force = false; S.onboard.step = 1;
+        S.tab = S.onboard.returnTab || 'settings'; S.onboard.returnTab = '';
+        return true;
+      case 'obgoal': return mutate(function (db) { setDirection(db, 'goal', ds.v); }, false);
+      case 'obexp': return mutate(function (db) { setDirection(db, 'experience', ds.v); }, false);
+      case 'obdays': return mutate(function (db) { setDirection(db, 'daysPerWeek', ds.v); }, false);
+      case 'obequip': return mutate(function (db) { setDirection(db, 'equipment', ds.v); }, false);
+      case 'obdone': {
+        if (!GZ.directionReady(load())) { toast('请选完四题'); return false; }
+        var wasForce = S.onboard.force;
+        mutate(function (db) {
+          if (!db.onboarding) db.onboarding = { profileDone: false, directionDone: false, direction: {}, completedAt: '' };
+          db.onboarding.directionDone = true;
+          db.onboarding.profileDone = true;
+          if (!db.onboarding.completedAt) db.onboarding.completedAt = GZ.today();
+          GZ.normalize(db);
+        }, wasForce ? '训练方向已保存' : '档案已建立');
+        S.onboard.force = false; S.onboard.step = 1;
+        S.tab = wasForce ? (S.onboard.returnTab || 'settings') : 'train';
+        S.onboard.returnTab = '';
+        return true;
+      }
+    }
+  }
+
   // ================= 设置 =================
   function lastBackup() { return Number(localStorage.getItem(BK) || 0); }
   function renderLibrary() {
@@ -1365,10 +1499,16 @@
     h += '<div class="sec-h" id="shareProfileSec">分享名片</div><div class="list profile-list">' +
       '<div class="cell"><span class="flex1">头像</span><label class="profile-avatar">' + (pp.avatar ? '<img src="' + pp.avatar + '" alt="头像">' : '<span>' + esc(pp.name.slice(0,1) || '我') + '</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-act="profileavatar"></label><span class="btn-small" data-act="profilenoavatar">移除</span></div>' +
       '<div class="cell"><label for="profileName" class="flex1">昵称</label><input id="profileName" class="profile-in" data-act="profiletext" data-k="name" maxlength="18" value="' + esc(pp.name) + '" placeholder="分享时显示的名字"></div>' +
+      '<div class="cell col"><span class="flex1" style="margin-bottom:8px">性别</span>' +
+      seg(GZ.ONBOARD_GENDER.map(function (g) { return { html: g.label, on: pp.gender === g.id, data: ' data-v="' + g.id + '"' }; }), -1, 'profilegender', 'mode-seg') + '</div>' +
       '<div class="cell"><label for="profileHandle" class="flex1">社媒 ID</label><input id="profileHandle" class="profile-in" data-act="profiletext" data-k="handle" maxlength="24" value="' + esc(pp.handle) + '" placeholder="可选，如 @seven"></div>' +
       '<div class="cell"><label for="profileSignature" class="flex1">个性签名</label><input id="profileSignature" class="profile-in" data-act="profiletext" data-k="signature" maxlength="48" value="' + esc(pp.signature) + '" placeholder="可选，写给坚持训练的自己"></div>' +
       '<div class="cell"><span class="flex1">卡片公开当天体重</span><label class="ios-sw green"><input type="checkbox" data-act="profileweight" ' + (pp.showWeight ? 'checked' : '') + '><i></i></label></div></div>' +
-      '<div class="sec-f">昵称、ID、头像、签名会出现在图片上。体重默认隐藏；不显示训练备注、云仓库或令牌。名片随私人云同步保存。输入后离开字段自动保存。</div>';
+      '<div class="sec-f">昵称、性别、ID、头像、签名会出现在名片相关能力里。体重默认隐藏；不显示训练备注、云仓库或令牌。名片随私人云同步保存。输入后离开字段自动保存。</div>';
+    var dirSum = GZ.directionSummary(db);
+    h += '<div class="sec-h">训练方向</div><div class="list">' +
+      '<div class="cell tap" data-act="editdir"><span class="flex1">' + (dirSum ? esc(dirSum) : '尚未填写') + '</span><span class="val">修改</span><span class="chev">›</span></div></div>' +
+      '<div class="sec-f">目标、经验、每周天数与器械只作档案记录，不会自动更换当前计划。</div>';
     var wd = P.watch, wn = wd && wd.workouts ? wd.workouts.length : 0, wsn = wd && wd.sleep ? Object.keys(wd.sleep).length : 0;
     h += '<div class="sec-h" id="watchSec">手表数据</div><div class="list">' +
       '<div class="cell"><span class="flex1">' + esc((wd && wd.source) || 'COROS') + '</span><span class="val">' + (wn || wsn ? esc(wn + ' 次训练 · ' + wsn + ' 晚睡眠') : '未导入') + '</span></div>' +
@@ -1481,10 +1621,14 @@
     switch (act) {
       case 'profiletext':
         return mutate(function(db) { var pp = Share.profile(db.params.shareProfile); pp[ds.k] = el.value; db.params.shareProfile = Share.profile(pp); }, '分享名片已保存');
+      case 'profilegender':
+        return mutate(function (db) { var pp = Share.profile(db.params.shareProfile); pp.gender = ds.v; db.params.shareProfile = Share.profile(pp); }, '性别已保存');
       case 'profileweight': return mutate(function(db) { var pp=Share.profile(db.params.shareProfile); pp.showWeight=el.checked; db.params.shareProfile=pp; }, el.checked ? '卡片会显示已记录的当天体重' : '卡片不再公开体重');
       case 'profilenoavatar': return mutate(function(db) { var pp=Share.profile(db.params.shareProfile); pp.avatar=''; db.params.shareProfile=pp; }, '头像已移除');
       case 'profileavatar':
         uploadShareAvatar(el.files && el.files[0]); return false;
+      case 'editdir':
+        S.onboard.force = true; S.onboard.step = 2; S.onboard.returnTab = 'settings'; return true;
       case 'param': var v = parseFloat(el.value); if (isNaN(v) || v < 0) return true; if (ds.pct) v = v / 100; return mutate(function (db) { setPath(db.params, ds.k, v); });
       case 'mode': return mutate(function (db) { db.params.ruleMode = ds.v; }, ds.v === 'full' ? '已切换：完整三阶规则' : '已切换：严格按表格公式');
       case 'adaptsw': return mutate(function (db) { db.params.adaptive = el.checked; }, el.checked ? '已开启：按末组次数自适应加重' : '已关闭：固定步幅加重');
@@ -1556,6 +1700,17 @@
   var ACT = { train: trainAct, plan: planAct, stats: statsAct, review: reviewAct, settings: settingsAct };
   function render(keepScroll) {
     var body = document.getElementById('body'), y = body.scrollTop;
+    var tb = document.getElementById('tabbar');
+    if (gateOnboard()) {
+      syncOnboardStep(load());
+      if (tb) tb.style.display = 'none';
+      document.getElementById('navTitle').textContent = S.onboard.step === 2 ? '训练方向' : '建立档案';
+      body.innerHTML = '<div class="pg-onboard"><div class="page">' + renderOnboarding() + '</div></div>';
+      body.scrollTop = keepScroll ? y : 0;
+      navState();
+      return;
+    }
+    if (tb) tb.style.display = '';
     var planSub = S.tab === 'plan' && S.plan.view;
     var planTitle = S.plan.view === 'lib' ? '计划库' : '计划详情';
     document.getElementById('navTitle').textContent = S.tab === 'settings' && S.settings.view === 'lib' ? '动作库' : planSub ? planTitle : TABS.filter(function (t) { return t.id === S.tab; })[0].title;
@@ -1580,12 +1735,12 @@
     var tag = el.tagName, isField = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
     if (type === 'click' && isField) return;
     if (type === 'change' && !isField) return;
-    if (type === 'input' && ['note', 'bw', 'swapq', 'libq', 'slotq'].indexOf(el.dataset.act) < 0) return;
+    if (type === 'input' && ['note', 'bw', 'swapq', 'libq', 'slotq', 'obbw'].indexOf(el.dataset.act) < 0) return;
     if (type === 'change' && (el.dataset.act === 'swapq' || el.dataset.act === 'libq')) return;
     if (el.classList.contains('mask') && e.target.closest('[data-stop]')) return;
     var prevTab = S.tab;
-    var res = ACT[S.tab](el.dataset.act, el.dataset, el);
-    if (res) render(prevTab === S.tab);
+    var res = gateOnboard() ? onboardAct(el.dataset.act, el.dataset, el) : ACT[S.tab](el.dataset.act, el.dataset, el);
+    if (res) render(prevTab === S.tab && !gateOnboard());
   }
   document.addEventListener('DOMContentLoaded', function () {
     var body = document.getElementById('body');

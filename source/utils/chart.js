@@ -11,11 +11,11 @@
   'use strict';
   var FONT = '-apple-system, "SF Pro Text", "PingFang SC", sans-serif';
   var THEME = {
-    grid: 'rgba(60,60,67,0.10)', axis: '#8E8E93', text: '#3A3A3C', label: '#1C1C1E',
+    grid: 'rgba(60,60,67,0.10)', axis: '#6C6C70', text: '#3A3A3C', label: '#1C1C1E',
     hole: '#FFFFFF', track: 'rgba(118,118,128,0.12)', font: '10px ' + FONT
   };
-  var ACCENT = '#FF6B1A', BLUE = '#0A84FF';
-  var PALETTE = ['#FF6B1A', '#0A84FF', '#34C759', '#AF52DE', '#8E8E93'];
+  var ACCENT = '#E65A00', BLUE = '#007AFF';
+  var PALETTE = ['#E65A00', '#007AFF', '#34C759', '#AF52DE', '#6C6C70'];
 
   function niceRange(min, max, ticks) {
     if (min === max) { min -= 5; max += 5; }

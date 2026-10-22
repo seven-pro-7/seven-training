@@ -1,0 +1,10 @@
+{
+  "plugins": {
+    "impeccable": {
+      "enabled": true
+    },
+    "refero": {
+      "enabled": true
+    }
+  }
+}
