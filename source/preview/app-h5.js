@@ -1817,6 +1817,77 @@
     var res = gateOnboard() ? onboardAct(el.dataset.act, el.dataset, el) : ACT[S.tab](el.dataset.act, el.dataset, el);
     if (res) render(prevTab === S.tab && !gateOnboard());
   }
+  /** 当前如果在子目录里，返回上一级要触发的动作；根页面和弹层里不响应 */
+  function parentBack() {
+    if (document.querySelector('.mask')) return null;
+    if (gateOnboard()) {
+      if (S.onboard.step !== 2) return null;
+      return { act: S.onboard.force ? 'obcancel' : 'obback', onboard: true };
+    }
+    var back = document.querySelector('#body .lib-back');
+    if (!back) return null;
+    return { act: back.dataset.act, ds: back.dataset, el: back };
+  }
+  function runParentBack(back) {
+    if (!back) return;
+    if (back.onboard) { if (onboardAct(back.act, {}, null)) render(); return; }
+    var prevTab = S.tab, res = ACT[S.tab](back.act, back.ds, back.el);
+    if (res) render(prevTab === S.tab && !gateOnboard());
+  }
+  /** 从屏幕左侧右滑，跟手退出当前目录，松手超过一段距离才回到上一级 */
+  function bindSwipeBack() {
+    var app = document.querySelector('.app');
+    if (!app) return;
+    var drag = null, swallow = false;
+    app.addEventListener('click', function (e) {
+      if (!swallow) return;
+      swallow = false; e.preventDefault(); e.stopPropagation();
+    }, true);
+    app.addEventListener('pointerdown', function (e) {
+      if (drag || (e.button != null && e.button !== 0)) return;
+      if (e.target.closest('input, textarea, select, canvas, #rest, #tabbar')) return;
+      var back = parentBack(); if (!back) return;
+      var edge = app.getBoundingClientRect().left;
+      if (e.clientX - edge > 44) return;
+      var shell = document.querySelector('#body > div');
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0, back: back, shell: shell, on: false };
+    });
+    app.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      drag.dx = dx; drag.dy = dy;
+      if (!drag.on) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        if (Math.abs(dy) > Math.abs(dx) || dx < 10) { drag = null; return; }
+        drag.on = true;
+      }
+      if (dx < 0) dx = 0;
+      if (drag.shell) {
+        drag.shell.style.transition = 'none';
+        drag.shell.style.transform = 'translate3d(' + dx + 'px,0,0)';
+        drag.shell.style.boxShadow = '-12px 0 28px rgba(0,0,0,.12)';
+      }
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+    function finish(e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var d = drag; drag = null;
+      if (d.on) { swallow = true; setTimeout(function () { swallow = false; }, 350); }
+      var shell = d.shell, go = d.on && d.dx > 72;
+      if (!shell) { if (go) runParentBack(d.back); return; }
+      if (!go) {
+        shell.style.transition = 'transform .22s ease';
+        shell.style.transform = '';
+        shell.style.boxShadow = '';
+        return;
+      }
+      shell.style.transition = 'transform .18s ease';
+      shell.style.transform = 'translate3d(100%,0,0)';
+      setTimeout(function () { runParentBack(d.back); }, 170);
+    }
+    app.addEventListener('pointerup', finish);
+    app.addEventListener('pointercancel', finish);
+  }
   document.addEventListener('DOMContentLoaded', function () {
     var body = document.getElementById('body');
     body.addEventListener('click', function (e) { handle(e, 'click'); });
@@ -1844,6 +1915,7 @@
     document.addEventListener('visibilitychange', function () { var c = Sync.cfg(); if (document.visibilityState === 'visible' && Sync.on() && (!c.lastAt || Date.now() - c.lastAt > 30000)) Sync.run(); });
     window.addEventListener('online', function () { if (Sync.on()) Sync.run(); });
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); }, 120); });
+    bindSwipeBack();
     render();
     if (Sync.on()) Sync.run();
   });

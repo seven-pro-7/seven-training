@@ -200,6 +200,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .date-pick, .ex-pick, .base-pick, .pick-cell { position: relative; }
 .date-pick input, .ex-pick select, .base-pick select, .pick-cell select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .lib-back { color: #E65A00; font-size: 17px; padding: 2px 0 12px; display: inline-block; }
+.app #body > div { background: #F2F2F7; min-height: 100%; }
 .app .lib-list { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .cyc-nav { display: flex; align-items: center; gap: 4px; }
 .cyc-btn { width: 24px; height: 24px; border-radius: 50%; background: #EFEFF4; color: #E65A00; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
