@@ -793,7 +793,7 @@
    * 参数分两类：
    *   BASE_KEYS 共享底座（体重、器材、名片）——所有计划共用，切换计划不变。规范见 .cursor/rules/plan-base.mdc
    *   PLAN_KEYS 计划自己（规则参数、周期、减载、计划起始 1RM）——各计划独立，暂停时随计划冻结
-   *   T1/T2/T3 只是 GZCLP 的界面层级；其他计划用 slotBadge（主项/辅助/配件或 BBB）
+   *   T1/T2/T3 只是 GZCLP 的界面层级；其他计划用 slotBadge（主项/变式/孤立或 BBB）
    * 1RM 的口径：每个计划冻结自己的起始 1RM（避免改一次 1RM 就改写已暂停计划的历史）；
    *   跨计划共享的是「1RM 档案」oneRMProfile：手动录入值 + 所有计划的估算 1RM，用于新计划的起始重量。
    */
@@ -962,7 +962,7 @@
    *   freshState(slot, weight)          → 换入新动作时从头进阶的状态
    *   evaluate(slot, state, entry, P, deload) → 本次结果：judgment / nextStage / nextWeight / nextFail / volume / e1rm …
    *   amrapLast(tier)                   → 最后一组是否 AMRAP（训练页最后一个圆点画成实心）
-   * 层级 T1/T2/T3 在策略之外统一映射为通用角色：主项 / 辅助 / 配件（roleOf），
+   * 层级 T1/T2/T3 在策略之外统一映射为通用角色：主项 / 变式 / 孤立（roleOf），
    * 换计划时历史数据按「动作名 + 角色」衔接，不依赖某个策略的阶段名。
    */
   var PROGRESSIONS = {};
@@ -979,9 +979,9 @@
     return PROGRESSIONS[id] || PROGRESSIONS.gzclp;
   }
   var ROLES = { T1: 'main', T2: 'assist', T3: 'accessory', C: 'cardio' };
-  var ROLE_NAME = { main: '主项', assist: '辅助', accessory: '配件', cardio: '有氧' };
+  var ROLE_NAME = { main: '主项', assist: '变式', accessory: '孤立', cardio: '有氧' };
   function roleOf(tier) { return ROLES[tier] || 'accessory'; }
-  /** T1/T2/T3 只是 GZCLP 的层级名。其他计划按自己的进阶显示主项、辅助、配件、有氧或 BBB。 */
+  /** T1/T2/T3 只是 GZCLP 的层级名。其他计划按自己的进阶显示主项、变式、孤立、有氧或 BBB。 */
   function slotBadge(s, progHint) {
     var prog = (s && s.prog) || progHint || '';
     if (prog === 'cardio' || (s && s.tier === 'C')) return '有氧';
@@ -1224,7 +1224,7 @@
     B2_4: { role: '腘绳肌', why: '和 A1 的腿弯举错开，俯卧与坐姿交替', pool: ['坐姿腿弯举', '俯卧腿弯举'] }
   };
   var ROTATION_PRINCIPLES = [
-    { t: 'T1 主项，T2 变式，T3 孤立', d: 'T1 只放深蹲、卧推、硬拉、实力推。T2 放这些主项的变式，以及引体、下拉、划船这类复合动作。T3 只放单关节孤立，例如弯举、侧平举、面拉、腿弯举。' },
+    { t: 'T1、T2、T3 分层', d: 'T1 只放深蹲、卧推、硬拉、实力推。T2 放这些动作的变式，以及引体、下拉、划船这类复合动作。T3 只放单关节孤立，例如弯举、侧平举、面拉、腿弯举。' },
     { t: 'T1 四大项不轮换', d: '力量具有专项性（SAID 原则），深蹲、卧推、硬拉、实力推需要持续重复练习才能进步。' },
     { t: 'T2/T3 每轮换一次，一轮内固定', d: '系统综述显示：有计划的动作变化有利于肌肉均衡增长和最大力量，随意、过于频繁地换动作反而有害（Kassiano 等 2022，JSCR）。轮换动作组股四头肌四个头都增长、深蹲 1RM 提升最大（Fonseca 2014，JSCR）。' },
     { t: '同一位置只在同一动作模式内轮换', d: '每个位置都有固定的角色（如深蹲变式、垂直拉、腘绳肌），保证每周推、拉、蹲、髋铰链的比例不变。' },
@@ -1662,7 +1662,7 @@
         var eq = equipOf(name, s.equip);
         var def = isGZ ? ROTATION[s.id] : null;
         var b = slotBadge(s, curProg.id);
-        var role = isGZ ? (s.tier === 'T1' ? '主项 · 四大项不轮换' : (def ? def.role : '辅助')) : (b + ' · ' + (s.prog === 'cardio' ? '有氧' : s.prog === 'linear' ? '线性加重' : s.prog === 'w531' ? '5/3/1波浪' : s.prog === 'fixed' ? 'BBB固定' : '双重进阶'));
+        var role = isGZ ? (s.tier === 'T1' ? 'T1 · 四大项不轮换' : (def ? def.role : s.tier)) : (b + ' · ' + (s.prog === 'cardio' ? '有氧' : s.prog === 'linear' ? '线性加重' : s.prog === 'w531' ? '5/3/1波浪' : s.prog === 'fixed' ? 'BBB固定' : '双重进阶'));
         var pv = prev ? prev[s.id] : '';
         var isNew = isGZ && !!prev && name !== pv;
         if (isNew) changed++;
@@ -1789,8 +1789,8 @@
       pie: pie, pieTotal: pie.reduce(function (a, b) { return a + b.value; }, 0),
       volume: { labels: labels, stacks: [
         { name: progressionOf(db).id === 'gzclp' ? 'T1' : '主项', color: TIER_COLORS.T1, data: v1 },
-        { name: progressionOf(db).id === 'gzclp' ? 'T2' : (progressionOf(db).id === 'w531' ? 'BBB' : '辅助'), color: TIER_COLORS.T2, data: v2 },
-        { name: progressionOf(db).id === 'gzclp' ? 'T3' : '配件', color: TIER_COLORS.T3, data: v3 }] },
+        { name: progressionOf(db).id === 'gzclp' ? 'T2' : (progressionOf(db).id === 'w531' ? 'BBB' : '变式'), color: TIER_COLORS.T2, data: v2 },
+        { name: progressionOf(db).id === 'gzclp' ? 'T3' : '孤立', color: TIER_COLORS.T3, data: v3 }] },
       e1rm: e1, weightTrend: weightTrend, bw: bw, prs: prs, totalWeeks: Math.max(P.totalWeeks, weeks)
     };
   }
@@ -1970,12 +1970,12 @@
     var prog = progressionOf(db, slot), ex = libFindIn(db, name || slot.name), part = ex ? ex.part : '';
     var rot = ROTATION[slot.id];
     if (prog.id === 'gzclp') {
-      if (slot.tier === 'T1') return { key: 'main', label: '主项', hint: '只在深蹲、卧推、硬拉、实力推之间换。', names: ['杠铃深蹲', '传统硬拉', '平板卧推', '站姿实力推'], part: part, locked: true };
+      if (slot.tier === 'T1') return { key: 'main', label: 'T1', hint: '只在深蹲、卧推、硬拉、实力推之间换。', names: ['杠铃深蹲', '传统硬拉', '平板卧推', '站姿实力推'], part: part, locked: true };
       if (rot) {
         var head = libFindIn(db, rot.pool[0]);
         return { key: slot.id, label: rot.role, hint: rot.why, names: rot.pool.slice(), part: head ? head.part : part, locked: false };
       }
-      return { key: roleOf(slot.tier), label: ROLE_NAME[roleOf(slot.tier)] || '动作', hint: '', names: null, part: part, locked: false };
+      return { key: roleOf(slot.tier), label: slot.tier || '动作', hint: '', names: null, part: part, locked: false };
     }
     if (prog.id === 'cardio') return { key: 'cardio', label: '有氧', hint: '只记分钟，不记重量。', names: null, part: part, locked: false };
     var label = prog.id === 'fixed' ? 'BBB' : (prog.id === 'w531' || prog.id === 'linear' ? '主项' : (ROLE_NAME[roleOf(slot.tier)] || '动作'));
@@ -2178,16 +2178,16 @@
   var PROGRESSION_RULES = {
     gzclp: {
       name: 'GZCLP · 线性三阶进阶',
-      summary: '主项从 5×3+ 开始，失败则降阶到 6×2+ 与 10×1+；辅助每轮在同模式内轮换；配件高次数积累。',
+      summary: 'T1 从 5×3+ 开始，失败则降阶到 6×2+ 与 10×1+；T2 每轮在同模式内轮换；T3 高次数积累。',
       rules: [
-        { title: 'T1 主项 · 三阶进阶', rows: [
+        { title: 'T1 · 三阶进阶', rows: [
           ['5×3+', '末组 AMRAP ≥ 6', '加重，继续 5×3+'], ['5×3+', '3 ≤ AMRAP < 6', '重量不变，巩固'], ['5×3+', '连续 2 次 AMRAP < 3', '进入 6×2+，重量不变'],
           ['6×2+', '末组 AMRAP ≥ 4', '加重，继续 6×2+'], ['6×2+', '2 ≤ AMRAP < 4', '重量不变，巩固'], ['6×2+', '连续 2 次 AMRAP < 2', '进入 10×1+，重量不变'],
           ['10×1+', '末组 AMRAP ≥ 2', '加重，继续 10×1+'], ['10×1+', 'AMRAP < 2', '测新 5RM，取 90% 为新 TM，重置 5×3+']] },
-        { title: 'T2 次主项 · 退阶重置', rows: [
+        { title: 'T2 · 退阶重置', rows: [
           ['3×10', '全部完成', '加重，继续 3×10'], ['3×10', '无法完成', '降为 3×8，重量不变'],
           ['3×8', '全部完成', '加重，回到 3×10（表格公式）'], ['3×8', '无法完成', '降为 3×6，重量不变'], ['3×6', '完成 / 未完成', '加重，重置回 3×10']] },
-        { title: 'T3 辅助项', rows: [['3×15+', '末组 AMRAP ≥ 阈值(25)', '加重，回到 3×15+'], ['3×15+', '末组 AMRAP < 阈值', '重量不变']] },
+        { title: 'T3', rows: [['3×15+', '末组 AMRAP ≥ 阈值(25)', '加重，回到 3×15+'], ['3×15+', '末组 AMRAP < 阈值', '重量不变']] },
         { title: '减载周规则', rows: [['第 6 周', '计划内减载', 'T1 −50%，T2 −40%，T3 少 1 组，不打乱进阶链']] }
       ],
       general: [
@@ -2202,7 +2202,7 @@
     },
     w531: {
       name: '5/3/1 · Wendler 经典百分比波浪',
-      summary: '以训练最大重量（TM = 1RM × 90%）为计算基准。主项 4 周波浪，BBB 辅助 5×10 固定积累容量。',
+      summary: '以训练最大重量（TM = 1RM × 90%）为计算基准。主项 4 周波浪，BBB 5×10 固定积累容量。',
       rules: [
         { title: '主项四周百分比波浪', rows: [
           ['第 1 周 (3×5+)', '65%×5, 75%×5, 85%×5+', '末组 AMRAP 尽量多做，突破次数'],
@@ -2213,13 +2213,13 @@
           ['深蹲 / 硬拉', '完成一轮 4 周', '下轮 TM +5 kg（下肢）'],
           ['卧推 / 实力推', '完成一轮 4 周', '下轮 TM +2.5 kg（上肢）'],
           ['未达标保护', 'W3 未能完成 1 次', 'TM 下调 10%（TM × 0.9），从头循环']] },
-        { title: 'BBB 辅助与配件', rows: [
+        { title: 'BBB 与孤立', rows: [
           ['BBB (Boring But Big)', '主项后同动作 5×10', '重量固定为当前 TM 的 50%，专注肌肉量'],
-          ['配件动作', '推、拉、单腿/核心', '每类每天 25~50 次总量，双重进阶（8–12 次）']] }
+          ['孤立', '推、拉、单腿/核心', '每类每天 25~50 次总量，双重进阶（8–12 次）']] }
       ],
       general: [
         'TM 原则：永远不要高估 TM，宁轻勿重；慢速而持续的进步才是力量王道',
-        '休息时间：主项重组 3~5 分钟，BBB 组 90~120 秒，配件 60 秒',
+        '休息时间：主项重组 3~5 分钟，BBB 组 90~120 秒，孤立 60 秒',
         '第 4 周减载：必须严格减载，即使感觉良好也不要冲重量，为下一轮蓄力'
       ]
     },
@@ -2231,7 +2231,7 @@
           ['规定组次全部完成', '达到目标次数（如 3×5+）', '下次训练加重（上肢 +2.5kg，下肢 +2.5~5kg）'],
           ['末组 AMRAP', '最后一组尽力多做', '次数多于 5 次记为巩固；自适应模式下可适当多加'],
           ['连续 3 次未达标', '同一重量 3 次失败', '卸重 10%（工作重量 × 0.9），重新线性累积']] },
-        { title: '辅助与配件进阶', rows: [
+        { title: '变式与孤立进阶', rows: [
           ['双重进阶', '区间 8–12 或 15–20 次', '所有组达到上限时加重回到下限；某组低于下限降重']] }
       ],
       general: [
@@ -2250,8 +2250,8 @@
           ['跌破下限', '任一组低于次数下限 2 次以上', '下次降低一档重量，避免动作代偿变形']] },
         { title: '常用次数区间', rows: [
           ['大肌群复合 (6–10)', '主项、推胸、划船、深蹲变式', '兼顾机械张力与力量增长'],
-          ['肥大辅助 (8–12)', '哑铃推举、引体、分腿蹲、下拉', '肌肥大黄金区间，代谢压力与泵感'],
-          ['孤立配件 (10–15 / 12–20)', '侧平举、面拉、弯举、腿屈伸', '单关节孤立，保护关节，高泵感']] }
+          ['变式 (8–12)', '哑铃推举、引体、分腿蹲、下拉', '肌肥大黄金区间，代谢压力与泵感'],
+          ['孤立 (10–15 / 12–20)', '侧平举、面拉、弯举、腿屈伸', '单关节孤立，保护关节，高泵感']] }
       ],
       general: [
         '加重不要激进：加重幅度越小（杠铃 2.5kg，哑铃 1~2kg，绳索 2.5kg），平台期越少',
@@ -2766,15 +2766,15 @@
   }
   function templateCatalog() {
     return [
-      { id: 'gzclp', name: 'GZCLP', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'strength', goals: ['strength'], blurb: '深蹲、卧推、硬拉、实力推。主项从 5×3+ 开始，完不成就退阶；辅助动作每轮在同一模式里轮换。' },
-      { id: '531', name: '5/3/1', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'strength', goals: ['strength'], blurb: '四周一个循环。训练最大重量取 1RM 的 90%，主项按百分比波浪，辅助同一动作 5×10、重量固定。' },
+      { id: 'gzclp', name: 'GZCLP', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'strength', goals: ['strength'], blurb: '深蹲、卧推、硬拉、实力推。T1 从 5×3+ 开始，完不成就退阶；T2、T3 每轮在同一模式里轮换。' },
+      { id: '531', name: '5/3/1', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'strength', goals: ['strength'], blurb: '四周一个循环。训练最大重量取 1RM 的 90%，主项按百分比波浪，BBB 同一动作 5×10、重量固定。' },
       { id: 'nsb', name: '新手全身力量', days: '每周 3 练', daysFit: ['2_3'], lean: 'unisex', focus: 'strength', goals: ['strength'], blurb: '三个全身日。深蹲、卧推、硬拉和实力推完成规定次数就加重，适合刚开始建立力量。' },
       { id: 'ath3', name: '功能表现 · 全身', days: '每周 3 练', daysFit: ['2_3'], lean: 'unisex', focus: 'function', goals: ['strength', 'recomp'], blurb: '蹲、髋铰链、推、拉，加上单腿和核心。练的是能用出来的力量，不只是单项最大重量。' },
-      { id: 'ppl', name: 'Reddit PPL', days: '每周 6 练', daysFit: ['5_6'], lean: 'male', focus: 'physique', goals: ['muscle_gain'], blurb: '推、拉、腿各两次。主项完成规定次数就加重，辅助动作全部组做到区间上限才加重。' },
+      { id: 'ppl', name: 'Reddit PPL', days: '每周 6 练', daysFit: ['5_6'], lean: 'male', focus: 'physique', goals: ['muscle_gain'], blurb: '推、拉、腿各两次。主项完成规定次数就加重，变式全部组做到区间上限才加重。' },
       { id: 'phul', name: 'PHUL', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'physique', goals: ['muscle_gain', 'reshape'], blurb: '两天力量、两天肌肥大。上肢下肢分开，既加重量也加围度。' },
       { id: 'bro5', name: '五分化增肌', days: '每周 5 练', daysFit: ['5_6'], lean: 'male', focus: 'physique', goals: ['muscle_gain', 'reshape'], blurb: '胸、背、肩、腿、手臂各一天。次数偏中高，用来把推拉和手臂的容量做够。' },
       { id: 'pp4', name: '推拉分化', days: '每周 4 练', daysFit: ['4'], lean: 'male', focus: 'physique', goals: ['muscle_gain', 'reshape'], blurb: '推、拉各两次。腿部分别放进推日和拉日，适合想加厚上肢、每周能练四天的人。' },
-      { id: 'ul4', name: '上肢下肢 · 塑形', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'physique', goals: ['reshape', 'muscle_gain', 'recomp'], blurb: '上肢、下肢各两次，全程用肥大次数。肩、臀和核心的配件比力量计划更多。' },
+      { id: 'ul4', name: '上肢下肢 · 塑形', days: '每周 4 练', daysFit: ['4'], lean: 'unisex', focus: 'physique', goals: ['reshape', 'muscle_gain', 'recomp'], blurb: '上肢、下肢各两次，全程用肥大次数。肩、臀和核心的孤立比力量计划更多。' },
       { id: 'glute4', name: '臀腿优先 · 塑形', days: '每周 4 练', daysFit: ['4'], lean: 'female', focus: 'physique', goals: ['reshape', 'muscle_gain'], blurb: '下肢每周两次，臀推、髋铰链和外展放在前面；上肢保持姿态和平衡，不把容量全压在卧推上。' },
       { id: 'lul3', name: '下 · 上 · 下', days: '每周 3 练', daysFit: ['2_3'], lean: 'female', focus: 'physique', goals: ['reshape', 'recomp'], blurb: '三天里两天练下肢。想优先臀腿体态、又只有三天时间时用。' },
       { id: 'fb3', name: '全身 · 减脂向', days: '每周 3 练', daysFit: ['2_3'], lean: 'unisex', focus: 'fat_loss', goals: ['fat_loss', 'recomp'], blurb: '三次全身训练，复合动作为主，用来在减脂时保住肌肉。这套只练力量，有氧另排。' },

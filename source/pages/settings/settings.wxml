@@ -56,9 +56,9 @@
     <view class="cell"><text class="flex1">每轮周数</text><input class="f-in num" type="number" value="{{p.totalWeeks}}" data-k="totalWeeks" bindblur="onParam" /><text class="f-u">周 / 轮</text></view>
     <view class="cell" wx:if="{{isGz}}"><text class="flex1">减载周</text><switch checked="{{p.deloadEnabled}}" color="#34C759" bindchange="onDeload" /></view>
     <view class="cell" wx:if="{{isGz && p.deloadEnabled}}"><text class="flex1">每轮第</text><input class="f-in num" type="number" value="{{p.deloadEvery}}" data-k="deloadEvery" bindblur="onParam" /><text class="f-u">周减载</text></view>
-    <view class="cell" wx:if="{{isGz}}"><text class="flex1">每轮自动轮换辅助动作</text><switch checked="{{p.autoRotate !== false}}" color="#34C759" bindchange="onRotate" /></view>
+    <view class="cell" wx:if="{{isGz}}"><text class="flex1">每轮自动轮换 T2/T3</text><switch checked="{{p.autoRotate !== false}}" color="#34C759" bindchange="onRotate" /></view>
   </view>
-  <view class="sec-f" wx:if="{{isGz}}">{{p.autoRotate !== false ? '每进入新一轮，辅助动作会在同一模式里换成上一轮没练过的，主项不变。' : ''}}完成一轮（{{p.totalWeeks}} 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内的周序计算{{p.deloadEnabled ? '（每轮第 ' + p.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : ''}}。</view>
+  <view class="sec-f" wx:if="{{isGz}}">{{p.autoRotate !== false ? '每进入新一轮，T2/T3 会在同一模式里换成上一轮没练过的，T1 不变。' : ''}}完成一轮（{{p.totalWeeks}} 周 × 4 日）后自动进入下一轮，可无限循环；减载按每轮内的周序计算{{p.deloadEnabled ? '（每轮第 ' + p.deloadEvery + ' 周 T1 −50%、T2 −40%、T3 少 1 组，不影响进阶）' : ''}}。</view>
   <view class="sec-f" wx:else>这套计划每 {{p.totalWeeks}} 周一轮，按自己的进阶加重，独立运作，不使用 GZCLP 的减载和动作轮换规则。</view>
 
   <view class="sec-h">动作</view>

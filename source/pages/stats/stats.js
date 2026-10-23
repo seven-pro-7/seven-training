@@ -4,10 +4,11 @@ const store = require('../../utils/store.js');
 const { getCtx } = require('../../utils/canvas.js');
 
 Page({
-  data: { s: null, liftIdx: 0, dayIdx: 0, cur: null, palette: Chart.PALETTE },
+  data: { s: null, liftIdx: 0, dayIdx: 0, cur: null, palette: Chart.PALETTE, isGz: true },
   onShow() {
-    const s = GZ.buildStats(store.load());
-    this.setData({ s, cur: s.e1rm[this.data.liftIdx] || null }, () => this.drawAll());
+    const db = store.load();
+    const s = GZ.buildStats(db);
+    this.setData({ s, isGz: GZ.progressionOf(db).id === 'gzclp', cur: s.e1rm[this.data.liftIdx] || null }, () => this.drawAll());
   },
   onLift(e) { const i = Number(e.currentTarget.dataset.i); this.setData({ liftIdx: i, cur: this.data.s.e1rm[i] }, () => this.draw('c_e1')); },
   onDayTab(e) { this.setData({ dayIdx: Number(e.currentTarget.dataset.i) }, () => this.draw('c_w')); },

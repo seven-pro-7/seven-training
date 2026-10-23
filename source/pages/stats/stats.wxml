@@ -7,7 +7,7 @@
     </view>
     <view class="kpi"><text class="k-l">累计容量</text><text class="num kv">{{s.kpi.volume}}</text><text class="ks">{{s.kpi.reps}} 次</text></view>
     <view class="kpi"><text class="k-l">加重</text><view><text class="num kv accent">{{s.kpi.adds}}</text><text class="ku">次</text></view><text class="ks">预警 {{s.kpi.warns}}</text></view>
-    <view class="kpi"><text class="k-l">T1 达标率</text><text class="num kv">{{s.kpi.t1Rate === null ? '—' : s.kpi.t1Rate + '%'}}</text><text class="ks">T2 完成 {{s.kpi.t2Rate === null ? '—' : s.kpi.t2Rate + '%'}}</text></view>
+    <view class="kpi"><text class="k-l">{{isGz ? 'T1 达标率' : '主项达标率'}}</text><text class="num kv">{{s.kpi.t1Rate === null ? '—' : s.kpi.t1Rate + '%'}}</text><text class="ks">{{isGz ? 'T2' : '变式'}} 完成 {{s.kpi.t2Rate === null ? '—' : s.kpi.t2Rate + '%'}}</text></view>
   </view>
 
   <!-- e1RM -->

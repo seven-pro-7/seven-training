@@ -50,7 +50,7 @@
       <text class="t">{{vm.cycleText}}动作编排</text>
       <text class="s">{{!vm.rotation.enabled ? '自动轮换已关闭' : vm.rotation.cycle === 1 ? '起始动作' : '换了 ' + vm.rotation.changed + ' / ' + vm.rotation.total + ' 个'}}</text>
     </view>
-    <view class="rot-tip">T1 四大项固定；T2/T3 每轮在同一动作模式内换一次，一轮 {{vm.weeksPerCycle}} 周内保持不变{{vm.rotation.isFuture ? '。这一轮还没开始，以下为预排' : ''}}</view>
+    <view class="rot-tip" wx:if="{{vm.progression === 'gzclp'}}">T1 四大项固定；T2/T3 每轮在同一动作模式内换一次，一轮 {{vm.weeksPerCycle}} 周内保持不变{{vm.rotation.isFuture ? '。这一轮还没开始，以下为预排' : ''}}</view>
     <view class="rot-day" wx:for="{{vm.rotation.days}}" wx:key="id" wx:for-item="d">
       <view class="rot-dh"><text class="num rot-did">{{d.id}}</text><text class="rot-dn">{{d.name}}</text></view>
       <view class="rot-row" wx:for="{{d.slots}}" wx:key="id" wx:for-item="r">
