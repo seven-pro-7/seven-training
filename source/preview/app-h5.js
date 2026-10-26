@@ -1128,93 +1128,81 @@
     if (st.ex) drawExercise();
   }
   var TIER_HEX = { T1: '#FF6B1A', T2: '#0A84FF', T3: '#8E8E93' };
+  /** 数据页可切到其他计划的只读快照；计划总览始终看当前计划，和当前状态同一份数据。 */
+  function exerciseDb() {
+    if (S.tab === 'stats') return viewDb();
+    return load();
+  }
+  function tierData(se, t, key) {
+    var b = se.byTier && se.byTier[t];
+    return (b && b[key]) || [];
+  }
   function drawExercise() {
-    var d = Insight.detail(viewDb(), S.stats.ex), c; if (!d) return;
+    var d = GZ.exerciseDetail(exerciseDb(), S.stats.ex), c; if (!d) return;
     var se = d.series, multi = d.tiers.length > 1, col = function (t) { return TIER_HEX[t] || '#FF6B1A'; };
     if ((c = ctxOf('c_ex_w'))) {
-      var sw = multi ? d.tiers.map(function (t) { return { color: col(t), data: se.byTier[t].perf, width: 2.2, connect: true }; })
-        : [{ color: '#FF6B1A', data: se.perf, width: 2.5, fill: 'rgba(255,107,26,0.22)', connect: true }];
-      Chart.line(c.ctx, c.w, c.h, { labels: se.labels, series: sw, emptyText: '暂无数据' });
+      var sw = multi ? d.tiers.map(function (t) { return { color: col(t), data: tierData(se, t, 'perf'), width: 2.2, connect: true }; })
+        : [{ color: '#FF6B1A', data: se.perf || [], width: 2.5, fill: 'rgba(255,107,26,0.22)', connect: true }];
+      Chart.line(c.ctx, c.w, c.h, { labels: se.labels || [], series: sw, emptyText: '暂无数据' });
     }
     if ((c = ctxOf('c_ex_e'))) {
       var ser = [];
-      if (d.ref && d.primary === 'T1') ser.push({ color: '#C7C7CC', data: se.labels.map(function () { return d.ref; }), dashed: true, width: 1, dots: false });
+      if (d.ref && d.primary === 'T1') ser.push({ color: '#C7C7CC', data: (se.labels || []).map(function () { return d.ref; }), dashed: true, width: 1, dots: false });
       if (se.reg) ser.push({ color: '#0A84FF', data: se.reg, dashed: true, width: 1.5, dots: false, connect: true });
-      if (multi) d.tiers.forEach(function (t) { if (t !== d.primary) ser.push({ color: col(t), data: se.byTier[t].e1rm, width: 1.4, connect: true }); });
-      ser.push({ color: multi ? col(d.primary) : '#FF6B1A', data: multi ? se.byTier[d.primary].e1rm : se.e1rm, width: 2.5, fill: multi ? undefined : 'rgba(255,107,26,0.22)', connect: true });
-      Chart.line(c.ctx, c.w, c.h, { labels: se.labels, series: ser, emptyText: '还没有可估算的记录' });
+      if (multi) d.tiers.forEach(function (t) { if (t !== d.primary) ser.push({ color: col(t), data: tierData(se, t, 'e1rm'), width: 1.4, connect: true }); });
+      ser.push({ color: multi ? col(d.primary) : '#FF6B1A', data: multi ? tierData(se, d.primary, 'e1rm') : (se.e1rm || []), width: 2.5, fill: multi ? undefined : 'rgba(255,107,26,0.22)', connect: true });
+      Chart.line(c.ctx, c.w, c.h, { labels: se.labels || [], series: ser, emptyText: '还没有可估算的记录' });
     }
-    if ((c = ctxOf('c_ex_v'))) Chart.bars(c.ctx, c.w, c.h, { labels: se.labels, stacks: d.tiers.map(function (t) { return { name: t, color: col(t), data: se.byTier[t].volume }; }), emptyText: '暂无容量数据' });
+    if ((c = ctxOf('c_ex_v'))) Chart.bars(c.ctx, c.w, c.h, { labels: se.labels || [], stacks: (d.tiers || []).map(function (t) { return { name: t, color: col(t), data: tierData(se, t, 'volume') }; }), emptyText: '暂无容量数据' });
   }
   function fmtKg(v) { return GZ.fmtW(Math.round(v * 10) / 10); }
-  function exercisePlanMeta(name) {
-    var db = viewDb(), lib = GZ.libFindIn(db, name), found = null, equip = lib && lib.equip ? lib.equip : '';
-    var vm = GZ.buildPlan(db, { cycle: S.plan.cycle || 0 });
-    (vm.overview || []).forEach(function (o) {
-      (o.slots || []).forEach(function (s) {
-        if (!found && s.name === name) found = { day: o.day, dayName: o.name, slot: s };
-      });
-    });
-    if (!equip) {
-      (db.days || []).forEach(function (day) {
-        (day.slots || []).forEach(function (s) {
-          if (!equip && s.name === name && s.equip) equip = s.equip;
-        });
-      });
-    }
-    return { found: found, equip: equip };
-  }
-  function renderExerciseEmpty(name) {
-    var meta = exercisePlanMeta(name), f = meta.found, s = f && f.slot, bits = [];
-    if (meta.equip) bits.push(meta.equip);
-    if (f) bits.push(f.day + (f.dayName ? ' ' + f.dayName : ''));
-    if (s) {
-      if (s.isCardio) { if (s.weight || s.stage) bits.push(String(s.weight || s.stage)); }
-      else {
-        if (s.weight !== '' && s.weight !== null && s.weight !== undefined) bits.push(s.weight + ' kg');
-        if (s.stage) bits.push(s.stage);
-      }
-    }
-    return '<div class="mask share-mask" data-act="exclose"><div class="sheet share-sheet" data-stop="1">' +
-      '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title ex-title">' + esc(name) + '</span><button class="share-close" data-act="exclose" aria-label="关闭动作详情">×</button></div>' +
-      '<p class="ex-sub">' + (s ? tier(s.tier, s.badge) : '') + (bits.length ? '<span>' + esc(bits.join(' · ')) + '</span>' : '') + '</p></div>' +
-      '<div class="ss-body"><div class="ss-sec"><p class="ss-empty">还没有「' + esc(name) + '」的训练记录。完成第一次训练后，这里会自动生成重量走势、每次容量与估算 1RM 趋势。</p></div></div></div></div>';
-  }
   function renderExerciseSheet() {
-    var name = S.stats.ex;
-    var d = Insight.detail(viewDb(), name);
-    if (!d) return renderExerciseEmpty(name);
-    var unit = d.bw ? '次' : d.unit.replace(' 单只', '').replace(' 外加', '');
+    var d = GZ.exerciseDetail(exerciseDb(), S.stats.ex);
+    if (!d) { S.stats.ex = null; return ''; }
     var kp = function (l, v, u, sub) { return '<div class="ex-k"><span class="ex-kl">' + l + '</span><span class="ex-kv"><b class="num">' + v + '</b>' + (u ? '<i>' + u + '</i>' : '') + '</span><span class="ex-ks">' + sub + '</span></div>'; };
     var dt = function (x) { return x.slice(5).replace('-', '月') + '日'; };
     var perfLabel = d.bw ? '次数走势' : '重量走势';
-    var kpis = '<div class="ex-kpis">' +
-      kp(d.bw ? '最近次数' : '最佳重量', d.bw ? d.points[d.points.length - 1].last !== null ? d.points[d.points.length - 1].last : d.points[d.points.length - 1].reps : fmtKg(d.bestWeight.v), d.bw ? '次' : unit, d.bw ? dt(d.lastDate) : dt(d.bestWeight.date)) +
-      kp('估算 1RM', d.bestE1 ? fmtKg(d.bestE1.v) : '—', d.bestE1 ? 'kg' : '', d.bw ? '自重不估算' : d.bestE1 ? '最佳 · ' + dt(d.bestE1.date) : '暂无') +
-      kp('累计容量', d.bw ? '—' : (d.volume >= 1000 ? (d.volume / 1000).toFixed(2) : d.volume), d.bw ? '' : (d.volume >= 1000 ? 't' : 'kg'), d.bw ? '自重不计 kg' : '均 ' + d.avgVolume.toLocaleString('zh-CN') + ' kg / 次') +
-      kp('记录次数', d.n, '次', d.adds ? '加重 ' + d.adds + ' 次' : '首次 ' + dt(d.firstDate)) + '</div>';
+    var kpis;
+    if (!d.n) {
+      kpis = '<div class="ex-kpis">' +
+        kp('最佳估算 1RM', '—', '', '尚未开始') +
+        kp('最重训练重量', '—', '', '尚未开始') +
+        kp('单次最高容量', '—', '', '尚未开始') +
+        kp('已记录训练', '0', '次', '尚未开始') + '</div>';
+    } else {
+      var unit = d.bw ? '次' : d.unit.replace(' 单只', '').replace(' 外加', '');
+      kpis = '<div class="ex-kpis">' +
+        kp(d.bw ? '最近次数' : '最佳重量', d.bw ? d.points[d.points.length - 1].last !== null ? d.points[d.points.length - 1].last : d.points[d.points.length - 1].reps : fmtKg(d.bestWeight.v), d.bw ? '次' : unit, d.bw ? dt(d.lastDate) : dt(d.bestWeight.date)) +
+        kp('估算 1RM', d.bestE1 ? fmtKg(d.bestE1.v) : '—', d.bestE1 ? 'kg' : '', d.bw ? '自重不估算' : d.bestE1 ? '最佳 · ' + dt(d.bestE1.date) : '暂无') +
+        kp('累计容量', d.bw ? '—' : (d.volume >= 1000 ? (d.volume / 1000).toFixed(2) : d.volume), d.bw ? '' : (d.volume >= 1000 ? 't' : 'kg'), d.bw ? '自重不计 kg' : '均 ' + d.avgVolume.toLocaleString('zh-CN') + ' kg / 次') +
+        kp('记录次数', d.n, '次', d.adds ? '加重 ' + d.adds + ' 次' : '首次 ' + dt(d.firstDate)) + '</div>';
+    }
     var e1sec = '';
     if (!d.bw) {
-      var delta = d.e1Delta === null ? '' : '<div class="mini"><div class="mi"><span class="num mi-v ' + (d.e1Delta > 0 ? 'accent' : '') + '">' + (d.e1Delta > 0 ? '+' : '') + d.e1Delta + '</span><span class="mi-l">首次至今 kg</span></div>' +
-        (d.slope !== null ? '<div class="mi"><span class="num mi-v">' + (d.slope >= 0 ? '+' : '') + d.slope + '</span><span class="mi-l">kg / 周</span></div><div class="mi"><span class="num mi-v">' + d.r2 + '</span><span class="mi-l">R²</span></div>' : '<div class="mi"><span class="num mi-v">—</span><span class="mi-l">趋势需 3 次</span></div>') +
-        (d.vsRef !== null ? '<div class="mi"><span class="num mi-v">' + (d.vsRef > 0 ? '+' : '') + d.vsRef + '%</span><span class="mi-l">对比录入 1RM</span></div>' : '') + '</div>';
+      var delta = !d.n
+        ? '<div class="mini"><div class="mi"><span class="num mi-v">—</span><span class="mi-l">首次至今 kg</span></div><div class="mi"><span class="num mi-v">—</span><span class="mi-l">kg / 周</span></div><div class="mi"><span class="num mi-v">—</span><span class="mi-l">R²</span></div>' + (d.ref ? '<div class="mi"><span class="num mi-v">—</span><span class="mi-l">对比录入 1RM</span></div>' : '') + '</div>'
+        : (d.e1Delta === null ? '' : '<div class="mini"><div class="mi"><span class="num mi-v ' + (d.e1Delta > 0 ? 'accent' : '') + '">' + (d.e1Delta > 0 ? '+' : '') + d.e1Delta + '</span><span class="mi-l">首次至今 kg</span></div>' +
+          (d.slope !== null ? '<div class="mi"><span class="num mi-v">' + (d.slope >= 0 ? '+' : '') + d.slope + '</span><span class="mi-l">kg / 周</span></div><div class="mi"><span class="num mi-v">' + d.r2 + '</span><span class="mi-l">R²</span></div>' : '<div class="mi"><span class="num mi-v">—</span><span class="mi-l">趋势需 3 次</span></div>') +
+          (d.vsRef !== null ? '<div class="mi"><span class="num mi-v">' + (d.vsRef > 0 ? '+' : '') + d.vsRef + '%</span><span class="mi-l">对比录入 1RM</span></div>' : '') + '</div>');
       e1sec = '<div class="ss-sec"><div class="ss-h"><span class="ss-t">估算 1RM 趋势</span>' + (d.latestE1 ? '<span class="ex-src">' + esc(d.e1Kind) + '</span>' : '') + '</div>' +
         '<canvas id="c_ex_e" class="cv"></canvas>' +
         '<div class="legend">' + (d.tiers.length > 1 ? d.tiers.map(function (t) { var lb = (d.tierLabel && d.tierLabel[t]) || t; return '<div class="lg"><div class="sw" style="background:' + (TIER_HEX[t] || '#FF6B1A') + '"></div>' + lb + (t === d.primary ? ' · 估算以此为准' : '') + '</div>'; }).join('') : '<div class="lg"><div class="sw" style="background:#FF6B1A"></div>估算 1RM</div>') + (d.slope !== null ? '<div class="lg"><div class="sw dash" style="border-color:#0A84FF"></div>回归趋势</div>' : '') + (d.ref && d.primary === 'T1' ? '<div class="lg"><div class="sw dash" style="border-color:#C7C7CC"></div>录入 1RM</div>' : '') + '</div>' +
         delta + (d.tip ? '<p class="ss-hint">' + esc(d.tip) + '</p>' : '') + '</div>';
     } else e1sec = '<div class="ss-sec"><div class="ss-h"><span class="ss-t">估算 1RM</span></div><p class="ss-empty">' + esc(d.tip) + '</p></div>';
     var volsec = d.bw ? '' : '<div class="ss-sec"><div class="ss-h"><span class="ss-t">每次容量</span>' + (d.bestVolume ? '<span class="ex-src">最高 ' + d.bestVolume.v.toLocaleString('zh-CN') + ' kg</span>' : '') + '</div><canvas id="c_ex_v" class="cv"></canvas>' + (d.tiers.length > 1 ? '<div class="legend">' + d.tiers.map(function (t) { return '<div class="lg"><div class="sw" style="background:' + (TIER_HEX[t] || '#FF6B1A') + '"></div>' + esc((d.tierLabel && d.tierLabel[t]) || t) + '</div>'; }).join('') + '</div>' : '') + '</div>';
-    var rows = d.recent.map(function (p) {
+    var rows = d.n ? d.recent.map(function (p) {
       var main = d.bw ? (p.last !== null ? '末组 ' + p.last + ' 次' : '共 ' + p.reps + ' 次') : fmtKg(p.weight) + ' kg × ' + p.reps + ' 次';
       return '<div class="ex-row"><span class="ex-d num">' + p.md + '</span><span class="ex-m"><b>' + esc(main) + '</b><i>' + esc(p.day + ' · ' + p.stage + (p.volume ? ' · ' + Math.round(p.volume).toLocaleString('zh-CN') + ' kg' : '')) + '</i></span><span class="ex-e">' + (p.e1rm ? '<b class="num">' + fmtKg(p.e1rm) + '</b><i>1RM</i>' : '<i>—</i>') + '</span><span class="jtag" style="color:' + (GZ.JUDGE_COLORS ? GZ.JUDGE_COLORS[p.judgment] || '#8E8E93' : '#8E8E93') + '">' + esc(p.judgment) + '</span></div>';
-    }).join('');
+    }).join('') : '';
+    var hist = d.n
+      ? '<div class="ss-sec"><div class="ss-h"><span class="ss-t">最近记录</span><span class="ex-src">共 ' + d.n + ' 次</span></div><div class="ex-rows">' + rows + '</div></div>'
+      : '<div class="ss-sec"><div class="ss-h"><span class="ss-t">全部记录</span><span class="ex-src">共 0 次</span></div><p class="ss-empty">还没有训练记录。完成第一次训练后，这里会列出全部记录。</p></div>';
     return '<div class="mask share-mask" data-act="exclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title ex-title">' + esc(d.name) + '</span><button class="share-close" data-act="exclose" aria-label="关闭动作详情">×</button></div>' +
-      '<p class="ex-sub">' + d.tiers.map(function (t) { return tier(t, (d.tierLabel && d.tierLabel[t]) || t); }).join(' ') + '<span>' + esc(d.equip) + ' · ' + esc(d.days.join(' / ')) + ' · ' + d.n + ' 次记录</span></p></div>' +
+      '<p class="ex-sub">' + (d.tiers || []).map(function (t) { return tier(t, (d.tierLabel && d.tierLabel[t]) || t); }).join(' ') + '<span>' + esc(d.equip) + ' · ' + esc((d.days || []).join(' / ')) + ' · ' + d.n + ' 次记录</span></p></div>' +
       '<div class="ss-body">' + kpis +
       '<div class="ss-sec"><div class="ss-h"><span class="ss-t">' + perfLabel + '</span></div><canvas id="c_ex_w" class="cv"></canvas></div>' +
-      e1sec + volsec +
-      '<div class="ss-sec"><div class="ss-h"><span class="ss-t">最近记录</span><span class="ex-src">共 ' + d.n + ' 次</span></div><div class="ex-rows">' + rows + '</div></div>' +
+      e1sec + volsec + hist +
       '<details class="quote-source ex-method"><summary>估算方法</summary><p>1RM 用 Epley 公式估算：重量 × (1 + 次数 ÷ 30)。T1 取末组 AMRAP；T2 取实际完成次数 ÷ 组数；T3 取末组次数，超过 ' + Insight.REP_CAP + ' 次按 ' + Insight.REP_CAP + ' 次计（高次数会让公式偏高，所以偏保守）。自重动作不估算。</p><p>估算值只用于看趋势，不是真实 1RM，也不会改变训练计划里的重量。</p></details>' +
       '</div></div></div>';
   }

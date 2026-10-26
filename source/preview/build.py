@@ -110,12 +110,12 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .app .pg-train .ex-row.g { margin: 0; border-radius: 0; background: transparent; padding: 12px 16px; min-height: 48px; }
 .app .pg-train .ex-row.g + .ex-row.g { border-top: 0.5px solid var(--sep); }
 .app .pg-train .ex-row.g .exr-n { font-size: 15px; font-weight: 400; }
-.app .pg-stats .empty-chart { margin: 12px 0 4px; padding: 22px 16px; border-radius: 14px; background: var(--fill2); text-align: center; }
-.app .pg-stats .ec-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
-.app .pg-stats .ec-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--label3); }
-.app .pg-stats .ec-dots i.on { background: var(--accent); }
-.app .pg-stats .ec-t { font-size: 15px; font-weight: 600; color: var(--label); }
-.app .pg-stats .ec-s { font-size: 13px; color: var(--label2); margin-top: 4px; line-height: 1.5; }
+.app .empty-chart { margin: 12px 0 4px; padding: 22px 16px; border-radius: 14px; background: var(--fill2); text-align: center; }
+.app .ec-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+.app .ec-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--label3); }
+.app .ec-dots i.on { background: var(--accent); }
+.app .ec-t { font-size: 15px; font-weight: 600; color: var(--label); }
+.app .ec-s { font-size: 13px; color: var(--label2); margin-top: 4px; line-height: 1.5; }
 .app .pg-stats .kv-na { display: block; font-size: 22px; font-weight: 600; color: var(--label3); line-height: 1.3; }
 .app .pg-review .lt-head, .app .pg-review .lt-row { display: flex; align-items: center; gap: 12px; }
 .app .pg-review .lt-head { font-size: 13px; color: var(--label2); padding: 2px 0 8px; border-bottom: 0.5px solid var(--sep); }
