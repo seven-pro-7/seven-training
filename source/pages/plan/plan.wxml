@@ -44,29 +44,6 @@
     </view>
   </view>
 
-  <!-- 本轮动作编排 -->
-  <view class="card rot-card" wx:if="{{vm.rotation}}">
-    <view class="card-title">
-      <text class="t">{{vm.cycleText}}动作编排</text>
-      <text class="s">{{!vm.rotation.enabled ? '自动轮换已关闭' : vm.rotation.cycle === 1 ? '起始动作' : '换了 ' + vm.rotation.changed + ' / ' + vm.rotation.total + ' 个'}}</text>
-    </view>
-    <view class="rot-tip" wx:if="{{vm.progression === 'gzclp'}}">T1 四大项固定；T2/T3 每轮在同一动作模式内换一次，一轮 {{vm.weeksPerCycle}} 周内保持不变{{vm.rotation.isFuture ? '。这一轮还没开始，以下为预排' : ''}}</view>
-    <view class="rot-day" wx:for="{{vm.rotation.days}}" wx:key="id" wx:for-item="d">
-      <view class="rot-dh"><text class="num rot-did">{{d.id}}</text><text class="rot-dn">{{d.name}}</text></view>
-      <view class="rot-row" wx:for="{{d.slots}}" wx:key="id" wx:for-item="r">
-        <text class="tier t-{{r.tier}}">{{r.badge || r.tier}}</text>
-        <view class="rot-main">
-          <view class="rot-n">{{r.name}}<text class="equip-tag eq-{{r.equip}}">{{r.equip}}</text><text class="rot-new" wx:if="{{r.isNew}}">新</text><text class="rot-lock" wx:if="{{r.locked}}">锁定</text></view>
-          <view class="rot-s">{{r.role}}{{r.isNew ? ' · 上一轮 ' + r.prev : ''}}{{r.startW ? ' · 起始 ' + r.startW : ''}}</view>
-        </view>
-      </view>
-    </view>
-    <view class="rot-why-btn" bindtap="toggleWhy">{{showWhy ? '收起编排依据' : '查看编排依据'}}<text class="chev">{{showWhy ? '⌃' : '›'}}</text></view>
-    <view class="rot-why" wx:if="{{showWhy}}">
-      <view class="rw" wx:for="{{vm.rotation.principles}}" wx:key="t"><text class="rw-t">{{index + 1}}. {{item.t}}</text><text class="rw-d">{{item.d}}</text></view>
-    </view>
-  </view>
-
   <!-- 当前状态 -->
   <view class="card">
     <view class="card-title"><text class="t">当前状态</text><text class="s">自动更新</text></view>

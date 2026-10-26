@@ -448,6 +448,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-plan .gcell.next .cw { color: var(--accent); font-weight: 700; }
 .pg-plan .cdot { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; }
 .pg-plan .ov-row { position: relative; display: flex; align-items: center; padding: 10px 0; }
+.pg-plan .ov-row.tap { cursor: pointer; }
+.pg-plan .ov-row.tap:active { opacity: 0.72; }
 .pg-plan .ov-row + .ov-row::before { content: ''; position: absolute; top: 0; left: 35px; right: 0; height: 0.5px; background: var(--sep); }
 .pg-plan .ov-main { flex: 1; margin-left: 9px; display: flex; flex-direction: column; }
 .pg-plan .ovn { font-size: 15px; font-weight: 500; }
@@ -1013,7 +1015,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   <h1>训练<span>手记</span></h1>
   <div>8 周 · A1 → B1 → A2 → B2 循环</div>
   <ul>
-    <li><b>训练</b>：今天这一练；当前计划的周期与编排从「计划总览」进入</li>
+    <li><b>训练</b>：今天这一练；当前计划的周期与动作状态从「计划总览」进入</li>
     <li><b>数据</b>：记录、趋势与小结，看重量、容量和这一路的进步</li>
     <li><b>工具</b>：计划库在这里；1RM、BMI 等计算器以后也放这里</li>
     <li><b>我的</b>：个人资料、云同步、备份和进阶参数</li>
@@ -5777,7 +5779,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var rd = vm.round;
       h += '<div class="wk-prog"><div class="wk-bar"><div class="wk-in" style="width:' + rd.pct + '%"></div></div><span class="wk-t">本周 <span class="num strong">' + rd.done + '/' + rd.total + '</span>' +
         (rd.left ? ' · 完成 ' + rd.leftText + ' 后进入' + rd.nextWeekText : '') + '</span></div>';
-      h += '<div class="card tap lib-entry" data-act="overview"><span class="flex1">计划总览</span><span class="cap" style="margin-right:8px">周期与动作编排</span><span class="chev">›</span></div>';
+      h += '<div class="card tap lib-entry" data-act="overview"><span class="flex1">计划总览</span><span class="cap" style="margin-right:8px">周期与动作状态</span><span class="chev">›</span></div>';
     }
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
@@ -5879,7 +5881,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (t.result) {
       var r = t.result;
       h += '<div class="mask" data-act="closeResult"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + r.day + ' ' + r.dayName + ' · ' + r.weekText + '</span><div class="sheet-title">' + (r.cycleDone ? '第 ' + r.cycle + ' 轮完成' : r.weekDone ? '本周完成' : '训练完成') + '</div>' +
-        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">' + ((vm.progression || 'gzclp') === 'gzclp' ? '已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在训练页的「计划总览」查看本轮编排与依据' : '已按计划更换变式。可在训练页的「计划总览」查看本轮编排') + '</div>' : '')
+        (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">' + ((vm.progression || 'gzclp') === 'gzclp' ? '已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。当前动作在「计划总览」的当前状态里。' : '已按计划更换变式。当前动作在「计划总览」的当前状态里。') + '</div>' : '')
           : r.weekDone ? '<div class="wk-done">本周训练日全部完成，已进入' + r.nextWeekText + (r.nextDeload ? '（减载周）' : '') + '</div>'
           : (r.leftText ? '<div class="wk-left">本周还剩 ' + r.leftText + '</div>' : '')) +
         '<div class="res-kpi"><div class="rk"><span class="num rk-v">' + r.volume + '</span><span class="rk-l">容量 kg</span></div><div class="rk"><span class="num rk-v accent">' + r.adds + '</span><span class="rk-l">项加重</span></div></div>' +
@@ -6002,7 +6004,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'rest': beginRest(Number(ds.rest), ds.name); return false;
       case 'cancelEdit': t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; return true;
       case 'submit': submit(); return false;
-      case 'overview': S.tab = 'plan'; S.plan.view = ''; S.plan.from = 'train'; S.plan.slot = null; S.plan.detail = null; render(); return false;
+      case 'overview': S.tab = 'plan'; S.plan.view = ''; S.plan.from = 'train'; S.plan.slot = null; S.plan.detail = null; S.stats.ex = null; render(); return false;
       case 'opendetail':
         var curOpen = GZ.activeProgram(load());
         S.tab = 'tools'; S.plan.view = 'browse'; S.plan.tpl = curOpen ? GZ.templateKey(curOpen.template) : '';
@@ -6121,7 +6123,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (p.view === 'lib') return renderPlanLib();
     if (p.view === 'browse') return renderPlanBrowse();
     var db = load(), cur = GZ.activeProgram(db), vm = GZ.buildPlan(db, { cycle: p.cycle }), h = '';
-    var live = !cur || cur.status === 'active', holding = cur && cur.status === 'paused', closed = cur && cur.status === 'ended';
+    var live = !cur || cur.status === 'active', holding = cur && cur.status === 'paused';
     h += '<div class="lib-back" data-act="overviewback">‹ 训练</div><div class="pg-title">计划总览</div>';
     h += planStatusCard(cur);
     if (live) {
@@ -6132,7 +6134,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     } else {
       h += '<div class="card hold-card"><div class="hold-t">' + (holding ? '已暂停' : '已结束') + '</div><div class="hold-s">' + (holding ? '训练进度停在这里。要继续或结束，请到工具里的计划库打开这套计划。' : '这套计划已结束，下面是当时的记录。') + '</div></div>';
     }
-    var wide = vm.days.length > 4, gz = (db.params.progression || 'gzclp') === 'gzclp';
+    var wide = vm.days.length > 4;
     h += '<div class="card"><div class="card-title"><div class="cyc-nav"><span class="cyc-btn ' + (vm.canPrev ? '' : 'off') + '" data-act="cycle" data-d="-1">‹</span>' +
       '<span class="t cyc-label">' + vm.cycleText + (vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : '') + '</span>' +
       '<span class="cyc-btn ' + (vm.canNext ? '' : 'off') + '" data-act="cycle" data-d="1">›</span></div><span class="s">' + (db.params.progression === 'w531' ? '顶组 kg' : (vm.mainLabel || '主项') + ' 重量 kg') + '</span></div><div class="grid-head' + (wide ? ' wide' : '') + '"><span class="gw"></span>' +
@@ -6145,31 +6147,15 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         }).join('') + '</div>';
     });
     h += '<div class="legend"><div class="lg"><div class="sw" style="background:#FF6B1A"></div>已完成 · 圆点为判定</div><div class="lg"><div class="sw" style="box-shadow:inset 0 0 0 2px #FF6B1A"></div>下一次</div><div class="lg"><div class="sw" style="background:#E5E5EA"></div>每次加重的推演</div></div></div>';
-    var rt = vm.rotation;
-    if (rt) {
-      h += '<div class="card rot-card"><div class="card-title"><span class="t">' + vm.cycleText + '动作编排</span><span class="s">' +
-        (gz ? (!rt.enabled ? '自动轮换已关闭' : rt.cycle === 1 ? '起始动作' : '换了 ' + rt.changed + ' / ' + rt.total + ' 个') : '点动作可微调') + '</span></div>' +
-        '<div class="rot-tip">' + (gz ? (rt.isCur ? '点任意一行可调整重量或更换动作，从该训练日的下一次训练起生效。' : 'T1 四大项固定；T2/T3 每轮在同一动作模式内换一次，一轮 ' + vm.weeksPerCycle + ' 周内保持不变。') : '点任意一行可调整重量或更换动作，从该训练日的下一次训练起生效。') + (rt.isFuture ? '这一轮还没开始，以下为预排。' : '') + '</div>' +
-        rt.days.map(function (d) {
-          return '<div class="rot-day"><div class="rot-dh"><span class="num rot-did">' + d.id + '</span><span class="rot-dn">' + esc(d.name) + '</span></div>' +
-            d.slots.map(function (r) {
-              return '<div class="rot-row' + (rt.isCur && !closed ? ' tap' : '') + '"' + (rt.isCur && !closed ? ' data-act="slotsheet" data-day="' + d.id + '" data-slot="' + r.id + '"' : '') + '>' + tier(r.tier, r.badge) +
-                '<div class="rot-main"><div class="rot-n">' + esc(r.name) + equipTag(r.equip) +
-                (r.isNew ? '<span class="rot-new">新</span>' : '') + (r.fixed ? '<span class="rot-lock">固定</span>' : r.locked ? '<span class="rot-lock">锁定</span>' : '') + '</div>' +
-                '<div class="rot-s">' + (rt.isCur && r.cur ? '<span class="num rot-cw">' + esc(r.cur) + '</span>' : '') + esc(r.role) + (r.isNew ? ' · 上一轮 ' + esc(r.prev) : '') + (r.startW ? ' · 起始 ' + esc(r.startW) : '') + '</div></div>' +
-                (rt.isCur && !closed ? '<span class="rot-chev">›</span>' : '') + '</div>';
-            }).join('') + '</div>';
-        }).join('') +
-        (gz ? '<div class="rot-why-btn" data-act="why">' + (p.why ? '收起编排依据' : '查看编排依据') + '<span class="chev">' + (p.why ? '⌃' : '›') + '</span></div>' +
-        (p.why ? '<div class="rot-why">' + rt.principles.map(function (x, i) { return '<div class="rw"><span class="rw-t">' + (i + 1) + '. ' + esc(x.t) + '</span><span class="rw-d">' + esc(x.d) + '</span></div>'; }).join('') + '</div>' : '') : '') +
-        '</div>';
-    }
     var ov = vm.overview[p.ov];
-    h += '<div class="card"><div class="card-title"><span class="t">当前状态</span><span class="s">自动更新</span></div>' +
+    h += '<div class="card"><div class="card-title"><span class="t">当前状态</span><span class="s">点动作看趋势</span></div>' +
       seg(vm.overview.map(function (o) { return { html: '<span class="num">' + o.day + '</span>' }; }), p.ov, 'ov') +
       ov.slots.map(function (s) {
-        return '<div class="ov-row">' + tier(s.tier, s.badge) + '<div class="ov-main"><span class="ovn">' + s.name + '</span><span class="ov-sub">' + s.stage + (s.fail > 0 ? '<span class="amber"> · 预警 ' + s.fail + '</span>' : '') + '</span></div>' +
-          '<div class="ov-right"><span class="num ov-w">' + s.weight + (s.isCardio ? '' : '<span class="ov-u"> kg</span>') + '</span><span class="ov-last"><span style="color:' + s.lastColor + '">' + s.last + '</span>' + (s.gain ? '<span class="green"> ' + s.gain + '</span>' : '') + '</span></div></div>';
+        return '<div class="ov-row tap" data-act="exopen" data-name="' + esc(s.name) + '" role="button" aria-label="查看' + esc(s.name) + '的数据趋势">' +
+          tier(s.tier, s.badge) +
+          '<div class="ov-main"><span class="ovn">' + esc(s.name) + '</span><span class="ov-sub">' + s.stage + (s.fail > 0 ? '<span class="amber"> · 预警 ' + s.fail + '</span>' : '') + '</span></div>' +
+          '<div class="ov-right"><span class="num ov-w">' + s.weight + (s.isCardio ? '' : '<span class="ov-u"> kg</span>') + '</span><span class="ov-last"><span style="color:' + s.lastColor + '">' + s.last + '</span>' + (s.gain ? '<span class="green"> ' + s.gain + '</span>' : '') + '</span></div>' +
+          '<span class="chev">›</span></div>';
       }).join('') + '</div>';
     if (p.detail) {
       var d = p.detail;
@@ -6178,7 +6164,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         (d.note ? '<div class="note-box">' + esc(d.note) + '</div>' : '') +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="edit" data-id="' + d.id + '">修改这次</div><div class="btn-ghost solid" data-act="closeDetail">完成</div></div></div></div>';
     }
-    if (p.slot) h += renderSlotSheet();
+    if (S.stats.ex) h += renderExerciseSheet();
     return h;
   }
   // ============ 计划页：单个位置的动作面板（调整重量 / 更换动作 / 锁定轮换） ============
@@ -6390,7 +6376,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       p.cycle = next; return true;
     }
     if (act === 'go') { if (!goTrain(ds.day)) return false; return true; }
-    if (act === 'overviewback') { S.tab = 'train'; p.from = ''; p.slot = null; p.detail = null; render(); return false; }
+    if (act === 'exopen') { S.stats.ex = ds.name; return true; }
+    if (act === 'exclose') { S.stats.ex = null; return true; }
+    if (act === 'overviewback') { S.tab = 'train'; p.from = ''; p.slot = null; p.detail = null; S.stats.ex = null; render(); return false; }
     if (act === 'openlib') { p.view = 'lib'; return true; }
     if (act === 'libback') { p.view = ''; if (S.tab === 'plan') { S.tab = 'tools'; } return true; }
     if (act === 'backlib') { p.view = 'lib'; return true; }
@@ -6565,9 +6553,43 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if ((c = ctxOf('c_ex_v'))) Chart.bars(c.ctx, c.w, c.h, { labels: se.labels, stacks: d.tiers.map(function (t) { return { name: t, color: col(t), data: se.byTier[t].volume }; }), emptyText: '暂无容量数据' });
   }
   function fmtKg(v) { return GZ.fmtW(Math.round(v * 10) / 10); }
+  function exercisePlanMeta(name) {
+    var db = viewDb(), lib = GZ.libFindIn(db, name), found = null, equip = lib && lib.equip ? lib.equip : '';
+    var vm = GZ.buildPlan(db, { cycle: S.plan.cycle || 0 });
+    (vm.overview || []).forEach(function (o) {
+      (o.slots || []).forEach(function (s) {
+        if (!found && s.name === name) found = { day: o.day, dayName: o.name, slot: s };
+      });
+    });
+    if (!equip) {
+      (db.days || []).forEach(function (day) {
+        (day.slots || []).forEach(function (s) {
+          if (!equip && s.name === name && s.equip) equip = s.equip;
+        });
+      });
+    }
+    return { found: found, equip: equip };
+  }
+  function renderExerciseEmpty(name) {
+    var meta = exercisePlanMeta(name), f = meta.found, s = f && f.slot, bits = [];
+    if (meta.equip) bits.push(meta.equip);
+    if (f) bits.push(f.day + (f.dayName ? ' ' + f.dayName : ''));
+    if (s) {
+      if (s.isCardio) { if (s.weight || s.stage) bits.push(String(s.weight || s.stage)); }
+      else {
+        if (s.weight !== '' && s.weight !== null && s.weight !== undefined) bits.push(s.weight + ' kg');
+        if (s.stage) bits.push(s.stage);
+      }
+    }
+    return '<div class="mask share-mask" data-act="exclose"><div class="sheet share-sheet" data-stop="1">' +
+      '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title ex-title">' + esc(name) + '</span><button class="share-close" data-act="exclose" aria-label="关闭动作详情">×</button></div>' +
+      '<p class="ex-sub">' + (s ? tier(s.tier, s.badge) : '') + (bits.length ? '<span>' + esc(bits.join(' · ')) + '</span>' : '') + '</p></div>' +
+      '<div class="ss-body"><div class="ss-sec"><p class="ss-empty">还没有「' + esc(name) + '」的训练记录。完成第一次训练后，这里会自动生成重量走势、每次容量与估算 1RM 趋势。</p></div></div></div></div>';
+  }
   function renderExerciseSheet() {
-    var d = Insight.detail(viewDb(), S.stats.ex);
-    if (!d) { S.stats.ex = null; return ''; }
+    var name = S.stats.ex;
+    var d = Insight.detail(viewDb(), name);
+    if (!d) return renderExerciseEmpty(name);
     var unit = d.bw ? '次' : d.unit.replace(' 单只', '').replace(' 外加', '');
     var kp = function (l, v, u, sub) { return '<div class="ex-k"><span class="ex-kl">' + l + '</span><span class="ex-kv"><b class="num">' + v + '</b>' + (u ? '<i>' + u + '</i>' : '') + '</span><span class="ex-ks">' + sub + '</span></div>'; };
     var dt = function (x) { return x.slice(5).replace('-', '月') + '日'; };
@@ -7088,9 +7110,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     }
     h += '\u0000act\u0000';
     h += '<div class="sec-h">动作</div><div class="list"><div class="cell tap" data-act="openlib"><span class="flex1">动作库</span><span class="val">' + GZ.libAll(db).length + ' 个' +
-      (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div>' +
-      '<div class="cell tap" data-act="goplan"><span class="flex1">调整动作与重量</span><span class="val">计划总览</span><span class="chev">›</span></div></div>' +
-      '<div class="sec-f">每个训练日练什么、每个动作多重，都在训练页的「计划总览 → 动作编排」里调整，点任意一行即可改重量或换动作，与该训练日的下一次训练一致。</div>';
+      (db.customLib.length ? ' · 自定义 ' + db.customLib.length : '') + '</span><span class="chev">›</span></div></div>';
     h += '\u0000sync\u0000';
     var sc = Sync.cfg();
     h += '<div class="sec-h" id="syncSec">云同步</div>';
@@ -7207,7 +7227,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         if (err) { toast(err); return false; }
         save(dba); st.pattern = GZ.patternOfPart(st.add.part).id; st.part = st.add.part; st.equip = ''; st.q = ''; st.add = null; render(); toast('已添加'); return false;
       case 'advtoggle': st.adv = !st.adv; return true;
-      case 'goplan': S.tab = 'plan'; S.plan.view = ''; S.plan.from = 'train'; render(); return false;
       case 'export': exportFile(); return false;
       case 'syncconnect':
         if (st.connecting) return false;
@@ -7271,6 +7290,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var hl = S.tab === 'plan' ? 'train' : S.tab;
     document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === hl); });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
+    else if (S.stats.ex) requestAnimationFrame(drawExercise);
     if (S.tab === 'stats' && S.review.share) paintSharePreview();
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
@@ -7389,7 +7409,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     });
     document.addEventListener('visibilitychange', function () { var c = Sync.cfg(); if (document.visibilityState === 'visible' && Sync.on() && (!c.lastAt || Date.now() - c.lastAt > 30000)) Sync.run(); });
     window.addEventListener('online', function () { if (Sync.on()) Sync.run(); });
-    var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); }, 120); });
+    var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); else if (S.stats.ex) drawExercise(); }, 120); });
     bindSwipeBack();
     render();
     if (Sync.on()) Sync.run();

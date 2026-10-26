@@ -243,7 +243,7 @@
       <text class="sheet-cap">{{result.day}} {{result.dayName}} · {{result.weekText}}</text>
       <view class="sheet-title">{{result.cycleDone ? '第 ' + result.cycle + ' 轮完成' : result.weekDone ? '本周完成' : '训练完成'}}</view>
       <view class="wk-done" wx:if="{{result.cycleDone}}">第 {{result.cycle}} 轮 {{result.weeksPerCycle}} 周全部完成，进入第 {{result.cycle + 1}} 轮{{result.nextDeload ? '（含减载周）' : ''}}</view>
-      <view class="wk-left" wx:if="{{result.cycleDone && result.rotated}}">{{vm.progression === 'gzclp' ? '已按轮换计划更换 ' + result.rotated + ' 个 T2/T3 动作，T1 四大项不变。可在「计划」查看本轮编排与依据' : '已按计划更换变式。可在「计划」查看本轮编排'}}</view>
+      <view class="wk-left" wx:if="{{result.cycleDone && result.rotated}}">{{vm.progression === 'gzclp' ? '已按轮换计划更换 ' + result.rotated + ' 个 T2/T3 动作，T1 四大项不变。当前动作在「计划」的当前状态里。' : '已按计划更换变式。当前动作在「计划」的当前状态里。'}}</view>
       <view class="wk-done" wx:elif="{{result.weekDone}}">A1 · B1 · A2 · B2 全部完成，已进入{{result.nextWeekText}}{{result.nextDeload ? '（减载周）' : ''}}</view>
       <view class="wk-left" wx:elif="{{result.leftText}}">本周还剩 {{result.leftText}}</view>
       <view class="res-kpi">
