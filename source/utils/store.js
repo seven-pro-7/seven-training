@@ -11,7 +11,10 @@ function load() {
     if (db) save(db);
   }
   if (!db) { db = GZ.defaults(true); save(db); }
-  return GZ.normalize(db);
+  var prevDays = db.daysVersion;
+  db = GZ.normalize(db);
+  if (prevDays !== db.daysVersion) save(db);
+  return db;
 }
 function save(db) { wx.setStorageSync(KEY, db); }
 function reset(withSeed) { const db = GZ.defaults(withSeed); save(db); return db; }

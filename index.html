@@ -1051,7 +1051,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
   // ---------- 基础常量 ----------
   var VERSION = 1;
-  var DAYS_VERSION = 5; // 动作模板版本。v5：A2 的第二个 T2 改为水平拉（坐姿划船），四天都有背部拉动；深蹲与髋铰链的 T2 各留一个变式
+  var DAYS_VERSION = 6; // 动作模板版本。v6：四天统一为 T1 → T2 同模式变式 → T2 背部复合拉 → T3 → T3。B2 的罗马尼亚硬拉与潘德雷划船对调
   var LIFTS = { squat: '杠铃深蹲', bench: '平板卧推', deadlift: '传统硬拉', ohp: '站姿实力推' };
   var LIFT_ORDER = ['squat', 'bench', 'deadlift', 'ohp'];
   var STEP_KEYS = [
@@ -1123,8 +1123,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     ['T2', '箱式深蹲', '下肢·蹲', '杠铃', '坐箱停顿，强化底部发力；约为深蹲的 90%', 'squat', 0.9, 2.5],
     ['T2', '泽奇深蹲', '下肢·蹲', '杠铃', '肘托杠深蹲，躯干承重更强；约为深蹲的 80%', 'squat', 0.8, 2.5],
     ['T2', '罗马尼亚硬拉', '下肢·髋铰链', '杠铃', '腘绳肌主导；约为硬拉的 75%', 'deadlift', 0.75, 2.5],
+    ['T2', '直腿硬拉', '下肢·髋铰链', '杠铃', '膝关节微屈的髋铰链变式；约为硬拉的 70%', 'deadlift', 0.7, 2.5],
     ['T2', '赤字硬拉', '下肢·髋铰链', '杠铃', '站垫高平台拉，强化起拉段；约为硬拉的 90%', 'deadlift', 0.9, 2.5],
+    ['T2', '架上拉', '下肢·髋铰链', '杠铃', '膝上起拉，强化锁定段；约为硬拉的 105%', 'deadlift', 1.05, 2.5],
     ['T2', '杠铃早安式', '下肢·髋铰链', '杠铃', '髋铰链，腘绳肌与竖脊肌；约为硬拉的 45%', 'deadlift', 0.45, 2.5],
+    ['T2', '早安式体前屈', '下肢·髋铰链', '杠铃', '杠铃早安，腘绳肌与竖脊肌；约为硬拉的 45%', 'deadlift', 0.45, 2.5],
     ['T2', '臀推', '下肢·髋伸', '杠铃', '臀大肌主导；可达硬拉的 100%', 'deadlift', 1, 2.5],
     ['T2', '暂停卧推', '上肢·水平推', '杠铃', '触胸停顿1秒，消除反弹借力；约为卧推的 92%', 'bench', 0.92, 2.5],
     ['T2', '窄距卧推', '上肢·水平推', '杠铃', '三头侧重；约为卧推的 85%', 'bench', 0.85, 2.5],
@@ -1133,6 +1136,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     ['T2', '潘德雷划船', '上肢·水平拉', '杠铃', '躯干平行地面，约为卧推的 90%', 'bench', 0.9, 2.5],
     ['T2', '杠铃划船', '上肢·水平拉', '杠铃', '俯身杠铃划船，约为卧推的 95%', 'bench', 0.95, 2.5],
     ['T2', 'T杠划船', '上肢·水平拉', '杠铃', '背部厚度，约为卧推的 80%', 'bench', 0.8, 2.5],
+    ['T2', '胸部支撑划船', '上肢·水平拉', '器械', '胸靠消除腰部借力的水平拉；配重约为卧推的 70%', 'bench', 0.7, 2.5],
     ['T2', '坐姿哑铃推肩', '上肢·垂直推', '哑铃', '肩部容量；单只≈卧推的 32%', 'bench', 0.32, 2],
     ['T2', '阿诺德推举', '上肢·垂直推', '哑铃', '旋转推举，三角肌前中束；单只≈卧推的 26%', 'bench', 0.26, 2],
     ['T2', '哑铃卧推', '上肢·水平推', '哑铃', '活动范围大；单只≈卧推的 38%', 'bench', 0.38, 2],
@@ -1285,7 +1289,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   /**
    * GZCLP 四天（每天 1×T1 + 2×T2 + 2×T3）
    *  - T1 主项：A1 深蹲 / B1 实力推 / A2 卧推 / B2 硬拉
-   *  - T2 变式：蹲、推、髋铰链各留一个变式；四天各有一条背部复合拉（下拉、引体、坐姿划船、杠铃划船）
+   *  - 四天槽位顺序一致：T1 主项 → T2 同模式变式 → T2 背部复合拉 → T3 → T3
    *  - T3 孤立：单关节，弯举、侧平举、面拉、腿弯举、腿屈伸
    * 每个 T2/T3 在这一轮里只出现一次。已经练过的位置从下一次训练起换成新动作，已有记录仍按当时的动作回放。
    */
@@ -1314,8 +1318,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       ] },
       { id: 'B2', name: '髋铰链主导', slots: [
         slot('B2_1', 'T1', '传统硬拉', pct('deadlift', 0.85), 't1l', false, 'deadlift'),
-        slot('B2_2', 'T2', '潘德雷划船', pct('bench', 0.55), 't2u'),
-        slot('B2_3', 'T2', '罗马尼亚硬拉', pct('deadlift', 0.6), 't2l'),
+        slot('B2_2', 'T2', '罗马尼亚硬拉', pct('deadlift', 0.6), 't2l'),
+        slot('B2_3', 'T2', '潘德雷划船', pct('deadlift', 0.55), 't2u'),
         slot('B2_4', 'T3', '坐姿腿弯举', pct('squat', 0.3), 't3l', false),
         slot('B2_5', 'T3', '哑铃弯举', fixed(12), 't3u', true)
       ] }
@@ -1434,10 +1438,27 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return db;
   }
 
-  /** 升级模板前，记下每个动作下一次该用的重量，换槽位时带着走。 */
+  // 模板迁移写过的动作。有 tier/step/tpl 的 changes 一定是模板生成的；没有这些字段、但名字落在这张表里的，也是旧模板留下的，不是用户手动更换。
+  var TPL_EX = {
+    '前蹲': 1, '上斜卧推': 1, '高位下拉': 1, '俯卧腿弯举': 1, '坐姿哑铃推肩': 1, '罗马尼亚硬拉': 1,
+    '引体向上': 1, '哑铃侧平举': 1, '窄距卧推': 1, '杠铃弯举': 1, '绳索三头屈伸': 1,
+    '潘德雷划船': 1, '坐姿划船': 1, '面拉': 1, '哑铃弯举': 1, '箱式深蹲': 1, '坐姿腿屈伸': 1, '坐姿腿弯举': 1
+  };
+  function changeIsTemplate(c) {
+    if (!c || c.auto) return false;
+    if (c.tpl || c.tier || c.step) return true;
+    return !!TPL_EX[c.name];
+  }
+  function changeIsManual(c) { return !!(c && !c.auto && !changeIsTemplate(c)); }
+  function carriedNum(weightMap, name) {
+    if (!weightMap || weightMap[name] === undefined || weightMap[name] === null || weightMap[name] === '') return null;
+    var n = Number(weightMap[name]);
+    return isNaN(n) ? null : n;
+  }
+  /** 升级模板前，记下每个动作下一次该用的重量，换槽位时带着走。先用上次实际重量兜底，再用当前槽位的下次重量覆盖。 */
   function nextExerciseWeights(db) {
-    var map = {};
     var rp = replay(db);
+    var map = lastWeights(rp);
     db.days.forEach(function (d) {
       var wk = (rp.counts[d.id] || 0) + 1;
       d.slots.forEach(function (s) {
@@ -1458,25 +1479,43 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var nd = fresh.filter(function (x) { return x.id === d.id; })[0];
       if (!nd) return;
       if (nd.name) d.name = nd.name;
+      var done = counts[d.id] || 0;
       d.slots.forEach(function (s) {
-        if (s.changes && s.changes.length) return;
         var ns = nd.slots.filter(function (x) { return x.id === s.id; })[0];
         if (!ns) return;
-        if (ns.name === s.name) {
-          s.tier = ns.tier; s.step = ns.step; s.roundProg = ns.roundProg;
+        var nextWeek = done + 1;
+        // 用户已经为下一次训练手动换好的动作保留。模板自己写下的 changes 不挡这次升级。
+        if ((s.changes || []).some(function (c) { return changeIsManual(c) && c.fromWeek > done; })) return;
+        var curEf = effectiveSlot(db, s, nextWeek, null);
+        if (curEf.auto || (curEf.change && changeIsManual(curEf.change))) return;
+        var cur = curEf.slot;
+        var carried = carriedNum(weightMap, ns.name);
+        if (cur.name === ns.name && (cur.tier || s.tier) === ns.tier && (cur.step || s.step) === ns.step) {
+          s.roundProg = ns.roundProg;
+          s.lift = ns.lift;
+          if (!done) {
+            s.name = ns.name; s.equip = ns.equip; s.tier = ns.tier; s.step = ns.step;
+            s.init = clone(ns.init); s.roundProg = ns.roundProg; s.lift = ns.lift;
+            if (carried !== null) s.init = { type: 'fixed', value: carried };
+            delete s.changes;
+          }
           return;
         }
-        var done = counts[d.id] || 0;
         if (!done) {
+          var adjusts = s.adjusts;
           s.name = ns.name; s.equip = ns.equip; s.tier = ns.tier;
-          s.init = ns.init; s.step = ns.step; s.roundProg = ns.roundProg; s.lift = ns.lift;
-          if (weightMap && weightMap[ns.name] !== undefined && !isNaN(Number(weightMap[ns.name]))) s.init = { type: 'fixed', value: Number(weightMap[ns.name]) };
+          s.init = clone(ns.init); s.step = ns.step; s.roundProg = ns.roundProg; s.lift = ns.lift;
+          if (adjusts && adjusts.length) s.adjusts = adjusts;
+          delete s.changes;
+          if (carried !== null) s.init = { type: 'fixed', value: carried };
           return;
         }
-        s.tier = ns.tier; s.step = ns.step; s.roundProg = ns.roundProg;
-        var w = weightMap && weightMap[ns.name];
-        if (w === undefined || w === null || isNaN(Number(w))) w = initWeight(ns, db.params);
-        s.changes = [{ fromWeek: done + 1, name: ns.name, equip: ns.equip, weight: Number(w), tier: ns.tier, step: ns.step }];
+        // 已练过的周次继续用当时的动作名、层级和步幅回放，不改 s.name / s.tier / s.step。
+        s.roundProg = ns.roundProg;
+        var hist = (s.changes || []).filter(function (c) { return c.fromWeek <= done; });
+        var w = carried !== null ? carried : initWeight(ns, db.params);
+        hist.push({ fromWeek: nextWeek, name: ns.name, equip: ns.equip, weight: Number(w), tier: ns.tier, step: ns.step, tpl: true });
+        s.changes = hist;
       });
     });
   }
@@ -1525,6 +1564,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         p.snap.daysVersion = DAYS_VERSION;
       });
       db.daysVersion = DAYS_VERSION;
+      db.cfgAt = Math.max(db.cfgAt || 0, Date.now());
     }
     return db;
   }
@@ -2307,8 +2347,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     A2_3: { role: '水平拉', why: '卧推日补一条背部复合拉。器械和哑铃划船，与 B2 的杠铃划船错开', pool: ['坐姿划船', '单臂哑铃划船'] },
     B1_2: { role: '垂直推', why: '支援站姿实力推；哑铃与杠铃交替改善左右力量平衡', pool: ['坐姿哑铃推肩', '杠铃推举', '阿诺德推举'] },
     B1_3: { role: '垂直拉', why: '引体向上是复合动作，作为垂直拉的变式放在 T2', pool: ['引体向上', '反握引体向上', '负重引体向上'] },
-    B2_2: { role: '水平拉', why: '杠铃划船平衡卧推。和 A2 的器械划船分开，避免同一轮抢同一个动作', pool: ['潘德雷划船', '杠铃划船', '俯身划船', 'T杠划船'] },
-    B2_3: { role: '髋铰链', why: '硬拉的变式：腘绳肌、臀大肌、竖脊肌', pool: ['罗马尼亚硬拉', '赤字硬拉', '杠铃早安式', '臀推', '山羊挺身'] },
+    B2_2: { role: '髋铰链变式', why: '硬拉的变式：腘绳肌、臀大肌、竖脊肌', pool: ['罗马尼亚硬拉', '直腿硬拉', '早安式体前屈', '架上拉'] },
+    B2_3: { role: '水平拉·重拉', why: '杠铃划船平衡卧推。和 A2 的器械划船分开，避免同一轮抢同一个动作', pool: ['潘德雷划船', '杠铃划船', 'T杠划船', '胸部支撑划船'] },
     A1_4: { role: '股四头', why: '单关节伸膝。第一轮双侧，第二轮单侧，之后交替', pool: ['坐姿腿屈伸', '单腿腿屈伸'] },
     B1_4: { role: '后束 / 肩袖', why: '平衡大量推类动作，维护肩关节', pool: ['面拉', '反向飞鸟'] },
     A1_5: { role: '腘绳肌', why: '屈膝孤立；坐姿（拉长位）增肌更优（Maeo 2021）', pool: ['俯卧腿弯举', '坐姿腿弯举'] },
@@ -5401,7 +5441,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function watchLoad() { try { return JSON.parse(localStorage.getItem(WATCH_KEY)) || null; } catch (e) { return null; } }
   function watchSave(w) { if (w) localStorage.setItem(WATCH_KEY, JSON.stringify(w)); else localStorage.removeItem(WATCH_KEY); }
   function load() {
-    var db = rawLoad(); if (!db) { db = GZ.defaults(false); save(db, { fromSync: true }); }
+    var raw = rawLoad(), prevDays = raw ? raw.daysVersion : undefined;
+    var db = raw; if (!db) { db = GZ.defaults(false); save(db, { fromSync: true }); }
     db = GZ.normalize(db);
     var w = watchLoad();
     // 旧版把手表数据放在 params.watch：并入独立存储后从主数据里拿掉
@@ -5409,7 +5450,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       w = Badges.mergeWatch(w, { source: db.params.watch.source, workouts: db.params.watch.workouts || [], sleep: db.params.watch.sleep || {} });
       watchSave(w); delete db.params.watch;
       // 主数据里的旧副本必须落盘去掉，否则会被反复合并、甚至用旧值覆盖刚拉取的
-      var raw = rawLoad(); if (raw && raw.params) { delete raw.params.watch; localStorage.setItem(KEY, JSON.stringify(raw)); }
+      var stored = rawLoad(); if (stored && stored.params) { delete stored.params.watch; localStorage.setItem(KEY, JSON.stringify(stored)); }
+    }
+    if (raw && prevDays !== db.daysVersion) {
+      var snap = JSON.parse(JSON.stringify(db));
+      if (snap.params && snap.params.watch) delete snap.params.watch;
+      localStorage.setItem(KEY, JSON.stringify(snap));
     }
     if (w) db.params.watch = w;
     return db;
@@ -5478,16 +5524,20 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         });
         return read.then(function (g) {
           if (g.status !== 200 && g.status !== 404) throw g.status;
-          var remote = null, sha = null;
+          var remote = null, sha = null, rawRemoteObj = null, remoteVer = null;
           if (g.status === 200) {
             if (!g.legacyFile) sha = g.json.sha;
-            try { remote = GZ.normalize(JSON.parse(b64dec(g.json.content))); } catch (e) { throw 'bad'; }
+            try { rawRemoteObj = JSON.parse(b64dec(g.json.content)); } catch (e) { throw 'bad'; }
+            remoteVer = rawRemoteObj.daysVersion;
+            remote = GZ.normalize(rawRemoteObj);
             if (remote.params.watch) { var ow = remote.params.watch; delete remote.params.watch; try { watchSave(Badges.mergeWatch(watchLoad(), { source: ow.source, workouts: ow.workouts || [], sleep: ow.sleep || {} })); } catch (e) {} }
           }
-          var raw = rawLoad(), local = GZ.normalize(raw || GZ.defaults(false)), merged = GZ.mergeDb(local, remote);
+          var raw = rawLoad(), localVer = raw && raw.daysVersion, local = GZ.normalize(raw || GZ.defaults(false)), merged = GZ.mergeDb(local, remote);
+          var remoteChanged = g.status === 200 && remoteVer !== remote.daysVersion;
+          var localChanged = !!(raw && localVer !== local.daysVersion);
           var pulled = !GZ.sameDb(merged, local);
-          if (pulled || !raw) save(merged, { fromSync: true });
-          if (remote && GZ.sameDb(merged, remote) && !g.legacyFile) return { pulled: pulled, pushed: false, n: merged.records.length };
+          if (pulled || !raw || localChanged) save(merged, { fromSync: true });
+          if (remote && GZ.sameDb(merged, remote) && !g.legacyFile && !remoteChanged) return { pulled: pulled, pushed: false, n: merged.records.length };
           var body = { message: '同步训练数据 · ' + GZ.today() + ' · ' + merged.records.length + ' 条记录', content: b64enc(JSON.stringify(merged)) };
           if (sha) body.sha = sha;
           return req(c, 'PUT', filePath(c), body).then(function (pr) {

@@ -47,7 +47,8 @@
   function watchLoad() { try { return JSON.parse(localStorage.getItem(WATCH_KEY)) || null; } catch (e) { return null; } }
   function watchSave(w) { if (w) localStorage.setItem(WATCH_KEY, JSON.stringify(w)); else localStorage.removeItem(WATCH_KEY); }
   function load() {
-    var db = rawLoad(); if (!db) { db = GZ.defaults(false); save(db, { fromSync: true }); }
+    var raw = rawLoad(), prevDays = raw ? raw.daysVersion : undefined;
+    var db = raw; if (!db) { db = GZ.defaults(false); save(db, { fromSync: true }); }
     db = GZ.normalize(db);
     var w = watchLoad();
     // 旧版把手表数据放在 params.watch：并入独立存储后从主数据里拿掉
@@ -55,7 +56,12 @@
       w = Badges.mergeWatch(w, { source: db.params.watch.source, workouts: db.params.watch.workouts || [], sleep: db.params.watch.sleep || {} });
       watchSave(w); delete db.params.watch;
       // 主数据里的旧副本必须落盘去掉，否则会被反复合并、甚至用旧值覆盖刚拉取的
-      var raw = rawLoad(); if (raw && raw.params) { delete raw.params.watch; localStorage.setItem(KEY, JSON.stringify(raw)); }
+      var stored = rawLoad(); if (stored && stored.params) { delete stored.params.watch; localStorage.setItem(KEY, JSON.stringify(stored)); }
+    }
+    if (raw && prevDays !== db.daysVersion) {
+      var snap = JSON.parse(JSON.stringify(db));
+      if (snap.params && snap.params.watch) delete snap.params.watch;
+      localStorage.setItem(KEY, JSON.stringify(snap));
     }
     if (w) db.params.watch = w;
     return db;
@@ -124,16 +130,20 @@
         });
         return read.then(function (g) {
           if (g.status !== 200 && g.status !== 404) throw g.status;
-          var remote = null, sha = null;
+          var remote = null, sha = null, rawRemoteObj = null, remoteVer = null;
           if (g.status === 200) {
             if (!g.legacyFile) sha = g.json.sha;
-            try { remote = GZ.normalize(JSON.parse(b64dec(g.json.content))); } catch (e) { throw 'bad'; }
+            try { rawRemoteObj = JSON.parse(b64dec(g.json.content)); } catch (e) { throw 'bad'; }
+            remoteVer = rawRemoteObj.daysVersion;
+            remote = GZ.normalize(rawRemoteObj);
             if (remote.params.watch) { var ow = remote.params.watch; delete remote.params.watch; try { watchSave(Badges.mergeWatch(watchLoad(), { source: ow.source, workouts: ow.workouts || [], sleep: ow.sleep || {} })); } catch (e) {} }
           }
-          var raw = rawLoad(), local = GZ.normalize(raw || GZ.defaults(false)), merged = GZ.mergeDb(local, remote);
+          var raw = rawLoad(), localVer = raw && raw.daysVersion, local = GZ.normalize(raw || GZ.defaults(false)), merged = GZ.mergeDb(local, remote);
+          var remoteChanged = g.status === 200 && remoteVer !== remote.daysVersion;
+          var localChanged = !!(raw && localVer !== local.daysVersion);
           var pulled = !GZ.sameDb(merged, local);
-          if (pulled || !raw) save(merged, { fromSync: true });
-          if (remote && GZ.sameDb(merged, remote) && !g.legacyFile) return { pulled: pulled, pushed: false, n: merged.records.length };
+          if (pulled || !raw || localChanged) save(merged, { fromSync: true });
+          if (remote && GZ.sameDb(merged, remote) && !g.legacyFile && !remoteChanged) return { pulled: pulled, pushed: false, n: merged.records.length };
           var body = { message: '同步训练数据 · ' + GZ.today() + ' · ' + merged.records.length + ' 条记录', content: b64enc(JSON.stringify(merged)) };
           if (sha) body.sha = sha;
           return req(c, 'PUT', filePath(c), body).then(function (pr) {
