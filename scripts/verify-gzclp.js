@@ -136,7 +136,7 @@ check('T2 自重完成 3×10 建议负重', function () {
 });
 
 check('T3 full：低于 15 次减轻，15～阈值保持，达到阈值加重；excel 低于 15 仍保持', function () {
-  var db = GZ.defaults(false), s = slotOf(db, 'A1_5');
+  var db = GZ.defaults(false), s = slotOf(db, 'A1_4');
   var low = ev(s, { stage: '3×15+', weight: 20, fail: 0 }, { v: 14 });
   assert.strictEqual(low.judgment, '减轻');
   assert.strictEqual(low.nextWeight, 17.5);
@@ -159,15 +159,15 @@ check('回放记住上次完成的 3×10，并在 3×6 失败时用它重置', f
   var db = GZ.defaults(false);
   var steps = ['完成', '未完成', '完成', '完成', '未完成', '完成', '未完成'];
   db.records = steps.map(function (v, i) {
-    return { id: 't' + i, date: '2026-02-' + String(i + 1).padStart(2, '0'), day: 'A1', createdAt: i + 1,
-      entries: { A1_2: { v: v }, A1_1: { v: 3 }, A1_3: { v: '完成' }, A1_4: { v: 20 }, A1_5: { v: 20 } } };
+    return { id: 't' + i, date: '2026-02-' + String(i + 1).padStart(2, '0'), day: 'B2', createdAt: i + 1,
+      entries: { B2_2: { v: v }, B2_1: { v: 3 }, B2_3: { v: '完成' }, B2_4: { v: 20 }, B2_5: { v: 20 } } };
   });
   var rp = GZ.replay(GZ.normalize(db));
-  var st = rp.states.A1_2;
+  var st = rp.states.B2_2;
   assert.strictEqual(st.stage, '3×10');
   assert.strictEqual(st.weight, 52.5);
   assert.strictEqual(st.last3x10, 52.5);
-  var last = rp.sessions[rp.sessions.length - 1].items.filter(function (it) { return it.slotId === 'A1_2'; })[0];
+  var last = rp.sessions[rp.sessions.length - 1].items.filter(function (it) { return it.slotId === 'B2_2'; })[0];
   assert.strictEqual(last.judgment, '重置');
   assert.strictEqual(last.nextWeight, 52.5);
 });
@@ -185,7 +185,7 @@ check('一轮结束时 3×8 会在新动作上从 3×10 重新开始；关闭轮
   var s = slotOf(db, 'A2_3');
   var ef = GZ.effectiveSlot(db, s, 9, rp.hist);
   var st = GZ.startState(s, rp.states.A2_3, ef, 9, GZ.progressionOf(db, s));
-  assert.strictEqual(ef.slot.name, '单臂哑铃划船');
+  assert.strictEqual(ef.slot.name, '杠铃划船');
   assert.strictEqual(ef.resetNow, true);
   assert.strictEqual(st.stage, '3×10');
   db.params.autoRotate = false;
@@ -218,15 +218,29 @@ check('四天都有背部拉动，16 个 T2/T3 不重复，轮换池和槽位一
   assert.deepStrictEqual(pulls, { A1: 1, B1: 1, A2: 1, B2: 1 });
   assert.strictEqual(squatT2, 1);
   assert.strictEqual(hingeT2, 1);
+  assert.strictEqual(slotOf(db, 'A1_2').name, '罗马尼亚硬拉');
+  assert.strictEqual(slotOf(db, 'A1_2').init.base, 'deadlift');
+  assert.strictEqual(slotOf(db, 'A1_2').init.pct, 0.6);
+  assert.strictEqual(slotOf(db, 'A1_2').step, 't2l');
+  assert.strictEqual(slotOf(db, 'B1_2').name, '上斜哑铃卧推');
+  assert.strictEqual(slotOf(db, 'B1_2').init.base, 'bench');
+  assert.strictEqual(slotOf(db, 'B1_2').init.pct, 0.3);
+  assert.strictEqual(slotOf(db, 'A2_2').name, '坐姿哑铃推肩');
   assert.strictEqual(slotOf(db, 'A2_3').name, '坐姿划船');
-  assert.strictEqual(slotOf(db, 'B2_2').name, '罗马尼亚硬拉');
-  assert.strictEqual(slotOf(db, 'B2_3').name, '潘德雷划船');
-  assert.strictEqual(slotOf(db, 'B2_2').init.base, 'deadlift');
+  assert.strictEqual(slotOf(db, 'B2_2').name, '前蹲');
+  assert.strictEqual(slotOf(db, 'B2_2').init.base, 'squat');
   assert.strictEqual(slotOf(db, 'B2_2').init.pct, 0.6);
   assert.strictEqual(slotOf(db, 'B2_2').step, 't2l');
-  assert.strictEqual(slotOf(db, 'B2_3').init.base, 'deadlift');
-  assert.strictEqual(slotOf(db, 'B2_3').init.pct, 0.55);
+  assert.strictEqual(slotOf(db, 'B2_3').name, '单臂哑铃划船');
+  assert.strictEqual(slotOf(db, 'B2_3').init.base, 'bench');
+  assert.strictEqual(slotOf(db, 'B2_3').init.pct, 0.35);
   assert.strictEqual(slotOf(db, 'B2_3').step, 't2u');
+  ['A1', 'B1', 'A2', 'B2'].forEach(function (id) {
+    var day = db.days.filter(function (d) { return d.id === id; })[0];
+    var t1 = day.slots[0], t2 = day.slots[1];
+    var p1 = GZ.libFindIn(db, t1.name).part, p2 = GZ.libFindIn(db, t2.name).part;
+    assert.notStrictEqual(p1, p2, id + ' stacks ' + p1);
+  });
   for (var c = 1; c <= 3; c++) {
     var plan = GZ.planCycles(db, c).actual[c], seen = {};
     Object.keys(plan).forEach(function (id) {
@@ -242,7 +256,7 @@ check('旧模板升级：没练过直接换；练过则从下次训练起换', f
   var s = slotOf(fresh, 'A2_3');
   s.name = '箱式深蹲'; s.equip = '杠铃'; s.step = 't2l'; s.init = { type: 'pct', base: 'squat', pct: 0.65 };
   GZ.normalize(fresh);
-  assert.strictEqual(fresh.daysVersion, 6);
+  assert.strictEqual(fresh.daysVersion, 7);
   assert.strictEqual(slotOf(fresh, 'A2_3').name, '坐姿划船');
 
   var used = GZ.defaults(false);
@@ -276,25 +290,25 @@ check('模板 changes 不再挡住升级，两周历史照旧，第 3 周按统�
   db.params.adaptive = true;
   db.params.ruleMode = 'full';
   putSlot(db, 'A1_1', { init: { type: 'fixed', value: 62.5 } });
-  putSlot(db, 'A1_2', { init: { type: 'fixed', value: 37.5 } });
+  putSlot(db, 'A1_2', { name: '前蹲', equip: '杠铃', tier: 'T2', step: 't2l', init: { type: 'fixed', value: 37.5 }, lift: null });
   putSlot(db, 'A1_3', { name: '上斜卧推', equip: '杠铃', tier: 'T2', step: 't2u', init: { type: 'pct', base: 'bench', pct: 0.55 },
     changes: [{ fromWeek: 3, name: '高位下拉', equip: '器械', weight: 50, tier: 'T2', step: 't2u' }] });
   putSlot(db, 'A1_4', { name: '高位下拉', equip: '器械', tier: 'T3', step: 't3u', init: { type: 'fixed', value: 30 }, roundProg: true,
     changes: [{ fromWeek: 3, name: '坐姿腿屈伸', equip: '器械', weight: 25, tier: 'T3', step: 't3l' }] });
-  putSlot(db, 'A1_5', { init: { type: 'fixed', value: 10 } });
+  putSlot(db, 'A1_5', { name: '俯卧腿弯举', equip: '器械', tier: 'T3', step: 't3l', init: { type: 'fixed', value: 10 }, roundProg: false });
   putSlot(db, 'B1_1', { init: { type: 'fixed', value: 30 } });
-  putSlot(db, 'B1_2', { init: { type: 'fixed', value: 22.5 } });
+  putSlot(db, 'B1_2', { name: '坐姿哑铃推肩', equip: '哑铃', tier: 'T2', step: 't2u', init: { type: 'fixed', value: 22.5 } });
   putSlot(db, 'B1_3', { name: '罗马尼亚硬拉', equip: '杠铃', tier: 'T2', step: 't2l', init: { type: 'pct', base: 'deadlift', pct: 0.6 },
     changes: [{ fromWeek: 2, name: '引体向上', equip: '自重', weight: 0, tier: 'T2', step: 't2u' }] });
   putSlot(db, 'B1_4', { name: '引体向上', equip: '自重', tier: 'T3', step: 't3u', init: { type: 'fixed', value: 0 }, roundProg: true,
     changes: [{ fromWeek: 2, name: '面拉', equip: '器械', weight: 15, tier: 'T3', step: 't3u' }] });
-  putSlot(db, 'B1_5', { init: { type: 'fixed', value: 8 } });
+  putSlot(db, 'B1_5', { name: '哑铃侧平举', equip: '哑铃', tier: 'T3', step: 't3u', init: { type: 'fixed', value: 8 }, roundProg: true });
   putSlot(db, 'A2_1', { init: { type: 'fixed', value: 62.5 } });
-  putSlot(db, 'A2_2', { init: { type: 'fixed', value: 40 } });
+  putSlot(db, 'A2_2', { name: '窄距卧推', equip: '杠铃', tier: 'T2', step: 't2u', init: { type: 'fixed', value: 40 } });
   putSlot(db, 'A2_3', { name: '杠铃深蹲', equip: '杠铃', tier: 'T2', step: 't2l', init: { type: 'pct', base: 'squat', pct: 0.7 },
     changes: [{ fromWeek: 2, name: '箱式深蹲', equip: '杠铃', weight: 40 }] });
-  putSlot(db, 'A2_4', { init: { type: 'fixed', value: 20 } });
-  putSlot(db, 'A2_5', { init: { type: 'fixed', value: 10 } });
+  putSlot(db, 'A2_4', { name: '杠铃弯举', equip: '杠铃', tier: 'T3', step: 't3u', init: { type: 'fixed', value: 20 }, roundProg: true });
+  putSlot(db, 'A2_5', { name: '绳索三头屈伸', equip: '器械', tier: 'T3', step: 't3u', init: { type: 'fixed', value: 10 }, roundProg: true });
   putSlot(db, 'B2_1', { init: { type: 'fixed', value: 87.5 } });
   putSlot(db, 'B2_2', { name: '潘德雷划船', equip: '杠铃', tier: 'T2', step: 't2u', init: { type: 'fixed', value: 50 }, lift: null });
   putSlot(db, 'B2_3', { name: '坐姿划船', equip: '器械', tier: 'T2', step: 't2u', init: { type: 'fixed', value: 35 },
@@ -304,7 +318,7 @@ check('模板 changes 不再挡住升级，两周历史照旧，第 3 周按统�
   putSlot(db, 'B2_5', { init: { type: 'fixed', value: 8 } });
   db.records = [
     sess('a1w1', '2026-10-13', 'A1', { A1_1: { v: 3 }, A1_2: { v: '完成' }, A1_3: { v: '完成' } }),
-    sess('b1w1', '2026-10-14', 'B1', { B1_1: { v: 3 }, B1_2: { v: '未完成' }, B1_3: { v: '完成' } }),
+    sess('b1w1', '2026-10-14', 'B1', { B1_1: { v: 3 }, B1_2: { v: '未完成' }, B1_3: { v: '完成' }, B1_5: { v: '完成', w: 35, ex: '上斜哑铃卧推' } }),
     sess('a2w1', '2026-10-15', 'A2', { A2_1: { v: 3 }, A2_2: { v: '完成' }, A2_3: { v: '完成' } }),
     sess('b2w1', '2026-10-16', 'B2', { B2_1: { v: 3 }, B2_2: { v: '完成' }, B2_3: { v: '完成' }, B2_5: { v: 25 } }),
     sess('a1w2', '2026-10-20', 'A1', { A1_1: { v: 3 }, A1_2: { v: '完成' }, A1_3: { v: '完成' } }),
@@ -324,7 +338,7 @@ check('模板 changes 不再挡住升级，两周历史照旧，第 3 周按统�
   ];
   db.activeProgramId = 'p-gzclp-1';
   GZ.normalize(db);
-  assert.strictEqual(db.daysVersion, 6);
+  assert.strictEqual(db.daysVersion, 7);
   assert.ok(db.cfgAt > 1000);
   var after = GZ.replay(db).sessions.filter(function (s) { return s.week <= 2; }).map(function (s) {
     return s.week + ' ' + s.rec.day + ' ' + s.items.map(function (it) { return it.name; }).join('/');
@@ -338,18 +352,21 @@ check('模板 changes 不再挡住升级，两周历史照旧，第 3 周按统�
   assert.strictEqual(slotOf(db, 'A2_3').changes[1].fromWeek, 3);
   assert.strictEqual(slotOf(db, 'A2_3').changes[1].weight, 35);
   assert.strictEqual(slotOf(db, 'A2_3').changes[1].tpl, true);
+  assert.strictEqual(slotOf(db, 'A1_2').name, '前蹲');
+  assert.strictEqual(slotOf(db, 'A1_2').changes[0].name, '罗马尼亚硬拉');
+  assert.strictEqual(slotOf(db, 'A1_2').changes[0].weight, 65);
   assert.strictEqual(slotOf(db, 'B2_2').name, '潘德雷划船');
-  assert.strictEqual(slotOf(db, 'B2_2').changes[0].name, '罗马尼亚硬拉');
-  assert.strictEqual(slotOf(db, 'B2_2').changes[0].weight, 65);
+  assert.strictEqual(slotOf(db, 'B2_2').changes[0].name, '前蹲');
+  assert.strictEqual(slotOf(db, 'B2_2').changes[0].weight, 47.5);
   assert.strictEqual(slotOf(db, 'B2_3').name, '坐姿划船');
   assert.strictEqual(slotOf(db, 'B2_3').changes.filter(function (c) { return c.fromWeek === 2; })[0].name, '罗马尼亚硬拉');
-  assert.strictEqual(slotOf(db, 'B2_3').changes.filter(function (c) { return c.fromWeek === 3; })[0].name, '潘德雷划船');
-  assert.strictEqual(slotOf(db, 'B2_3').changes.filter(function (c) { return c.fromWeek === 3; })[0].weight, 55);
+  assert.strictEqual(slotOf(db, 'B2_3').changes.filter(function (c) { return c.fromWeek === 3; })[0].name, '单臂哑铃划船');
+  assert.notStrictEqual(slotOf(db, 'B2_3').changes.filter(function (c) { return c.fromWeek === 3; })[0].weight, 35);
   var expect = {
-    A1: [['杠铃深蹲', 72.5], ['前蹲', 47.5], ['高位下拉', 50], ['坐姿腿屈伸', 25], ['俯卧腿弯举', 10]],
-    B1: [['站姿实力推', 35], ['坐姿哑铃推肩', 22.5], ['引体向上', 0], ['面拉', 17.5], ['哑铃侧平举', 8]],
-    A2: [['平板卧推', 67.5], ['窄距卧推', 45], ['坐姿划船', 35], ['杠铃弯举', 20], ['绳索三头屈伸', 10]],
-    B2: [['传统硬拉', 97.5], ['罗马尼亚硬拉', 65], ['潘德雷划船', 55], ['坐姿腿弯举', 25], ['哑铃弯举', 9]]
+    A1: [['杠铃深蹲', 72.5], ['罗马尼亚硬拉', 65], ['高位下拉', 50], ['坐姿腿屈伸', 25], ['哑铃侧平举', 8]],
+    B1: [['站姿实力推', 35], ['上斜哑铃卧推', 22.5], ['引体向上', 0], ['绳索夹胸', 10], ['面拉', 17.5]],
+    A2: [['平板卧推', 67.5], ['坐姿哑铃推肩', 22.5], ['坐姿划船', 35], ['绳索三头屈伸', 10], ['杠铃弯举', 20]],
+    B2: [['传统硬拉', 97.5], ['前蹲', 47.5], ['单臂哑铃划船', 25], ['坐姿腿弯举', 25], ['哑铃弯举', 9]]
   };
   var plan = GZ.buildPlan(db);
   Object.keys(expect).forEach(function (day) {
@@ -360,7 +377,7 @@ check('模板 changes 不再挡住升级，两周历史照旧，第 3 周按统�
     assert.deepStrictEqual(ov, ovExp, day + ' plan ' + JSON.stringify(ov));
   });
   var paused = db.programs.filter(function (p) { return p.id === 'paused-gz'; })[0];
-  assert.strictEqual(paused.snap.daysVersion, 6);
+  assert.strictEqual(paused.snap.daysVersion, 7);
   var pausedA2 = null;
   paused.snap.days.forEach(function (d) { d.slots.forEach(function (s) { if (s.id === 'A2_3') pausedA2 = s; }); });
   assert.strictEqual(pausedA2.name, '坐姿划船');
@@ -386,11 +403,47 @@ check('升级后的 daysVersion 会被认成新配置，同步不能把它和旧
   var local = GZ.normalize(rawLocal);
   assert.notStrictEqual(remoteVer, remote.daysVersion);
   assert.notStrictEqual(localVer, local.daysVersion);
-  assert.strictEqual(remote.daysVersion, 6);
+  assert.strictEqual(remote.daysVersion, 7);
   assert.ok(remote.cfgAt > 50 && local.cfgAt > 50);
   var merged = GZ.mergeDb(local, remote);
-  assert.strictEqual(merged.daysVersion, 6);
-  assert.strictEqual(slotOf(merged, 'B2_2').name, '罗马尼亚硬拉');
+  assert.strictEqual(merged.daysVersion, 7);
+  assert.strictEqual(slotOf(merged, 'B2_2').name, '前蹲');
+});
+
+check('一次性替换的重量不会变成新模板槽位的起点', function () {
+  var db = GZ.defaults(false);
+  db.daysVersion = 6;
+  function rename(id, name, init, step) {
+    var s = slotOf(db, id), lb = GZ.libFindIn(db, name);
+    s.name = name; s.equip = lb.equip; s.init = init; s.step = step; delete s.changes;
+  }
+  rename('A1_2', '前蹲', { type: 'pct', base: 'squat', pct: 0.6 }, 't2l');
+  rename('A1_5', '俯卧腿弯举', { type: 'pct', base: 'squat', pct: 0.3 }, 't3l');
+  rename('B1_2', '坐姿哑铃推肩', { type: 'pct', base: 'ohp', pct: 0.6 }, 't2u');
+  rename('B1_4', '面拉', { type: 'fixed', value: 15 }, 't3u');
+  rename('B1_5', '哑铃侧平举', { type: 'fixed', value: 8 }, 't3u');
+  rename('A2_2', '窄距卧推', { type: 'pct', base: 'bench', pct: 0.65 }, 't2u');
+  rename('A2_4', '杠铃弯举', { type: 'fixed', value: 20 }, 't3u');
+  rename('A2_5', '绳索三头屈伸', { type: 'pct', base: 'bench', pct: 0.25 }, 't3u');
+  rename('B2_2', '罗马尼亚硬拉', { type: 'pct', base: 'deadlift', pct: 0.6 }, 't2l');
+  rename('B2_3', '潘德雷划船', { type: 'pct', base: 'deadlift', pct: 0.55 }, 't2u');
+  db.records = [{ id: 'rmvaj5j6l5hq3', date: '2026-10-16', day: 'B2', deload: false, createdAt: 4,
+    entries: { B2_1: { v: 11 }, B2_2: { v: '完成' }, B2_3: { v: '完成', w: 35, ex: '上斜哑铃卧推' }, B2_4: { v: 25 }, B2_5: { v: 25, w: 6 } } }];
+  GZ.normalize(db);
+  var fresh = GZ.buildTrain(GZ.defaults(false), { day: 'B1' }).items.filter(function (it) { return it.slotId === 'B1_2'; })[0];
+  var incline = GZ.buildTrain(db, { day: 'B1' }).items.filter(function (it) { return it.slotId === 'B1_2'; })[0];
+  var row = slotOf(db, 'B2_3').changes.filter(function (c) { return c.fromWeek === 2; })[0];
+  assert.strictEqual(incline.name, '上斜哑铃卧推');
+  assert.strictEqual(incline.weight, fresh.weight);
+  assert.strictEqual(fresh.weight, 20);
+  assert.notStrictEqual(incline.weight, 35);
+  assert.strictEqual(row.name, '单臂哑铃划船');
+  assert.strictEqual(row.weight, 22.5);
+  assert.notStrictEqual(row.weight, 35);
+  var fly = GZ.buildTrain(db, { day: 'B1' }).items.filter(function (it) { return it.slotId === 'B1_4'; })[0];
+  assert.strictEqual(fly.name, '绳索夹胸');
+  assert.strictEqual(fly.weight, 10);
+  assert.strictEqual(GZ.buildTrain(db, { day: 'A1' }).items.filter(function (it) { return it.slotId === 'A1_2'; })[0].name, '罗马尼亚硬拉');
 });
 
 check('手动更换不因模板升级被盖掉', function () {
