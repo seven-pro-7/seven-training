@@ -477,6 +477,36 @@ check('规则文案和训练提示跟引擎一致', function () {
   assert.ok(pull.amrapHint.indexOf('负重') >= 0);
 });
 
+check('零记录动作仍返回同一份趋势详情', function () {
+  var Insight = require('../source/utils/insight.js');
+  var db = GZ.normalize(GZ.defaults(true));
+  var squat = Insight.detail(db, '杠铃深蹲');
+  assert.ok(squat && squat.n > 0);
+  assert.ok(squat.bestWeight && squat.series.labels.length === squat.n);
+  assert.strictEqual(squat.sessions.length, squat.n);
+  assert.strictEqual(GZ.exerciseDetail, Insight.detail);
+  var row = Insight.detail(db, '单臂哑铃划船');
+  assert.ok(row);
+  assert.strictEqual(row.n, 0);
+  assert.strictEqual(row.bestE1rm, null);
+  assert.strictEqual(row.bestWeight, null);
+  assert.strictEqual(row.bestVolume, null);
+  assert.strictEqual(row.delta, null);
+  assert.strictEqual(row.slope, null);
+  assert.strictEqual(row.r2, null);
+  assert.deepStrictEqual(row.sessions, []);
+  assert.deepStrictEqual(row.labels, []);
+  assert.deepStrictEqual(row.weights, []);
+  assert.deepStrictEqual(row.e1rms, []);
+  assert.deepStrictEqual(row.volumes, []);
+  assert.ok(row.tiers.indexOf('T2') >= 0);
+  assert.strictEqual(row.bw, false);
+  assert.strictEqual(row.isCardio, false);
+  assert.ok(row.series.byTier.T2);
+  assert.strictEqual(Insight.detail(db, ''), null);
+  assert.strictEqual(GZ.exerciseDetail(db, '单臂哑铃划船').n, 0);
+});
+
 if (failed) {
   console.error('\n' + failed + ' failed');
   process.exit(1);

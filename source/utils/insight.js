@@ -92,11 +92,67 @@
     return out;
   }
 
-  /** 单个动作的详情：曲线、容量、估算 1RM 趋势 */
+  /** 当前计划里这个动作出现在哪些训练日。没有练过也要能打开同一张趋势页。 */
+  function appearances(db, name, rp) {
+    var prog = GZ.progressionOf(db).id, hits = [], seen = {};
+    (db.days || []).forEach(function (day) {
+      var nw = ((rp.counts && rp.counts[day.id]) || 0) + 1;
+      (day.slots || []).forEach(function (s0) {
+        var s = GZ.effectiveSlot(db, s0, nw, rp.hist).slot;
+        if (!s || s.name !== name) return;
+        var key = s.tier + '|' + day.id;
+        if (seen[key]) return;
+        seen[key] = 1;
+        hits.push({
+          tier: s.tier, badge: GZ.slotBadge(s, prog), day: day.id, lift: s.lift || '',
+          equip: GZ.equipOf(s.name, s.equip), isCardio: s.prog === 'cardio'
+        });
+      });
+    });
+    return hits;
+  }
+
+  /** 还没有训练记录时也返回完整详情，图表序列留空，由同一张趋势页画出「暂无数据」。 */
+  function blankDetail(db, name, rp) {
+    var P = (db && db.params) || {}, hits = appearances(db, name, rp);
+    var lib = GZ.libFindIn(db, name);
+    var tiers = [], labelOf = {}, days = [], lift = '';
+    hits.forEach(function (h) {
+      if (tiers.indexOf(h.tier) < 0) { tiers.push(h.tier); labelOf[h.tier] = h.badge || h.tier; }
+      if (days.indexOf(h.day) < 0) days.push(h.day);
+      if (h.lift && (h.tier === 'T1' || !lift)) lift = h.lift;
+    });
+    tiers.sort(function (a, b) { return (TIER_ORDER[a] || 9) - (TIER_ORDER[b] || 9); });
+    var primary = tiers[0] || '';
+    var primaryHit = hits.filter(function (h) { return h.tier === primary; })[0] || hits[0];
+    var equip = (lib && lib.equip) || (primaryHit && primaryHit.equip) || GZ.equipOf(name, '');
+    var bw = equip === '自重';
+    var isCardio = equip === '有氧' || hits.some(function (h) { return h.isCardio; });
+    var ref = lift && P.oneRM && P.oneRM[lift] ? P.oneRM[lift] : null;
+    var byTier = {};
+    tiers.forEach(function (t) { byTier[t] = { perf: [], e1rm: [], volume: [] }; });
+    var series = { labels: [], byTier: byTier, primary: primary, perf: [], volume: [], e1rm: [], reg: null };
+    var tip = isCardio ? '完成第一次训练后，这里会显示每次时长。'
+      : bw ? '自重动作没有外加重量，不估算 1RM。完成第一次训练后，这里会显示次数走势。'
+      : '完成第一次训练后，这里会生成重量走势、每次容量和估算 1RM。';
+    return {
+      name: name, tier: primary, tierLabel: labelOf, tiers: tiers, days: days, equip: equip, bw: bw, isCardio: isCardio,
+      unit: GZ.unitOf(equip || '杠铃'), n: 0, firstDate: '', lastDate: '',
+      bestWeight: null, lastWeight: null, bestE1: null, bestE1rm: null, latestE1: null,
+      e1Delta: null, delta: null, e1Count: 0, e1Kind: '', primary: primary, e1Capped: false,
+      slope: null, r2: null, ref: ref, vsRef: null,
+      volume: 0, avgVolume: 0, reps: 0, adds: 0, bestVolume: null,
+      series: series, points: [], recent: [], sessions: [],
+      labels: [], weights: [], e1rms: [], volumes: [], tip: tip
+    };
+  }
+
+  /** 单个动作的详情：曲线、容量、估算 1RM 趋势。没有记录时也返回同一结构。 */
   function detail(db, name, rp) {
+    if (!name) return null;
     rp = rp || GZ.replay(db);
     var c = collect(rp), pts = c.byName[name];
-    if (!pts || !pts.length) return null;
+    if (!pts || !pts.length) return blankDetail(db, name, rp);
     var P = db.params || {}, first = pts[0], lastPt = pts[pts.length - 1];
     var bw = lastPt.bw, tiers = {}, days = {};
     var labelOf = {};
@@ -159,9 +215,14 @@
       ref: ref, vsRef: ref && bestE ? Math.round((bestE.e1rm / ref - 1) * 1000) / 10 : null,
       volume: Math.round(vol), avgVolume: Math.round(vol / pts.length), reps: reps, adds: adds,
       bestVolume: bestV && bestV.volume > 0 ? { v: Math.round(bestV.volume), date: bestV.date } : null,
-      series: series, points: pts, recent: pts.slice(-8).reverse(), tip: tip
+      series: series, points: pts, recent: pts.slice(-8).reverse(), sessions: pts,
+      labels: series.labels, weights: series.perf, e1rms: series.e1rm, volumes: series.volume,
+      bestE1rm: bestE ? { v: bestE.e1rm, date: bestE.date } : null,
+      delta: latestE && firstE && e1pts.length >= 2 ? r1(latestE.e1rm - firstE.e1rm) : null,
+      isCardio: lastPt.equip === '有氧', tip: tip
     };
   }
 
+  if (GZ) GZ.exerciseDetail = detail;
   return { REP_CAP: REP_CAP, estimate: estimate, collect: collect, list: list, detail: detail, repsOf: repsOf };
 });
