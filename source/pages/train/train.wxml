@@ -31,11 +31,19 @@
         <view class="lk-s">{{vm.lockedInfo.dateText}} · 容量 {{vm.lockedInfo.vol}} kg</view>
       </view>
     </view>
-    <view class="lk-row" wx:for="{{vm.lockedInfo.items}}" wx:key="name">
-      <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
-      <text class="lk-n">{{item.name}}</text>
-      <text class="lk-w num"><text class="accent" wx:if="{{item.manual}}">手动 </text>{{item.w}} × {{item.input}}</text>
-      <text class="jtag lk-j" style="color: {{item.color}}">{{item.j}}</text>
+    <view class="sess-list">
+      <view class="sess-row" wx:for="{{vm.lockedInfo.items}}" wx:key="name">
+        <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
+        <view class="sess-main">
+          <text class="sess-name">{{item.name}}</text>
+          <text class="sess-sub">{{item.detail}}</text>
+          <text class="sess-ctx" wx:if="{{item.context}}">{{item.context}}</text>
+        </view>
+        <view class="sess-right">
+          <text class="jtag" style="color: {{item.color}}">{{item.j}}</text>
+          <text class="sess-next" wx:if="{{item.next}}">{{item.next}}</text>
+        </view>
+      </view>
     </view>
     <view class="lk-tip">下周的 {{vm.day}} 会在本周 {{vm.round.leftText}} 完成后开放</view>
     <view class="sheet-btns">
@@ -143,8 +151,8 @@
         </view>
         <view class="in-hint" wx:if="{{item.amrapHint}}">{{item.amrapHint}}</view>
         <view class="subrow" wx:if="{{item.value === '未完成'}}">
-          <text class="in-hint">实际总次数（可选，用于容量）</text>
-          <input class="mini-in num" type="number" value="{{item.reps2}}" placeholder="{{item.sets * item.reps - 2}}" placeholder-class="ph" data-slot="{{item.slotId}}" bindinput="onReps" />
+          <text class="in-hint">实际总次数（选填，不填则这次不计入容量）</text>
+          <input class="mini-in num" type="number" value="{{item.reps2}}" placeholder="次数" placeholder-class="ph" data-slot="{{item.slotId}}" bindinput="onReps" />
         </view>
       </view>
 

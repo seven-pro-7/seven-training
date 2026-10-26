@@ -236,14 +236,17 @@
         if (included.indexOf(s.rec.id) < 0) included.push(s.rec.id);
         var nsets = it.deload ? it.dSets : it.sets, nreps;
         if (it.deload) { nreps = nsets * it.reps; estimated = true; }
-        else if (it.tier === 'T2') { nreps = it.actualReps; if (e.v !== '完成' && (e.reps === undefined || e.reps === null || e.reps === '')) estimated = true; }
+        else if (it.tier === 'T2') {
+          nreps = it.actualReps;
+          if (e.v !== '完成' && it.actualReps == null) nreps = 0;
+        }
         else nreps = (nsets - 1) * it.reps + Number(it.input || 0);
         nreps = Math.max(0, Number(nreps) || 0);
         var equip = GZ.equipOf(it.name, it.equip), w = it.deload ? it.dWeight : it.weight;
         var load = equip === '自重' ? '自重' : GZ.fmtW(w) + ' ' + GZ.unitOf(equip);
-        var result = it.deload ? '减载完成' : it.tier === 'T2' ? (e.v === '完成' ? '完成' : '部分完成') : '末组 ' + it.input + ' 次';
+        var result = it.deload ? '减载完成' : it.tier === 'T2' ? (e.v === '完成' ? '完成' : (it.actualReps == null ? '未完成 · 未记次数' : '实际 ' + it.actualReps + ' 次')) : '末组 ' + it.input + ' 次';
         if (it.judgment === '加重') adds++;
-        var recordedVolume = equip === '自重' ? 0 : it.volume;
+        var recordedVolume = Number(it.volume) || 0;
         volume += recordedVolume; reps += nreps; sets += nsets;
         rows.push({ day: s.rec.day, tier: it.tier, name: it.name, load: load, stage: it.stage, result: result,
           reps: nreps, sets: nsets, judgment: it.judgment, volume: recordedVolume });
@@ -300,7 +303,6 @@
     s.items.forEach(function (it) {
       var e = (s.rec.entries || {})[it.slotId];
       if (!hasEntry(e, s.rec.deload) || it.judgment === '跳过') return;
-      if (GZ.equipOf(it.name, it.equip) === '自重') return;
       v += Number(it.volume) || 0;
     });
     return v;

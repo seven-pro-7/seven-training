@@ -44,7 +44,7 @@
 .log-d { font-size: 24rpx; color: var(--label2); }
 .log-v { font-size: 30rpx; font-weight: 600; }
 .log-u { font-size: 22rpx; color: var(--label2); font-weight: 400; }
-.log-body { padding: 0 32rpx 24rpx 116rpx; }
+.log-body { padding: 0 32rpx 24rpx; }
 .li { display: flex; align-items: center; padding: 10rpx 0; font-size: 28rpx; }
 .li-n { flex: 1; margin-left: 14rpx; }
 .li-w { margin-right: 16rpx; color: var(--label2); }

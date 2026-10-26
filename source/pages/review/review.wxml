@@ -47,7 +47,7 @@
       </view>
       <view class="t1row" wx:for="{{item.t1}}" wx:for-item="t" wx:key="day">
         <text class="num t1d">{{t.day}}</text><text class="t1n">{{t.name}}</text>
-        <text class="num t1w">{{t.w}} kg × {{t.input === null ? '—' : t.input}}</text>
+        <text class="num t1w">{{t.w}} kg · {{t.stage}} · 末组 {{t.input === null ? '—' : t.input}}</text>
         <text class="jtag" style="color: {{t.color}}">{{t.j}}</text>
       </view>
     </view>
@@ -60,16 +60,24 @@
       <view class="log" wx:for="{{vm.logs}}" wx:key="id">
         <view class="cell tap" data-id="{{item.id}}" bindtap="toggle">
           <text class="num log-day">{{item.day}}</text>
-          <view class="log-meta"><text>{{item.dayName}} · 第 {{item.week}} 次</text><text class="log-d">{{item.dateText}}{{item.deload ? ' · 减载' : ''}}{{item.bw ? ' · ' + item.bw + ' kg' : ''}}</text></view>
+          <view class="log-meta"><text>{{item.dayName}} · {{item.weekText}}</text><text class="log-d">{{item.dateText}}{{item.deload ? ' · 减载' : ''}}{{item.bw ? ' · ' + item.bw + ' kg' : ''}}</text></view>
           <text class="num log-v">{{item.vol}}<text class="log-u"> kg</text></text>
           <text class="chev">{{open[item.id] ? '⌃' : '›'}}</text>
         </view>
         <view wx:if="{{open[item.id]}}" class="log-body">
-          <view class="li" wx:for="{{item.items}}" wx:for-item="it" wx:key="name">
-            <text class="tier t-{{it.tier}}">{{it.badge || it.tier}}</text>
-            <text class="li-n">{{it.name}}</text>
-            <text class="li-w num"><text class="accent" wx:if="{{it.manual}}">手动 </text>{{it.w}} × {{it.input}}</text>
-            <text class="jtag" style="color: {{it.color}}">{{it.j}}</text>
+          <view class="sess-list">
+            <view class="sess-row" wx:for="{{item.items}}" wx:for-item="it" wx:key="name">
+              <text class="tier t-{{it.tier}}">{{it.badge || it.tier}}</text>
+              <view class="sess-main">
+                <text class="sess-name">{{it.name}}</text>
+                <text class="sess-sub">{{it.detail}}</text>
+                <text class="sess-ctx" wx:if="{{it.context}}">{{it.context}}</text>
+              </view>
+              <view class="sess-right">
+                <text class="jtag" style="color: {{it.color}}">{{it.j}}</text>
+                <text class="sess-next" wx:if="{{it.next}}">{{it.next}}</text>
+              </view>
+            </view>
           </view>
           <view class="note-box" wx:if="{{item.note}}">{{item.note}}</view>
           <view class="log-act">

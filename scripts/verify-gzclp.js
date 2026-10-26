@@ -458,6 +458,90 @@ check('手动更换不因模板升级被盖掉', function () {
   assert.ok(!(slotOf(db, 'A1_2').changes || []).some(function (c) { return c.tpl && c.name === '前蹲'; }));
 });
 
+check('哑铃容量按单只 ×2，高脚杯不翻倍；自重看当次体重；T2 没填次数不计容量', function () {
+  var db = GZ.defaults(false);
+  var incline = ev(slotOf(db, 'B1_2'), { stage: '3×10', weight: 20, fail: 0, last3x10: 20 }, { v: '完成' });
+  assert.strictEqual(incline.volume, 1200);
+  assert.strictEqual(incline.loadFactor, 2);
+  var row = ev(slotOf(db, 'B2_3'), { stage: '3×10', weight: 20, fail: 0, last3x10: 20 }, { v: '完成' });
+  assert.strictEqual(row.volume, 1200);
+  assert.strictEqual(row.loadFactor, 2);
+  var goblet = ev({ id: 'x', tier: 'T2', name: '高脚杯深蹲', equip: '哑铃', step: 't2l' }, { stage: '3×10', weight: 24, fail: 0, last3x10: 24 }, { v: '完成' });
+  assert.strictEqual(goblet.volume, 720);
+  assert.strictEqual(goblet.loadFactor, 1);
+  var bar = ev(slotOf(db, 'A1_2'), { stage: '3×10', weight: 40, fail: 0, last3x10: 40 }, { v: '完成' });
+  assert.strictEqual(bar.volume, 1200);
+  var miss = ev(slotOf(db, 'A1_2'), { stage: '3×10', weight: 40, fail: 0, last3x10: 40 }, { v: '未完成' });
+  assert.strictEqual(miss.volume, 0);
+  assert.strictEqual(miss.actualReps, null);
+  var some = ev(slotOf(db, 'A1_2'), { stage: '3×10', weight: 40, fail: 0, last3x10: 40 }, { v: '未完成', reps: 22 });
+  assert.strictEqual(some.volume, 880);
+  db.records = [{ id: 'bw1', date: '2026-10-01', day: 'B1', bw: 75, createdAt: 1, entries: { B1_1: { v: 3 }, B1_3: { v: '完成' } } }];
+  var withBw = GZ.replay(GZ.normalize(db)).sessions[0].items.filter(function (it) { return it.slotId === 'B1_3'; })[0];
+  assert.strictEqual(withBw.name, '引体向上');
+  assert.strictEqual(withBw.volume, 2250);
+  assert.strictEqual(withBw.bodyweightUsed, true);
+  var bwLine = GZ.logView(GZ.replay(db).sessions[0], db.params).items.filter(function (it) { return it.slotId === 'B1_3'; })[0];
+  assert.ok(bwLine.detail.indexOf('自重') === 0, bwLine.detail);
+  assert.ok(bwLine.detail.indexOf('0 ×') < 0, bwLine.detail);
+  assert.ok(bwLine.detail.indexOf('容量 2250 kg') >= 0, bwLine.detail);
+  assert.ok(bwLine.next.indexOf('0 kg') < 0, bwLine.next);
+  var sideDb = GZ.defaults(false);
+  sideDb.records = [{ id: 'db1', date: '2026-10-02', day: 'B2', createdAt: 1, entries: { B2_1: { v: 3 }, B2_3: { v: '完成', w: 20 } } }];
+  var side = GZ.logView(GZ.replay(GZ.normalize(sideDb)).sessions[0], sideDb.params).items.filter(function (it) { return it.slotId === 'B2_3'; })[0];
+  assert.strictEqual(side.name, '单臂哑铃划船');
+  assert.ok(side.detail.indexOf('kg 单只') >= 0 && side.detail.indexOf('两侧') >= 0, side.detail);
+  assert.ok(side.detail.indexOf('容量 1200 kg') >= 0, side.detail);
+  assert.ok(side.next.indexOf('kg 单只') >= 0, side.next);
+  db.records[0].bw = null;
+  var noBw = GZ.replay(GZ.normalize(db)).sessions[0].items.filter(function (it) { return it.slotId === 'B1_3'; })[0];
+  assert.strictEqual(noBw.volume, 0);
+  assert.notStrictEqual(noBw.bodyweightUsed, true);
+});
+
+check('第 1 周样例按当时的动作回放，不把旧重量写成新槽位的手动重量', function () {
+  var seeded = GZ.normalize(GZ.defaults(true));
+  var fresh = GZ.normalize(GZ.defaults(false));
+  // 这些槽位在第 1 周样例里练的是另一个动作。下次重量必须仍是新模板的起点。
+  ['A1_2', 'A1_3', 'A1_4', 'A1_5', 'B1_2', 'B1_3', 'B1_4', 'B1_5', 'A2_2', 'A2_3', 'A2_4', 'A2_5', 'B2_2', 'B2_3', 'B2_4'].forEach(function (id) {
+    function pick(db) {
+      var day = id.split('_')[0];
+      return GZ.buildTrain(db, { day: day }).items.filter(function (it) { return it.slotId === id; })[0];
+    }
+    var got = pick(seeded), base = pick(fresh);
+    assert.strictEqual(got.name, base.name, id);
+    assert.strictEqual(got.weight, base.weight, id + ' ' + got.weight + ' vs ' + base.weight);
+  });
+  var curl = GZ.buildTrain(seeded, { day: 'B2' }).items.filter(function (it) { return it.slotId === 'B2_5'; })[0];
+  assert.strictEqual(curl.name, '哑铃弯举');
+  assert.notStrictEqual(curl.weight, 6);
+  var logs = GZ.buildReview(seeded).logs;
+  var a1 = logs.filter(function (l) { return l.id === 'xls_A1_w1'; })[0];
+  assert.strictEqual(a1.weekText, '第 1 周');
+  assert.ok(a1.weekText.indexOf('次') < 0);
+  assert.strictEqual(a1.items[1].name, '泽奇深蹲');
+  assert.ok(a1.items[1].context.indexOf('前蹲') >= 0);
+  assert.ok(a1.items[1].context.indexOf('替换') >= 0);
+  assert.notStrictEqual(a1.items[1].name, '罗马尼亚硬拉');
+  assert.strictEqual(a1.items[3].name, '高位下拉');
+  assert.ok(a1.items[3].detail.indexOf('50 kg') >= 0);
+  assert.ok(a1.items[3].detail.indexOf('3×15+') >= 0);
+  assert.ok(a1.items[3].detail.indexOf('末组 15 次') >= 0);
+  assert.ok(a1.items[3].context.indexOf('手动') >= 0);
+  assert.notStrictEqual(a1.items[3].name, '坐姿腿屈伸');
+  assert.strictEqual(a1.items[0].detail.indexOf(' × '), -1);
+  var b1 = logs.filter(function (l) { return l.id === 'xls_B1_w1'; })[0];
+  assert.strictEqual(b1.items[2].name, '罗马尼亚硬拉');
+  assert.ok(b1.items[2].detail.indexOf('自重') < 0);
+  var pull = logs.filter(function (l) { return l.id === 'xls_B1_w1'; })[0].items[3];
+  assert.strictEqual(pull.name, '俯身划船');
+  assert.ok(pull.context.indexOf('引体向上') >= 0);
+  var dbBw = GZ.normalize(GZ.defaults(true));
+  dbBw.records.forEach(function (r) { if (r.id === 'xls_B1_w1') r.bw = 70; });
+  var bwPull = GZ.buildReview(dbBw).logs.filter(function (l) { return l.id === 'xls_B1_w1'; })[0];
+  assert.ok(bwPull.items.some(function (it) { return it.detail.indexOf('kg 单只') >= 0 && it.detail.indexOf('双手') >= 0; }));
+});
+
 check('规则文案和训练提示跟引擎一致', function () {
   var text = JSON.stringify(GZ.PROGRESSION_RULES.gzclp);
   assert.ok(text.indexOf('末组 AMRAP ≥ 3') >= 0);
