@@ -1051,7 +1051,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
   // ---------- 基础常量 ----------
   var VERSION = 1;
-  var DAYS_VERSION = 4; // 动作模板版本。v4：T2 只放复合变式，T3 只放孤立；引体、高位下拉从 T3 调到 T2
+  var DAYS_VERSION = 5; // 动作模板版本。v5：A2 的第二个 T2 改为水平拉（坐姿划船），四天都有背部拉动；深蹲与髋铰链的 T2 各留一个变式
   var LIFTS = { squat: '杠铃深蹲', bench: '平板卧推', deadlift: '传统硬拉', ohp: '站姿实力推' };
   var LIFT_ORDER = ['squat', 'bench', 'deadlift', 'ohp'];
   var STEP_KEYS = [
@@ -1065,9 +1065,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
   var STAGES = {
     T1: {
-      '5×3+': { sets: 5, reps: 3, add: 6, hold: 3, next: '6×2+' },
-      '6×2+': { sets: 6, reps: 2, add: 4, hold: 2, next: '10×1+' },
-      '10×1+': { sets: 10, reps: 1, add: 2, hold: 2, next: null }
+      // add = 加重线（末组做到目标次数就加重）。完整三阶不再使用「保持区」；excel 模式另有硬编码公式。
+      '5×3+': { sets: 5, reps: 3, add: 3, hold: 3, next: '6×2+' },
+      '6×2+': { sets: 6, reps: 2, add: 2, hold: 2, next: '10×1+' },
+      '10×1+': { sets: 10, reps: 1, add: 1, hold: 1, next: null }
     },
     T2: {
       '3×10': { sets: 3, reps: 10, next: '3×8' },
@@ -1112,7 +1113,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    */
   var LIB = [
     // ---- T1：严格只保留四大项，不提供变式或其他复合动作 ----
-    ['T1', '杠铃深蹲', '下肢·蹲', '杠铃', '主项；末组AMRAP≥6次加重', 'squat', 1, 2.5],
+    ['T1', '杠铃深蹲', '下肢·蹲', '杠铃', '主项；末组 AMRAP ≥ 3 次加重，低于 3 次进入 6×2+', 'squat', 1, 2.5],
     ['T1', '传统硬拉', '下肢·髋铰链', '杠铃', '主项；髋主导拉起', 'deadlift', 1, 2.5],
     ['T1', '平板卧推', '上肢·水平推', '杠铃', '主项；胸大肌主导', 'bench', 1, 2.5],
     ['T1', '站姿实力推', '上肢·垂直推', '杠铃', '主项；站姿推举', 'ohp', 1, 2.5],
@@ -1284,7 +1285,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   /**
    * GZCLP 四天（每天 1×T1 + 2×T2 + 2×T3）
    *  - T1 主项：A1 深蹲 / B1 实力推 / A2 卧推 / B2 硬拉
-   *  - T2 变式：同一动作模式的复合变式，外加垂直拉、水平拉。引体、高位下拉、划船都在这里
+   *  - T2 变式：蹲、推、髋铰链各留一个变式；四天各有一条背部复合拉（下拉、引体、坐姿划船、杠铃划船）
    *  - T3 孤立：单关节，弯举、侧平举、面拉、腿弯举、腿屈伸
    * 每个 T2/T3 在这一轮里只出现一次。已经练过的位置从下一次训练起换成新动作，已有记录仍按当时的动作回放。
    */
@@ -1307,7 +1308,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       { id: 'A2', name: '水平推主导', slots: [
         slot('A2_1', 'T1', '平板卧推', pct('bench', 0.85), 't1u', false, 'bench'),
         slot('A2_2', 'T2', '窄距卧推', pct('bench', 0.65), 't2u'),
-        slot('A2_3', 'T2', '箱式深蹲', pct('squat', 0.65), 't2l'),
+        slot('A2_3', 'T2', '坐姿划船', pct('bench', 0.55), 't2u'),
         slot('A2_4', 'T3', '杠铃弯举', fixed(20), 't3u', true),
         slot('A2_5', 'T3', '绳索三头屈伸', pct('bench', 0.25), 't3u', true)
       ] },
@@ -1335,7 +1336,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       totalWeeks: 8,
       deloadEnabled: true,
       deloadEvery: 6,
-      t1FailLimit: 2,
+      t1FailLimit: 2, // 旧字段。完整三阶已改为一次未达标即降阶，不再读取；保留以便旧档案原样读写
       adaptive: true, // 按末组 AMRAP 次数自适应加重：次数远超加重线时，一次多加 1~2 档
       autoRotate: true // 每轮（8 周）自动轮换 T2/T3 动作
     };
@@ -1719,6 +1720,30 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    * 结果永远不会低于普通步幅——它只会「多加」，不会「少加」。
    */
   var ADAPT = { damp: 0.5, repCap: 15, maxSteps: 3, t3Extra: 10, t3MaxSteps: 2 };
+  /**
+   * 3×6 失败后回到 3×10 的重量。
+   * 优先用上一轮真正完成过的 3×10（没有完成记录时用这一轮 3×10 的起始重量）加 2 档，
+   * 加 2 档会碰到或超过这次失败重量时退回加 1 档；两者都必须低于失败重量。
+   * 填了 new10RM 时直接采用该重量。都没有时退到失败重量的 85%。
+   */
+  function t2ResetWeight(w, step, inc, last, e) {
+    var manual = e && e.new10RM !== undefined && e.new10RM !== null && e.new10RM !== '' ? Number(e.new10RM) : NaN;
+    if (!isNaN(manual) && manual > 0) return alignTo(manual, inc);
+    var bump = step > 0 ? step : (inc > 0 ? inc : 0);
+    if (!(last > 0)) {
+      var scaled = alignTo(w * 0.85, inc);
+      if (scaled > 0 && scaled < w - 1e-9) return scaled;
+      return Math.max(0, alignTo(fix(w - bump), inc));
+    }
+    var plus1 = alignTo(fix(last + (step || 0)), inc);
+    var plus2 = alignTo(fix(last + 2 * (step || 0)), inc);
+    if (step > 0 && plus2 > plus1 && plus2 < w - 1e-9) return plus2;
+    if (plus1 > 0 && plus1 < w - 1e-9) return plus1;
+    if (last < w - 1e-9) return alignTo(last, inc);
+    var fallback = alignTo(w * 0.85, inc);
+    if (fallback > 0 && fallback < w - 1e-9) return fallback;
+    return Math.max(0, alignTo(fix(w - bump), inc));
+  }
   function adaptiveUp(P, w, a, add, step, inc) {
     var out = { up: step, boost: false, note: '' };
     if (!P.adaptive || P.ruleMode === 'excel' || !step || !(a > add) || !(w > 0)) return out;
@@ -1742,6 +1767,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       slotId: s.id, tier: s.tier, badge: slotBadge(s), name: s.name, equip: s.equip, lift: s.lift,
       stage: st.stage, sets: def.sets, reps: def.reps, weight: w, planned: planned, manual: mw !== null, fail: st.fail || 0,
       input: e ? e.v : null, judgment: '', nextStage: st.stage, nextWeight: w, nextFail: st.fail || 0,
+      nextLast3x10: st.last3x10 || 0,
       volume: 0, e1rm: null, delta: 0, deload: false
     };
     if (deload) {
@@ -1770,22 +1796,21 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         r.nextWeight = a >= 6 ? fix(w + step) : w;
         r.nextFail = 0;
       } else {
-        if (a >= def.add) {
-          var ad = adaptiveUp(P, w, a, def.add, step, inc);
-          r.judgment = '加重'; r.nextWeight = alignTo(fix(w + ad.up), inc); r.nextFail = 0;
+        // 完整三阶：末组达到目标次数（5×3+ 为 3，6×2+ 为 2，10×1+ 为 1）就加重并留在本阶。
+        // 达不到就立刻进入下一阶，重量不变；10×1+ 失败则重置。不再停在 3～5 次的保持区，也不再要求连续失败。
+        var target = def.reps;
+        if (a >= target) {
+          var ad = adaptiveUp(P, w, a, target, step, inc);
+          r.judgment = '加重'; r.nextStage = st.stage; r.nextWeight = alignTo(fix(w + ad.up), inc); r.nextFail = 0;
           if (ad.boost) { r.boost = true; r.adaptNote = ad.note; }
-        }
-        else if (a >= def.hold && def.next !== null) { r.judgment = '保持'; r.nextFail = 0; }
-        else if (def.next === null) {
-          // 10×1+ 未达标：测试新 5RM，取 90% 为新 TM，重置回 5×3+
+        } else if (def.next === null) {
+          // 10×1+ 未达标。新 5RM 已经约是 1RM 的 85%，只再乘 5×3+ 的起始比例，不再乘一遍 TM。
           r.judgment = '重置'; r.nextStage = FIRST_STAGE.T1; r.nextFail = 0;
           var p0 = s.init && s.init.type === 'pct' ? s.init.pct : 0.85;
-          r.nextWeight = e.new5RM ? alignTo(Number(e.new5RM) * P.tmRatio * p0, inc) : alignTo(w * 0.85, inc);
+          r.nextWeight = e.new5RM ? alignTo(Number(e.new5RM) * p0, inc) : alignTo(w * 0.85, inc);
           r.reset5RM = e.new5RM || null;
         } else {
-          var fails = (st.fail || 0) + 1;
-          if (fails >= (P.t1FailLimit || 2)) { r.judgment = '降阶'; r.nextStage = def.next; r.nextFail = 0; }
-          else { r.judgment = '建议降阶'; r.nextFail = fails; }
+          r.judgment = '降阶'; r.nextStage = def.next; r.nextWeight = w; r.nextFail = 0;
         }
       }
     } else if (s.tier === 'T2') {
@@ -1793,10 +1818,26 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var actual = done ? def.sets * def.reps : (e.reps !== undefined && e.reps !== null && e.reps !== '' ? Number(e.reps) : def.sets * def.reps - 2);
       r.volume = fix(w * actual);
       r.actualReps = actual;
-      // =IF(F="完成","加重","退阶") / 下次阶段 3×10→3×8→3×6→3×10 / =IF(OR(F="完成",D="3×6"),E+步幅,E)
-      if (done) { r.judgment = '加重'; r.nextStage = '3×10'; r.nextWeight = alignTo(fix(w + step), inc); }
-      else if (st.stage === '3×6') { r.judgment = mode === 'excel' ? '退阶' : '重置'; r.nextStage = '3×10'; r.nextWeight = alignTo(fix(w + step), inc); }
-      else { r.judgment = '退阶'; r.nextStage = def.next; r.nextWeight = w; }
+      var bw2 = equipOf(s.name, s.equip) === '自重';
+      if (done && st.stage === '3×10' && w > 0) r.nextLast3x10 = w;
+      // 表格公式：完成任何组次都回到 3×10 并加重；3×6 未完成也加重回到 3×10。
+      // 完整三阶：完成留在当前组次并加重；只有 3×6 失败才重置，重量取上次完成的 3×10 加 1～2 档。
+      if (done && bw2 && st.stage === '3×10') {
+        r.judgment = '建议负重'; r.nextStage = '3×10'; r.nextWeight = w;
+      } else if (done) {
+        r.judgment = '加重';
+        r.nextStage = mode === 'excel' ? '3×10' : st.stage;
+        r.nextWeight = alignTo(fix(w + step), inc);
+      } else if (st.stage === '3×6') {
+        r.nextStage = '3×10';
+        if (mode === 'excel') {
+          r.judgment = '退阶'; r.nextWeight = alignTo(fix(w + step), inc);
+        } else {
+          r.judgment = '重置';
+          r.nextWeight = t2ResetWeight(w, step, inc, r.nextLast3x10, e);
+          r.nextLast3x10 = r.nextWeight;
+        }
+      } else { r.judgment = '退阶'; r.nextStage = def.next; r.nextWeight = w; }
     } else {
       var t = Number(e.v);
       r.volume = fix(w * ((def.sets - 1) * def.reps + t));
@@ -1810,8 +1851,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           r.adaptNote = '末组 ' + t + ' 次，超过加重线（' + P.t3Threshold + ' 次）' + (t - P.t3Threshold) + ' 次：本次多加一档 +' + fmtW(up3) + ' kg（常规 +' + fmtW(step) + '）';
         }
         r.judgment = '加重'; r.nextWeight = alignTo(fix(w + up3), inc);
-      }
-      else { r.judgment = '保持'; r.nextWeight = w; }
+      } else if (mode !== 'excel' && t < def.reps) {
+        r.judgment = '减轻';
+        r.nextWeight = Math.max(0, alignTo(fix(w - step), inc));
+      } else { r.judgment = '保持'; r.nextWeight = w; }
     }
     r.delta = fix(r.nextWeight - w);
     return r;
@@ -2040,11 +2083,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 
   registerProgression({
     id: 'gzclp', name: 'GZCLP', family: 'stage',
-    desc: 'T1 5×3+ → 6×2+ → 10×1+，T2 3×10 → 3×8 → 3×6，T3 3×15+ 末组达标加重；每次训练都可能加重。',
+    desc: 'T1 做满 3/2/1 次就加重，做不满立刻降阶；T2 完成当前组次加重，3×6 失败才重置；T3 低于 15 次减轻，达到阈值加重。',
     firstStage: function (tier) { return FIRST_STAGE[tier]; },
     stageDef: gzStageDef,
-    initState: function (s, P) { return { stage: FIRST_STAGE[s.tier], weight: initWeight(s, P), fail: 0 }; },
-    freshState: function (s, weight) { return { stage: FIRST_STAGE[s.tier], weight: weight, fail: 0 }; },
+    initState: function (s, P) {
+      var w = initWeight(s, P);
+      return { stage: FIRST_STAGE[s.tier], weight: w, fail: 0, last3x10: s.tier === 'T2' ? w : 0 };
+    },
+    freshState: function (s, weight) {
+      return { stage: FIRST_STAGE[s.tier], weight: weight, fail: 0, last3x10: s.tier === 'T2' ? weight : 0 };
+    },
     evaluate: gzEvaluate,
     amrapLast: function (tier) { return tier !== 'T2'; }
   });
@@ -2254,12 +2302,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    */
   var ROTATION = {
     A1_2: { role: '深蹲变式', why: '保持「蹲」模式，变换杠位与躯干角度，补强 T1 深蹲的薄弱环节', pool: ['前蹲', '泽奇深蹲', '箱式深蹲'] },
-    A2_3: { role: '深蹲变式', why: '另一天再练一次蹲。顺序和 A1 错开，同一轮不会两个位置做同一个变式', pool: ['箱式深蹲', '腿举', '哈克深蹲', '泽奇深蹲'] },
     A1_3: { role: '垂直拉', why: '高位下拉是复合动作，三轮依次换握法，不进孤立组', pool: ['高位下拉', '对握高位下拉', '反握高位下拉'] },
     A2_2: { role: '卧推变式', why: '窄距、暂停、上斜和臂屈伸，分别补锁定段、触胸段和上胸', pool: ['窄距卧推', '暂停卧推', '上斜卧推', '上斜哑铃卧推', '负重双杠臂屈伸', '哑铃卧推'] },
+    A2_3: { role: '水平拉', why: '卧推日补一条背部复合拉。器械和哑铃划船，与 B2 的杠铃划船错开', pool: ['坐姿划船', '单臂哑铃划船'] },
     B1_2: { role: '垂直推', why: '支援站姿实力推；哑铃与杠铃交替改善左右力量平衡', pool: ['坐姿哑铃推肩', '杠铃推举', '阿诺德推举'] },
     B1_3: { role: '垂直拉', why: '引体向上是复合动作，作为垂直拉的变式放在 T2', pool: ['引体向上', '反握引体向上', '负重引体向上'] },
-    B2_2: { role: '水平拉', why: '划船是复合动作，平衡卧推带来的推拉比例', pool: ['潘德雷划船', '杠铃划船', 'T杠划船', '坐姿划船', '单臂哑铃划船'] },
+    B2_2: { role: '水平拉', why: '杠铃划船平衡卧推。和 A2 的器械划船分开，避免同一轮抢同一个动作', pool: ['潘德雷划船', '杠铃划船', '俯身划船', 'T杠划船'] },
     B2_3: { role: '髋铰链', why: '硬拉的变式：腘绳肌、臀大肌、竖脊肌', pool: ['罗马尼亚硬拉', '赤字硬拉', '杠铃早安式', '臀推', '山羊挺身'] },
     A1_4: { role: '股四头', why: '单关节伸膝。第一轮双侧，第二轮单侧，之后交替', pool: ['坐姿腿屈伸', '单腿腿屈伸'] },
     B1_4: { role: '后束 / 肩袖', why: '平衡大量推类动作，维护肩关节', pool: ['面拉', '反向飞鸟'] },
@@ -2404,7 +2452,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       res = evalSlot(Object.assign({}, ef.slot, { name: e.ex, equip: lib ? lib.equip : '' }), st, e);
       // 仅本次替换：记录容量，但不推进原动作的阶段与重量
       if (!res.deload && res.judgment !== '跳过') { res.judgment = '替换'; res.e1rm = null; }
-      res.nextStage = st.stage; res.nextWeight = st.weight; res.nextFail = st.fail || 0; res.delta = 0;
+      res.nextStage = st.stage; res.nextWeight = st.weight; res.nextFail = st.fail || 0; res.nextLast3x10 = st.last3x10 || 0; res.delta = 0;
       res.sub = true; res.origName = ef.slot.name;
     } else {
       res = evalSlot(ef.slot, st, e);
@@ -2453,7 +2501,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         var res = runSlot(db, s, states[s.id], rec.entries ? rec.entries[s.id] : null, week, rec.deload, hist, snapW).res;
         items.push(res);
         vol[s.tier] += res.volume;
-        states[s.id] = { stage: res.nextStage, weight: res.nextWeight, fail: res.nextFail || 0, cycleMiss: res.nextCycleMiss || 0 };
+        var prev10 = states[s.id] && states[s.id].last3x10 || 0;
+        states[s.id] = { stage: res.nextStage, weight: res.nextWeight, fail: res.nextFail || 0, cycleMiss: res.nextCycleMiss || 0, last3x10: res.nextLast3x10 != null ? res.nextLast3x10 : prev10 };
       });
       items.forEach(function (it) {
         if (it.deload || it.judgment === '跳过') return;
@@ -2509,6 +2558,23 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return entries;
   }
 
+  function gzInputHint(P, s, def, equip, stage) {
+    if (s.tier === 'T1') {
+      if (P.ruleMode === 'excel') return '≥6 加重 · 3–5 保持 · <3 建议降阶';
+      return '≥' + def.reps + ' 加重 · <' + def.reps + (def.next ? ' 降阶' : ' 重置');
+    }
+    if (s.tier === 'T3') {
+      var bw = equip === '自重';
+      if (P.ruleMode === 'excel') return '≥' + P.t3Threshold + (bw ? ' 建议切换负重版' : ' 加重');
+      return '≥' + P.t3Threshold + (bw ? ' 建议负重' : ' 加重') + ' · <' + def.reps + ' 减轻';
+    }
+    if (s.tier === 'T2') {
+      if (equip === '自重' && stage === '3×10') return '完成 3×10 后建议改做负重版';
+      if (P.ruleMode === 'excel') return '完成就加重，并回到 3×10';
+      return '完成就加重，留在 ' + (stage || '当前组次');
+    }
+    return '';
+  }
   function buildTrain(db, opts) {
     opts = opts || {};
     var P = db.params, rp = replay(db, { untilId: opts.recordId || null });
@@ -2567,8 +2633,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         inputType: res.inputMode || (deload ? 'deload' : s.tier === 'T2' ? 'done' : 'amrap'),
         loads: res.loads || null,
         scheme: s.scheme || null,
-        amrapHint: res.inputMode === 'cardio' ? ('填实际分钟，达到 ' + def.reps + ' 分钟算完成') : res.inputMode === 'sets' && s.scheme ? ('全部做到 ' + s.scheme.repMax + ' 次加重，有一组 ≤ ' + (s.scheme.repMin - 2) + ' 次减轻') : res.inputMode === 'linear' && s.scheme ? ('末组至少 ' + s.scheme.reps + ' 次加重，连续 3 次失败减 10%') : res.inputMode === 'wave' ? '规定次数没完成，这一轮不加训练最大重量' : res.inputMode === 'fixed' ? '重量固定为训练最大重量的 50%，不自动加重' : (s.tier === 'T1' ? ('≥' + def.add + ' 加重' + (def.next ? ' · <' + def.hold + ' 预警' : ' · <' + def.add + ' 重置')) : s.tier === 'T3' ? ('≥' + P.t3Threshold + (equipOf(res.name, res.equip) === '自重' ? ' 建议切换负重版' : ' 加重')) : ''),
-        amrapTarget: res.inputMode === 'cardio' ? def.reps : deload ? null : s.tier === 'T1' ? def.add : s.tier === 'T3' ? P.t3Threshold : null,
+        amrapHint: res.inputMode === 'cardio' ? ('填实际分钟，达到 ' + def.reps + ' 分钟算完成') : res.inputMode === 'sets' && s.scheme ? ('全部做到 ' + s.scheme.repMax + ' 次加重，有一组 ≤ ' + (s.scheme.repMin - 2) + ' 次减轻') : res.inputMode === 'linear' && s.scheme ? ('末组至少 ' + s.scheme.reps + ' 次加重，连续 3 次失败减 10%') : res.inputMode === 'wave' ? '规定次数没完成，这一轮不加训练最大重量' : res.inputMode === 'fixed' ? '重量固定为训练最大重量的 50%，不自动加重' : gzInputHint(P, s, def, equipOf(res.name, res.equip), st.stage),
+        amrapTarget: res.inputMode === 'cardio' ? def.reps : deload ? null : s.tier === 'T1' ? (P.ruleMode === 'excel' ? 6 : def.reps) : s.tier === 'T3' ? P.t3Threshold : null,
         value: e.v, setsIn: e.sets || null, miss: !!e.miss, logged: doneLog, reps2: e.reps, skip: !!e.skip, new5RM: e.new5RM || '', done: e.done || 0, dots: dots,
         need5RM: s.tier === 'T1' && P.ruleMode !== 'excel' && st.stage === '10×1+',
         rest: REST[s.tier],
@@ -2928,6 +2994,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         Object.keys(lastBySlot).forEach(function (id) {
           var it = lastBySlot[id], dn = id.split('_')[0] + ' ';
           if (it.tier === 'T2' && it.judgment === '退阶') insights.push({ type: 'warn', text: dn + it.name + ' 没吃下 ' + it.stage + '，下次降到 ' + it.nextStage + '，重量不变。' });
+          if (it.tier === 'T2' && it.judgment === '重置') insights.push({ type: 'warn', text: dn + it.name + ' 3×6 没完成，已重置回 3×10 @ ' + fmtW(it.nextWeight) + 'kg。' });
+          if (it.tier === 'T2' && it.judgment === '建议负重') insights.push({ type: 'tip', text: dn + it.name + ' 已完成 3×10。自重加不上重量，可以换成负重版本。' });
+          if (it.tier === 'T3' && it.judgment === '减轻') insights.push({ type: 'warn', text: dn + it.name + ' 末组 ' + it.input + ' 次，低于 ' + (it.reps || 15) + ' 次，下次减轻到 ' + fmtW(it.nextWeight) + 'kg。' });
           if (it.tier === 'T3' && it.judgment === '保持' && Number(it.input) >= P.t3Threshold - 4) insights.push({ type: 'tip', text: dn + it.name + ' 末组 ' + it.input + ' 次，距离 ' + P.t3Threshold + ' 次加重只差 ' + (P.t3Threshold - it.input) + ' 次，下次冲一把。' });
         });
       }
@@ -3145,6 +3214,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       if (e.skip) entries[k].skip = true;
       if (e.reps !== undefined && e.reps !== null && e.reps !== '') entries[k].reps = Number(e.reps);
       if (e.new5RM) entries[k].new5RM = Number(e.new5RM);
+      if (e.new10RM) entries[k].new10RM = Number(e.new10RM);
       if (manualW(e) !== null) entries[k].w = manualW(e);
       if (e.ex) entries[k].ex = String(e.ex);
       if (e.miss) entries[k].miss = true;
@@ -3233,25 +3303,31 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   var PROGRESSION_RULES = {
     gzclp: {
       name: 'GZCLP · 线性三阶进阶',
-      summary: 'T1 从 5×3+ 开始，失败则降阶到 6×2+ 与 10×1+；T2 每轮在同模式内轮换；T3 高次数积累。',
+      summary: 'T1 做满目标次数就加重，做不满就降阶；T2 在当前组次上加重，做不满才退阶；T3 做满 15 次保持，达到阈值加重，低于 15 次减轻。',
       rules: [
         { title: 'T1 · 三阶进阶', rows: [
-          ['5×3+', '末组 AMRAP ≥ 6', '加重，继续 5×3+'], ['5×3+', '3 ≤ AMRAP < 6', '重量不变，巩固'], ['5×3+', '连续 2 次 AMRAP < 3', '进入 6×2+，重量不变'],
-          ['6×2+', '末组 AMRAP ≥ 4', '加重，继续 6×2+'], ['6×2+', '2 ≤ AMRAP < 4', '重量不变，巩固'], ['6×2+', '连续 2 次 AMRAP < 2', '进入 10×1+，重量不变'],
-          ['10×1+', '末组 AMRAP ≥ 2', '加重，继续 10×1+'], ['10×1+', 'AMRAP < 2', '测新 5RM，取 90% 为新 TM，重置 5×3+']] },
+          ['5×3+', '末组 AMRAP ≥ 3', '加重，继续 5×3+'], ['5×3+', '末组 AMRAP < 3', '进入 6×2+，重量不变'],
+          ['6×2+', '末组 AMRAP ≥ 2', '加重，继续 6×2+'], ['6×2+', '末组 AMRAP < 2', '进入 10×1+，重量不变'],
+          ['10×1+', '末组 AMRAP ≥ 1', '加重，继续 10×1+'], ['10×1+', '末组 AMRAP < 1', '按新 5RM × 85% 重置回 5×3+；未测则按当前重量 × 85%'],
+          ['高次数', '末组远超目标', '自适应多加，最多 3 档，只会多加不会少加']] },
         { title: 'T2 · 退阶重置', rows: [
-          ['3×10', '全部完成', '加重，继续 3×10'], ['3×10', '无法完成', '降为 3×8，重量不变'],
-          ['3×8', '全部完成', '加重，回到 3×10（表格公式）'], ['3×8', '无法完成', '降为 3×6，重量不变'], ['3×6', '完成 / 未完成', '加重，重置回 3×10']] },
-        { title: 'T3', rows: [['3×15+', '末组 AMRAP ≥ 阈值(25)', '加重，回到 3×15+'], ['3×15+', '末组 AMRAP < 阈值', '重量不变']] },
+          ['3×10 / 3×8 / 3×6', '全部完成', '加重，留在当前组次'],
+          ['3×10', '无法完成', '降为 3×8，重量不变'], ['3×8', '无法完成', '降为 3×6，重量不变'],
+          ['3×6', '无法完成', '重置回 3×10。重量 = 上次完成的 3×10 + 1～2 档，且低于这次失败重量'],
+          ['自重 3×10', '全部完成', '建议改做负重版本，不再显示加重 +0kg']] },
+        { title: 'T3', rows: [
+          ['3×15+', '末组 AMRAP ≥ 阈值(25)', '加重'], ['3×15+', '15 ≤ 末组 < 阈值', '重量不变'],
+          ['3×15+', '末组 < 15', '减轻一档'], ['自重', '末组 ≥ 阈值', '建议改做负重版本']] },
         { title: '减载周规则', rows: [['第 6 周', '计划内减载', 'T1 −50%，T2 −40%，T3 少 1 组，不打乱进阶链']] }
       ],
       general: [
         '循环顺序：A1 → B1 → A2 → B2 依次滚动，不固定星期几',
         '组间休息：T1 3~5 分钟，T2 2~3 分钟，T3 60~90 秒',
         '减载：每 6 周 1 次，T1 −50%，T2 −40%，T3 减 1 组（不改变进阶链）',
-        'T1 降阶：需连续 2 次未达标，单次失败只预警',
+        'T1 降阶：完整三阶下，末组低于目标次数即进入下一阶。3～5 次的保持区只在「严格按表格」里保留',
+        '严格按表格：T1 仍是 ≥6 加重、3～5 保持、<3 切到 6×2+；T2 完成任何组次都加重并回到 3×10，3×6 失败也加重回到 3×10',
         '推荐重量：T1=1RM×76.5%；T2≈1RM×动作系数×65%；T3≈1RM×动作系数×50%',
-        '动作轮换：T1 四大项固定；T2/T3 每轮（8 周）在同一动作模式内自动换一次，不与上一轮重复，一轮内保持不变',
+        '动作轮换：T1 四大项固定；T2/T3 每轮（8 周）在同一动作模式内自动换一次。换入的新动作从 3×10 或 3×15+ 重新开始，不接着上一轮没走完的 3×8 / 3×6',
         '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
       ]
     },
@@ -3335,6 +3411,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   };
   function progressionRules(progId) {
     return PROGRESSION_RULES[progId] || PROGRESSION_RULES.dual;
+  }
+  function ruleModeNote(P) {
+    if (!P || P.ruleMode === 'excel') return '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换（≥6 加重，3～5 次保持），T2 完成任何组次都加重并回到 3×10，3×6 未完成也会加重回到 3×10。固定步幅，不启用自适应加重。';
+    var base = 'T1 按 5×3+ → 6×2+ → 10×1+ 进阶：末组达到 3 / 2 / 1 次就加重，达不到就进入下一阶，10×1+ 失败按新 5RM 的 85% 重置回 5×3+。T2 完成当前组次就加重并留在这一阶，3×6 失败才重置回 3×10。';
+    if (P.adaptive === false) return base;
+    return base + '末组次数明显高于目标时（例如 5×3+ 做到 12 次以上），按 Epley 估算偏轻的程度，取一半、最多加 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。';
   }
   var RULES = PROGRESSION_RULES.gzclp.rules;
   var GENERAL_RULES = PROGRESSION_RULES.gzclp.general;
@@ -3816,7 +3898,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (s.prog === 'fixed') return (sc.sets || 5) + '×' + (sc.reps || 10) + (sc.pct ? ' · 训练最大重量 ' + Math.round(sc.pct * 100) + '%' : '');
     if (s.prog === 'cardio') return (sc.minutes || 20) + ' 分钟';
     if (s.tier === 'T1') return '5×3+ → 6×2+ → 10×1+';
-    if (s.tier === 'T2') return '3×10 → 3×8 → 3×6';
+    if (s.tier === 'T2') return '完成留在当前组次，失败再退阶';
     return '3×15+';
   }
   function templateCatalog() {
@@ -3909,7 +3991,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
     PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, TIER_LABELS: TIER_LABELS, tierLabel: tierLabel, slotBadge: slotBadge, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, recommendTemplates: recommendTemplates, ceilTo: ceilTo,
-    PROGRESSION_RULES: PROGRESSION_RULES, progressionRules: progressionRules,
+    PROGRESSION_RULES: PROGRESSION_RULES, progressionRules: progressionRules, ruleModeNote: ruleModeNote,
     LEGACY_PID: LEGACY_PID, BASE_KEYS: BASE_KEYS, PLAN_KEYS: PLAN_KEYS, PROGRAM_STATUS: PROGRAM_STATUS, recPid: recPid, activePid: activePid, activeProgram: activeProgram, programById: programById,
     canTrain: canTrain, planView: planView, switchProgram: switchProgram, pauseProgram: pauseProgram, resumeProgram: resumeProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile,
     ONBOARD_GENDER: ONBOARD_GENDER, ONBOARD_GOAL: ONBOARD_GOAL, ONBOARD_EXPERIENCE: ONBOARD_EXPERIENCE, ONBOARD_DAYS: ONBOARD_DAYS, ONBOARD_EQUIP: ONBOARD_EQUIP,
@@ -5710,10 +5792,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
             '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null || it.value === undefined ? '' : it.value) + '" placeholder="' + (it.amrapTarget || '') + '">' +
             '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="1">+</div></div></div>';
         }
-        if (it.need5RM) h += '<div class="inrow"><div class="flex1"><div class="in-label">新 5RM</div><div class="in-hint">10×1+ 未达标时填写，用于重置</div></div><input class="mini-in num" inputmode="decimal" data-act="5rm" data-slot="' + it.slotId + '" value="' + esc(it.new5RM) + '" placeholder="kg"></div>';
+        if (it.need5RM) h += '<div class="inrow"><div class="flex1"><div class="in-label">新 5RM</div><div class="in-hint">未达标时按新 5RM 的 85% 重置</div></div><input class="mini-in num" inputmode="decimal" data-act="5rm" data-slot="' + it.slotId + '" value="' + esc(it.new5RM) + '" placeholder="kg"></div>';
         if (it.inputType === 'done') {
           h += '<div class="inrow col"><div class="seg seg-done"><div class="seg-i ' + (it.value === '完成' ? 'on ok' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="完成">全部完成</div>' +
             '<div class="seg-i ' + (it.value === '未完成' ? 'on bad' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="未完成">未完成</div></div>';
+          if (it.amrapHint) h += '<div class="in-hint">' + esc(it.amrapHint) + '</div>';
           if (it.value === '未完成') h += '<div class="subrow"><span class="in-hint">实际总次数（可选，用于容量）</span><input class="mini-in num" inputmode="numeric" data-act="reps" data-slot="' + it.slotId + '" value="' + esc(it.reps2) + '" placeholder="' + (it.sets * it.reps - 2) + '"></div>';
           h += '</div>';
         }
@@ -6937,7 +7020,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (isCurGz) {
       h += '<div class="sec-h">判定规则</div>' + seg([{ html: '完整三阶', on: P.ruleMode === 'full', data: ' data-v="full"' }, { html: '严格按表格', on: P.ruleMode === 'excel', data: ' data-v="excel"' }], -1, 'mode', 'mode-seg') +
         (P.ruleMode === 'full' ? '<div class="list"><div class="cell"><span class="flex1">按末组次数自适应加重</span><label class="ios-sw green"><input type="checkbox" data-act="adaptsw" ' + (P.adaptive !== false ? 'checked' : '') + '><i></i></label></div></div>' : '') +
-        '<div class="sec-f">' + (P.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (P.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。') + '</div>';
+        '<div class="sec-f">' + GZ.ruleModeNote(P) + '</div>';
     } else {
       var pRules = GZ.progressionRules(P.progression);
       h += '<div class="sec-h">当前计划进阶</div><div class="list"><div class="cell"><span class="flex1">策略</span><span class="val">' + esc(pRules.name) + '</span></div></div>' +

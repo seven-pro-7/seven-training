@@ -132,7 +132,7 @@
         </view>
       </view>
       <view class="inrow" wx:if="{{item.need5RM}}">
-        <view class="flex1"><view class="in-label">新 5RM</view><view class="in-hint">10×1+ 未达标时填写，用于重置</view></view>
+        <view class="flex1"><view class="in-label">新 5RM</view><view class="in-hint">未达标时按新 5RM 的 85% 重置</view></view>
         <input class="mini-in num" type="digit" value="{{item.new5RM}}" placeholder="kg" placeholder-class="ph" data-slot="{{item.slotId}}" bindinput="on5RM" />
       </view>
 
@@ -141,6 +141,7 @@
           <view class="seg-i {{item.value === '完成' ? 'on ok' : ''}}" data-slot="{{item.slotId}}" data-v="完成" bindtap="onDone">全部完成</view>
           <view class="seg-i {{item.value === '未完成' ? 'on bad' : ''}}" data-slot="{{item.slotId}}" data-v="未完成" bindtap="onDone">未完成</view>
         </view>
+        <view class="in-hint" wx:if="{{item.amrapHint}}">{{item.amrapHint}}</view>
         <view class="subrow" wx:if="{{item.value === '未完成'}}">
           <text class="in-hint">实际总次数（可选，用于容量）</text>
           <input class="mini-in num" type="number" value="{{item.reps2}}" placeholder="{{item.sets * item.reps - 2}}" placeholder-class="ph" data-slot="{{item.slotId}}" bindinput="onReps" />

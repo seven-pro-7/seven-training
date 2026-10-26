@@ -41,7 +41,7 @@
     <view class="list" wx:if="{{p.ruleMode === 'full'}}">
       <view class="cell"><text class="flex1">按末组次数自适应加重</text><switch checked="{{p.adaptive !== false}}" color="#34C759" bindchange="onAdaptive" /></view>
     </view>
-    <view class="sec-f">{{p.ruleMode === 'full' ? 'T1 按 5×3+ → 6×2+ → 10×1+ 三阶进阶，连续 2 次未达标才降阶，10×1+ 失败测 5RM 重置。' + (p.adaptive !== false ? '末组次数远超加重线时（如卧推 17 次而加重线是 6 次），按 Epley 公式估算偏轻的程度，取一半、最多 3 档，只会多加不会少加；T3 超过阈值 10 次以上加 2 档。' : '') : '与 Excel 公式逐格一致：T1 只在 5×3+ 与 6×2+ 之间切换，固定步幅，不启用自适应加重。'}}</view>
+    <view class="sec-f">{{ruleNote}}</view>
   </block>
   <block wx:else>
     <view class="sec-h">当前计划进阶</view>
