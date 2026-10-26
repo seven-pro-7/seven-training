@@ -29,6 +29,8 @@
 .cdot { position: absolute; top: 10rpx; right: 10rpx; width: 12rpx; height: 12rpx; border-radius: 50%; }
 
 .ov-row { position: relative; display: flex; align-items: center; padding: 20rpx 0; }
+.ov-row.tap { cursor: pointer; }
+.ov-row.tap:active { opacity: 0.72; }
 .ov-row + .ov-row::before { content: ''; position: absolute; top: 0; left: 70rpx; right: 0; height: 1rpx; background: var(--sep); }
 .ov-main { flex: 1; margin-left: 18rpx; display: flex; flex-direction: column; }
 .ovn { font-size: 30rpx; font-weight: 500; }
