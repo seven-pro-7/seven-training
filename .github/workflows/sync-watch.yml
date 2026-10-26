@@ -2,8 +2,11 @@ name: Sync watch
 
 on:
   schedule:
-    # 07:30 Asia/Shanghai, after the previous night's sleep is available
+    # 北京时间 07:30、13:30、19:30、22:30。白天练完的力量训练当天就能进快照，不必等到次日早上。
     - cron: '30 23 * * *'
+    - cron: '30 5 * * *'
+    - cron: '30 11 * * *'
+    - cron: '30 14 * * *'
   workflow_dispatch:
 
 permissions:

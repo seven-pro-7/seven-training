@@ -366,13 +366,13 @@
       && onboardIds(ONBOARD_DAYS).indexOf(d.daysPerWeek) >= 0
       && onboardIds(ONBOARD_EQUIP).indexOf(d.equipment) >= 0;
   }
-  /** 已有训练记录的老档案视为完成，不强制弹切入流程。 */
+  /** 已有训练记录的老档案视为完成。资料与训练方向流程已下架，不再拦截进入。 */
   function onboardingComplete(db) {
-    if (!db) return false;
+    if (!db) return true;
     if ((db.records || []).length > 0) return true;
     return profileReady(db) && directionReady(db);
   }
-  function needsOnboarding(db) { return !onboardingComplete(db); }
+  function needsOnboarding() { return false; }
   function labelOf(list, id) {
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].label;
     return '';
@@ -793,7 +793,7 @@
    * 参数分两类：
    *   BASE_KEYS 共享底座（体重、器材、名片）——所有计划共用，切换计划不变。规范见 .cursor/rules/plan-base.mdc
    *   PLAN_KEYS 计划自己（规则参数、周期、减载、计划起始 1RM）——各计划独立，暂停时随计划冻结
-   *   T1/T2/T3 只是 GZCLP 的界面层级；其他计划用 slotBadge（主项/变式/孤立或 BBB）
+   *   层级显示名只在 TIER_LABELS：GZCLP 是 T1/T2/T3，其他进阶是主项/变式/孤立或 BBB。界面走 slotBadge / tierLabel。
    * 1RM 的口径：每个计划冻结自己的起始 1RM（避免改一次 1RM 就改写已暂停计划的历史）；
    *   跨计划共享的是「1RM 档案」oneRMProfile：手动录入值 + 所有计划的估算 1RM，用于新计划的起始重量。
    */
@@ -979,16 +979,29 @@
     return PROGRESSIONS[id] || PROGRESSIONS.gzclp;
   }
   var ROLES = { T1: 'main', T2: 'assist', T3: 'accessory', C: 'cardio' };
-  var ROLE_NAME = { main: '主项', assist: '变式', accessory: '孤立', cardio: '有氧' };
+  /**
+   * 每个进阶的层级显示名。界面只从这里取，不要在页面里再写一套。
+   * 槽位自己的 prog 优先；GZCLP 的槽位不写 prog，缺省就是 gzclp。
+   */
+  var TIER_LABELS = {
+    gzclp: { T1: 'T1', T2: 'T2', T3: 'T3', C: '有氧' },
+    w531: { T1: '主项', T2: '主项', T3: '主项', C: '有氧' },
+    fixed: { T1: 'BBB', T2: 'BBB', T3: 'BBB', C: '有氧' },
+    linear: { T1: '主项', T2: '变式', T3: '孤立', C: '有氧' },
+    dual: { T1: '主项', T2: '变式', T3: '孤立', C: '有氧' },
+    cardio: { T1: '有氧', T2: '有氧', T3: '有氧', C: '有氧' }
+  };
+  var ROLE_NAME = { main: TIER_LABELS.dual.T1, assist: TIER_LABELS.dual.T2, accessory: TIER_LABELS.dual.T3, cardio: '有氧' };
   function roleOf(tier) { return ROLES[tier] || 'accessory'; }
-  /** T1/T2/T3 只是 GZCLP 的层级名。其他计划按自己的进阶显示主项、变式、孤立、有氧或 BBB。 */
+  function tierLabel(progId, tier) {
+    var table = TIER_LABELS[progId] || TIER_LABELS.dual;
+    if (tier === 'C') return '有氧';
+    return (tier && table[tier]) || '动作';
+  }
+  /** 槽位徽章。progHint 是计划进阶，槽位自己的 prog（BBB、有氧）优先。 */
   function slotBadge(s, progHint) {
-    var prog = (s && s.prog) || progHint || '';
-    if (prog === 'cardio' || (s && s.tier === 'C')) return '有氧';
-    if (prog === 'fixed') return 'BBB';
-    if (prog === 'w531') return '主项';
-    if (prog === 'gzclp') return (s && s.tier) || '';
-    return ROLE_NAME[roleOf(s && s.tier)] || '动作';
+    var prog = (s && s.prog) || progHint || 'gzclp';
+    return tierLabel(prog, s && s.tier);
   }
 
   registerProgression({
@@ -1630,7 +1643,7 @@
     var recCyc = cycleOf(rec.week, P);
     var curProg = progressionOf(db);
     var rot = buildRotation(db, cycle, rp);
-    return { progression: curProg.id, progressionName: curProg.name, rotation: rot, rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
+    return { progression: curProg.id, progressionName: curProg.name, mainLabel: tierLabel(curProg.id, 'T1'), assistLabel: tierLabel(curProg.id, 'T2'), rotation: rot, rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
       done: done, planned: P.totalWeeks * nd, progress: Math.min(100, Math.round(done / (P.totalWeeks * nd) * 100)),
       cycle: cycle, curCycle: curCycle, maxCycle: maxCycle, weeksPerCycle: N,
       cycleText: '第 ' + cycle + ' 轮', isCurCycle: cycle === curCycle, isFuture: cycle > curCycle,
@@ -1787,10 +1800,18 @@
         t3Add: t3add, warns: judged['建议降阶'] + judged['降阶'] + judged['退阶'] + judged['重置']
       },
       pie: pie, pieTotal: pie.reduce(function (a, b) { return a + b.value; }, 0),
-      volume: { labels: labels, stacks: [
-        { name: progressionOf(db).id === 'gzclp' ? 'T1' : '主项', color: TIER_COLORS.T1, data: v1 },
-        { name: progressionOf(db).id === 'gzclp' ? 'T2' : (progressionOf(db).id === 'w531' ? 'BBB' : '变式'), color: TIER_COLORS.T2, data: v2 },
-        { name: progressionOf(db).id === 'gzclp' ? 'T3' : '孤立', color: TIER_COLORS.T3, data: v3 }] },
+      volume: { labels: labels, stacks: (function () {
+        var pid = progressionOf(db).id;
+        var volName = function (tier) {
+          if (pid === 'w531' && tier === 'T2') return tierLabel('fixed', tier);
+          if (pid === 'w531' && tier === 'T3') return tierLabel('dual', tier);
+          return tierLabel(pid, tier);
+        };
+        return [
+          { name: volName('T1'), color: TIER_COLORS.T1, data: v1 },
+          { name: volName('T2'), color: TIER_COLORS.T2, data: v2 },
+          { name: volName('T3'), color: TIER_COLORS.T3, data: v3 }];
+      })() },
       e1rm: e1, weightTrend: weightTrend, bw: bw, prs: prs, totalWeeks: Math.max(P.totalWeeks, weeks)
     };
   }
@@ -1978,7 +1999,7 @@
       return { key: roleOf(slot.tier), label: slot.tier || '动作', hint: '', names: null, part: part, locked: false };
     }
     if (prog.id === 'cardio') return { key: 'cardio', label: '有氧', hint: '只记分钟，不记重量。', names: null, part: part, locked: false };
-    var label = prog.id === 'fixed' ? 'BBB' : (prog.id === 'w531' || prog.id === 'linear' ? '主项' : (ROLE_NAME[roleOf(slot.tier)] || '动作'));
+    var label = tierLabel(prog.id, slot.tier);
     var hint = prog.id === 'fixed' ? '同一主动作的固定容量。' : prog.id === 'w531' ? '百分比波浪的主项。' : prog.id === 'linear' ? '完成规定次数就加重。' : '全部做到区间上限才加重。';
     return { key: prog.id + ':' + label, label: label, hint: hint, names: (prog.id === 'fixed' || prog.id === 'w531') ? [name || slot.name] : null, part: part, locked: false };
   }
@@ -2853,7 +2874,7 @@
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
-    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, slotBadge: slotBadge, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, recommendTemplates: recommendTemplates, ceilTo: ceilTo,
+    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, TIER_LABELS: TIER_LABELS, tierLabel: tierLabel, slotBadge: slotBadge, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, recommendTemplates: recommendTemplates, ceilTo: ceilTo,
     PROGRESSION_RULES: PROGRESSION_RULES, progressionRules: progressionRules,
     LEGACY_PID: LEGACY_PID, BASE_KEYS: BASE_KEYS, PLAN_KEYS: PLAN_KEYS, PROGRAM_STATUS: PROGRAM_STATUS, recPid: recPid, activePid: activePid, activeProgram: activeProgram, programById: programById,
     canTrain: canTrain, planView: planView, switchProgram: switchProgram, pauseProgram: pauseProgram, resumeProgram: resumeProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile,

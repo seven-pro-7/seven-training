@@ -10,7 +10,7 @@ Required environment:
 Optional:
   DATA_OWNER           default seven-pro-7
   DATA_REPO            default seven-training-data
-  COROS_MCP_URL        default https://mcp.coros.com/mcp
+  COROS_MCP_URL        不填则先试国内 mcpcn，再试国际 mcp.coros.com
 """
 import base64
 import json
@@ -21,7 +21,11 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-MCP_URL = os.environ.get('COROS_MCP_URL', 'https://mcp.coros.com/mcp')
+# 账号在国内登录时，令牌只对 mcpcn 有效。没指定地址就先国内、再国际。
+MCP_URLS = [os.environ['COROS_MCP_URL'].strip()] if os.environ.get('COROS_MCP_URL', '').strip() else [
+    'https://mcpcn.coros.com/mcp',
+    'https://mcp.coros.com/mcp',
+]
 WATCH_FILE = 'training-watch.json'
 LEGACY_FILE = 'gzclp-watch.json'
 STRENGTH = 402
@@ -38,13 +42,33 @@ def request(url, method, headers, body=None):
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=30) as res:
-            raw = res.read()
-            return res.status, raw
+            return res.status, dict(res.headers), res.read()
     except urllib.error.HTTPError as err:
-        return err.code, err.read()
+        return err.code, dict(err.headers), err.read()
+
+
+def header_get(headers, name):
+    name = name.lower()
+    for key, value in (headers or {}).items():
+        if str(key).lower() == name:
+            return value
+    return ''
 
 
 def mcp_call(token, name, arguments):
+    errors = []
+    for url in MCP_URLS:
+        try:
+            return mcp_call_url(url, token, name, arguments)
+        except SystemExit as exc:
+            message = str(exc)
+            errors.append(message)
+            if '401' not in message and '令牌' not in message:
+                raise
+    raise SystemExit(errors[-1] if errors else 'COROS 调用失败')
+
+
+def mcp_call_url(url, token, name, arguments):
     headers = {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json',
@@ -54,13 +78,17 @@ def mcp_call(token, name, arguments):
         'jsonrpc': '2.0', 'id': 1, 'method': 'initialize',
         'params': {'protocolVersion': '2025-03-26', 'capabilities': {}, 'clientInfo': {'name': 'training-watch-sync', 'version': '1'}},
     }
-    status, raw = request(MCP_URL, 'POST', headers, init)
+    status, hdrs, raw = request(url, 'POST', headers, init)
     if status == 401:
         raise SystemExit('COROS 令牌无效或已过期，请更新仓库 Secret COROS_ACCESS_TOKEN')
     if status >= 400:
         raise SystemExit('COROS MCP 初始化失败 HTTP %s' % status)
+    session = header_get(hdrs, 'mcp-session-id')
+    if session:
+        headers['Mcp-Session-Id'] = session
+    request(url, 'POST', headers, {'jsonrpc': '2.0', 'method': 'notifications/initialized'})
     call = {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {'name': name, 'arguments': arguments}}
-    status, raw = request(MCP_URL, 'POST', headers, call)
+    status, hdrs, raw = request(url, 'POST', headers, call)
     if status == 401:
         raise SystemExit('COROS 令牌无效或已过期，请更新仓库 Secret COROS_ACCESS_TOKEN')
     if status >= 400:
@@ -228,7 +256,7 @@ def github_api(token, owner, repo, path, method, body=None):
         'Content-Type': 'application/json',
         'User-Agent': 'training-watch-sync',
     }
-    status, raw = request(url, method, headers, body)
+    status, _headers, raw = request(url, method, headers, body)
     try:
         parsed = json.loads(raw.decode() or 'null')
     except ValueError:

@@ -20,6 +20,7 @@ Page({
 
   refresh() {
     const db = store.load(), P = db.params, rp = GZ.replay(db), names = libNames(db);
+    const curProg = GZ.progressionOf(db).id;
     const curCyc = GZ.cycleOf(GZ.recommend(db, rp).week, P).cycle, nextPlan = GZ.planCycles(db, curCyc + 1);
     const days = db.days.map((d) => ({
       id: d.id, name: d.name,
@@ -28,7 +29,7 @@ Page({
         const list = names[s.tier].indexOf(ef.slot.name) < 0 ? [ef.slot.name].concat(names[s.tier]) : names[s.tier];
         const eq = GZ.equipOf(ef.slot.name, ef.slot.equip), rec = GZ.recommendWeight(db, ef.slot.name, s.tier, { preferLast: false });
         return {
-        id: s.id, tier: s.tier, name: ef.slot.name, equip: eq, equipLabel: eq + (eq === '哑铃' ? '·单只' : eq === '负重' ? '·外加' : ''),
+        id: s.id, tier: s.tier, badge: GZ.slotBadge(s, curProg), name: ef.slot.name, equip: eq, equipLabel: eq + (eq === '哑铃' ? '·单只' : eq === '负重' ? '·外加' : ''),
         recText: rec.text + (rec.unit === '自重' ? '' : ' ' + rec.unit), recNote: rec.note, recWeight: rec.weight,
         init: s.init, opts: list, optIdx: list.indexOf(ef.slot.name),
         changeText: ef.auto ? '第 ' + ef.change.cycle + ' 轮自动轮换 · 上一轮 ' + ef.change.prev : ef.change ? '第 ' + ef.change.fromWeek + ' 周起更换 · 原 ' + s.name : '',
@@ -41,11 +42,10 @@ Page({
         stepText: eq === '自重' ? '达阈值后改负重' : GZ.stepOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg · 按 ' + GZ.incOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg 档'
       }; })
     }));
-    const curProg = P.progression || 'gzclp';
     const isGz = curProg === 'gzclp';
     const pRules = GZ.progressionRules ? GZ.progressionRules(curProg) : { name: curProg, summary: '' };
     this.setData({
-      p: P, isGz, progName: pRules.name, progSummary: pRules.summary, days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
+      p: P, isGz, mainLabel: GZ.tierLabel(curProg, 'T1'), progName: pRules.name, progSummary: pRules.summary, days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
       lifts: GZ.LIFT_ORDER.map((k) => ({ key: k, name: GZ.LIFTS[k], oneRM: P.oneRM[k], tm: GZ.fmtW(GZ.tm(P, k)) })),
       steps: GZ.STEP_KEYS.map((s) => ({ key: s.key, label: s.label, note: s.note, v: P.steps[s.key] }))
     });

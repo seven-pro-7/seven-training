@@ -18,7 +18,7 @@
       <text class="f-u">kg</text>
     </view>
   </view>
-  <view class="sec-f">{{isGz ? 'T1' : '主项'}}以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</view>
+  <view class="sec-f">{{mainLabel}}以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</view>
 
   <view class="sec-h">加重步幅</view>
   <view class="list">
@@ -73,7 +73,7 @@
   <view class="list">
     <view class="cell slot" wx:for="{{days[dIdx].slots}}" wx:key="id" wx:for-item="s" wx:for-index="si">
       <view class="slot-top">
-        <text class="tier t-{{s.tier}}">{{s.tier}}</text>
+        <text class="tier t-{{s.tier}}">{{s.badge || s.tier}}</text>
         <picker class="flex1" range="{{s.opts}}" value="{{s.optIdx}}" data-si="{{si}}" bindchange="onEx">
           <view class="ex-pick">{{s.name}}<text class="equip-tag eq-{{s.equip}}">{{s.equipLabel}}</text><text class="chev">⌄</text></view>
         </picker>

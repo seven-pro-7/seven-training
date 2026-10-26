@@ -24,7 +24,7 @@
         <text class="t cyc-label">{{vm.cycleText}}{{vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : ''}}</text>
         <text class="cyc-btn {{vm.canNext ? '' : 'off'}}" data-d="1" bindtap="onCycle">›</text>
       </view>
-      <text class="s">{{vm.progression === 'w531' ? '顶组 kg' : vm.progression === 'gzclp' ? 'T1 重量 kg' : '主项重量 kg'}}</text>
+      <text class="s">{{vm.progression === 'w531' ? '顶组 kg' : vm.mainLabel + ' 重量 kg'}}</text>
     </view>
     <view class="grid-head">
       <text class="gw"></text>
@@ -54,7 +54,7 @@
     <view class="rot-day" wx:for="{{vm.rotation.days}}" wx:key="id" wx:for-item="d">
       <view class="rot-dh"><text class="num rot-did">{{d.id}}</text><text class="rot-dn">{{d.name}}</text></view>
       <view class="rot-row" wx:for="{{d.slots}}" wx:key="id" wx:for-item="r">
-        <text class="tier t-{{r.tier}}">{{r.tier}}</text>
+        <text class="tier t-{{r.tier}}">{{r.badge || r.tier}}</text>
         <view class="rot-main">
           <view class="rot-n">{{r.name}}<text class="equip-tag eq-{{r.equip}}">{{r.equip}}</text><text class="rot-new" wx:if="{{r.isNew}}">新</text><text class="rot-lock" wx:if="{{r.locked}}">锁定</text></view>
           <view class="rot-s">{{r.role}}{{r.isNew ? ' · 上一轮 ' + r.prev : ''}}{{r.startW ? ' · 起始 ' + r.startW : ''}}</view>
@@ -74,7 +74,7 @@
       <view wx:for="{{vm.overview}}" wx:key="day" class="seg-i {{ovIdx === index ? 'on' : ''}}" data-i="{{index}}" bindtap="onOv"><text class="num">{{item.day}}</text></view>
     </view>
     <view class="ov-row" wx:for="{{vm.overview[ovIdx].slots}}" wx:key="id">
-      <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+      <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
       <view class="ov-main">
         <text class="ovn">{{item.name}}</text>
         <text class="ov-sub">{{item.stage}}<text class="amber" wx:if="{{item.fail > 0}}"> · 预警 {{item.fail}}</text></text>
@@ -94,7 +94,7 @@
       <view class="sheet-title">{{detail.day}} {{detail.dayName}}</view>
       <view class="list">
         <view class="cell d-row" wx:for="{{detail.items}}" wx:key="name">
-          <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+          <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
           <view class="d-main"><text>{{item.name}}</text><text class="d-sub">{{item.w}} kg × {{item.input}}<text class="accent" wx:if="{{item.manual}}"> · 手动</text></text></view>
           <view class="d-right"><text class="jtag" style="color: {{item.color}}">{{item.j}}</text><text class="d-sub">{{item.next}}</text></view>
         </view>

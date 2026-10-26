@@ -32,7 +32,7 @@
       </view>
     </view>
     <view class="lk-row" wx:for="{{vm.lockedInfo.items}}" wx:key="name">
-      <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+      <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
       <text class="lk-n">{{item.name}}</text>
       <text class="lk-w num"><text class="accent" wx:if="{{item.manual}}">手动 </text>{{item.w}} × {{item.input}}</text>
       <text class="jtag lk-j" style="color: {{item.color}}">{{item.j}}</text>
@@ -58,7 +58,7 @@
   <!-- 动作 -->
   <view wx:for="{{vm.items}}" wx:key="slotId" class="card ex {{item.skip ? 'skipped' : ''}}">
     <view class="ex-head">
-      <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+      <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
       <view class="ex-title">
         <text class="ex-name">{{item.name}}</text>
         <text class="equip-tag eq-{{item.equip}}">{{item.equip}}{{item.equip === '哑铃' ? '·单只' : item.equip === '负重' ? '·外加' : ''}}</text>
@@ -251,7 +251,7 @@
       </view>
       <view class="list">
         <view class="cell res-row" wx:for="{{result.items}}" wx:key="name">
-          <text class="tier t-{{item.tier}}">{{item.tier}}</text>
+          <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
           <text class="res-name flex1">{{item.name}}</text>
           <view class="res-r">
             <text class="jtag" style="color: {{item.color}}">{{item.j}}</text>

@@ -1400,13 +1400,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       && onboardIds(ONBOARD_DAYS).indexOf(d.daysPerWeek) >= 0
       && onboardIds(ONBOARD_EQUIP).indexOf(d.equipment) >= 0;
   }
-  /** 已有训练记录的老档案视为完成，不强制弹切入流程。 */
+  /** 已有训练记录的老档案视为完成。资料与训练方向流程已下架，不再拦截进入。 */
   function onboardingComplete(db) {
-    if (!db) return false;
+    if (!db) return true;
     if ((db.records || []).length > 0) return true;
     return profileReady(db) && directionReady(db);
   }
-  function needsOnboarding(db) { return !onboardingComplete(db); }
+  function needsOnboarding() { return false; }
   function labelOf(list, id) {
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].label;
     return '';
@@ -1827,7 +1827,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    * 参数分两类：
    *   BASE_KEYS 共享底座（体重、器材、名片）——所有计划共用，切换计划不变。规范见 .cursor/rules/plan-base.mdc
    *   PLAN_KEYS 计划自己（规则参数、周期、减载、计划起始 1RM）——各计划独立，暂停时随计划冻结
-   *   T1/T2/T3 只是 GZCLP 的界面层级；其他计划用 slotBadge（主项/变式/孤立或 BBB）
+   *   层级显示名只在 TIER_LABELS：GZCLP 是 T1/T2/T3，其他进阶是主项/变式/孤立或 BBB。界面走 slotBadge / tierLabel。
    * 1RM 的口径：每个计划冻结自己的起始 1RM（避免改一次 1RM 就改写已暂停计划的历史）；
    *   跨计划共享的是「1RM 档案」oneRMProfile：手动录入值 + 所有计划的估算 1RM，用于新计划的起始重量。
    */
@@ -2013,16 +2013,29 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return PROGRESSIONS[id] || PROGRESSIONS.gzclp;
   }
   var ROLES = { T1: 'main', T2: 'assist', T3: 'accessory', C: 'cardio' };
-  var ROLE_NAME = { main: '主项', assist: '变式', accessory: '孤立', cardio: '有氧' };
+  /**
+   * 每个进阶的层级显示名。界面只从这里取，不要在页面里再写一套。
+   * 槽位自己的 prog 优先；GZCLP 的槽位不写 prog，缺省就是 gzclp。
+   */
+  var TIER_LABELS = {
+    gzclp: { T1: 'T1', T2: 'T2', T3: 'T3', C: '有氧' },
+    w531: { T1: '主项', T2: '主项', T3: '主项', C: '有氧' },
+    fixed: { T1: 'BBB', T2: 'BBB', T3: 'BBB', C: '有氧' },
+    linear: { T1: '主项', T2: '变式', T3: '孤立', C: '有氧' },
+    dual: { T1: '主项', T2: '变式', T3: '孤立', C: '有氧' },
+    cardio: { T1: '有氧', T2: '有氧', T3: '有氧', C: '有氧' }
+  };
+  var ROLE_NAME = { main: TIER_LABELS.dual.T1, assist: TIER_LABELS.dual.T2, accessory: TIER_LABELS.dual.T3, cardio: '有氧' };
   function roleOf(tier) { return ROLES[tier] || 'accessory'; }
-  /** T1/T2/T3 只是 GZCLP 的层级名。其他计划按自己的进阶显示主项、变式、孤立、有氧或 BBB。 */
+  function tierLabel(progId, tier) {
+    var table = TIER_LABELS[progId] || TIER_LABELS.dual;
+    if (tier === 'C') return '有氧';
+    return (tier && table[tier]) || '动作';
+  }
+  /** 槽位徽章。progHint 是计划进阶，槽位自己的 prog（BBB、有氧）优先。 */
   function slotBadge(s, progHint) {
-    var prog = (s && s.prog) || progHint || '';
-    if (prog === 'cardio' || (s && s.tier === 'C')) return '有氧';
-    if (prog === 'fixed') return 'BBB';
-    if (prog === 'w531') return '主项';
-    if (prog === 'gzclp') return (s && s.tier) || '';
-    return ROLE_NAME[roleOf(s && s.tier)] || '动作';
+    var prog = (s && s.prog) || progHint || 'gzclp';
+    return tierLabel(prog, s && s.tier);
   }
 
   registerProgression({
@@ -2664,7 +2677,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var recCyc = cycleOf(rec.week, P);
     var curProg = progressionOf(db);
     var rot = buildRotation(db, cycle, rp);
-    return { progression: curProg.id, progressionName: curProg.name, rotation: rot, rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
+    return { progression: curProg.id, progressionName: curProg.name, mainLabel: tierLabel(curProg.id, 'T1'), assistLabel: tierLabel(curProg.id, 'T2'), rotation: rot, rows: rows, overview: overview, days: db.days.map(function (d) { return { id: d.id, name: d.name }; }),
       done: done, planned: P.totalWeeks * nd, progress: Math.min(100, Math.round(done / (P.totalWeeks * nd) * 100)),
       cycle: cycle, curCycle: curCycle, maxCycle: maxCycle, weeksPerCycle: N,
       cycleText: '第 ' + cycle + ' 轮', isCurCycle: cycle === curCycle, isFuture: cycle > curCycle,
@@ -2821,10 +2834,18 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         t3Add: t3add, warns: judged['建议降阶'] + judged['降阶'] + judged['退阶'] + judged['重置']
       },
       pie: pie, pieTotal: pie.reduce(function (a, b) { return a + b.value; }, 0),
-      volume: { labels: labels, stacks: [
-        { name: progressionOf(db).id === 'gzclp' ? 'T1' : '主项', color: TIER_COLORS.T1, data: v1 },
-        { name: progressionOf(db).id === 'gzclp' ? 'T2' : (progressionOf(db).id === 'w531' ? 'BBB' : '变式'), color: TIER_COLORS.T2, data: v2 },
-        { name: progressionOf(db).id === 'gzclp' ? 'T3' : '孤立', color: TIER_COLORS.T3, data: v3 }] },
+      volume: { labels: labels, stacks: (function () {
+        var pid = progressionOf(db).id;
+        var volName = function (tier) {
+          if (pid === 'w531' && tier === 'T2') return tierLabel('fixed', tier);
+          if (pid === 'w531' && tier === 'T3') return tierLabel('dual', tier);
+          return tierLabel(pid, tier);
+        };
+        return [
+          { name: volName('T1'), color: TIER_COLORS.T1, data: v1 },
+          { name: volName('T2'), color: TIER_COLORS.T2, data: v2 },
+          { name: volName('T3'), color: TIER_COLORS.T3, data: v3 }];
+      })() },
       e1rm: e1, weightTrend: weightTrend, bw: bw, prs: prs, totalWeeks: Math.max(P.totalWeeks, weeks)
     };
   }
@@ -3012,7 +3033,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       return { key: roleOf(slot.tier), label: slot.tier || '动作', hint: '', names: null, part: part, locked: false };
     }
     if (prog.id === 'cardio') return { key: 'cardio', label: '有氧', hint: '只记分钟，不记重量。', names: null, part: part, locked: false };
-    var label = prog.id === 'fixed' ? 'BBB' : (prog.id === 'w531' || prog.id === 'linear' ? '主项' : (ROLE_NAME[roleOf(slot.tier)] || '动作'));
+    var label = tierLabel(prog.id, slot.tier);
     var hint = prog.id === 'fixed' ? '同一主动作的固定容量。' : prog.id === 'w531' ? '百分比波浪的主项。' : prog.id === 'linear' ? '完成规定次数就加重。' : '全部做到区间上限才加重。';
     return { key: prog.id + ':' + label, label: label, hint: hint, names: (prog.id === 'fixed' || prog.id === 'w531') ? [name || slot.name] : null, part: part, locked: false };
   }
@@ -3887,7 +3908,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
-    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, slotBadge: slotBadge, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, recommendTemplates: recommendTemplates, ceilTo: ceilTo,
+    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, TIER_LABELS: TIER_LABELS, tierLabel: tierLabel, slotBadge: slotBadge, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, recommendTemplates: recommendTemplates, ceilTo: ceilTo,
     PROGRESSION_RULES: PROGRESSION_RULES, progressionRules: progressionRules,
     LEGACY_PID: LEGACY_PID, BASE_KEYS: BASE_KEYS, PLAN_KEYS: PLAN_KEYS, PROGRAM_STATUS: PROGRAM_STATUS, recPid: recPid, activePid: activePid, activeProgram: activeProgram, programById: programById,
     canTrain: canTrain, planView: planView, switchProgram: switchProgram, pauseProgram: pauseProgram, resumeProgram: resumeProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile,
@@ -5429,7 +5450,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         var meta = null; try { meta = JSON.parse(b64dec(g.json.content)).generatedAt; } catch (e) {}
         c.watchErr = ''; c.watchAt = Date.now(); c.watchGen = meta || c.watchGen || ''; setCfg(c);
         var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
-        if (manual) toast((changed ? '已拉取手表数据' : '云端快照没有新内容') + watchLatestText(merged));
+        if (manual) toast((changed ? '已拉取手表数据' : '云端快照没有新内容') + watchLatestText(merged) + watchSnapText(meta));
         if (!typing && (changed || S.tab === 'settings')) render(true);
         return changed;
       });
@@ -5464,6 +5485,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function watchLatestText(w) {
     var edge = Badges.watchLatest ? Badges.watchLatest(w) : null;
     return edge ? '，最近一次力量训练是 ' + mdDate(edge.date) : '';
+  }
+  function watchSnapText(generatedAt) {
+    var day = generatedAt && String(generatedAt).slice(0, 10);
+    var hm = generatedAt && String(generatedAt).slice(11, 16);
+    if (!day || day.length < 10) return '';
+    return '。这份快照更新于 ' + mdDate(day) + (hm && hm.indexOf(':') > 0 ? ' ' + hm : '') + '，立即拉取不会直接连接手表';
   }
   function ago(ts) {
     if (!ts) return '从未';
@@ -5507,7 +5534,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '', from: '' }, stats: { lift: 0, day: 0, ex: null }, data: { seg: 1 }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', pattern: '', part: '', equip: '', q: '', add: null },
     onboard: { step: 1, force: false, returnTab: '' }
   };
-  function gateOnboard() { return GZ.needsOnboarding(load()) || S.onboard.force; }
+  function gateOnboard() { return false; }
   function syncOnboardStep(db) {
     if (S.onboard.force) return;
     if (!GZ.profileReady(db)) S.onboard.step = 1;
@@ -5965,7 +5992,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var wide = vm.days.length > 4, gz = (db.params.progression || 'gzclp') === 'gzclp';
     h += '<div class="card"><div class="card-title"><div class="cyc-nav"><span class="cyc-btn ' + (vm.canPrev ? '' : 'off') + '" data-act="cycle" data-d="-1">‹</span>' +
       '<span class="t cyc-label">' + vm.cycleText + (vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : '') + '</span>' +
-      '<span class="cyc-btn ' + (vm.canNext ? '' : 'off') + '" data-act="cycle" data-d="1">›</span></div><span class="s">' + (db.params.progression === 'w531' ? '顶组 kg' : gz ? 'T1 重量 kg' : '主项重量 kg') + '</span></div><div class="grid-head' + (wide ? ' wide' : '') + '"><span class="gw"></span>' +
+      '<span class="cyc-btn ' + (vm.canNext ? '' : 'off') + '" data-act="cycle" data-d="1">›</span></div><span class="s">' + (db.params.progression === 'w531' ? '顶组 kg' : (vm.mainLabel || '主项') + ' 重量 kg') + '</span></div><div class="grid-head' + (wide ? ' wide' : '') + '"><span class="gw"></span>' +
       vm.days.map(function (d) { return '<span class="gh num">' + d.id + '</span>'; }).join('') + '</div>';
     vm.rows.forEach(function (row) {
       h += '<div class="grid-row' + (wide ? ' wide' : '') + '"><div class="gw"><span class="num">W' + row.wc + '</span>' + (row.deload ? '<span class="dltag">减载</span>' : '') + '</div>' +
@@ -6329,7 +6356,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     h += '<div class="kpis"><div class="kpi"><span class="k-l">训练次数</span><div><span class="num kv">' + k.sessions + '</span><span class="ku">/ ' + k.planned + '</span></div><div class="kbar"><div class="kin" style="width:' + k.progress + '%"></div></div></div>' +
       '<div class="kpi"><span class="k-l">累计容量</span><span class="num kv">' + k.volume + '</span><span class="ks">' + k.reps + ' 次</span></div>' +
       '<div class="kpi"><span class="k-l">加重</span><div><span class="num kv accent">' + k.adds + '</span><span class="ku">次</span></div><span class="ks">预警 ' + k.warns + '</span></div>' +
-      '<div class="kpi"><span class="k-l">' + ((viewDb().params.progression || 'gzclp') === 'gzclp' ? 'T1 达标率' : '主项达标率') + '</span>' + (k.t1Rate === null ? '<span class="kv-na">暂无</span>' : '<span class="num kv">' + k.t1Rate + '%</span>') + '<span class="ks">' + ((viewDb().params.progression || 'gzclp') === 'gzclp' ? 'T2 完成 ' : '变式完成 ') + (k.t2Rate === null ? '暂无' : k.t2Rate + '%') + '</span></div></div>';
+      '<div class="kpi"><span class="k-l">' + GZ.tierLabel(GZ.progressionOf(viewDb()).id, 'T1') + ' 达标率</span>' + (k.t1Rate === null ? '<span class="kv-na">暂无</span>' : '<span class="num kv">' + k.t1Rate + '%</span>') + '<span class="ks">' + GZ.tierLabel(GZ.progressionOf(viewDb()).id, 'T2') + ' 完成 ' + (k.t2Rate === null ? '暂无' : k.t2Rate + '%') + '</span></div></div>';
     h += '<div class="card">' + seg(s.e1rm.map(function (e) { return { html: e.name }; }), st.lift, 'lift');
     if (cur) {
       h += '<span class="cap">最佳 e1RM</span><div class="hero"><span class="num hero-v">' + cur.best + '</span><span class="hero-u">' + (cur.n ? 'kg' : '') + '</span><span class="cap hero-d">' + cur.bestDate + '</span></div>';
@@ -6454,8 +6481,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       (bs.nextGoals[0] ? (function () { var g = bs.nextGoals[0], d = bs.byId[g.id], p = bs.prog[g.id]; return '<div class="cell tap wall-goal" data-act="wallopen"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>下一个：' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>'; })() : '') + '</div>';
     }
     if (part === 'summary' || (!part && r.tab === 0)) {
-      h += '<div class="card lt-card"><div class="card-title"><span class="t">' + (gzReview ? 'T1 进度' : '主项进度') + '</span><span class="s">起始 → 下次</span></div>' +
-        '<div class="lt-head"><span class="lt-c1">' + (gzReview ? 'T1' : '主项') + '</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
+      h += '<div class="card lt-card"><div class="card-title"><span class="t">' + GZ.tierLabel(GZ.progressionOf(viewDb()).id, 'T1') + ' 进度</span><span class="s">起始 → 下次</span></div>' +
+        '<div class="lt-head"><span class="lt-c1">' + GZ.tierLabel(GZ.progressionOf(viewDb()).id, 'T1') + '</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
         vm.liftTable.map(function (x) {
           return '<div class="lt-row"><div class="lt-c1"><span class="lt-n">' + esc(x.name) + '</span><span class="lt-s num">' + x.day + ' · ' + x.stage + (x.fail ? ' · <span class="amber">预警 ' + x.fail + '</span>' : '') + '</span></div>' +
             '<div class="lt-c2"><span class="num lt-v">' + x.last + '</span>' + (x.lastJ ? '<span class="lt-j" style="color:' + x.lastColor + '">' + x.lastJ + '</span>' : '') + '</div>' +
@@ -6696,7 +6723,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return '<div class="mask share-mask" data-act="wallclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title">里程碑</span><button class="share-close" data-act="wallclose" aria-label="关闭徽章墙">×</button></div>' +
       '<p class="wall-sum">已获得 <b class="num">' + st.earnedCount + '</b> / ' + st.total + ' 枚 · 彩色是已获得，灰色带进度条</p></div>' +
-      '<div class="ss-body">' + nearBlock + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「我的 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。' + ((load().params.progression || 'gzclp') === 'gzclp' ? 'T1' : '主项') + '重量按工作重量统计，需完成目标（加重或保持）才算。</p></div></div></div>';
+      '<div class="ss-body">' + nearBlock + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「我的 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。' + GZ.tierLabel(GZ.progressionOf(load()).id, 'T1') + '重量按工作重量统计，需完成目标（加重或保持）才算。</p></div></div></div>';
   }
   async function paintSharePreview() {
     var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;
@@ -6879,10 +6906,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       '<div class="cell"><label for="profileSignature" class="flex1">个性签名</label><input id="profileSignature" class="profile-in" data-act="profiletext" data-k="signature" maxlength="48" value="' + esc(pp.signature) + '" placeholder="可选，写给坚持训练的自己"></div>' +
       '<div class="cell"><span class="flex1">卡片公开当天体重</span><label class="ios-sw green"><input type="checkbox" data-act="profileweight" ' + (pp.showWeight ? 'checked' : '') + '><i></i></label></div></div>' +
       '<div class="sec-f">昵称、性别、ID、头像、签名会出现在名片相关能力里。体重默认隐藏；不显示训练备注、云仓库或令牌。名片随私人云同步保存。输入后离开字段自动保存。</div>';
-    var dirSum = GZ.directionSummary(db);
-    h += '<div class="sec-h">训练方向</div><div class="list">' +
-      '<div class="cell tap" data-act="editdir"><span class="flex1">' + (dirSum ? esc(dirSum) : '尚未填写') + '</span><span class="val">修改</span><span class="chev">›</span></div></div>' +
-      '<div class="sec-f">目标、经验、每周天数与器械只作档案记录，不会自动更换当前计划。</div>';
     var wd = P.watch, wn = wd && wd.workouts ? wd.workouts.length : 0, wsn = wd && wd.sleep ? Object.keys(wd.sleep).length : 0;
     var wEdge = Badges.watchLatest ? Badges.watchLatest(wd) : null;
     h += '<div class="sec-h" id="watchSec">手表数据</div><div class="list">' +
@@ -6898,13 +6921,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       '<div class="cell tap" data-act="watchpaste"><span class="flex1 accent">粘贴快照文本</span><span class="chev">' + (st.wpaste ? '⌃' : '›') + '</span></div>' +
       (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
       (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
-      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天早上把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json。立即拉取只读取这份快照，不会直接连接手表；分享卡片按训练日期对上快照里的力量训练。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
+      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，COROS 的力量训练和睡眠会在北京时间 7:30、13:30、19:30、22:30 写入私有仓库的 training-watch.json。立即拉取只读取这份快照，不会直接连接手表；刚练完的那次要等下一次写入之后才能拉到。分享卡片按训练日期对上快照里的力量训练。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
     var isCurGz = (P.progression || 'gzclp') === 'gzclp';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
       '<div class="cell"><span class="flex1">当前体重</span>' + inp('bodyWeight', P.bodyWeight || 70, 'kg') + '</div></div>' +
-      '<div class="sec-f">' + (isCurGz ? 'T1 以四大项 1RM 推算；' : '主项以四大项 1RM 推算；') + '哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
+      '<div class="sec-f">' + GZ.tierLabel(GZ.progressionOf(load()).id, 'T1') + '以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
     h += '\u0000adv\u0000';
     h += '<div class="sec-h">加重步幅</div><div class="list">' +
       GZ.STEP_KEYS.map(function (s) { return '<div class="cell"><span class="flex1">' + s.label + '</span>' + inp('steps.' + s.key, P.steps[s.key], 'kg') + '</div>'; }).join('') +

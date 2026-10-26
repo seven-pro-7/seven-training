@@ -178,7 +178,7 @@
         var meta = null; try { meta = JSON.parse(b64dec(g.json.content)).generatedAt; } catch (e) {}
         c.watchErr = ''; c.watchAt = Date.now(); c.watchGen = meta || c.watchGen || ''; setCfg(c);
         var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
-        if (manual) toast((changed ? '已拉取手表数据' : '云端快照没有新内容') + watchLatestText(merged));
+        if (manual) toast((changed ? '已拉取手表数据' : '云端快照没有新内容') + watchLatestText(merged) + watchSnapText(meta));
         if (!typing && (changed || S.tab === 'settings')) render(true);
         return changed;
       });
@@ -213,6 +213,12 @@
   function watchLatestText(w) {
     var edge = Badges.watchLatest ? Badges.watchLatest(w) : null;
     return edge ? '，最近一次力量训练是 ' + mdDate(edge.date) : '';
+  }
+  function watchSnapText(generatedAt) {
+    var day = generatedAt && String(generatedAt).slice(0, 10);
+    var hm = generatedAt && String(generatedAt).slice(11, 16);
+    if (!day || day.length < 10) return '';
+    return '。这份快照更新于 ' + mdDate(day) + (hm && hm.indexOf(':') > 0 ? ' ' + hm : '') + '，立即拉取不会直接连接手表';
   }
   function ago(ts) {
     if (!ts) return '从未';
@@ -256,7 +262,7 @@
     plan: { ov: 0, detail: null, cycle: 0, view: '', tpl: '', from: '' }, stats: { lift: 0, day: 0, ex: null }, data: { seg: 1 }, review: { tab: 0, open: {}, rules: false }, settings: { d: 0, imp: false, view: '', pattern: '', part: '', equip: '', q: '', add: null },
     onboard: { step: 1, force: false, returnTab: '' }
   };
-  function gateOnboard() { return GZ.needsOnboarding(load()) || S.onboard.force; }
+  function gateOnboard() { return false; }
   function syncOnboardStep(db) {
     if (S.onboard.force) return;
     if (!GZ.profileReady(db)) S.onboard.step = 1;
@@ -714,7 +720,7 @@
     var wide = vm.days.length > 4, gz = (db.params.progression || 'gzclp') === 'gzclp';
     h += '<div class="card"><div class="card-title"><div class="cyc-nav"><span class="cyc-btn ' + (vm.canPrev ? '' : 'off') + '" data-act="cycle" data-d="-1">‹</span>' +
       '<span class="t cyc-label">' + vm.cycleText + (vm.isFuture ? ' · 预览' : vm.isCurCycle ? ' · 进行中' : '') + '</span>' +
-      '<span class="cyc-btn ' + (vm.canNext ? '' : 'off') + '" data-act="cycle" data-d="1">›</span></div><span class="s">' + (db.params.progression === 'w531' ? '顶组 kg' : gz ? 'T1 重量 kg' : '主项重量 kg') + '</span></div><div class="grid-head' + (wide ? ' wide' : '') + '"><span class="gw"></span>' +
+      '<span class="cyc-btn ' + (vm.canNext ? '' : 'off') + '" data-act="cycle" data-d="1">›</span></div><span class="s">' + (db.params.progression === 'w531' ? '顶组 kg' : (vm.mainLabel || '主项') + ' 重量 kg') + '</span></div><div class="grid-head' + (wide ? ' wide' : '') + '"><span class="gw"></span>' +
       vm.days.map(function (d) { return '<span class="gh num">' + d.id + '</span>'; }).join('') + '</div>';
     vm.rows.forEach(function (row) {
       h += '<div class="grid-row' + (wide ? ' wide' : '') + '"><div class="gw"><span class="num">W' + row.wc + '</span>' + (row.deload ? '<span class="dltag">减载</span>' : '') + '</div>' +
@@ -1078,7 +1084,7 @@
     h += '<div class="kpis"><div class="kpi"><span class="k-l">训练次数</span><div><span class="num kv">' + k.sessions + '</span><span class="ku">/ ' + k.planned + '</span></div><div class="kbar"><div class="kin" style="width:' + k.progress + '%"></div></div></div>' +
       '<div class="kpi"><span class="k-l">累计容量</span><span class="num kv">' + k.volume + '</span><span class="ks">' + k.reps + ' 次</span></div>' +
       '<div class="kpi"><span class="k-l">加重</span><div><span class="num kv accent">' + k.adds + '</span><span class="ku">次</span></div><span class="ks">预警 ' + k.warns + '</span></div>' +
-      '<div class="kpi"><span class="k-l">' + ((viewDb().params.progression || 'gzclp') === 'gzclp' ? 'T1 达标率' : '主项达标率') + '</span>' + (k.t1Rate === null ? '<span class="kv-na">暂无</span>' : '<span class="num kv">' + k.t1Rate + '%</span>') + '<span class="ks">' + ((viewDb().params.progression || 'gzclp') === 'gzclp' ? 'T2 完成 ' : '变式完成 ') + (k.t2Rate === null ? '暂无' : k.t2Rate + '%') + '</span></div></div>';
+      '<div class="kpi"><span class="k-l">' + GZ.tierLabel(GZ.progressionOf(viewDb()).id, 'T1') + ' 达标率</span>' + (k.t1Rate === null ? '<span class="kv-na">暂无</span>' : '<span class="num kv">' + k.t1Rate + '%</span>') + '<span class="ks">' + GZ.tierLabel(GZ.progressionOf(viewDb()).id, 'T2') + ' 完成 ' + (k.t2Rate === null ? '暂无' : k.t2Rate + '%') + '</span></div></div>';
     h += '<div class="card">' + seg(s.e1rm.map(function (e) { return { html: e.name }; }), st.lift, 'lift');
     if (cur) {
       h += '<span class="cap">最佳 e1RM</span><div class="hero"><span class="num hero-v">' + cur.best + '</span><span class="hero-u">' + (cur.n ? 'kg' : '') + '</span><span class="cap hero-d">' + cur.bestDate + '</span></div>';
@@ -1203,8 +1209,8 @@
       (bs.nextGoals[0] ? (function () { var g = bs.nextGoals[0], d = bs.byId[g.id], p = bs.prog[g.id]; return '<div class="cell tap wall-goal" data-act="wallopen"><span class="wall-e" aria-hidden="true">' + esc(d.e) + '</span><div class="wall-nt"><b>下一个：' + esc(d.title) + '</b><i>' + esc(fmtProg(p)) + '</i><span class="wall-bar"><span style="width:' + Math.max(4, Math.round(p.pct * 100)) + '%"></span></span></div><span class="wall-pct num">' + Math.round(p.pct * 100) + '%</span></div>'; })() : '') + '</div>';
     }
     if (part === 'summary' || (!part && r.tab === 0)) {
-      h += '<div class="card lt-card"><div class="card-title"><span class="t">' + (gzReview ? 'T1 进度' : '主项进度') + '</span><span class="s">起始 → 下次</span></div>' +
-        '<div class="lt-head"><span class="lt-c1">' + (gzReview ? 'T1' : '主项') + '</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
+      h += '<div class="card lt-card"><div class="card-title"><span class="t">' + GZ.tierLabel(GZ.progressionOf(viewDb()).id, 'T1') + ' 进度</span><span class="s">起始 → 下次</span></div>' +
+        '<div class="lt-head"><span class="lt-c1">' + GZ.tierLabel(GZ.progressionOf(viewDb()).id, 'T1') + '</span><span class="lt-c2">最近末组</span><span class="lt-c3">下次</span><span class="lt-c4">累计</span></div>' +
         vm.liftTable.map(function (x) {
           return '<div class="lt-row"><div class="lt-c1"><span class="lt-n">' + esc(x.name) + '</span><span class="lt-s num">' + x.day + ' · ' + x.stage + (x.fail ? ' · <span class="amber">预警 ' + x.fail + '</span>' : '') + '</span></div>' +
             '<div class="lt-c2"><span class="num lt-v">' + x.last + '</span>' + (x.lastJ ? '<span class="lt-j" style="color:' + x.lastColor + '">' + x.lastJ + '</span>' : '') + '</div>' +
@@ -1445,7 +1451,7 @@
     return '<div class="mask share-mask" data-act="wallclose"><div class="sheet share-sheet" data-stop="1">' +
       '<div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title">里程碑</span><button class="share-close" data-act="wallclose" aria-label="关闭徽章墙">×</button></div>' +
       '<p class="wall-sum">已获得 <b class="num">' + st.earnedCount + '</b> / ' + st.total + ' 枚 · 彩色是已获得，灰色带进度条</p></div>' +
-      '<div class="ss-body">' + nearBlock + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「我的 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。' + ((load().params.progression || 'gzclp') === 'gzclp' ? 'T1' : '主项') + '重量按工作重量统计，需完成目标（加重或保持）才算。</p></div></div></div>';
+      '<div class="ss-body">' + nearBlock + body + (hasW ? '' : '<p class="ss-hint">手表系列需要先在「我的 → 手表数据」导入快照。</p>') + '<p class="ss-hint">手表系列只统计 ' + esc(st.watchFrom ? st.watchFrom.replace(/-/g, '.') : '训练手记第一条记录') + ' 之后的数据。' + GZ.tierLabel(GZ.progressionOf(load()).id, 'T1') + '重量按工作重量统计，需完成目标（加重或保持）才算。</p></div></div></div>';
   }
   async function paintSharePreview() {
     var sh=S.review.share, box=document.getElementById('shareArtwork'); if(!sh||!box) return;
@@ -1628,10 +1634,6 @@
       '<div class="cell"><label for="profileSignature" class="flex1">个性签名</label><input id="profileSignature" class="profile-in" data-act="profiletext" data-k="signature" maxlength="48" value="' + esc(pp.signature) + '" placeholder="可选，写给坚持训练的自己"></div>' +
       '<div class="cell"><span class="flex1">卡片公开当天体重</span><label class="ios-sw green"><input type="checkbox" data-act="profileweight" ' + (pp.showWeight ? 'checked' : '') + '><i></i></label></div></div>' +
       '<div class="sec-f">昵称、性别、ID、头像、签名会出现在名片相关能力里。体重默认隐藏；不显示训练备注、云仓库或令牌。名片随私人云同步保存。输入后离开字段自动保存。</div>';
-    var dirSum = GZ.directionSummary(db);
-    h += '<div class="sec-h">训练方向</div><div class="list">' +
-      '<div class="cell tap" data-act="editdir"><span class="flex1">' + (dirSum ? esc(dirSum) : '尚未填写') + '</span><span class="val">修改</span><span class="chev">›</span></div></div>' +
-      '<div class="sec-f">目标、经验、每周天数与器械只作档案记录，不会自动更换当前计划。</div>';
     var wd = P.watch, wn = wd && wd.workouts ? wd.workouts.length : 0, wsn = wd && wd.sleep ? Object.keys(wd.sleep).length : 0;
     var wEdge = Badges.watchLatest ? Badges.watchLatest(wd) : null;
     h += '<div class="sec-h" id="watchSec">手表数据</div><div class="list">' +
@@ -1647,13 +1649,13 @@
       '<div class="cell tap" data-act="watchpaste"><span class="flex1 accent">粘贴快照文本</span><span class="chev">' + (st.wpaste ? '⌃' : '›') + '</span></div>' +
       (st.wpaste ? '<div class="cell"><div class="flex1"><textarea class="imp" id="watchText" placeholder="粘贴手表快照 JSON"></textarea><span class="btn-small rust" style="margin-top:8px" data-act="watchdo">导入</span></div></div>' : '') +
       (wn || wsn ? '<div class="cell tap" data-act="watchclear"><span class="flex1 red">清除手表数据</span></div>' : '') + '</div>' +
-      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，每天早上把 COROS 的力量训练和睡眠写入私有仓库的 training-watch.json。立即拉取只读取这份快照，不会直接连接手表；分享卡片按训练日期对上快照里的力量训练。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
+      '<div class="sec-f">手表数据只在本机和你自己的私有云仓库里，用于里程碑和分享卡片；睡眠、心率默认不会出现在图片上。开启云同步后，COROS 的力量训练和睡眠会在北京时间 7:30、13:30、19:30、22:30 写入私有仓库的 training-watch.json。立即拉取只读取这份快照，不会直接连接手表；刚练完的那次要等下一次写入之后才能拉到。分享卡片按训练日期对上快照里的力量训练。手动导入只在自动同步不可用时备用，重复导入不会重复计数。</div>';
     var isCurGz = (P.progression || 'gzclp') === 'gzclp';
     h += '<div class="sec-h">基础 1RM</div><div class="list">' +
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
       '<div class="cell"><span class="flex1">当前体重</span>' + inp('bodyWeight', P.bodyWeight || 70, 'kg') + '</div></div>' +
-      '<div class="sec-f">' + (isCurGz ? 'T1 以四大项 1RM 推算；' : '主项以四大项 1RM 推算；') + '哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
+      '<div class="sec-f">' + GZ.tierLabel(GZ.progressionOf(load()).id, 'T1') + '以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
     h += '\u0000adv\u0000';
     h += '<div class="sec-h">加重步幅</div><div class="list">' +
       GZ.STEP_KEYS.map(function (s) { return '<div class="cell"><span class="flex1">' + s.label + '</span>' + inp('steps.' + s.key, P.steps[s.key], 'kg') + '</div>'; }).join('') +
