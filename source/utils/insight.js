@@ -62,7 +62,7 @@
         var pt = {
           sid: s.rec.id, date: s.rec.date, md: md(s.rec.date), day: s.rec.day, week: s.week, order: idx,
           tier: it.tier, badge: it.badge || it.tier, stage: it.stage, equip: equip, bw: bw, weight: Number(it.weight) || 0,
-          sets: Number(it.sets) || 0, reps: repsOf(it), last: last, volume: bw ? 0 : (Number(it.volume) || 0),
+          sets: Number(it.sets) || 0, reps: repsOf(it), last: last, volume: Number(it.volume) || 0,
           e1rm: est ? est.v : null, e1kind: est ? est.kind : '', e1conf: est ? est.conf : '', e1capped: est ? est.capped : false,
           judgment: it.judgment, input: it.input, lift: it.lift || '', sub: !!it.sub
         };

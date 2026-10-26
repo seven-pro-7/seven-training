@@ -255,6 +255,16 @@
   function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove('show'); }, 1800); }
   function confirmBox(title, content, ok) { if (window.confirm(title + '\n\n' + content)) ok(); }
   function tier(t, badge) { return '<span class="tier t-' + t + '">' + esc(badge || t) + '</span>'; }
+  /** 计划总览的完成详情、数据 → 记录的展开行，用同一套 HTML。 */
+  function sessionRows(items) {
+    return '<div class="sess-list">' + items.map(function (it) {
+      return '<div class="sess-row">' + tier(it.tier, it.badge) +
+        '<div class="sess-main"><span class="sess-name">' + esc(it.name) + '</span><span class="sess-sub">' + esc(it.detail) + '</span>' +
+        (it.context ? '<span class="sess-ctx">' + esc(it.context) + '</span>' : '') + '</div>' +
+        '<div class="sess-right"><span class="jtag" style="color:' + it.color + '">' + esc(it.j) + '</span>' +
+        (it.next ? '<span class="sess-next">' + esc(it.next) + '</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  }
   function equipTag(e) {
     var suffix = e === '哑铃' ? '·单只' : e === '负重' ? '·外加' : '';
     return '<span class="equip-tag eq-' + esc(e) + '">' + esc(e + suffix) + '</span>';
@@ -378,7 +388,7 @@
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
       h += '<div class="card locked"><div class="lk-head"><div class="lk-ic">✓</div><div class="flex1"><div class="lk-t">本周 ' + vm.day + ' 已完成</div><div class="lk-s">' + L.dateText + ' · 容量 ' + L.vol + ' kg</div></div></div>' +
-        L.items.map(function (it) { return '<div class="lk-row">' + tier(it.tier, it.badge) + '<span class="lk-n">' + it.name + '</span><span class="lk-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + (it.isCardio ? it.input + ' 分钟' : it.w + ' × ' + it.input) + '</span><span class="jtag lk-j" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
+        sessionRows(L.items) +
         '<div class="lk-tip">下周的 ' + vm.day + ' 会在本周 ' + vm.round.leftText + ' 完成后开放</div>' +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="editLocked" data-id="' + L.id + '">修改这次</div><div class="btn-ghost solid" data-act="day" data-day="' + vm.recommended + '">去练 ' + vm.recommended + '</div></div></div>';
     }
@@ -453,7 +463,7 @@
           h += '<div class="inrow col"><div class="seg seg-done"><div class="seg-i ' + (it.value === '完成' ? 'on ok' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="完成">全部完成</div>' +
             '<div class="seg-i ' + (it.value === '未完成' ? 'on bad' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="未完成">未完成</div></div>';
           if (it.amrapHint) h += '<div class="in-hint">' + esc(it.amrapHint) + '</div>';
-          if (it.value === '未完成') h += '<div class="subrow"><span class="in-hint">实际总次数（可选，用于容量）</span><input class="mini-in num" inputmode="numeric" data-act="reps" data-slot="' + it.slotId + '" value="' + esc(it.reps2) + '" placeholder="' + (it.sets * it.reps - 2) + '"></div>';
+          if (it.value === '未完成') h += '<div class="subrow"><span class="in-hint">实际总次数（选填，不填则这次不计入容量）</span><input class="mini-in num" inputmode="numeric" data-act="reps" data-slot="' + it.slotId + '" value="' + esc(it.reps2) + '" placeholder="次数"></div>';
           h += '</div>';
         }
         if (it.preview) {
@@ -753,8 +763,8 @@
       }).join('') + '</div>';
     if (p.detail) {
       var d = p.detail;
-      h += '<div class="mask" data-act="closeDetail"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + d.dateText + ' · 第 ' + d.week + ' 次 · 容量 ' + d.vol + ' kg</span><div class="sheet-title">' + d.day + ' ' + d.dayName + '</div>' +
-        '<div class="list">' + d.items.map(function (it) { return '<div class="cell d-row">' + tier(it.tier, it.badge) + '<div class="d-main"><span>' + it.name + '</span><span class="d-sub">' + (it.isCardio ? it.input + ' 分钟' : it.w + ' kg × ' + it.input + (it.manual ? '<span class="accent"> · 手动</span>' : '')) + '</span></div><div class="d-right"><span class="jtag" style="color:' + it.color + '">' + it.j + '</span><span class="d-sub">' + it.next + '</span></div></div>'; }).join('') + '</div>' +
+      h += '<div class="mask" data-act="closeDetail"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + d.dateText + ' · ' + d.weekText + ' · 容量 ' + d.vol + ' kg</span><div class="sheet-title">' + d.day + ' ' + d.dayName + '</div>' +
+        sessionRows(d.items) +
         (d.note ? '<div class="note-box">' + esc(d.note) + '</div>' : '') +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="edit" data-id="' + d.id + '">修改这次</div><div class="btn-ghost solid" data-act="closeDetail">完成</div></div></div></div>';
     }
@@ -1258,7 +1268,7 @@
           '<div class="wk-k"><div class="wkk"><span class="num kv">' + w.volText + '</span><span class="ks">容量' + (w.dv ? '<span class="' + (w.dvUp ? 'dv-up' : 'dv-down') + '"> ' + w.dv + '</span>' : '') + '</span></div>' +
           '<div class="wkk"><span class="num kv">' + w.sessions + '/' + w.total + '</span><span class="ks">完成</span></div><div class="wkk"><span class="num kv accent">' + w.adds + '</span><span class="ks">加重</span></div>' +
           '<div class="wkk"><span class="num kv ' + (w.warns ? 'amber' : '') + '">' + w.warns + '</span><span class="ks">预警</span></div></div>' +
-          w.t1.map(function (t) { return '<div class="t1row"><span class="num t1d">' + t.day + '</span><span class="t1n">' + t.name + '</span><span class="num t1w">' + t.w + ' kg × ' + (t.input === null ? '—' : t.input) + '</span><span class="jtag" style="color:' + t.color + '">' + t.j + '</span></div>'; }).join('') + '</div>';
+          w.t1.map(function (t) { return '<div class="t1row"><span class="num t1d">' + t.day + '</span><span class="t1n">' + t.name + '</span><span class="num t1w">' + t.w + ' kg · ' + esc(t.stage || '') + ' · 末组 ' + (t.input === null ? '—' : t.input) + '</span><span class="jtag" style="color:' + t.color + '">' + t.j + '</span></div>'; }).join('') + '</div>';
       });
     }
     if (part === 'log' || (!part && r.tab !== 0 && r.tab !== 1)) {
@@ -1267,10 +1277,10 @@
         h += '<div class="list">';
         vm.logs.forEach(function (l) {
           var op = !!r.open[l.id];
-          h += '<div class="log"><div class="cell tap" data-act="toggle" data-id="' + l.id + '"><span class="num log-day">' + l.day + '</span><div class="log-meta"><span>' + l.dayName + ' · 第 ' + l.week + ' 次</span><span class="log-d">' + l.dateText + (l.deload ? ' · 减载' : '') + (l.bw ? ' · ' + l.bw + ' kg' : '') + '</span></div>' +
+          h += '<div class="log"><div class="cell tap" data-act="toggle" data-id="' + l.id + '"><span class="num log-day">' + l.day + '</span><div class="log-meta"><span>' + l.dayName + ' · ' + l.weekText + '</span><span class="log-d">' + l.dateText + (l.deload ? ' · 减载' : '') + (l.bw ? ' · ' + l.bw + ' kg' : '') + '</span></div>' +
             '<span class="num log-v">' + l.vol + '<span class="log-u"> kg</span></span><span class="chev">' + (op ? '⌃' : '›') + '</span></div>';
           if (op) {
-            h += '<div class="log-body">' + l.items.map(function (it) { return '<div class="li">' + tier(it.tier, it.badge) + '<span class="li-n">' + it.name + '</span><span class="li-w num">' + (it.manual ? '<span class="accent">手动 </span>' : '') + it.w + ' × ' + it.input + '</span><span class="jtag" style="color:' + it.color + '">' + it.j + '</span></div>'; }).join('') +
+            h += '<div class="log-body">' + sessionRows(l.items) +
               (l.note ? '<div class="note-box">' + esc(l.note) + '</div>' : '') +
               '<div class="log-act"><span class="btn-small" data-act="shareopen" data-id="' + l.id + '">分享这次</span>' + (viewingOther() ? '' : '<span class="btn-small danger" data-act="del" data-id="' + l.id + '">删除</span><span class="btn-small rust" data-act="edit" data-id="' + l.id + '">修改</span>') + '</div></div>';
           }

@@ -67,13 +67,20 @@
   <view class="mask" wx:if="{{detail}}" bindtap="closeDetail">
     <view class="sheet" catchtap="noop">
       <view class="grabber"></view>
-      <text class="sheet-cap">{{detail.dateText}} · 第 {{detail.week}} 次 · 容量 {{detail.vol}} kg</text>
+      <text class="sheet-cap">{{detail.dateText}} · {{detail.weekText}} · 容量 {{detail.vol}} kg</text>
       <view class="sheet-title">{{detail.day}} {{detail.dayName}}</view>
-      <view class="list">
-        <view class="cell d-row" wx:for="{{detail.items}}" wx:key="name">
+      <view class="sess-list">
+        <view class="sess-row" wx:for="{{detail.items}}" wx:key="name">
           <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
-          <view class="d-main"><text>{{item.name}}</text><text class="d-sub">{{item.w}} kg × {{item.input}}<text class="accent" wx:if="{{item.manual}}"> · 手动</text></text></view>
-          <view class="d-right"><text class="jtag" style="color: {{item.color}}">{{item.j}}</text><text class="d-sub">{{item.next}}</text></view>
+          <view class="sess-main">
+            <text class="sess-name">{{item.name}}</text>
+            <text class="sess-sub">{{item.detail}}</text>
+            <text class="sess-ctx" wx:if="{{item.context}}">{{item.context}}</text>
+          </view>
+          <view class="sess-right">
+            <text class="jtag" style="color: {{item.color}}">{{item.j}}</text>
+            <text class="sess-next" wx:if="{{item.next}}">{{item.next}}</text>
+          </view>
         </view>
       </view>
       <view class="note-box" wx:if="{{detail.note}}">{{detail.note}}</view>

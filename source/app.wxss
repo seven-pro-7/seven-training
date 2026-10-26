@@ -67,6 +67,17 @@ page {
 .lib-rec { font-size: 22rpx; color: var(--accent); margin-top: 5rpx; line-height: 1.4; }
 .jtag { font-size: 26rpx; font-weight: 600; }
 
+/* 同一次训练的动作行：计划总览详情、数据记录展开、本周已完成共用 */
+.sess-list { display: flex; flex-direction: column; }
+.sess-row { display: flex; align-items: flex-start; gap: 16rpx; padding: 18rpx 0; }
+.sess-row + .sess-row { border-top: 1rpx solid var(--sep); }
+.sess-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4rpx; }
+.sess-name { font-size: 30rpx; font-weight: 600; line-height: 1.35; }
+.sess-sub { font-size: 24rpx; color: var(--label2); line-height: 1.45; }
+.sess-ctx { font-size: 22rpx; color: var(--accent); line-height: 1.4; }
+.sess-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4rpx; flex-shrink: 0; max-width: 42%; }
+.sess-next { font-size: 22rpx; color: var(--label2); text-align: right; line-height: 1.35; }
+
 /* 按钮 */
 .btn-primary { display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border-radius: 28rpx;
   font-size: 34rpx; font-weight: 600; height: 104rpx; line-height: 104rpx; border: none; padding: 0; }
