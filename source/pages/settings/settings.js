@@ -15,7 +15,7 @@ function setPath(obj, path, val) {
 }
 
 Page({
-  data: { p: null, lifts: [], steps: [], days: [], dIdx: 0, libNames: { T1: [], T2: [], T3: [] }, libCount: 0, customCount: 0, liftNames: LIFT_NAMES, showImport: false, recordCount: 0, tmPct: 90, backupText: '' },
+  data: { p: null, lifts: [], steps: [], days: [], dIdx: 0, libNames: { T1: [], T2: [], T3: [] }, libCount: 0, customCount: 0, liftNames: LIFT_NAMES, showImport: false, recordCount: 0, tmPct: 90, backupText: '', ruleNote: '' },
   onShow() { this.refresh(); },
 
   refresh() {
@@ -45,7 +45,7 @@ Page({
     const isGz = curProg === 'gzclp';
     const pRules = GZ.progressionRules ? GZ.progressionRules(curProg) : { name: curProg, summary: '' };
     this.setData({
-      p: P, isGz, mainLabel: GZ.tierLabel(curProg, 'T1'), progName: pRules.name, progSummary: pRules.summary, days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
+      p: P, isGz, mainLabel: GZ.tierLabel(curProg, 'T1'), progName: pRules.name, progSummary: pRules.summary, ruleNote: GZ.ruleModeNote(P), days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
       lifts: GZ.LIFT_ORDER.map((k) => ({ key: k, name: GZ.LIFTS[k], oneRM: P.oneRM[k], tm: GZ.fmtW(GZ.tm(P, k)) })),
       steps: GZ.STEP_KEYS.map((s) => ({ key: s.key, label: s.label, note: s.note, v: P.steps[s.key] }))
     });
