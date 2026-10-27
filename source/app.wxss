@@ -93,7 +93,10 @@ page {
 .mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.32); z-index: 100; display: flex; align-items: flex-end; }
 .mask.center { align-items: center; justify-content: center; }
 .sheet { width: 100%; max-height: 86vh; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border-radius: 40rpx 40rpx 0 0; padding: 16rpx 32rpx calc(56rpx + env(safe-area-inset-bottom)); box-sizing: border-box; }
-.sheet .sheet-btns { position: sticky; bottom: calc(-40rpx - env(safe-area-inset-bottom)); z-index: 2; padding: 20rpx 0 calc(40rpx + env(safe-area-inset-bottom)); background: var(--bg); }
+.sheet .sheet-btns { position: sticky; bottom: 0; z-index: 2; padding: 20rpx 0 calc(24rpx + env(safe-area-inset-bottom)); background: var(--bg); }
+.sheet-btns.stack { flex-direction: column; align-items: stretch; }
+.sheet-btns.stack .row { width: 100%; }
+.sheet-btns.stack .btn-primary { width: 100%; margin-top: 0; }
 .sheet .swap-ok { position: sticky; bottom: calc(-40rpx - env(safe-area-inset-bottom)); z-index: 2; margin-bottom: 0; box-shadow: 0 -12rpx 0 var(--bg), 0 12rpx 0 var(--bg); }
 .grabber { width: 72rpx; height: 10rpx; border-radius: 10rpx; background: var(--label3); margin: 0 auto 24rpx; }
 .sheet-cap { font-size: 26rpx; color: var(--label2); }
@@ -140,8 +143,8 @@ page {
 .wk-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16rpx; }
 .wk-share { flex: 0 0 auto; min-height: 56rpx; padding: 0 20rpx; border: 0; border-radius: 999rpx; background: #E3EFE4; color: #1E5A34; font-size: 26rpx; font-weight: 600; }
 .lk-share, .share-result { width: 100%; margin-top: 24rpx; }
-.share-sheet { display: flex; flex-direction: column; max-height: 92vh; overflow: hidden; padding: 0; }
-.ss-body { flex: 1; height: 62vh; min-height: 0; padding: 8rpx 28rpx 16rpx; box-sizing: border-box; }
+.share-sheet { display: flex; flex-direction: column; max-height: 78vh; overflow: hidden; padding: 0; }
+.ss-body { flex: 1 1 auto; height: 50vh; max-height: 50vh; min-height: 0; padding: 8rpx 28rpx 16rpx; box-sizing: border-box; }
 .share-art-wrap { margin-top: 8rpx; }
 .share-head { flex: 0 0 auto; padding: 12rpx 28rpx 8rpx; }
 .share-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
@@ -149,7 +152,7 @@ page {
 .share-title-row .sheet-title { margin: 0; font-size: 40rpx; }
 .share-tools { display: flex; align-items: center; gap: 8rpx; flex: 0 0 auto; }
 .share-profile { min-height: 64rpx; padding: 0 8rpx; border: 0; background: transparent; color: #3E5344; font-size: 28rpx; font-weight: 600; }
-.share-close { width: 64rpx; height: 64rpx; border: 0; border-radius: 50%; background: rgba(118,118,128,0.12); color: var(--label); font-size: 36rpx; line-height: 64rpx; }
+.share-close { width: 88rpx; height: 88rpx; border: 0; border-radius: 50%; background: rgba(118,118,128,0.12); color: var(--label); font-size: 40rpx; line-height: 88rpx; text-align: center; }
 .share-period { position: relative; display: inline-flex; align-items: center; min-height: 52rpx; padding: 0 18rpx; border-radius: 999rpx; background: rgba(118,118,128,0.12); color: var(--label); font-size: 26rpx; font-weight: 600; white-space: nowrap; }
 .share-period select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
 .share-art { border-radius: 28rpx; overflow: hidden; background: #EEF2EE; min-height: 240rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 16rpx 40rpx rgba(20,40,24,0.08); }

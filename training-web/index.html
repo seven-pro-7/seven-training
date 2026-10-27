@@ -287,7 +287,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.32); z-index: 100; display: flex; align-items: flex-end; }
 .mask.center { align-items: center; justify-content: center; }
 .sheet { width: 100%; max-height: 86vh; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border-radius: 20px 20px 0 0; padding: 8px 16px calc(28px + env(safe-area-inset-bottom)); box-sizing: border-box; }
-.sheet .sheet-btns { position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom)); z-index: 2; padding: 10px 0 calc(20px + env(safe-area-inset-bottom)); background: var(--bg); }
+.sheet .sheet-btns { position: sticky; bottom: 0; z-index: 2; padding: 10px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--bg); }
+.sheet-btns.stack { flex-direction: column; align-items: stretch; }
+.sheet-btns.stack .row { width: 100%; }
+.sheet-btns.stack .btn-primary { width: 100%; margin-top: 0; }
 .sheet .swap-ok { position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom)); z-index: 2; margin-bottom: 0; box-shadow: 0 -6px 0 var(--bg), 0 6px 0 var(--bg); }
 .grabber { width: 36px; height: 5px; border-radius: 5px; background: var(--label3); margin: 0 auto 12px; }
 .sheet-cap { font-size: 13px; color: var(--label2); }
@@ -334,8 +337,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .wk-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .wk-share { flex: 0 0 auto; min-height: 28px; padding: 0 10px; border: 0; border-radius: 499.5px; background: #E3EFE4; color: #1E5A34; font-size: 13px; font-weight: 600; }
 .lk-share, .share-result { width: 100%; margin-top: 12px; }
-.share-sheet { display: flex; flex-direction: column; max-height: 92vh; overflow: hidden; padding: 0; }
-.ss-body { flex: 1; height: 62vh; min-height: 0; padding: 4px 14px 8px; box-sizing: border-box; }
+.share-sheet { display: flex; flex-direction: column; max-height: 78vh; overflow: hidden; padding: 0; }
+.ss-body { flex: 1 1 auto; height: 50vh; max-height: 50vh; min-height: 0; padding: 4px 14px 8px; box-sizing: border-box; }
 .share-art-wrap { margin-top: 4px; }
 .share-head { flex: 0 0 auto; padding: 6px 14px 4px; }
 .share-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
@@ -343,7 +346,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .share-title-row .sheet-title { margin: 0; font-size: 22px; }
 .share-tools { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
 .share-profile { min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: #3E5344; font-size: 15px; font-weight: 600; }
-.share-close { width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(118,118,128,0.12); color: var(--label); font-size: 17px; line-height: 32px; }
+.share-close { width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(118,118,128,0.12); color: var(--label); font-size: 22px; line-height: 44px; text-align: center; }
 .share-period { position: relative; display: inline-flex; align-items: center; min-height: 26px; padding: 0 9px; border-radius: 499.5px; background: rgba(118,118,128,0.12); color: var(--label); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .share-period select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
 .share-art { border-radius: 14px; overflow: hidden; background: #EEF2EE; min-height: 120px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(20,40,24,0.08); }
@@ -786,8 +789,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 /* ===== 分享面板 v4：三段式（固定头 / 滚动正文 / 固定底栏）+ 五分区 ===== */
 .app .share-sheet {
   display: flex; flex-direction: column;
-  height: 100%; max-height: 100%; overflow: hidden;
-  padding: 0; /* 内边距交给内部三段，避免 sticky 计算错位 */
+  /* 遮罩本身已经停在导航下方；这里再留出一条可点击的遮罩，并给内部滚动一个确定高度 */
+  height: calc(100% - 56px);
+  max-height: calc(100% - 56px);
+  overflow: hidden;
+  padding: 0;
+  flex: 0 1 auto;
+  min-height: 0;
 }
 .app .share-head {
   flex: 0 0 auto; padding: 10px 16px 0;
@@ -797,9 +805,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .share-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .app .share-toolbar .sheet-title { font-size: 22px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.2px; }
 .app .share-close {
-  width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 50%;
+  width: 44px; height: 44px; flex: 0 0 auto; border: 0; border-radius: 50%;
   background: #E9EAE5; color: var(--label2);
   font-size: 22px; line-height: 1; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 3;
 }
 .app .share-close:active { transform: scale(.94); }
 
@@ -903,7 +913,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 /* 底栏：在文档流里；分享面板是模态，盖住了底部导航，只需让出安全区 */
 .app .share-foot {
   flex: 0 0 auto;
-  padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
   background: var(--bg);
   border-top: 1px solid rgba(60,60,67,0.08);
 }
@@ -1053,6 +1063,20 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .plan-ctx select { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--accent); background: none; border: 0; text-align: right; text-overflow: ellipsis; }
 .app .plan-ro { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px; padding: 10px 14px; border-radius: 14px; background: #FFF4E5; color: #8A5300; font-size: 13px; line-height: 1.5; }
 .app .plan-ro .btn-small { margin-left: auto; }
+
+/* 弹层停在导航下方，底部让出标签栏。关闭按钮和上方遮罩都落在可点区域内。 */
+.app { --chrome-top: 47px; }
+@media (max-width: 760px) { .app { --chrome-top: 0px; } }
+.app #body .mask {
+  top: calc(var(--chrome-top) + var(--navh));
+  right: 0;
+  bottom: calc(var(--tabh) + var(--tabbottom) + 8px);
+  left: 0;
+  z-index: 260;
+}
+.app .sheet {
+  max-height: calc(100% - 56px);
+}
 
 
 .app { --font-caption: 11px; --font-footnote: 13px; --font-body: 15px; --font-headline: 17px; --font-title: 22px; --font-heading: 28px; --font-display: 34px; --font-input: 16px; }
@@ -6668,8 +6692,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           : (r.leftText ? '<div class="wk-left">本周还剩 ' + r.leftText + '</div>' : '')) +
         '<div class="res-kpi"><div class="rk"><span class="num rk-v">' + r.volume + '</span><span class="rk-l">容量 kg</span></div><div class="rk"><span class="num rk-v accent">' + r.adds + '</span><span class="rk-l">项加重</span></div></div>' +
         '<div class="list">' + r.items.map(function (x) { return '<div class="cell res-row">' + tier(x.tier, x.badge) + '<span class="res-name flex1">' + x.name + '</span><div class="res-r"><span class="jtag" style="color:' + x.color + '">' + x.j + '</span><span class="res-next num">' + x.next + '</span></div></div>'; }).join('') + '</div>' +
-        '<button type="button" class="btn-primary share-result" data-act="shareopen" data-id="' + r.logId + '">生成今日战报</button>' +
-        '<div class="sheet-btns"><div class="btn-ghost" data-act="gotoStats">查看数据</div><div class="btn-ghost solid" data-act="closeResult">好</div></div></div></div>';
+        '<div class="sheet-btns stack"><button type="button" class="btn-primary share-result" data-act="shareopen" data-id="' + r.logId + '">生成今日战报</button><div class="row"><div class="btn-ghost" data-act="gotoStats">查看数据</div><div class="btn-ghost solid" data-act="closeResult">好</div></div></div></div></div>';
     }
     return h;
   }
@@ -7159,7 +7182,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       p.cycle = next; return true;
     }
     if (act === 'go') { if (!goTrain(ds.day)) return false; return true; }
-    if (act === 'exopen') { S.stats.ex = ds.name; return true; }
+    if (act === 'exopen') { closeSheets(); S.stats.ex = ds.name; return true; }
     if (act === 'exclose') { S.stats.ex = null; return true; }
     if (act === 'overviewback') { S.tab = 'train'; p.from = ''; p.slot = null; p.detail = null; S.stats.ex = null; render(); return false; }
     if (act === 'openlib') { p.view = 'lib'; return true; }
@@ -7399,7 +7422,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var va = viewAct(act, el); if (va !== null) return va;
     if (act === 'lift') { S.stats.lift = Number(ds.i); return true; }
     if (act === 'wday') { S.stats.day = Number(ds.i); return true; }
-    if (act === 'exopen') { S.stats.ex = ds.name; return true; }
+    if (act === 'exopen') { closeSheets(); S.stats.ex = ds.name; return true; }
     if (act === 'exclose') { S.stats.ex = null; return true; }
   }
 
@@ -7516,17 +7539,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var r = S.review;
     if (viewingOther() && (act === 'del' || act === 'edit')) { toast('这是其他计划的记录，只读'); return false; }
     if (act === 'shareopen') {
-      S.train.result = null;
-      if (S.plan) S.plan.detail = null;
+      closeSheets();
       r.share = { kind: 'day', id: ds.id, funVariant: 0, theme: 'sage', body: false, badgePick: null, badgeVariant: 0, image: null, blob: null };
       return true;
     }
-    if (act === 'shareclose') { r.share = null; return true; }
-    if (act === 'weekopen') { r.share = { kind: 'week', week: ds.week ? Number(ds.week) : null, funVariant: 0, theme: 'sage', body: false, image: null, blob: null }; return true; }
+    if (act === 'shareclose') { r.share = null; r.returnTo = null; return true; }
+    if (act === 'weekopen') { closeSheets(); r.share = { kind: 'week', week: ds.week ? Number(ds.week) : null, funVariant: 0, theme: 'sage', body: false, image: null, blob: null }; return true; }
     if (act === 'weekpick') { if (r.share) { r.share.week = Number(el.value); r.share.funVariant = 0; } return true; }
-    if (act === 'monthopen') { r.share = { kind: 'month', ym: ds.ym || null, funVariant: 0, theme: 'sage', body: false, image: null, blob: null }; return true; }
+    if (act === 'monthopen') { closeSheets(); r.share = { kind: 'month', ym: ds.ym || null, funVariant: 0, theme: 'sage', body: false, image: null, blob: null }; return true; }
     if (act === 'monthpick') { if (r.share) { r.share.ym = el.value; r.share.funVariant = 0; } return true; }
-    if (act === 'wallopen') { r.wall = true; return true; }
+    if (act === 'wallopen') { closeSheets(); r.wall = true; return true; }
     if (act === 'wallclose') { r.wall = false; return true; }
     if (act === 'bodytoggle') { if (r.share) r.share.body = !!el.checked; return true; }
     if (act === 'badgeswap' || act === 'badgeagain') {
@@ -7537,13 +7559,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       else { r.share.badgePick = null; r.share.badgeVariant = (r.share.badgeVariant || 0) + 1; }
       return true;
     }
-    if (act === 'watchgo') { r.returnTo = shareKeep(r.share); r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
+    if (act === 'watchgo') { r.returnTo = shareKeep(r.share); r.share = null; r.wall = false; S.stats.ex = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('watchSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
     if (act === 'sharetheme') { if (r.share) r.share.theme = ds.theme; return true; }
     if (act === 'funswap' || act === 'funagain') { if (r.share) r.share.funVariant = (r.share.funVariant || 0) + 1; return true; }
     if (act === 'sharecopy') { var cd = sharePayload(r.share); if (cd) copyText(cd.caption, '配文已复制'); return false; }
     if (act === 'shareexport') { exportShareImage(false); return false; }
     if (act === 'sharesystem') { exportShareImage(true); return false; }
-    if (act === 'shareprofile') { r.returnTo = shareKeep(r.share); r.share = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('shareProfileSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
+    if (act === 'shareprofile') { r.returnTo = shareKeep(r.share); r.share = null; r.wall = false; S.stats.ex = null; S.tab = 'settings'; render(); setTimeout(function () { var x = document.getElementById('shareProfileSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false; }
     if (act === 'sharetrain') { r.share=null; S.tab='train'; render(); return false; }
     if (act === 'rtab') { r.tab = Number(ds.i); return true; }
     if (act === 'rules') { r.rules = !r.rules; return true; }
@@ -7586,7 +7608,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (!sh.kind) sh.kind = 'day';
     var data = sharePayload(sh);
     var empty = sh.kind === 'month' ? '还没有可生成月报的训练' : sh.kind === 'week' ? '还没有可生成周报的训练' : '这次没有可分享的训练';
-    if (!data) return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title">' + empty + '</span><button type="button" class="share-close" data-act="shareclose" aria-label="关闭">×</button></div></div><div class="share-foot"><button type="button" class="btn-primary" data-act="shareclose">返回</button></div></div></div>';
+    if (!data) return '<div class="mask share-mask" data-act="shareclose"><div class="sheet share-sheet" data-stop="1"><div class="share-head"><div class="grabber"></div><div class="share-toolbar"><span class="sheet-title">' + empty + '</span><button type="button" class="share-close" data-act="shareclose" aria-label="关闭">×</button></div></div></div></div>';
     if (sh.kind === 'day') { sh.id = data.recordId; sh.date = data.date; sh.day = data.day; }
     if (sh.kind === 'week') sh.week = data.week;
     if (sh.kind === 'month') sh.ym = data.ym;
@@ -7622,8 +7644,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         '<div class="share-art-wrap"><div id="shareArtwork" class="share-art" aria-label="' + artLabel + '"><span class="share-loading">正在整理这张海报…</span></div></div>' +
         '<div class="share-pills" role="toolbar" aria-label="海报微调">' + pills + '</div></div>' +
       '<div class="share-foot"><div class="share-actions">' +
-        '<button type="button" data-act="sharecopy">复制配文</button>' +
-        '<button type="button" data-act="shareexport" disabled>保存图片</button>' +
         '<button type="button" class="main" data-act="sharesystem" disabled>系统分享</button></div></div></div></div>';
   }
 
@@ -7674,7 +7694,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       sh.blob=blob;sh.image=canvas.toDataURL('image/png');
       var alt = data.name + ' · ' + (kind === 'month' ? data.title + ' 月报' : kind === 'week' ? data.title : data.date + ' 训练战报');
       box.innerHTML='';var img=new Image();img.src=sh.image;img.alt=alt;box.appendChild(img);
-      document.querySelectorAll('[data-act="shareexport"],[data-act="sharesystem"]').forEach(function(b){b.disabled=false;});
+      document.querySelectorAll('[data-act="sharesystem"]').forEach(function(b){b.disabled=false;});
     } catch(e) { if(box.isConnected) box.textContent='图片生成失败，请关闭后重试。'; }
   }
   function exportShareImage(system) {
@@ -7684,7 +7704,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var shareTitle = kind === 'month' ? '月报 · '+sh.ym : kind === 'week' ? '周报 · 第 '+sh.week+' 周' : '训练战报 · '+sh.date+' '+(sh.day||'');
     var file=new File([sh.blob],filename,{type:'image/png'});
     if(system && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share) {
-      navigator.share({files:[file],title:shareTitle}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，可保存图片后分享');});return;
+      navigator.share({files:[file],title:shareTitle}).catch(function(e){if(e.name!=='AbortError') toast('系统分享暂不可用，已改为下载图片');});return;
     }
     var a=document.createElement('a'),url=URL.createObjectURL(sh.blob);a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(function(){URL.revokeObjectURL(url);},30000);
@@ -8039,6 +8059,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   var RENDER = { train: renderTrain, plan: renderPlan, stats: renderData, tools: renderTools, settings: renderSettings };
   var ACT = { train: trainAct, plan: planAct, stats: dataAct, tools: toolsAct, settings: settingsAct };
   var PGCLS = { train: 'pg-train', plan: 'pg-plan', stats: 'pg-stats pg-review', tools: 'pg-tools pg-plan', settings: 'pg-settings' };
+  /** 同时只留一层弹层。切 Tab、打开另一张卡之前清掉训练结算、详情、趋势、徽章墙和分享。 */
+  function closeSheets() {
+    S.train.result = null;
+    if (S.train.swap) S.train.swap.show = false;
+    if (S.plan) { S.plan.detail = null; S.plan.slot = null; }
+    S.stats.ex = null;
+    S.review.wall = false;
+    S.review.share = null;
+    S.review.returnTo = null;
+  }
   function render(keepScroll) {
     var body = document.getElementById('body'), y = body.scrollTop;
     var tb = document.getElementById('tabbar');
@@ -8167,15 +8197,23 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     body.addEventListener('scroll', navState, { passive: true });
     document.getElementById('tabbar').addEventListener('click', function (e) {
       var it = e.target.closest('.tb-item'); if (!it) return;
-      if (S.tab === it.dataset.tab || (it.dataset.tab === 'train' && S.tab === 'plan')) { body.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-      var prevTab = S.tab;
-      S.tab = it.dataset.tab; render(); if (rest.show) renderRest();
-      if (S.review.returnTo && prevTab === 'settings') {
-        var back = S.review.returnTo; S.review.returnTo = null;
-        if (S.tab === 'stats') S.data.seg = 2;
-        S.review.share = shareRestore(back);
-        render();
+      if (S.tab === it.dataset.tab || (it.dataset.tab === 'train' && S.tab === 'plan')) {
+        if (document.querySelector('#body .mask')) { closeSheets(); render(); }
+        body.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
       }
+      var prevTab = S.tab;
+      var dest = it.dataset.tab;
+      var back = S.review.returnTo;
+      var restore = back && prevTab === 'settings' && dest === back.from ? back : null;
+      closeSheets();
+      S.tab = dest;
+      if (restore) {
+        if (dest === 'stats') S.data.seg = 2;
+        S.review.share = shareRestore(restore);
+      }
+      render();
+      if (rest.show) renderRest();
     });
     document.getElementById('rest').addEventListener('click', function (e) {
       var a = e.target.closest('[data-rest-adj]'), s = e.target.closest('[data-rest-stop]');

@@ -32,8 +32,6 @@
     </scroll-view>
     <view class="share-foot">
       <view class="share-actions">
-        <view bindtap="onCopy">复制配文</view>
-        <view bindtap="onSave">保存图片</view>
         <view class="main" bindtap="onShare">系统分享</view>
       </view>
     </view>
