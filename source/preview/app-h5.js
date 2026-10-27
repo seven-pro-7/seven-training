@@ -371,18 +371,29 @@
     var db0 = load(), cur0 = GZ.activeProgram(db0);
     if (cur0 && cur0.status !== 'active' && !S.train.recordId) return renderTrainHold(cur0);
     var vm = trainVM(), t = S.train, h = '';
-    h += '<div class="head"><div class="row between"><label class="date-pick"><span class="head-sub">' + (vm.editing ? '编辑记录 · ' : '') + vm.weekText + (vm.locked ? ' · 已完成' : ' · ' + GZ.dateLabel(t.date)) + '</span>' +
-      (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '">') + '</label>' + (vm.editing ? '<span class="link" data-act="cancelEdit">取消</span>' : '') + '</div>' +
-      '<div class="large-title"><span class="num">' + vm.day + '</span> ' + vm.dayName + '</div></div>';
+    var o = vm.overview || {};
+    h += '<div class="head day-head"><div class="head-tools"><span class="cycle-eye num">' + (vm.editing ? '编辑记录 · ' : '') + '第 ' + vm.cycle + ' 轮 · 第 ' + vm.weekInCycle + ' 周' + (vm.locked ? ' · 已完成' : '') + '</span><div class="head-pills">' +
+      '<label class="date-pick date-pill"><span class="num">' + GZ.dateLabel(t.date) + '</span>' + (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '" aria-label="训练日期">') + '</label>' +
+      (!vm.locked && (vm.deloadSuggest || vm.deload) ? '<div class="deload-pill' + (vm.deload ? ' on' : '') + '"><span>减载</span><label class="ios-sw sm"><input type="checkbox" data-act="deload" aria-label="减载周" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>' : '') +
+      (vm.editing ? '<span class="link" data-act="cancelEdit">取消</span>' : '') + '</div></div>' +
+      '<div class="large-title"><span class="num">' + vm.day + '</span> ' + esc(vm.dayName) + '</div>' +
+      (!vm.locked && (vm.deloadSuggest || vm.deload) ? '<div class="dl-note">' + esc(vm.deloadTip || '减载周 · 降低负荷恢复') + '</div>' : '') + '</div>';
     if (!vm.editing) h += backupNag();
     if (!vm.editing) {
-      h += '<div class="seg day-seg' + (vm.days.length > 4 ? ' wide' : '') + '">' + vm.days.map(function (d) {
+      h += '<div class="day-cmd"><div class="seg day-seg' + (vm.days.length > 4 ? ' wide' : '') + '">' + vm.days.map(function (d) {
         return '<div class="seg-i ' + (d.id === vm.day ? 'on ' : '') + (d.done ? 'is-done' : '') + '" data-act="day" data-day="' + d.id + '">' + (d.done ? '<span class="ds-ck">✓</span>' : '') +
           '<span class="num">' + d.id + '</span>' + (d.rec ? '<div class="rec-dot"></div>' : '') + '</div>';
       }).join('') + '</div>';
       var rd = vm.round;
       h += '<div class="wk-prog"><div class="wk-bar"><div class="wk-in" style="width:' + rd.pct + '%"></div></div><span class="wk-t">本周 <span class="num strong">' + rd.done + '/' + rd.total + '</span>' +
-        (rd.left ? ' · 完成 ' + rd.leftText + ' 后进入' + rd.nextWeekText : '') + '</span></div>';
+        (rd.left ? ' · 完成 ' + rd.leftText + ' 后进入' + rd.nextWeekText : '') + '</span></div></div>';
+    }
+    if (!vm.locked && vm.overview) {
+      h += '<div class="ov"><div class="ov-cell"><span class="ov-k">' + esc(o.focusLabel) + '</span><span class="ov-v">' + esc(o.focusName) + '</span></div>' +
+        '<div class="ov-cell"><span class="ov-k">已完成</span><span class="ov-v num">' + o.done + '/' + o.total + '<span class="ov-u"> 项</span></span></div>' +
+        '<div class="ov-cell"><span class="ov-k">实时容量</span><span class="ov-v num">' + o.volume + '<span class="ov-u"> kg</span></span></div></div>';
+    }
+    if (!vm.editing) {
       h += '<div class="card tap lib-entry" data-act="overview"><span class="flex1">计划总览</span><span class="cap" style="margin-right:8px">周期与动作状态</span><span class="chev">›</span></div>';
     }
     if (vm.locked && vm.lockedInfo) {
@@ -394,10 +405,6 @@
         '<div class="sheet-btns"><div class="btn-ghost" data-act="editLocked" data-id="' + L.id + '">修改这次</div><div class="btn-ghost solid" data-act="day" data-day="' + vm.recommended + '">去练 ' + vm.recommended + '</div></div></div>';
     }
     if (!vm.locked) {
-    if (vm.deloadSuggest || vm.deload) {
-      h += '<div class="card deload"><div class="dl-ic">↓</div><div class="flex1"><div class="dl-t">减载周</div><div class="dl-s">' + esc(vm.deloadTip || '减载周 · 降低负荷恢复') + '</div></div>' +
-        '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
-    }
     // 专注模式：只展开「当前动作」，其余收成一行。焦点只在换训练日 / 首次进入时自动定位到第一个未完成的动作，
     // 之后由用户点「下一个动作」或点某一行切换，避免刚填完就被收起、看不到判定结果。
     var finished = function (x) { return x.skip || !!x.preview; };
@@ -429,50 +436,53 @@
       }
       flushRest();
       var nxt = nextOpen(it.slotId);
-      h += '<div class="card ex is-focus ' + (it.skip ? 'skipped' : '') + '">';
+      h += '<div class="card ex is-focus tier-' + it.tier + (it.skip ? ' skipped' : '') + '">';
       h += '<div class="ex-head">' + tier(it.tier, it.badge) + '<div class="ex-title"><span class="ex-name">' + esc(it.name) + '</span>' + equipTag(it.equip) +
         (it.sub ? '<span class="ex-tag sub">替换 ' + esc(it.planName) + '</span>' : it.autoNew ? '<span class="ex-tag rot">本轮轮换 · 原 ' + esc(it.autoPrev) + '</span>' : it.changeNew ? '<span class="ex-tag new">新动作</span>' : '') + '</div>' +
+        (it.skip ? '<span class="ex-skip-w num">' + (it.isBW ? '自重' : esc(it.weightText)) + '</span>' : '') +
         '<span class="ex-act" data-act="openswap" data-slot="' + it.slotId + '">更换</span>' +
         '<span class="ex-skip" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</span></div>';
+      if (!it.skip) {
       h += '<div class="ex-main">' + (!it.isBW
-        ? '<div class="wbox ' + (it.editW ? 'editing' : '') + '"' + (it.canAdjust ? ' data-act="editW" data-slot="' + it.slotId + '"' : '') + '><span class="w-num num ' + (it.manual ? 'manual' : '') + '">' + it.weightText + '</span><span class="w-unit">' + esc(it.unitText) + '</span>' + (it.canAdjust ? '<span class="w-edit">' + (it.editW ? '完成' : '调整') + '</span>' : '') + '</div>'
-        : '<div class="wbox bw-only"><span class="w-num bw-text">自重</span></div>') + '<span class="reps num">' + (it.isCardio ? '' : it.repsText) + '</span></div>';
-      if (it.manual || it.plates || it.fail > 0) h += '<div class="ex-sub">' + (it.manual ? '<span class="accent">已手动调整 · 建议 ' + it.autoText + ' kg' + (it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.plates || '') + (it.fail > 0 ? '<span class="amber">' + (it.plates ? ' · ' : '') + '已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
+        ? '<div class="wbox ' + (it.editW ? 'editing' : '') + '"' + (it.canAdjust ? ' data-act="editW" data-slot="' + it.slotId + '"' : '') + '><span class="w-num num ' + (it.manual ? 'manual' : '') + '">' + it.weightText + '</span><span class="w-unit">' + esc(it.unitText) + '</span>' + (it.canAdjust ? '<span class="w-edit">' + (it.editW ? '收起' : '调整') + '</span>' : '') + '</div>'
+        : '<div class="wbox bw-only"><span class="w-num bw-text">自重</span></div>') + (it.isCardio ? '' : '<span class="reps num">' + it.repsText + '</span>') + '</div>';
+      if (it.manual || it.plates || it.fail > 0) h += '<div class="meta-row">' + (it.manual ? '<span class="meta-chip manual">已手动调整 · 建议 ' + it.autoText + ' kg</span>' : '') + (it.plates ? '<span class="meta-chip">' + esc(it.plates) + '</span>' : '') + (it.fail > 0 ? '<span class="meta-chip warn">已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
       if (it.editW) {
         h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
-          '<input class="st-val wide num" inputmode="decimal" data-act="winput" data-slot="' + it.slotId + '" value="' + it.weightText + '">' +
-          '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">每次 ' + it.wStep + ' kg</span>' +
-          (it.manual ? '<span class="link we-reset" data-act="wreset" data-slot="' + it.slotId + '">恢复 ' + it.autoText + '</span>' : '') + '</div>';
+          '<input class="st-val wide num" inputmode="decimal" data-act="winput" data-slot="' + it.slotId + '" value="' + it.weightText + '" aria-label="工作重量">' +
+          '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">± ' + it.wStep + ' kg</span>' +
+          (it.manual ? '<span class="we-reset" data-act="wreset" data-slot="' + it.slotId + '">恢复建议</span>' : '') + '</div>';
       }
-      if (!it.skip) {
         if (it.inputType !== 'sets' && it.inputType !== 'fixed' && it.inputType !== 'cardio') {
           h += '<div class="dots">' + it.dots.map(function (d) {
             return '<div class="dot ' + (d.on ? 'on ' : '') + (d.amrap ? 'amrap' : '') + '" data-act="dot" data-slot="' + it.slotId + '" data-i="' + d.i + '" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">' + (d.amrap ? (d.i + 1) + '+' : d.i + 1) + '</div>';
           }).join('') + '<div class="rest-btn" data-act="rest" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">休息 ' + it.restText + '</div></div>';
         }
+        h += '<div class="ex-foot">';
         if (it.inputType === 'sets') h += setsBlock(it);
         else if (it.inputType === 'linear' || it.inputType === 'wave') h += repBlock(it);
         else if (it.inputType === 'fixed') h += fixedBlock(it);
         else if (it.inputType === 'cardio') h += cardioBlock(it);
         else if (it.inputType === 'amrap') {
           h += '<div class="inrow"><div class="flex1"><div class="in-label">末组次数</div><div class="in-hint">目标 ' + it.amrapHint + '</div></div><div class="stepper">' +
-            '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null || it.value === undefined ? '' : it.value) + '" placeholder="' + (it.amrapTarget || '') + '">' +
+            '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null || it.value === undefined ? '' : it.value) + '" placeholder="' + (it.amrapTarget || '') + '" aria-label="末组次数">' +
             '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="1">+</div></div></div>';
         }
-        if (it.need5RM) h += '<div class="inrow"><div class="flex1"><div class="in-label">新 5RM</div><div class="in-hint">未达标时按新 5RM 的 85% 重置</div></div><input class="mini-in num" inputmode="decimal" data-act="5rm" data-slot="' + it.slotId + '" value="' + esc(it.new5RM) + '" placeholder="kg"></div>';
+        if (it.need5RM) h += '<div class="inrow"><div class="flex1"><div class="in-label">新 5RM</div><div class="in-hint">未达标时按新 5RM 的 85% 重置</div></div><input class="mini-in num" inputmode="decimal" data-act="5rm" data-slot="' + it.slotId + '" value="' + esc(it.new5RM) + '" placeholder="kg" aria-label="新 5RM"></div>';
         if (it.inputType === 'done') {
           h += '<div class="inrow col"><div class="seg seg-done"><div class="seg-i ' + (it.value === '完成' ? 'on ok' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="完成">全部完成</div>' +
             '<div class="seg-i ' + (it.value === '未完成' ? 'on bad' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="未完成">未完成</div></div>';
           if (it.amrapHint) h += '<div class="in-hint">' + esc(it.amrapHint) + '</div>';
-          if (it.value === '未完成') h += '<div class="subrow"><span class="in-hint">实际总次数（选填，不填则这次不计入容量）</span><input class="mini-in num" inputmode="numeric" data-act="reps" data-slot="' + it.slotId + '" value="' + esc(it.reps2) + '" placeholder="次数"></div>';
+          if (it.value === '未完成') h += '<div class="subrow"><span class="in-hint">实际总次数（选填，不填则这次不计入容量）</span><input class="mini-in num" inputmode="numeric" data-act="reps" data-slot="' + it.slotId + '" value="' + esc(it.reps2) + '" placeholder="次数" aria-label="实际总次数"></div>';
           h += '</div>';
         }
         if (it.preview) {
           var p = it.preview;
-          h += '<div class="verdict"><div class="v-ic" style="background:' + p.color + '">' + p.icon + '</div><span class="v-j" style="color:' + p.color + '">' + p.judgment + '</span>' +
-            (p.sub ? '<span class="v-l">不影响 ' + esc(p.origName) + ' 的进阶</span>' : it.inputType === 'cardio' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + esc(p.nextStage) + '</span></div>' : p.judgment !== '减载' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + p.nextWeight + '</span><span class="v-u">kg</span>' + (p.stageChanged ? '<span class="v-stage">· ' + p.nextStage + '</span>' : '') + '</div>' : '<span class="v-l">按减载重量完成</span>') + '</div>' +
+          h += '<div class="verdict v-' + (p.tone || 'hold') + '"><div class="v-ic">' + p.icon + '</div><span class="v-j">' + esc(p.pill || p.judgment) + '</span>' +
+            (p.sub ? '<span class="v-l">不影响 ' + esc(p.origName) + ' 的进阶</span>' : it.inputType === 'cardio' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + esc(p.nextStage) + '</span></div>' : p.judgment !== '减载' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + p.nextWeight + '</span><span class="v-u">kg</span>' + (p.stageChanged ? '<span class="v-stage">· ' + esc(p.nextStage) + '</span>' : '') + '</div>' : '<span class="v-l">按减载重量完成</span>') + '</div>' +
             (p.boost && p.adaptNote ? '<div class="v-adapt"><span class="v-adapt-t">多加一档</span>' + esc(p.adaptNote) + '</div>' : '');
         }
+        h += '</div>';
       }
       if ((it.preview || it.skip) && nxt) h += '<div class="ex-next" data-act="focus" data-slot="' + nxt + '">下一个动作<span class="exr-chev">›</span></div>';
       h += '</div>';
@@ -717,9 +727,10 @@
     if (!rest.show) { el.innerHTML = ''; return; }
     var pct = Math.max(0, Math.min(100, rest.left / rest.total * 100)), app = document.querySelector('.app'), tb = document.getElementById('tabbar');
     var bottom = 12 + (app && tb ? app.getBoundingClientRect().bottom - tb.getBoundingClientRect().top : 60) + (S.tab === 'train' && !S.train.result ? 72 : 0);
-    el.innerHTML = '<div class="rest-float" style="bottom:' + Math.round(bottom) + 'px">' +
-      (rest.open ? '<div class="rest-pop"><div class="rp-n">' + esc(rest.name) + ' · 组间休息</div><div class="rp-btns"><div class="rp-b" data-rest-adj="-30">−30 秒</div><div class="rp-b main" data-rest-stop="1">结束休息</div><div class="rp-b" data-rest-adj="30">+30 秒</div></div></div>' : '') +
-      '<div class="rest-cap" data-rest-toggle="1"><span class="rc-ring" style="background:conic-gradient(#fff ' + pct + '%, rgba(255,255,255,0.25) 0)"><i></i></span><span class="rc-t num">' + fmtSec(rest.left) + '</span><span class="rc-l">休息</span></div></div>';
+    el.innerHTML = '<div class="rest-live" style="bottom:' + Math.round(bottom) + 'px">' +
+      '<div class="rl-top"><span class="rl-name">' + esc(rest.name) + ' · 组间休息</span><span class="rl-time num">' + fmtSec(rest.left) + '</span></div>' +
+      '<div class="rl-bar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="rl-btns"><div class="rl-b" data-rest-adj="-30">−30s</div><div class="rl-b main" data-rest-stop="1">跳过休息</div><div class="rl-b" data-rest-adj="30">+30s</div></div></div>';
   }
 
   // ================= 计划 =================

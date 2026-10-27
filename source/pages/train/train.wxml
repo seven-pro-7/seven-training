@@ -1,26 +1,51 @@
 <view class="page">
-  <!-- 大标题 -->
-  <view class="head">
-    <view class="row between">
-      <picker mode="date" value="{{date}}" bindchange="onDate" disabled="{{vm.locked}}">
-        <text class="head-sub">{{vm.editing ? '编辑记录 · ' : ''}}{{vm.weekText}}{{vm.locked ? ' · 已完成' : ' · ' + dateText}}</text>
-      </picker>
-      <text class="link" wx:if="{{vm.editing}}" bindtap="cancelEdit">取消</text>
+  <!-- 指挥头：周期、日期、减载、训练日 -->
+  <view class="head day-head">
+    <view class="head-tools">
+      <text class="cycle-eye num">{{vm.editing ? '编辑记录 · ' : ''}}第 {{vm.cycle}} 轮 · 第 {{vm.weekInCycle}} 周{{vm.locked ? ' · 已完成' : ''}}</text>
+      <view class="head-pills">
+        <picker mode="date" value="{{date}}" bindchange="onDate" disabled="{{vm.locked}}">
+          <view class="date-pill"><text class="num">{{dateText}}</text></view>
+        </picker>
+        <view class="deload-pill {{vm.deload ? 'on' : ''}}" wx:if="{{!vm.locked && (vm.deloadSuggest || vm.deload)}}">
+          <text>减载</text>
+          <switch checked="{{vm.deload}}" color="#E65A00" bindchange="onDeload" />
+        </view>
+        <text class="link" wx:if="{{vm.editing}}" bindtap="cancelEdit">取消</text>
+      </view>
     </view>
     <view class="large-title"><text class="num">{{vm.day}}</text> {{vm.dayName}}</view>
+    <view class="dl-note" wx:if="{{!vm.locked && (vm.deloadSuggest || vm.deload)}}">{{vm.deloadTip || '减载周 · 降低负荷恢复'}}</view>
   </view>
 
   <block wx:if="{{!vm.editing}}">
-    <view class="seg day-seg">
-      <view wx:for="{{vm.days}}" wx:key="id" class="seg-i {{item.id === vm.day ? 'on' : ''}} {{item.done ? 'is-done' : ''}}" data-day="{{item.id}}" bindtap="onDay">
-        <text class="ds-ck" wx:if="{{item.done}}">✓</text><text class="num">{{item.id}}</text><view class="rec-dot" wx:if="{{item.rec}}"></view>
+    <view class="day-cmd">
+      <view class="seg day-seg">
+        <view wx:for="{{vm.days}}" wx:key="id" class="seg-i {{item.id === vm.day ? 'on' : ''}} {{item.done ? 'is-done' : ''}}" data-day="{{item.id}}" bindtap="onDay">
+          <text class="ds-ck" wx:if="{{item.done}}">✓</text><text class="num">{{item.id}}</text><view class="rec-dot" wx:if="{{item.rec}}"></view>
+        </view>
+      </view>
+      <view class="wk-prog">
+        <view class="wk-bar"><view class="wk-in" style="width: {{vm.round.pct}}%"></view></view>
+        <text class="wk-t">本周 <text class="num strong">{{vm.round.done}}/{{vm.round.total}}</text>{{vm.round.left ? ' · 完成 ' + vm.round.leftText + ' 后进入' + vm.round.nextWeekText : ''}}</text>
       </view>
     </view>
-    <view class="wk-prog">
-      <view class="wk-bar"><view class="wk-in" style="width: {{vm.round.pct}}%"></view></view>
-      <text class="wk-t">本周 <text class="num strong">{{vm.round.done}}/{{vm.round.total}}</text>{{vm.round.left ? ' · 完成 ' + vm.round.leftText + ' 后进入' + vm.round.nextWeekText : ''}}</text>
-    </view>
   </block>
+
+  <view class="ov" wx:if="{{!vm.locked && vm.overview}}">
+    <view class="ov-cell">
+      <text class="ov-k">{{vm.overview.focusLabel}}</text>
+      <text class="ov-v">{{vm.overview.focusName}}</text>
+    </view>
+    <view class="ov-cell">
+      <text class="ov-k">已完成</text>
+      <text class="ov-v num">{{vm.overview.done}}/{{vm.overview.total}}<text class="ov-u"> 项</text></text>
+    </view>
+    <view class="ov-cell">
+      <text class="ov-k">实时容量</text>
+      <text class="ov-v num">{{vm.overview.volume}}<text class="ov-u"> kg</text></text>
+    </view>
+  </view>
 
   <!-- 本周已完成：锁定 -->
   <view class="card locked" wx:if="{{vm.locked && vm.lockedInfo}}">
@@ -55,17 +80,8 @@
 
   <block wx:if="{{!vm.locked}}">
 
-  <view class="card deload" wx:if="{{vm.deloadSuggest || vm.deload}}">
-    <view class="dl-ic">↓</view>
-    <view class="flex1">
-      <view class="dl-t">减载周</view>
-      <view class="dl-s">{{vm.deloadTip || '减载周 · 降低负荷恢复'}}</view>
-    </view>
-    <switch checked="{{vm.deload}}" color="#FF6B1A" bindchange="onDeload" />
-  </view>
-
   <!-- 动作 -->
-  <view wx:for="{{vm.items}}" wx:key="slotId" class="card ex {{item.skip ? 'skipped' : ''}}">
+  <view wx:for="{{vm.items}}" wx:key="slotId" class="card ex tier-{{item.tier}} {{item.skip ? 'skipped' : ''}}">
     <view class="ex-head">
       <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
       <view class="ex-title">
@@ -75,25 +91,27 @@
         <text class="ex-tag rot" wx:elif="{{item.autoNew}}">本轮轮换 · 原 {{item.autoPrev}}</text>
         <text class="ex-tag new" wx:elif="{{item.changeNew}}">新动作</text>
       </view>
+      <text class="ex-skip-w num" wx:if="{{item.skip}}">{{item.isBW ? '自重' : item.weightText}}</text>
       <text class="ex-act" data-slot="{{item.slotId}}" bindtap="openSwap">更换</text>
       <text class="ex-skip" data-slot="{{item.slotId}}" bindtap="onSkip">{{item.skip ? '恢复' : '跳过'}}</text>
     </view>
 
+    <block wx:if="{{!item.skip}}">
     <view class="ex-main" wx:if="{{item.isCardio}}">
       <view class="wbox"><text class="w-num num">{{item.weightText}}</text><text class="w-unit">分钟</text></view>
     </view>
     <view class="ex-main" wx:else>
       <view class="wbox {{item.editW ? 'editing' : ''}}" data-slot="{{item.slotId}}" bindtap="onEditW" wx:if="{{item.canAdjust}}">
         <text class="w-num num {{item.manual ? 'manual' : ''}}">{{item.weightText}}</text><text class="w-unit">{{item.unitText}}</text>
-        <text class="w-edit">{{item.editW ? '完成' : '调整'}}</text>
+        <text class="w-edit">{{item.editW ? '收起' : '调整'}}</text>
       </view>
       <view class="wbox bw-only" wx:else><text class="w-num bw-text">自重</text></view>
       <text class="reps num">{{item.repsText}}</text>
     </view>
-    <view class="ex-sub" wx:if="{{item.manual || item.plates || item.fail > 0}}">
-      <text class="accent" wx:if="{{item.manual}}">已手动调整 · 建议 {{item.autoText}} kg{{item.plates || item.fail > 0 ? ' · ' : ''}}</text>
-      <text wx:if="{{item.plates}}">{{item.plates}}</text>
-      <text class="amber" wx:if="{{item.fail > 0}}">{{item.plates ? ' · ' : ''}}已预警 {{item.fail}} 次</text>
+    <view class="meta-row" wx:if="{{item.manual || item.plates || item.fail > 0}}">
+      <text class="meta-chip manual" wx:if="{{item.manual}}">已手动调整 · 建议 {{item.autoText}} kg</text>
+      <text class="meta-chip" wx:if="{{item.plates}}">{{item.plates}}</text>
+      <text class="meta-chip warn" wx:if="{{item.fail > 0}}">已预警 {{item.fail}} 次</text>
     </view>
 
     <view class="wedit" wx:if="{{item.editW}}">
@@ -102,17 +120,17 @@
         <input class="st-val wide num" type="digit" value="{{item.weightText}}" data-slot="{{item.slotId}}" bindblur="onWInput" bindconfirm="onWInput" />
         <view class="st-btn" data-slot="{{item.slotId}}" data-d="1" bindtap="onWStep">+</view>
       </view>
-      <text class="we-step">每次 {{item.wStep}} kg</text>
-      <text class="link we-reset" wx:if="{{item.manual}}" data-slot="{{item.slotId}}" bindtap="onWReset">恢复 {{item.autoText}}</text>
+      <text class="we-step">± {{item.wStep}} kg</text>
+      <text class="we-reset" wx:if="{{item.manual}}" data-slot="{{item.slotId}}" bindtap="onWReset">恢复建议</text>
     </view>
 
-    <block wx:if="{{!item.skip}}">
-      <view class="dots" wx:if="{{item.inputType !== 'cardio'}}">
-        <view wx:for="{{item.dots}}" wx:for-item="d" wx:key="i" class="dot {{d.on ? 'on' : ''}} {{d.amrap ? 'amrap' : ''}}"
-          data-slot="{{item.slotId}}" data-i="{{d.i}}" data-rest="{{item.rest}}" data-name="{{item.name}}" bindtap="onDot">{{d.amrap ? '+' : d.i + 1}}</view>
-        <view class="rest-btn" data-rest="{{item.rest}}" data-name="{{item.name}}" bindtap="startRest">休息 {{item.restText}}</view>
-      </view>
+    <view class="dots" wx:if="{{item.inputType !== 'cardio'}}">
+      <view wx:for="{{item.dots}}" wx:for-item="d" wx:key="i" class="dot {{d.on ? 'on' : ''}} {{d.amrap ? 'amrap' : ''}}"
+        data-slot="{{item.slotId}}" data-i="{{d.i}}" data-rest="{{item.rest}}" data-name="{{item.name}}" bindtap="onDot">{{d.amrap ? '+' : d.i + 1}}</view>
+      <view class="rest-btn" data-rest="{{item.rest}}" data-name="{{item.name}}" bindtap="startRest">休息 {{item.restText}}</view>
+    </view>
 
+    <view class="ex-foot">
       <view class="inrow col" wx:if="{{item.inputType === 'cardio'}}">
         <view class="seg seg-done">
           <view class="seg-i {{item.value !== null && item.value !== '' && item.value >= item.amrapTarget ? 'on ok' : ''}}" data-slot="{{item.slotId}}" bindtap="onCardioDone">完成</view>
@@ -157,9 +175,9 @@
         </view>
       </view>
 
-      <view class="verdict" wx:if="{{item.preview}}">
-        <view class="v-ic" style="background: {{item.preview.color}}">{{item.preview.icon}}</view>
-        <text class="v-j" style="color: {{item.preview.color}}">{{item.preview.judgment}}</text>
+      <view class="verdict v-{{item.preview.tone}}" wx:if="{{item.preview}}">
+        <view class="v-ic">{{item.preview.icon}}</view>
+        <text class="v-j">{{item.preview.pill}}</text>
         <text class="v-l" wx:if="{{item.preview.sub}}">不影响 {{item.preview.origName}} 的进阶</text>
         <view class="v-next" wx:elif="{{item.isCardio}}">
           <text class="v-l">下次</text>
@@ -173,6 +191,7 @@
         <text class="v-l" wx:else>按减载重量完成</text>
       </view>
       <view class="v-adapt" wx:if="{{item.preview.boost && item.preview.adaptNote}}"><text class="v-adapt-t">多加一档</text>{{item.preview.adaptNote}}</view>
+    </view>
     </block>
   </view>
 
@@ -232,15 +251,17 @@
   </view>
 
   <!-- 组间休息 -->
-  <view class="mask center rest-mask" wx:if="{{rest.show}}">
-    <view class="rest-box">
-      <text class="rest-name">{{rest.name}} · 组间休息</text>
-      <text class="rest-num num">{{rest.text}}</text>
+  <view class="mask rest-mask" wx:if="{{rest.show}}">
+    <view class="rest-banner">
+      <view class="rest-top">
+        <text class="rest-name">{{rest.name}} · 组间休息</text>
+        <text class="rest-num num">{{rest.text}}</text>
+      </view>
       <view class="rest-bar"><view class="rest-in" style="width: {{rest.pct}}%"></view></view>
       <view class="rest-btns">
-        <view class="rb" data-d="-30" bindtap="adjRest">−30</view>
+        <view class="rb" data-d="-30" bindtap="adjRest">−30s</view>
         <view class="rb main" bindtap="stopRest">跳过休息</view>
-        <view class="rb" data-d="30" bindtap="adjRest">+30</view>
+        <view class="rb" data-d="30" bindtap="adjRest">+30s</view>
       </view>
     </view>
   </view>

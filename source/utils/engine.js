@@ -1861,7 +1861,7 @@
       else if (curProg.id === 'w531') deloadTip = '第 4 周减载 · 40% / 50% / 60% 恢复周';
       else deloadTip = '减载周 · 降低工作负荷，促进身体恢复';
     }
-    return {
+    return paintTrainView({
       progression: curProg.id, progressionName: curProg.name,
       day: dayId, dayName: day.name, week: week, totalWeeks: P.totalWeeks, recommended: rec.day,
       cycle: cyc.cycle, weekInCycle: cyc.wc, weeksPerCycle: cyc.N, weekText: weekText(week, P),
@@ -1870,7 +1870,30 @@
       round: { week: round.week, done: round.done, total: round.total, leftText: round.leftText, left: round.left.length, nextWeek: round.week + 1, nextWeekText: weekText(round.week + 1, P), pct: Math.round(round.done / round.total * 100) },
       locked: !!locked, lockedInfo: lockedInfo,
       ruleMode: P.ruleMode, editing: !!opts.recordId
+    });
+  }
+
+  /** 训练首页的概览条和判定色调。判定原文留在 judgment，界面用 pill / tone。 */
+  function paintTrainView(vm) {
+    var items = vm.items || [], primary = null, vol = 0;
+    items.forEach(function (it) {
+      if (!primary && it.tier === 'T1') primary = it;
+      if (it.preview) {
+        var j = it.preview.judgment, boost = !!it.preview.boost;
+        it.preview.pill = boost ? '多加一档' : j;
+        it.preview.tone = (boost || j === '加重' || j === '纪录' || j === '完成' || j === '建议负重') ? 'go'
+          : (j === '重置' || j === '降阶' || j === '退阶' || j === '建议降阶' || j === '减轻' || j === '未完成') ? 'warn'
+          : 'hold';
+      }
+      if (!it.skip && it.preview && it.preview.volume) vol += Number(it.preview.volume) || 0;
+    });
+    if (!primary && items.length) primary = items[0];
+    vm.overview = {
+      focusLabel: vm.progression === 'gzclp' ? 'T1 主项' : ((primary && primary.badge) || '主项'),
+      focusName: primary ? primary.name : '—',
+      done: vm.filled, total: vm.total, volume: Math.round(vol)
     };
+    return vm;
   }
 
   // ---------- 视图模型：计划页（按轮显示，每轮 N 周 × 4 日） ----------
