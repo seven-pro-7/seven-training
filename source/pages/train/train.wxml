@@ -269,10 +269,12 @@
           </view>
         </view>
       </view>
-      <button class="btn-primary share-result" data-id="{{result.logId}}" bindtap="openShare">生成今日战报</button>
-      <view class="sheet-btns">
-        <view class="btn-ghost" bindtap="gotoStats">查看数据</view>
-        <view class="btn-ghost solid" bindtap="closeResult">好</view>
+      <view class="sheet-btns stack">
+        <button class="btn-primary share-result" data-id="{{result.logId}}" bindtap="openShare">生成今日战报</button>
+        <view class="row">
+          <view class="btn-ghost" bindtap="gotoStats">查看数据</view>
+          <view class="btn-ghost solid" bindtap="closeResult">好</view>
+        </view>
       </view>
     </view>
   </view>

@@ -1,8 +1,13 @@
 /* ===== 分享面板 v4：三段式（固定头 / 滚动正文 / 固定底栏）+ 五分区 ===== */
 .app .share-sheet {
   display: flex; flex-direction: column;
-  height: 100%; max-height: 100%; overflow: hidden;
-  padding: 0; /* 内边距交给内部三段，避免 sticky 计算错位 */
+  /* 遮罩本身已经停在导航下方；这里再留出一条可点击的遮罩，并给内部滚动一个确定高度 */
+  height: calc(100% - 56px);
+  max-height: calc(100% - 56px);
+  overflow: hidden;
+  padding: 0;
+  flex: 0 1 auto;
+  min-height: 0;
 }
 .app .share-head {
   flex: 0 0 auto; padding: 10px 16px 0;
@@ -12,9 +17,11 @@
 .app .share-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .app .share-toolbar .sheet-title { font-size: 22px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.2px; }
 .app .share-close {
-  width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 50%;
+  width: 44px; height: 44px; flex: 0 0 auto; border: 0; border-radius: 50%;
   background: #E9EAE5; color: var(--label2);
-  font-size: 20px; line-height: 1; font-weight: 500;
+  font-size: 22px; line-height: 1; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 3;
 }
 .app .share-close:active { transform: scale(.94); }
 
@@ -118,7 +125,7 @@
 /* 底栏：在文档流里；分享面板是模态，盖住了底部导航，只需让出安全区 */
 .app .share-foot {
   flex: 0 0 auto;
-  padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
   background: var(--bg);
   border-top: 1px solid rgba(60,60,67,0.08);
 }
@@ -268,3 +275,17 @@
 .app .plan-ctx select { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--accent); background: none; border: 0; text-align: right; text-overflow: ellipsis; }
 .app .plan-ro { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px; padding: 10px 14px; border-radius: 14px; background: #FFF4E5; color: #8A5300; font-size: 13px; line-height: 1.5; }
 .app .plan-ro .btn-small { margin-left: auto; }
+
+/* 弹层停在导航下方，底部让出标签栏。关闭按钮和上方遮罩都落在可点区域内。 */
+.app { --chrome-top: 47px; }
+@media (max-width: 760px) { .app { --chrome-top: 0px; } }
+.app #body .mask {
+  top: calc(var(--chrome-top) + var(--navh));
+  right: 0;
+  bottom: calc(var(--tabh) + var(--tabbottom) + 8px);
+  left: 0;
+  z-index: 260;
+}
+.app .sheet {
+  max-height: calc(100% - 56px);
+}
