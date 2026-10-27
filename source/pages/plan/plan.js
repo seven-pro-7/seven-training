@@ -3,7 +3,7 @@ const store = require('../../utils/store.js');
 const app = getApp();
 
 Page({
-  data: { vm: null, ovIdx: 0, detail: null },
+  data: { vm: null, ovIdx: 0, detail: null, share: { show: false, kind: 'day', recordId: '', week: 0, ym: '' } },
   onShow() { this.refresh(); },
   refresh() {
     const db = store.load();
@@ -34,6 +34,11 @@ Page({
     }
   },
   closeDetail() { this.setData({ detail: null }); },
+  openShare(e) {
+    const id = e.currentTarget.dataset.id;
+    this.setData({ detail: null, share: { show: true, kind: 'day', recordId: id, week: 0, ym: '' } });
+  },
+  closeShare() { this.setData({ 'share.show': false }); },
   editRecord(e) {
     app.globalData.editRecordId = e.currentTarget.dataset.id;
     this.setData({ detail: null });

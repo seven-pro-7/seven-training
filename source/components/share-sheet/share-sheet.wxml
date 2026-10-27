@@ -1,0 +1,41 @@
+<view class="mask share-mask" wx:if="{{show}}" bindtap="onClose">
+  <view class="sheet share-sheet" catchtap="noop">
+    <view class="share-head">
+      <view class="grabber"></view>
+      <view class="share-toolbar">
+        <view class="share-title-row">
+          <text class="sheet-title">{{title}}</text>
+          <picker wx:if="{{periods.length}}" mode="selector" range="{{periods}}" value="{{periodIndex}}" bindchange="onPeriod">
+            <view class="share-period">{{periodLabel}} ▾</view>
+          </picker>
+        </view>
+        <view class="share-tools">
+          <text class="share-profile" bindtap="onProfile">名片 ›</text>
+          <text class="share-close" bindtap="onClose">×</text>
+        </view>
+      </view>
+    </view>
+    <scroll-view scroll-y class="ss-body">
+      <view class="share-profile-tip" wx:if="{{!hasName}}" bindtap="onProfile">还没有昵称。点这里设置名片，名字会印在海报上 ›</view>
+      <view class="share-art-wrap">
+        <canvas type="2d" id="poster" class="share-art" style="width:100%;height:{{artH}}px;"></canvas>
+      </view>
+      <view class="share-pills">
+        <view class="share-pill-group">
+          <view class="share-pill {{theme === 'sage' ? 'on' : ''}}" data-theme="sage" bindtap="onTheme">鼠尾草</view>
+          <view class="share-pill {{theme === 'warm' ? 'on' : ''}}" data-theme="warm" bindtap="onTheme">暖杏色</view>
+        </view>
+        <view class="share-pill" bindtap="onFun">🎲 换一句</view>
+        <view class="share-pill" wx:if="{{showBadge}}" bindtap="onBadge">🏅 换勋章</view>
+        <view class="share-pill {{body ? 'on' : ''}}" wx:if="{{showWatch}}" bindtap="onBody">⌚ 手表数据</view>
+      </view>
+    </scroll-view>
+    <view class="share-foot">
+      <view class="share-actions">
+        <view bindtap="onCopy">复制配文</view>
+        <view bindtap="onSave">保存图片</view>
+        <view class="main" bindtap="onShare">系统分享</view>
+      </view>
+    </view>
+  </view>
+</view>

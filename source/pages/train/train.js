@@ -5,7 +5,7 @@ const app = getApp();
 function fmtSec(s) { s = Math.max(0, s); const m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
 
 Page({
-  data: { vm: null, date: '', dateText: '', bw: '', note: '', rest: { show: false }, result: null, swap: { show: false } },
+  data: { vm: null, date: '', dateText: '', bw: '', note: '', rest: { show: false }, result: null, swap: { show: false }, share: { show: false, kind: 'day', recordId: '', week: 0, ym: '' } },
 
   onLoad() { this.day = null; this.draft = null; this.drafts = {}; this.deloads = {}; this.recordId = null; this.deload = undefined; this.setDate(GZ.today()); },
   setDate(d) { this.setData({ date: d, dateText: GZ.dateLabel(d) }); },
@@ -241,7 +241,7 @@ Page({
       cycle: doneCyc, weeksPerCycle: GZ.cycleLen(db.params), volume: Math.round(s.volume),
       weekDone, cycleDone, rotated, nextWeekText: GZ.weekText(rd.week, db.params),
       leftText: this.recordId ? '' : rd.leftText, nextDeload: weekDone && GZ.isDeloadWeek(rd.week, db.params),
-      adds: s.items.filter((x) => x.judgment === '加重').length,
+      logId: rec.id, adds: s.items.filter((x) => x.judgment === '加重').length,
       items: s.items.map((it) => ({
         tier: it.tier, badge: it.badge, tierColor: GZ.TIER_COLORS[it.tier], name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment],
         next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : it.inputMode === 'cardio' ? it.nextStage : GZ.fmtW(it.nextWeight) + ' kg · ' + it.nextStage
@@ -258,5 +258,10 @@ Page({
   },
   closeResult() { this.setData({ result: null }); },
   gotoStats() { this.setData({ result: null }); wx.switchTab({ url: '/pages/stats/stats' }); },
+  openShare(e) {
+    const id = e.currentTarget.dataset.id;
+    this.setData({ result: null, share: { show: true, kind: 'day', recordId: id, week: 0, ym: '' } });
+  },
+  closeShare() { this.setData({ 'share.show': false }); },
   noop() {}
 });

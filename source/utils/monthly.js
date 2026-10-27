@@ -57,8 +57,9 @@
     var dim = daysIn(ym);
 
     // 日历：周一为每周第一天
-    var trained = {};
-    cur.forEach(function (f) { var d = +f.date.slice(8, 10); trained[d] = (trained[d] || 0) + 1; });
+    var trained = {}, weekSet = {};
+    cur.forEach(function (f) { var d = +f.date.slice(8, 10); trained[d] = (trained[d] || 0) + 1; weekSet[f.week] = 1; });
+    var activeWeeks = Object.keys(weekSet).length;
     var lead = (new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1).getDay() + 6) % 7, cells = [];
     for (var i = 0; i < lead; i++) cells.push(null);
     for (var d = 1; d <= dim; d++) cells.push({ d: d, n: trained[d] || 0 });
@@ -150,142 +151,101 @@
       (bodyLine ? bodyLine + '\n' : '') + fp.e + ' ' + fp.text + '\n' + summary + '\n#训练打卡 #月度回顾';
 
     return { ym: ym, title: title, mon: monText(ym), ongoing: ongoing, profile: p, name: p.name || '训练者', hasName: !!p.name,
-      n: t.n, days: t.days, daysInMonth: dim, volume: t.volume, volumeText: (t.volume / 1000).toFixed(2), reps: t.reps, sets: t.sets, adds: t.adds,
+      n: t.n, days: t.days, daysInMonth: dim, activeWeeks: activeWeeks, volume: t.volume, volumeText: (t.volume / 1000).toFixed(2), reps: t.reps, sets: t.sets, adds: t.adds,
       prev: pt, prevMon: monText(pm), volDelta: volDelta, calendar: calendar, best: best ? { date: best.date, day: best.day, volume: Math.round(best.volume) } : null,
       topEx: topEx.slice(0, 3), prog: progRows, milestones: msShow, milestoneCount: milestoneCount, watch: watch, watchNote: watchNote, bodyLine: bodyLine,
       fun: fp.text, funEmoji: fp.e, funTag: fp.tag, funBasis: fp.basis, funIndex: fi, funTotal: nFun, copy: summary, caption: caption, months: ms };
   }
 
-  // ---------- 绘制 ----------
-  var WEEK = ['一', '二', '三', '四', '五', '六', '日'];
-  async function draw(canvas, data, theme) {
-    var avatar = await H.loadImage(data.profile.avatar), ctx = canvas.getContext('2d');
-    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F', faint = '#A4AC9C', card = '#FFFFFF', fill = warm ? '#FFE8D3' : '#E6EDDF', rust = '#C55A32';
-    var W = 1080, text = H.text, font = H.font, rounded = H.rounded, wrap = H.wrap;
-    function pass(H0, real) {
-      if (real) { canvas.width = W; canvas.height = H0; } else { canvas.width = W; canvas.height = 6000; }
-      ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, real ? H0 : 6000);
-      if (real) { var glow = ctx.createRadialGradient(1010, 50, 10, 880, 70, 720); glow.addColorStop(0, warm ? '#FCD7B7' : '#E0E9D9'); glow.addColorStop(1, bg); ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 700); }
-      var y = 72;
-      // —— 一、名片 + 月份
-      var pf = data.profile, nameSize = H.fit(ctx, data.name, 700, 44, 36);
-      font(ctx, 26, 400); var sigLines = pf.signature ? wrap(ctx, pf.signature, 720).slice(0, 2) : [];
-      var subLine = pf.handle || '';
-      var profileH = Math.max(136, 10 + nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36 + 8);
-      var AV = 132, ax = 64, cy0 = y + Math.max(0, (profileH - AV) / 2);
-      ctx.save(); ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
-      ctx.fillStyle = warm ? '#F6DCC6' : '#DCE5D3'; ctx.fillRect(ax, cy0, AV, AV);
-      if (avatar) { var side = Math.min(avatar.width, avatar.height); ctx.drawImage(avatar, (avatar.width - side) / 2, (avatar.height - side) / 2, side, side, ax, cy0, AV, AV); }
-      else { font(ctx, 58, 700); ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.fillText(Array.from(data.name)[0], ax + AV / 2, cy0 + AV / 2 - 34); ctx.textAlign = 'left'; }
-      ctx.restore();
-      ctx.lineWidth = 4; ctx.strokeStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2 - 2, 0, Math.PI * 2); ctx.stroke();
-      var tx = ax + AV + 30, ty = y + Math.max(0, (profileH - (nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36)) / 2);
-      text(ctx, data.name, tx, ty, nameSize, ink, 700); ty += nameSize + 12;
-      if (subLine) { text(ctx, subLine, tx, ty, 26, muted, 500); ty += 34; }
-      sigLines.forEach(function (l) { text(ctx, l, tx, ty, 26, ink, 400); ty += 36; });
-      y += profileH + 30;
-      ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, y); ctx.lineTo(1016, y); ctx.stroke();
-      y += 30;
-      text(ctx, data.title, 64, y, 56, ink, 750);
-      ctx.textAlign = 'right'; text(ctx, data.ongoing ? '月报 · 进行中' : '月报', 1016, y + 22, 26, muted, 500); ctx.textAlign = 'left';
-      y += 56 + 46;
-      // —— 二、纵览
-      H.secLabel(ctx, y, '本月纵览', muted); y += 54;
-      rounded(ctx, 64, y, 952, 250, 36, card);
-      text(ctx, '累计训练容量', 100, y + 32, 26, muted, 500);
-      text(ctx, data.volumeText, 92, y + 74, 100, ink, 750);
-      font(ctx, 100, 750); var nw = ctx.measureText(data.volumeText).width;
-      text(ctx, 't', 100 + nw, y + 122, 34, muted, 550);
-      var sub = H.num(data.volume) + ' kg' + (data.volDelta === null ? ' · 这是第一个有记录的月份' : ' · 较 ' + data.prevMon);
-      text(ctx, sub, 100, y + 172, 26, muted, 400);
-      if (data.volDelta !== null) {
-        var chip = (data.volDelta >= 0 ? '↑ ' : '↓ ') + Math.abs(data.volDelta) + '%';
-        font(ctx, 34, 700); var cw = Math.ceil(ctx.measureText(chip).width) + 44;
-        rounded(ctx, 1016 - 36 - cw, y + 36, cw, 60, 30, fill);
-        text(ctx, chip, 1016 - 36 - cw + 22, y + 48, 34, data.volDelta >= 0 ? rust : muted, 700);
-      }
-      y += 250 + 34;
-      [[data.n, '训练次数'], [data.days, '训练天数'], [data.adds, '达到加重条件']].forEach(function (m, k) { var x = 70 + k * 322; text(ctx, m[0], x, y, 56, ink, 700); text(ctx, m[1], x, y + 66, 26, muted, 400); });
-      y += 96;
-      if (data.bodyLine) { y += 22; text(ctx, data.bodyLine, 70, y, 26, muted, 500); y += 34; }
-      y += 34;
-      // 趣味卡
-      var funText = (data.funEmoji ? data.funEmoji + ' ' : '') + data.fun, fs = 44, funLines;
-      do { font(ctx, fs, 700); funLines = wrap(ctx, funText, 872); if (funLines.length <= 2) break; fs -= 2; } while (fs > 32);
-      font(ctx, 26, 400); var basisLines = data.funBasis ? wrap(ctx, '算法：' + data.funBasis, 872).slice(0, 2) : [];
-      var funH = 36 + 26 + 14 + funLines.length * (fs + 14) + (basisLines.length ? 10 + basisLines.length * 34 : 0) + 36;
-      rounded(ctx, 64, y, 952, funH, 36, fill);
-      var fy = y + 36; text(ctx, data.funTag, 100, fy, 26, muted, 650); fy += 26 + 14;
-      funLines.forEach(function (l, k) { text(ctx, l, 100, fy + k * (fs + 14), fs, ink, 700); });
-      fy += funLines.length * (fs + 14) + 10;
-      basisLines.forEach(function (l, k) { text(ctx, l, 100, fy + k * 34, 26, muted, 400); });
-      y += funH + 52;
-      // —— 三、训练日历
-      H.secLabel(ctx, y, '训练日历', muted);
-      ctx.textAlign = 'right'; text(ctx, data.days + ' / ' + data.daysInMonth + ' 天', 1016, y + 2, 26, muted, 500); ctx.textAlign = 'left';
-      y += 62;
-      var rows = data.calendar.length, calH = 28 + 40 + rows * 80 + 20;
-      rounded(ctx, 64, y, 952, calH, 36, card);
-      var cw7 = 952 / 7;
-      ctx.textAlign = 'center';
-      WEEK.forEach(function (w, k) { text(ctx, w, 64 + cw7 * k + cw7 / 2, y + 28, 22, faint, 600); });
-      data.calendar.forEach(function (row, ri) {
-        row.forEach(function (c, k) {
-          if (!c) return;
-          var cx = 64 + cw7 * k + cw7 / 2, cy = y + 28 + 40 + ri * 80 + 36;
-          if (c.n > 0) {
-            ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.fillStyle = rust; ctx.fill();
-            if (c.n > 1) { ctx.beginPath(); ctx.arc(cx, cy, 36, 0, Math.PI * 2); ctx.lineWidth = 3; ctx.strokeStyle = rust; ctx.stroke(); }
-            text(ctx, c.d, cx, cy - 15, 30, '#FFFFFF', 700);
-          } else text(ctx, c.d, cx, cy - 15, 30, faint, 500);
-        });
+  function paintCal(ctx, pal, x, y, w, calendar) {
+    if (!calendar || !calendar.length) return 0;
+    var gap = 8, dot = Math.min(26, Math.floor((w - gap * 6) / 7));
+    calendar.forEach(function (row, ri) {
+      row.forEach(function (cell, k) {
+        if (!cell) return;
+        var cx = x + k * (dot + gap), cy = y + ri * (dot + gap);
+        ctx.beginPath();
+        ctx.arc(cx + dot / 2, cy + dot / 2, Math.max(4, dot / 2 - 1), 0, Math.PI * 2);
+        ctx.fillStyle = cell.n ? pal.accent : pal.soft;
+        ctx.fill();
+        if (cell.n > 1) { ctx.lineWidth = 3; ctx.strokeStyle = pal.ink; ctx.stroke(); }
       });
-      ctx.textAlign = 'left';
-      y += calH + 52;
-      // —— 四、估算 1RM 变化
-      if (data.prog.length) {
-        H.secLabel(ctx, y, '估算 1RM 变化', muted);
-        ctx.textAlign = 'right'; text(ctx, data.prog.length + ' 项动作', 1016, y + 2, 26, muted, 500); ctx.textAlign = 'left';
-        y += 62;
-        data.prog.forEach(function (p) {
-          ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, y - 18); ctx.lineTo(1016, y - 18); ctx.stroke();
-          text(ctx, p.tier, 64, y + 4, 26, muted, 650);
-          font(ctx, 34, 650); var nm = wrap(ctx, p.name, 420)[0];
-          text(ctx, nm, 148, y, 34, ink, 650);
-          var note = p.prior === null ? '本月首次记录' : (p.delta > 0 ? '较上月 +' + p.delta + ' kg' : p.delta < 0 ? '较上月 ' + p.delta + ' kg' : '与上月持平');
-          text(ctx, note, 148, y + 44, 26, p.delta > 0 ? rust : muted, p.delta > 0 ? 650 : 400);
-          ctx.textAlign = 'right'; text(ctx, p.e1 + ' kg', 1016, y + 2, 34, ink, 700); text(ctx, p.prior === null ? '基线' : (p.delta > 0 ? '+' + p.pct + '%' : p.pct + '%'), 1016, y + 44, 26, muted, 400); ctx.textAlign = 'left';
-          y += 96 + 28;
-        });
-        y += 14;
+    });
+    return calendar.length * (dot + gap);
+  }
+  async function draw(canvas, data, theme) {
+    var P = H.Poster, avatar = await H.loadImage(data.profile && data.profile.avatar);
+    function pass(finalH) {
+      var ctx, pal;
+      if (!finalH) {
+        var opened = P.openPoster(canvas, theme);
+        ctx = opened.ctx; pal = opened.pal;
+      } else {
+        ctx = canvas.getContext('2d');
+        pal = P.palette(theme);
+        P.closePoster(canvas, ctx, pal, finalH);
       }
-      // —— 五、里程碑
-      if (data.milestones.length) {
-        H.secLabel(ctx, y, '本月里程碑', muted);
-        ctx.textAlign = 'right'; text(ctx, data.milestoneCount + ' 枚', 1016, y + 2, 26, muted, 500); ctx.textAlign = 'left';
-        y += 62;
-        var bx = 64, by = y;
-        data.milestones.slice(0, 6).forEach(function (b) {
-          var label = b.e + ' ' + b.title; font(ctx, 26, 650);
-          var bw = Math.ceil(ctx.measureText(label).width) + 56;
-          if (bx + bw > 1016) { bx = 64; by += 76; }
-          rounded(ctx, bx, by, bw, 60, 30, warm ? '#FFDFC0' : '#DCE8D3');
-          text(ctx, label, bx + 28, by + 17, 26, ink, 650);
-          bx += bw + 16;
+      var y = 48;
+      y = P.paintIdentity(ctx, pal, y, avatar, {
+        name: data.name,
+        sub: (data.profile && (data.profile.handle || data.profile.signature)) || '',
+        title: data.title + '训练月报',
+        tag: data.ongoing ? '进行中' : '月报'
+      });
+      var colW = (P.PIN - P.PGAP) / 2;
+      var calH = ((data.calendar || []).length || 1) * 34;
+      var colH = 268 + calH;
+      var hero = P.volHero(data.volume);
+      var deltaChip = data.volDelta === null ? '第一个有记录的月份' : '较上月 ' + (data.volDelta >= 0 ? '+' : '') + data.volDelta + '%';
+      P.paintMini(ctx, pal, P.PX, y, colW, colH, {
+        icon: '📅', title: '本月出勤', value: String(data.n), unit: '次',
+        chip: data.days + ' 天 · ' + (data.activeWeeks || 0) + ' 周', tone: 'up',
+        paint: function (c, p, x, yy, w) { paintCal(c, p, x, yy, w, data.calendar); }
+      });
+      P.paintMini(ctx, pal, P.PX + colW + P.PGAP, y, colW, colH, {
+        icon: '🔥', title: '月度总容量', value: hero.v, unit: hero.u,
+        chip: deltaChip, tone: data.volDelta != null && data.volDelta < 0 ? 'down' : 'up'
+      });
+      y += colH + P.PGAP;
+      if (data.prog && data.prog.length) {
+        y = P.paintSection(ctx, pal, y, {
+          icon: '🏋️', title: '主项月度进步', trail: data.prog.length + ' 项', inner: data.prog.length * 108,
+          paint: function (c, p, x, yy, w) {
+            var max = 1;
+            data.prog.forEach(function (row) { if (row.e1 > max) max = row.e1; });
+            data.prog.forEach(function (row, i) {
+              var ry = yy + i * 108;
+              H.font(c, 30, 650);
+              H.text(c, P.ellipsis(c, row.name, w * 0.62), x, ry, 30, p.ink, 650);
+              c.textAlign = 'right';
+              H.text(c, row.e1 + ' kg', x + w, ry, 30, p.ink, 700);
+              c.textAlign = 'left';
+              var note = row.prior == null ? '本月首次记录' : (row.delta > 0 ? '较上月 +' + row.delta + ' kg' : row.delta < 0 ? '较上月 ' + row.delta + ' kg' : '与上月持平');
+              H.text(c, note, x, ry + 40, 24, row.delta > 0 ? p.chipInk : p.muted, 500);
+              P.fillRound(c, x, ry + 76, w, 14, 7, p.soft);
+              P.fillRound(c, x, ry + 76, Math.max(10, w * (row.e1 / max)), 14, 7, row.delta < 0 ? p.down : p.accent);
+            });
+          }
         });
-        if (data.milestoneCount > Math.min(6, data.milestones.length)) text(ctx, '… 等 ' + data.milestoneCount + ' 枚', bx, by + 17, 26, muted, 500);
-        y = by + 60 + 52;
+        y += P.PGAP;
       }
-      // —— 六、小结
-      H.secLabel(ctx, y, '本月小结', muted); y += 54;
-      font(ctx, 34, 500); var sm = wrap(ctx, data.copy, 880);
-      sm.forEach(function (l, k) { text(ctx, l, 84, y + k * 46, 34, ink, 500); });
-      y += sm.length * 46 + 72;
-      return y;
+      if (data.milestones && data.milestones.length) {
+        y = P.paintBadges(ctx, pal, y, { title: '本月解锁里程碑', items: data.milestones, trail: (data.milestoneCount || data.milestones.length) + ' 枚', limit: 6 });
+        y += P.PGAP;
+      }
+      y = P.paintFun(ctx, pal, y, { icon: '⚡', title: '月度趣味换算', emoji: data.funEmoji, text: data.fun, basis: data.funBasis, trail: data.funTag || '' });
+      if (data.bodyLine) {
+        y += P.PGAP;
+        H.font(ctx, 30, 600);
+        var bl = H.wrap(ctx, data.bodyLine, P.PIN - 64);
+        y = P.paintSection(ctx, pal, y, {
+          icon: '⌚', title: '手表记录', inner: Math.max(40, bl.length * 42),
+          paint: function (c, p, x, yy) { bl.forEach(function (l, i) { H.text(c, l, x, yy + i * 42, 30, p.ink, 600); }); }
+        });
+      }
+      return y + 64;
     }
-    var total = pass(0, false);
-    pass(total, true);
+    pass(pass(0));
     return canvas;
   }
 

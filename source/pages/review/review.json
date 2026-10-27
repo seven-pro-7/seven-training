@@ -1,1 +1,4 @@
-{ "navigationBarTitleText": "回顾" }
+{
+  "navigationBarTitleText": "回顾",
+  "usingComponents": { "share-sheet": "/components/share-sheet/share-sheet" }
+}

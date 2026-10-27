@@ -1,4 +1,22 @@
 <view class="page">
+  <view class="sec-h">分享名片</view>
+  <view class="list">
+    <view class="cell">
+      <text class="flex1">昵称</text>
+      <input class="f-in wide" maxlength="18" value="{{profile.name}}" data-k="name" bindblur="onProfile" placeholder="分享时显示的名字" placeholder-class="ph" />
+    </view>
+    <view class="cell">
+      <text class="flex1">社媒 ID</text>
+      <input class="f-in wide" maxlength="24" value="{{profile.handle}}" data-k="handle" bindblur="onProfile" placeholder="可选，如 @seven" placeholder-class="ph" />
+    </view>
+    <view class="cell">
+      <text class="flex1">个性签名</text>
+      <input class="f-in wide" maxlength="48" value="{{profile.signature}}" data-k="signature" bindblur="onProfile" placeholder="可选" placeholder-class="ph" />
+    </view>
+    <view class="cell"><text class="flex1">卡片公开当天体重</text><switch checked="{{profile.showWeight}}" color="#34C759" bindchange="onProfileWeight" /></view>
+  </view>
+  <view class="sec-f">昵称会出现在日战报、周报和月报海报上。体重默认隐藏。</view>
+
   <view class="sec-h">基础 1RM</view>
   <view class="list">
     <view class="cell" wx:for="{{lifts}}" wx:key="key">

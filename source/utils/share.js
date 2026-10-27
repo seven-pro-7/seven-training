@@ -144,6 +144,25 @@
     if (!date || String(date).length < 10) return '';
     return (+String(date).slice(5, 7)) + '月' + (+String(date).slice(8, 10)) + '日';
   }
+  function trimNum(n) {
+    var x = Math.round(Number(n) * 100) / 100;
+    if (!isFinite(x)) return '0';
+    return (Math.abs(x - Math.round(x)) < 0.001) ? String(Math.round(x)) : String(x);
+  }
+  /** 海报上的推进徽章：加重写出公斤差，保持与降阶用原判定名 */
+  function progMark(judgment, delta) {
+    if (!judgment || judgment === '跳过') return '';
+    if (judgment === '减载' || judgment === '减载完成') return '减载';
+    if (judgment === '加重') return delta > 0 ? '↑ +' + trimNum(delta) + 'kg' : '加重';
+    if (judgment === '保持') return '保持';
+    if (judgment === '减轻') return delta < 0 ? '↓ ' + trimNum(delta) + 'kg' : '减轻';
+    return judgment;
+  }
+  function volHero(kg) {
+    kg = Number(kg) || 0;
+    if (kg >= 1000) return { v: (kg / 1000).toFixed(2), u: 't' };
+    return { v: trimNum(Math.round(kg)), u: 'kg' };
+  }
   /** 对不上时说明原因：同一天已被另一次训练占用，或快照里根本没有这一天 */
   function watchGap(watch, date, matched) {
     if (matched || !watch || !(watch.workouts || []).length) return '';
@@ -248,8 +267,13 @@
         if (it.judgment === '加重') adds++;
         var recordedVolume = Number(it.volume) || 0;
         volume += recordedVolume; reps += nreps; sets += nsets;
-        rows.push({ day: s.rec.day, tier: it.tier, name: it.name, load: load, stage: it.stage, result: result,
-          reps: nreps, sets: nsets, judgment: it.judgment, volume: recordedVolume });
+        var delta = 0;
+        if (!it.deload && it.nextWeight != null && w !== '' && w != null && !isNaN(Number(it.nextWeight)) && !isNaN(Number(w))) {
+          delta = Math.round((Number(it.nextWeight) - Number(w)) * 100) / 100;
+        }
+        rows.push({ day: s.rec.day, tier: it.tier, badge: it.badge || it.tier, name: it.name, load: load, stage: it.stage, result: result,
+          reps: nreps, sets: nsets, judgment: it.judgment, volume: recordedVolume, delta: delta, mark: progMark(it.judgment, delta),
+          work: load + (it.stage ? ' × ' + it.stage : '') });
       });
     });
     if (!rows.length) return null;
@@ -328,111 +352,313 @@
     if (line) out.push(line); return out;
   }
   function loadImage(src) { return new Promise(function (resolve) { if (!src || typeof Image === 'undefined') return resolve(null); var i = new Image(); i.onload = function () { resolve(i); }; i.onerror = function () { resolve(null); }; i.src = src; }); }
-  // 输出的是实际 PNG，预览与保存始终同源；高度按动作数量变化，不能截掉训练内容。
-  // 画布字号 = 网页规范字号 × 2：22/26/30/34/44/56/68，展示数字 100
+  // 日 / 周 / 月海报共用 Apple Health 圆角卡片。输出 PNG 与预览同源，高度随内容增长。
   function secLabel(ctx, y, txt, muted) {
     rounded(ctx, 64, y + 4, 6, 30, 3, '#C55A32');
     text(ctx, txt, 84, y, 26, muted, 650);
   }
-  async function draw(canvas, data, theme) {
-    var avatar = await loadImage(data.profile.avatar), ctx = canvas.getContext('2d');
-    var warm = theme === 'warm', bg = warm ? '#FFF6EE' : '#F5F6F3', ink = '#20251F', muted = '#66705F', card = '#FFFFFF', fill = warm ? '#FFE8D3' : '#E6EDDF';
-    var W = 1080;
-    // ---- 预量 ----
-    var pf = data.profile, nameSize = fit(ctx, data.name, 700, 44, 36);
-    font(ctx, 26, 400); var sigLines = pf.signature ? wrap(ctx, pf.signature, 720).slice(0, 2) : [];
-    var subLine = [pf.handle, data.weight !== null ? '体重 ' + data.weight + ' kg' : ''].filter(Boolean).join('  ·  ');
-    var profileH = Math.max(136, 10 + nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36 + 8);
-    font(ctx, 34, 500); var summaryLines = wrap(ctx, data.copy, 880);
-    var funText = (data.funEmoji ? data.funEmoji + ' ' : '') + data.fun;
-    var fs = 44, funLines;
-    do { font(ctx, fs, 700); funLines = wrap(ctx, funText, 872); if (funLines.length <= 2) break; fs -= 2; } while (fs > 32);
-    font(ctx, 26, 400); var basisLines = data.funBasis ? wrap(ctx, '算法：' + data.funBasis, 872).slice(0, 2) : [];
-    var funH = 36 + 26 + 14 + funLines.length * (fs + 14) + (basisLines.length ? 10 + basisLines.length * 34 : 0) + 36;
-    // ---- 纵向坐标 ----
-    // 一、个人名片 + 训练阶段 + 日期
-    var s1Top = 72, s1Div = s1Top + profileH + 30, s1Stage = s1Div + 26;
-    var badges = data.badges || [], bRowTop = s1Stage + 34 + 26, bRowH = badges.length ? 60 : 0;
-    var s2Top = s1Stage + 34 + (bRowH ? 26 + bRowH + 44 : 56);
-    // 二、纵览：标签 + 容量卡 + 指标 + 趣味
-    var vTop = s2Top + 54, mTop = vTop + 250 + 34, bodyTop = mTop + 96 + 22, fTop = mTop + 96 + 34 + (data.bodyLine ? 56 : 0);
-    // 三、训练清单
-    var lLbl = fTop + funH + 52, lTop = lLbl + 62;
-    font(ctx, 34, 650);
-    var lH = data.rows.reduce(function (a, r) { return a + Math.max(Math.min(2, wrap(ctx, r.name, 400).length) * 38 + 6 + 34, 96) + 30; }, 0);
-    // 四、小结
-    var smLbl = lTop + lH + 34, smTop = smLbl + 54;
-    var H = smTop + summaryLines.length * 46 + 72;
-    canvas.width = W; canvas.height = H; ctx.textBaseline = 'top';
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    var glow = ctx.createRadialGradient(1010, 50, 10, 880, 70, 720); glow.addColorStop(0, warm ? '#FCD7B7' : '#E0E9D9'); glow.addColorStop(1, bg);
-    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 700);
-    // ==== 一、个人名片 · 阶段 · 日期 ====
-    var AV = 132, ax = 64, ay = s1Top, cy0 = ay + Math.max(0, (profileH - AV) / 2);
-    ctx.save(); ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
-    ctx.fillStyle = warm ? '#F6DCC6' : '#DCE5D3'; ctx.fillRect(ax, cy0, AV, AV);
-    if (avatar) { var side = Math.min(avatar.width, avatar.height); ctx.drawImage(avatar, (avatar.width - side) / 2, (avatar.height - side) / 2, side, side, ax, cy0, AV, AV); }
-    else { font(ctx, 58, 700); ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.fillText(Array.from(data.name)[0], ax + AV / 2, cy0 + AV / 2 - 34); ctx.textAlign = 'left'; }
+  function ellipsis(ctx, str, width) {
+    str = String(str || '');
+    if (ctx.measureText(str).width <= width) return str;
+    var s = str;
+    while (s && ctx.measureText(s + '…').width > width) s = Array.from(s).slice(0, -1).join('');
+    return (s || '') + '…';
+  }
+  function roundPath(ctx, x, y, w, h, r) {
+    var rr = Math.max(0, Math.min(r || 0, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+  function fillRound(ctx, x, y, w, h, r, color) {
+    roundPath(ctx, x, y, w, h, r);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+  function palette(theme) {
+    var warm = theme === 'warm';
+    return {
+      warm: warm,
+      bg: warm ? '#F5EFE8' : '#EEF2EE',
+      ink: '#1C1C1E',
+      muted: warm ? '#6A5344' : '#3E5344',
+      faint: warm ? '#A89280' : '#7E8E80',
+      card: '#FFFFFF',
+      line: warm ? 'rgba(90,60,30,0.10)' : 'rgba(30,50,35,0.10)',
+      shadow: warm ? 'rgba(80,40,10,0.12)' : 'rgba(20,40,24,0.12)',
+      accent: warm ? '#C45C28' : '#2E6B45',
+      chip: warm ? '#F4E0D0' : '#E3EFE4',
+      chipInk: warm ? '#8A3E16' : '#1E5A34',
+      soft: warm ? '#FBF6F1' : '#F3F6F3',
+      down: '#8A5A32',
+      tier: { T1: warm ? '#C45C28' : '#E65A00', T2: '#2E6B45', T3: '#5C6B8A', C: '#5C6B8A' }
+    };
+  }
+  var PW = 1080, PX = 56, PGAP = 20, PIN = 1080 - 112, PR = 28;
+  function bentoCard(ctx, pal, x, y, w, h, r) {
+    ctx.save();
+    ctx.shadowColor = pal.shadow;
+    ctx.shadowBlur = 28;
+    ctx.shadowOffsetY = 10;
+    ctx.shadowOffsetX = 0;
+    roundPath(ctx, x, y, w, h, r || PR);
+    ctx.fillStyle = pal.card;
+    ctx.fill();
     ctx.restore();
-    ctx.lineWidth = 4; ctx.strokeStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(ax + AV / 2, cy0 + AV / 2, AV / 2 - 2, 0, Math.PI * 2); ctx.stroke();
-    var tx = ax + AV + 30, ty = ay + Math.max(0, (profileH - (nameSize + 12 + (subLine ? 34 : 0) + sigLines.length * 36)) / 2);
-    text(ctx, data.name, tx, ty, nameSize, ink, 700); ty += nameSize + 12;
-    if (subLine) { text(ctx, subLine, tx, ty, 26, muted, 500); ty += 34; }
-    sigLines.forEach(function (l) { text(ctx, l, tx, ty, 26, ink, 400); ty += 36; });
-    ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, s1Div); ctx.lineTo(1016, s1Div); ctx.stroke();
-    text(ctx, data.day + ' ' + data.dayName, 64, s1Stage, 34, ink, 700);
-    ctx.textAlign = 'right'; text(ctx, data.date.slice(5).replace('-', '月') + '日 · ' + data.weekText, 1016, s1Stage + 6, 26, muted, 500); ctx.textAlign = 'left';
-    // 本次新获得的里程碑（最多 2 枚）：小胶囊，文字为主、每枚一个 emoji
-    var bx = 64;
-    badges.forEach(function (b) {
-      var label = b.e + ' ' + b.title;
-      font(ctx, 26, 650); var bw2 = Math.ceil(ctx.measureText(label).width) + 56;
-      rounded(ctx, bx, bRowTop, bw2, bRowH, 30, warm ? '#FFDFC0' : '#DCE8D3');
-      text(ctx, label, bx + 28, bRowTop + 17, 26, ink, 650);
-      bx += bw2 + 16;
-    });
-    // ==== 二、纵览数据 + 趣味包装 ====
-    secLabel(ctx, s2Top, '纵览数据', muted);
-    rounded(ctx, 64, vTop, 952, 250, 36, card);
-    text(ctx, data.estimated ? '估算训练容量' : '累计训练容量', 100, vTop + 32, 26, muted, 500);
-    text(ctx, data.volumeText, 92, vTop + 74, 100, ink, 750);
-    font(ctx, 100, 750); var numWidth = ctx.measureText(data.volumeText).width;
-    text(ctx, 't', 100 + numWidth, vTop + 122, 34, muted, 550);
-    text(ctx, data.volume.toLocaleString('zh-CN') + ' kg · 重量 × 次数之和', 100, vTop + 172, 26, muted, 400);
-    var metrics = [[data.rows.length, '训练动作'], [data.reps, (data.estimated ? '估算' : '累计') + '次数'], [data.adds, '达到加重条件']];
-    metrics.forEach(function (m, k) { var x = 70 + k * 322; text(ctx, m[0], x, mTop, 56, ink, 700); text(ctx, m[1], x, mTop + 66, 26, muted, 400); });
-    if (data.bodyLine) text(ctx, data.bodyLine, 70, bodyTop, 26, muted, 500);
-    // 趣味卡：标签 → emoji 行 → 一句话 → 算法
-    rounded(ctx, 64, fTop, 952, funH, 36, fill);
-    var fy = fTop + 36;
-    text(ctx, data.funTag, 100, fy, 26, muted, 650); fy += 26 + 14;
-    funLines.forEach(function (l, k) { text(ctx, l, 100, fy + k * (fs + 14), fs, ink, 700); });
-    fy += funLines.length * (fs + 14) + 10;
-    basisLines.forEach(function (l, k) { text(ctx, l, 100, fy + k * 34, 26, muted, 400); });
-    // ==== 三、训练内容明细 ====
-    secLabel(ctx, lLbl, '训练内容', muted);
-    ctx.textAlign = 'right'; text(ctx, data.rows.length + ' 项动作', 1016, lLbl + 2, 26, muted, 500); ctx.textAlign = 'left';
-    var y = lTop;
-    var rowHs = data.rows.map(function (r) { font(ctx, 34, 650); return Math.min(2, wrap(ctx, r.name, 400).length) * 38; });
-    data.rows.forEach(function (r, idx) {
-      ctx.strokeStyle = '#DCE1D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(64, y - 18); ctx.lineTo(1016, y - 18); ctx.stroke();
-      text(ctx, r.tier, 64, y + 4, 26, muted, 650);
-      font(ctx, 34, 650); var names = wrap(ctx, r.name, 400);
-      names.slice(0, 2).forEach(function (l, k) { text(ctx, l, 148, y + k * 38, 34, ink, 650); });
-      var resY = y + rowHs[idx] + 6;
-      text(ctx, r.result, 148, resY, 26, muted, 400);
-      font(ctx, 34, 650); ctx.textAlign = 'right';
-      text(ctx, r.load, 1016, y + 2, 34, ink, 650);
-      text(ctx, r.stage + ' · ' + r.reps + ' 次', 1016, y + 44, 26, muted, 400);
+    roundPath(ctx, x, y, w, h, r || PR);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = pal.line;
+    ctx.stroke();
+  }
+  function cardHead(ctx, pal, x, y, w, icon, title, trail) {
+    font(ctx, 28, 650);
+    text(ctx, ellipsis(ctx, (icon ? icon + '  ' : '') + title, trail ? w - 180 : w), x, y, 28, pal.muted, 650);
+    if (trail) {
+      ctx.textAlign = 'right';
+      text(ctx, trail, x + w, y + 2, 24, pal.faint, 600);
       ctx.textAlign = 'left';
-      y += Math.max(rowHs[idx] + 6 + 34, 96) + 30;
+    }
+    return 48;
+  }
+  function heroNum(ctx, pal, x, y, value, unit) {
+    var size = 84;
+    font(ctx, size, 700);
+    while (size > 52 && ctx.measureText(String(value)).width > 300) { size -= 4; font(ctx, size, 700); }
+    text(ctx, value, x, y, size, pal.ink, 700);
+    var nw = ctx.measureText(String(value)).width;
+    text(ctx, unit || '', x + nw + 12, y + Math.round(size * 0.46), 30, pal.muted, 600);
+    return size + 16;
+  }
+  function chip(ctx, pal, x, y, label, tone) {
+    if (!label) return { w: 0, h: 0 };
+    font(ctx, 26, 650);
+    var tw = ctx.measureText(String(label)).width, w = Math.ceil(tw) + 36, h = 46;
+    fillRound(ctx, x, y, w, h, 23, tone === 'down' ? '#F3E6DC' : pal.chip);
+    text(ctx, label, x + 18, y + 10, 26, tone === 'down' ? pal.down : pal.chipInk, 650);
+    return { w: w, h: h };
+  }
+  function paintMini(ctx, pal, x, y, w, h, spec) {
+    bentoCard(ctx, pal, x, y, w, h, PR);
+    var ix = x + 32, iy = y + 28, iw = w - 64;
+    cardHead(ctx, pal, ix, iy, iw, spec.icon, spec.title, spec.trail || '');
+    iy += 58;
+    heroNum(ctx, pal, ix, iy, spec.value, spec.unit || '');
+    iy += 108;
+    if (spec.chip) chip(ctx, pal, ix, iy, spec.chip, spec.tone || 'up');
+    if (spec.paint) spec.paint(ctx, pal, ix, iy + (spec.chip ? 62 : 8), iw);
+  }
+  function paintSection(ctx, pal, y, spec) {
+    var inner = spec.inner || 0;
+    var h = 28 + 56 + inner + 28;
+    bentoCard(ctx, pal, PX, y, PIN, h, PR);
+    cardHead(ctx, pal, PX + 32, y + 28, PIN - 64, spec.icon, spec.title, spec.trail || '');
+    if (spec.paint) spec.paint(ctx, pal, PX + 32, y + 28 + 52, PIN - 64);
+    return y + h;
+  }
+  function paintIdentity(ctx, pal, y, avatar, spec) {
+    var AV = 112, ax = PX;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ax + AV / 2, y + AV / 2, AV / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = pal.chip;
+    ctx.fillRect(ax, y, AV, AV);
+    if (avatar) {
+      var side = Math.min(avatar.width, avatar.height);
+      ctx.drawImage(avatar, (avatar.width - side) / 2, (avatar.height - side) / 2, side, side, ax, y, AV, AV);
+    } else {
+      font(ctx, 52, 700);
+      ctx.fillStyle = pal.ink;
+      ctx.textAlign = 'center';
+      ctx.fillText(Array.from(spec.name || '我')[0] || '我', ax + AV / 2, y + AV / 2 - 30);
+      ctx.textAlign = 'left';
+    }
+    ctx.restore();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(ax + AV / 2, y + AV / 2, AV / 2 - 2, 0, Math.PI * 2);
+    ctx.stroke();
+    var tx = ax + AV + 28;
+    font(ctx, 44, 700);
+    text(ctx, ellipsis(ctx, spec.name, PIN - AV - 40), tx, y + 10, 44, pal.ink, 700);
+    if (spec.sub) text(ctx, ellipsis(ctx, spec.sub, PIN - AV - 40), tx, y + 64, 26, pal.muted, 500);
+    y += AV + 32;
+    font(ctx, 46, 750);
+    var titleW = spec.tag ? PIN - 280 : PIN;
+    text(ctx, ellipsis(ctx, spec.title, titleW), PX, y, 46, pal.ink, 750);
+    if (spec.tag) {
+      font(ctx, 26, 650);
+      var tw = Math.ceil(ctx.measureText(spec.tag).width) + 36;
+      fillRound(ctx, PW - PX - tw, y + 6, tw, 44, 22, pal.card);
+      ctx.lineWidth = 2; ctx.strokeStyle = pal.line; roundPath(ctx, PW - PX - tw, y + 6, tw, 44, 22); ctx.stroke();
+      text(ctx, spec.tag, PW - PX - tw + 18, y + 16, 26, pal.muted, 650);
+    }
+    return y + 46 + 28;
+  }
+  function paintBackdrop(ctx, pal, height) {
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, PW, height || 6400);
+  }
+  function tierColor(pal, tier) { return pal.tier[tier] || pal.accent; }
+  function paintFun(ctx, pal, y, spec) {
+    var width = PIN - 64;
+    var raw = (spec.emoji ? spec.emoji + '  ' : '') + (spec.text || '');
+    var fs = 42, lines;
+    do { font(ctx, fs, 700); lines = wrap(ctx, raw, width); if (lines.length <= 3) break; fs -= 2; } while (fs > 30);
+    font(ctx, 24, 400);
+    var basis = spec.basis ? wrap(ctx, spec.basis, width).slice(0, 2) : [];
+    var inner = 8 + lines.length * (fs + 14) + (basis.length ? 10 + basis.length * 34 : 0);
+    return paintSection(ctx, pal, y, {
+      icon: spec.icon || '⚡', title: spec.title, trail: spec.trail || '', inner: inner,
+      paint: function (c, p, x, yy) {
+        lines.forEach(function (l, i) { text(c, l, x, yy + i * (fs + 14), fs, p.ink, 700); });
+        var by = yy + lines.length * (fs + 14) + 10;
+        basis.forEach(function (l, i) { text(c, l, x, by + i * 34, 24, p.muted, 400); });
+      }
     });
-    // ==== 四、训练小结 ====
-    secLabel(ctx, smLbl, '训练小结', muted);
-    summaryLines.forEach(function (l, k) { text(ctx, l, 84, smTop + k * 46, 34, ink, 500); });
+  }
+  function paintBadges(ctx, pal, y, spec) {
+    var items = (spec.items || []).slice(0, spec.limit || 8);
+    if (!items.length) return y;
+    var max = PIN - 64, rowH = 64, gap = 14;
+    font(ctx, 26, 650);
+    var rows = 1, cx = 0;
+    var placed = items.map(function (b) {
+      var label = (b.e ? b.e + ' ' : '') + b.title;
+      var bw = Math.ceil(ctx.measureText(label).width) + 48;
+      if (cx > 0 && cx + bw > max) { cx = 0; rows += 1; }
+      var slot = { label: label, x: cx, row: rows - 1, w: Math.min(bw, max) };
+      cx += slot.w + gap;
+      return slot;
+    });
+    var inner = rows * rowH + (rows - 1) * 12;
+    return paintSection(ctx, pal, y, {
+      icon: '🏅', title: spec.title, trail: spec.trail || '', inner: inner,
+      paint: function (c, p, x, yy) {
+        placed.forEach(function (slot) {
+          var py = yy + slot.row * (rowH + 12);
+          fillRound(c, x + slot.x, py, slot.w, rowH, 32, p.chip);
+          font(c, 26, 650);
+          text(c, ellipsis(c, slot.label, slot.w - 36), x + slot.x + 22, py + 18, 26, p.ink, 650);
+        });
+      }
+    });
+  }
+  function openPoster(canvas, theme) {
+    var ctx = canvas.getContext('2d');
+    var pal = palette(theme);
+    canvas.width = PW;
+    canvas.height = 6400;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    paintBackdrop(ctx, pal, 6400);
+    return { ctx: ctx, pal: pal };
+  }
+  function closePoster(canvas, ctx, pal, height) {
+    canvas.width = PW;
+    canvas.height = Math.max(480, Math.ceil(height));
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    paintBackdrop(ctx, pal, canvas.height);
+    return canvas.height;
+  }
+  var Poster = {
+    PW: PW, PX: PX, PGAP: PGAP, PIN: PIN, PR: PR,
+    palette: palette, bentoCard: bentoCard, cardHead: cardHead, heroNum: heroNum, chip: chip,
+    paintMini: paintMini, paintSection: paintSection, paintIdentity: paintIdentity, paintFun: paintFun,
+    paintBadges: paintBadges, openPoster: openPoster, closePoster: closePoster, fillRound: fillRound,
+    ellipsis: ellipsis, tierColor: tierColor, volHero: volHero, progMark: progMark, trimNum: trimNum, cnDate: cnDate,
+    roundPath: roundPath
+  };
+
+  async function draw(canvas, data, theme) {
+    var avatar = await loadImage(data.profile && data.profile.avatar);
+    function pass(finalH) {
+      var ctx, pal;
+      if (!finalH) {
+        var opened = openPoster(canvas, theme);
+        ctx = opened.ctx; pal = opened.pal;
+      } else {
+        ctx = canvas.getContext('2d');
+        pal = palette(theme);
+        closePoster(canvas, ctx, pal, finalH);
+      }
+      var pf = data.profile || {};
+      var sub = [pf.handle, data.weight != null ? '体重 ' + data.weight + ' kg' : '', !pf.handle && pf.signature ? pf.signature : ''].filter(Boolean).join(' · ');
+      var y = 48;
+      y = paintIdentity(ctx, pal, y, avatar, {
+        name: data.name, sub: sub,
+        title: data.day + ' · ' + data.dayName,
+        tag: cnDate(data.date)
+      });
+      var colW = (PIN - PGAP) / 2, colH = 318;
+      var hero = volHero(data.volume);
+      var useWatch = !!(data.bodyLine && data.watchBody && data.watchBody.kcal);
+      var right = useWatch
+        ? { icon: '🎯', title: '训练推进', value: trimNum(data.watchBody.kcal), unit: 'kcal', chip: (data.watchBody.min || 0) + ' 分钟', tone: 'up' }
+        : { icon: '🎯', title: '训练推进', value: String(data.rows.length), unit: '项', chip: data.adds ? '下次加重 ' + data.adds + ' 项' : '完成 ' + data.rows.length + ' 项', tone: 'up' };
+      paintMini(ctx, pal, PX, y, colW, colH, { icon: '🔥', title: '本次容量', value: hero.v, unit: hero.u, chip: '有效 ' + (data.sets || 0) + ' 组', tone: 'up' });
+      paintMini(ctx, pal, PX + colW + PGAP, y, colW, colH, right);
+      y += colH + PGAP;
+      var rowH = 100, rowGap = 14;
+      var inner = data.rows.length ? data.rows.length * rowH + Math.max(0, data.rows.length - 1) * rowGap : 40;
+      y = paintSection(ctx, pal, y, {
+        icon: '🏋️', title: '动作明细', trail: data.rows.length + ' 项', inner: inner,
+        paint: function (c, p, x, yy, w) {
+          data.rows.forEach(function (r, i) {
+            var ry = yy + i * (rowH + rowGap);
+            fillRound(c, x, ry, w, rowH, 22, p.soft);
+            var mark = r.badge || r.tier || '';
+            font(c, 22, 700);
+            var mw = Math.max(44, Math.ceil(c.measureText(mark).width) + 20);
+            fillRound(c, x + 16, ry + 30, mw, 40, 12, tierColor(p, r.tier));
+            c.textAlign = 'center'; c.fillStyle = '#FFFFFF';
+            c.fillText(mark, x + 16 + mw / 2, ry + 40);
+            c.textAlign = 'left';
+            var nameX = x + 16 + mw + 16;
+            font(c, 32, 650);
+            text(c, ellipsis(c, r.name, w * 0.42), nameX, ry + 16, 32, p.ink, 650);
+            text(c, ellipsis(c, r.stage || r.result || '', w * 0.42), nameX, ry + 56, 24, p.muted, 500);
+            c.textAlign = 'right';
+            font(c, 28, 700);
+            text(c, ellipsis(c, r.work || r.load, w * 0.38), x + w - 18, ry + 16, 28, p.ink, 700);
+            if (r.mark) {
+              font(c, 24, 650);
+              var bw = Math.ceil(c.measureText(r.mark).width) + 28;
+              var up = r.judgment === '加重';
+              fillRound(c, x + w - 18 - bw, ry + 54, bw, 36, 18, up ? p.chip : '#FFFFFF');
+              text(c, r.mark, x + w - 32, ry + 62, 24, up ? p.chipInk : p.muted, 650);
+            }
+            c.textAlign = 'left';
+          });
+        }
+      });
+      y += PGAP;
+      y = paintFun(ctx, pal, y, { icon: '⚡', title: '趣味能量换算', emoji: data.funEmoji, text: data.fun, basis: data.funBasis, trail: data.funTag || '' });
+      if (data.badges && data.badges.length) {
+        y += PGAP;
+        y = paintBadges(ctx, pal, y, { title: '达成里程碑', items: data.badges, trail: '1 枚' });
+      }
+      if (data.bodyLine && !useWatch) {
+        y += PGAP;
+        font(ctx, 30, 600);
+        var bl = wrap(ctx, data.bodyLine, PIN - 64);
+        y = paintSection(ctx, pal, y, {
+          icon: '⌚', title: '手表记录', inner: Math.max(40, bl.length * 42),
+          paint: function (c, p, x, yy) { bl.forEach(function (l, i) { text(c, l, x, yy + i * 42, 30, p.ink, 600); }); }
+        });
+      }
+      return y + 64;
+    }
+    pass(pass(0));
     return canvas;
   }
-  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, chooseFun: chooseFun, funPool: funPool, THINGS: THINGS, FOODS: FOODS, badgeState: badgeState, validSessions: validSessions, allFacts: allFacts, sessionVolume: sessionVolume,
-    // 绘图与换算的公共小工具，月报等其他卡片复用，保持字号、避头点、对照物口径一致
-    H: { font: font, rounded: rounded, text: text, fit: fit, wrap: wrap, loadImage: loadImage, secLabel: secLabel, compare: compare, num: num, hashSeed: hashSeed, shuffled: shuffled, hasEntry: hasEntry, FOODS: FOODS } };
+  return { PROFILE: PROFILE, profile: profile, dates: dates, sessionList: sessionList, build: build, draw: draw, chooseFun: chooseFun, funPool: funPool, THINGS: THINGS, FOODS: FOODS, badgeState: badgeState, validSessions: validSessions, allFacts: allFacts, sessionVolume: sessionVolume, progMark: progMark, volHero: volHero,
+    H: { font: font, rounded: rounded, text: text, fit: fit, wrap: wrap, loadImage: loadImage, secLabel: secLabel, compare: compare, num: num, hashSeed: hashSeed, shuffled: shuffled, hasEntry: hasEntry, FOODS: FOODS, Poster: Poster, volHero: volHero, progMark: progMark, cnDate: cnDate, trimNum: trimNum } };
 });

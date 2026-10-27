@@ -7,6 +7,28 @@
 
   <!-- 总结 -->
   <view wx:if="{{tab === 0}}">
+    <view class="bento" wx:if="{{bento}}">
+      <view class="bento-card bento-week" wx:if="{{bento.week}}" data-week="{{bento.week}}" bindtap="openWeek">
+        <text class="bento-k"><text class="bento-dot"></text>周度报告</text>
+        <text class="bento-hero">{{bento.weekLabel}}</text>
+        <text class="bento-sub">{{bento.sessions}} / {{bento.total}} 次</text>
+        <view class="bento-row"><text class="bento-vol num">{{bento.volText}}</text><text class="bento-chip {{bento.dvUp ? '' : 'down'}}" wx:if="{{bento.dv}}">较上周 {{bento.dv}}</text></view>
+      </view>
+      <view class="bento-card bento-quiet" wx:else>
+        <text class="bento-k"><text class="bento-dot"></text>周期回顾</text>
+        <text class="bento-empty">完成第一次训练后，周报和月报会出现在这里。</text>
+      </view>
+      <view class="bento-card" wx:if="{{bento.ym}}" data-ym="{{bento.ym}}" bindtap="openMonth">
+        <text class="bento-k"><text class="bento-dot sage"></text>月度报告</text>
+        <text class="bento-hero">{{bento.mon}}</text>
+        <text class="bento-sub">{{bento.days}} 天 · {{bento.tons}} t</text>
+      </view>
+      <view class="bento-card">
+        <text class="bento-k"><text class="bento-dot amber"></text>里程碑徽章</text>
+        <text class="bento-hero">{{bento.earned}}<text class="bento-unit"> / {{bento.badges}}</text></text>
+        <view class="bento-em"><text wx:for="{{bento.icons}}" wx:key="*this">{{item}}</text></view>
+      </view>
+    </view>
     <view class="card">
       <view class="card-title"><text class="t">训练小结</text><text class="link" bindtap="copySummary">复制</text></view>
       <view class="ins" wx:for="{{vm.insights}}" wx:key="text">
@@ -33,11 +55,14 @@
   <view wx:if="{{tab === 1}}">
     <view class="empty-tip" wx:if="{{!vm.weeks.length}}">完成第一次训练后生成周报</view>
     <view class="card wk" wx:for="{{vm.weeks}}" wx:key="week">
-      <view class="row between">
-        <view class="row"><text class="wk-n">第 {{item.week}} 周</text><text class="dltag" wx:if="{{item.deload}}">减载</text></view>
-        <view class="row dflags">
-          <text wx:for="{{item.days}}" wx:for-item="d" wx:key="id" class="dflag num {{d.on ? 'on' : ''}}">{{d.id}}</text>
+      <view class="wk-top">
+        <view>
+          <view class="row"><text class="wk-n">第 {{item.week}} 周</text><text class="dltag" wx:if="{{item.deload}}">减载</text></view>
+          <view class="row dflags">
+            <text wx:for="{{item.days}}" wx:for-item="d" wx:key="id" class="dflag num {{d.on ? 'on' : ''}}">{{d.id}}</text>
+          </view>
         </view>
+        <button class="wk-share" data-week="{{item.week}}" catchtap="openWeek">分享周报</button>
       </view>
       <view class="wk-k">
         <view class="wkk"><text class="num kv">{{item.volText}}</text><text class="ks">容量<text class="{{item.dvUp ? 'dv-up' : 'dv-down'}}" wx:if="{{item.dv}}"> {{item.dv}}</text></text></view>
@@ -81,6 +106,7 @@
           </view>
           <view class="note-box" wx:if="{{item.note}}">{{item.note}}</view>
           <view class="log-act">
+            <text class="btn-small" data-id="{{item.id}}" bindtap="openDay">分享这次</text>
             <text class="btn-small danger" data-id="{{item.id}}" bindtap="del">删除</text>
             <text class="btn-small rust" data-id="{{item.id}}" bindtap="edit">修改</text>
           </view>
@@ -89,4 +115,5 @@
     </view>
     <view class="sec-f" style="text-align: center">修改或删除任意一次记录，之后的重量与阶段会自动重算</view>
   </view>
+  <share-sheet show="{{share.show}}" kind="{{share.kind}}" record-id="{{share.recordId}}" week="{{share.week}}" ym="{{share.ym}}" bindclose="closeShare" />
 </view>
