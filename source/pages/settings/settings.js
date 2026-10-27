@@ -1,5 +1,6 @@
 const GZ = require('../../utils/engine.js');
 const store = require('../../utils/store.js');
+const Share = require('../../utils/share.js');
 
 function libNames(db) {
   const m = { T1: [], T2: [], T3: [] };
@@ -15,7 +16,7 @@ function setPath(obj, path, val) {
 }
 
 Page({
-  data: { p: null, lifts: [], steps: [], days: [], dIdx: 0, libNames: { T1: [], T2: [], T3: [] }, libCount: 0, customCount: 0, liftNames: LIFT_NAMES, showImport: false, recordCount: 0, tmPct: 90, backupText: '', ruleNote: '' },
+  data: { p: null, profile: { name: '', handle: '', signature: '', showWeight: false }, lifts: [], steps: [], days: [], dIdx: 0, libNames: { T1: [], T2: [], T3: [] }, libCount: 0, customCount: 0, liftNames: LIFT_NAMES, showImport: false, recordCount: 0, tmPct: 90, backupText: '', ruleNote: '' },
   onShow() { this.refresh(); },
 
   refresh() {
@@ -45,13 +46,28 @@ Page({
     const isGz = curProg === 'gzclp';
     const pRules = GZ.progressionRules ? GZ.progressionRules(curProg) : { name: curProg, summary: '' };
     this.setData({
-      p: P, isGz, mainLabel: GZ.tierLabel(curProg, 'T1'), progName: pRules.name, progSummary: pRules.summary, ruleNote: GZ.ruleModeNote(P), days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
+      p: P, profile: Share.profile(P.shareProfile), isGz, mainLabel: GZ.tierLabel(curProg, 'T1'), progName: pRules.name, progSummary: pRules.summary, ruleNote: GZ.ruleModeNote(P), days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
       lifts: GZ.LIFT_ORDER.map((k) => ({ key: k, name: GZ.LIFTS[k], oneRM: P.oneRM[k], tm: GZ.fmtW(GZ.tm(P, k)) })),
       steps: GZ.STEP_KEYS.map((s) => ({ key: s.key, label: s.label, note: s.note, v: P.steps[s.key] }))
     });
   },
   mutate(fn, tip) { const db = store.load(); fn(db); store.save(db); this.refresh(); if (tip !== false) wx.showToast({ title: tip || '已更新，数据已重算', icon: 'none' }); },
 
+  onProfile(e) {
+    const k = e.currentTarget.dataset.k;
+    this.mutate((db) => {
+      const pp = Share.profile(db.params.shareProfile);
+      pp[k] = e.detail.value;
+      db.params.shareProfile = Share.profile(pp);
+    }, '分享名片已保存');
+  },
+  onProfileWeight(e) {
+    this.mutate((db) => {
+      const pp = Share.profile(db.params.shareProfile);
+      pp.showWeight = !!e.detail.value;
+      db.params.shareProfile = Share.profile(pp);
+    }, e.detail.value ? '卡片会显示已记录的当天体重' : '卡片不再公开体重');
+  },
   onParam(e) {
     const k = e.currentTarget.dataset.k; let v = parseFloat(e.detail.value);
     if (isNaN(v) || v < 0) return this.refresh();

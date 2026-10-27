@@ -1,1 +1,4 @@
-{ "navigationBarTitleText": "计划" }
+{
+  "navigationBarTitleText": "计划",
+  "usingComponents": { "share-sheet": "/components/share-sheet/share-sheet" }
+}

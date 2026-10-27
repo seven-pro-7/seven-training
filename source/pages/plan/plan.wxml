@@ -85,9 +85,11 @@
       </view>
       <view class="note-box" wx:if="{{detail.note}}">{{detail.note}}</view>
       <view class="sheet-btns">
+        <view class="btn-ghost" data-id="{{detail.id}}" bindtap="openShare">分享这次</view>
         <view class="btn-ghost" data-id="{{detail.id}}" bindtap="editRecord">修改这次</view>
         <view class="btn-ghost solid" bindtap="closeDetail">完成</view>
       </view>
     </view>
   </view>
+  <share-sheet show="{{share.show}}" kind="{{share.kind}}" record-id="{{share.recordId}}" week="{{share.week}}" ym="{{share.ym}}" bindclose="closeShare" />
 </view>

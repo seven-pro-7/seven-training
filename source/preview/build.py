@@ -481,6 +481,7 @@ html = f"""<!DOCTYPE html>
 <script>{(ROOT / 'utils' / 'insight.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'share.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'monthly.js').read_text()}</script>
+<script>{(ROOT / 'utils' / 'weekly.js').read_text()}</script>
 <script>{(ROOT / 'preview' / 'app-h5.js').read_text()}</script>
 </body></html>"""
 html = html.replace('<span>􀙇 􀛨</span>', '<span>●●● ▮</span>')

@@ -1,5 +1,6 @@
 .sec-h:first-child { padding-top: 8rpx; }
 .f-in { width: 140rpx; height: 56rpx; text-align: right; font-size: 32rpx; color: var(--label); }
+.f-in.wide { width: 360rpx; }
 .f-in.sm { width: 90rpx; height: 52rpx; text-align: center; font-size: 28rpx; background: var(--fill); border-radius: 12rpx; margin: 0 10rpx; }
 .f-u { color: var(--label2); margin-left: 8rpx; font-size: 30rpx; }
 .tm { color: var(--label2); font-size: 26rpx; margin-right: 24rpx; }
