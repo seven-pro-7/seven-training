@@ -36,7 +36,10 @@
       <text class="f-u">kg</text>
     </view>
   </view>
-  <view class="sec-f">{{mainLabel}}以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</view>
+  <view class="sec-f">{{mainLabel}}以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。1RM 是四大项锚点，每个动作的起步重量在「我的基线」。</view>
+  <view class="list">
+    <view class="cell tap" bindtap="openBaselines"><text class="flex1">我的基线</text><text class="val">{{baselineText}}</text><text class="chev">›</text></view>
+  </view>
 
   <view class="sec-h">加重步幅</view>
   <view class="list">

@@ -328,7 +328,7 @@
   }
   /** 空白档案默认无记录。withSeed 为 true 时才写入表格样例（设置里的「恢复 Excel 默认」）。 */
   function defaults(withSeed) {
-    return { version: VERSION, daysVersion: DAYS_VERSION, params: defaultParams(), days: defaultDays(), records: withSeed ? excelSeedRecords() : [], onboarding: { profileDone: false, directionDone: false, direction: {}, completedAt: '' } };
+    return { version: VERSION, daysVersion: DAYS_VERSION, params: defaultParams(), days: defaultDays(), records: withSeed ? excelSeedRecords() : [], exerciseBaselines: {}, onboarding: { profileDone: false, directionDone: false, direction: {}, completedAt: '' } };
   }
 
   // ================= 新用户切入：资料 + 训练方向（档案层，可上云） =================
@@ -607,6 +607,7 @@
       if (x.ratio === undefined || x.ratio === null) x.ratio = dp.ratio;
       if (x.inc === undefined || x.inc === null) x.inc = dp.inc;
     });
+    db.exerciseBaselines = normalizeBaselines(db, db.exerciseBaselines);
     db.days.forEach(function (d) { d.slots.forEach(function (s) { s.equip = equipOf(s.name, s.equip); }); });
     // 最近一次填写体重时，自动作为负重动作的推算体重
     sortRecords(db.records).forEach(function (r) { if (Number(r.bw) > 0) db.params.bodyWeight = Number(r.bw); });
@@ -727,9 +728,108 @@
    */
   var TIER_PCT = { T1: 0.765, T2: 0.65, T3: 0.5 }; // 对 1RM 的直接比例：T1=TM(90%)×85%，T2≈15RM~10RM 之间，T3≈15RM 以下
   /**
+   * 个人动作基线：档案级，跟 customLib 一样不进某一套计划。
+   * 键是动作显示名。自重和有氧不记。新计划播种、换动作、设置「采用推荐」在没有本计划历史时先用这里。
+   */
+  function ensureBaselines(db) {
+    var root = rootOf(db);
+    if (!root.exerciseBaselines || typeof root.exerciseBaselines !== 'object' || Array.isArray(root.exerciseBaselines)) root.exerciseBaselines = {};
+    return root.exerciseBaselines;
+  }
+  function baselineEquip(db, name, fallback) {
+    var lb = libFindIn(db, name);
+    if (lb && lb.equip) return lb.equip;
+    return normEquip(fallback);
+  }
+  function baselineSkipped(equip) { return equip === '自重' || equip === '有氧'; }
+  function normalizeBaselines(db, raw) {
+    var out = {};
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+    Object.keys(raw).forEach(function (name) {
+      if (!name) return;
+      var b = raw[name];
+      if (!b || typeof b !== 'object') return;
+      var w = Number(b.lastWeight);
+      if (!(w > 0) || isNaN(w)) return;
+      var equip = baselineEquip(db, name, b.equip);
+      if (baselineSkipped(equip)) return;
+      var tier = b.lastTier === 'T1' || b.lastTier === 'T2' || b.lastTier === 'T3' ? b.lastTier : 'T3';
+      var source = b.source === 'manual' || b.source === 'imported' || b.source === 'trained' ? b.source : 'trained';
+      out[name] = {
+        lastWeight: fix(w),
+        lastDate: /^\d{4}-\d{2}-\d{2}$/.test(b.lastDate || '') ? b.lastDate : '',
+        lastTier: tier,
+        equip: equip,
+        source: source,
+        updatedAt: Number(b.updatedAt) > 0 ? Number(b.updatedAt) : 0
+      };
+    });
+    return out;
+  }
+  function baselineList(db) {
+    var map = (db && db.exerciseBaselines) || {};
+    return Object.keys(map).map(function (name) {
+      var b = map[name];
+      return {
+        name: name, lastWeight: b.lastWeight, weightText: fmtW(b.lastWeight),
+        lastDate: b.lastDate || '', lastTier: b.lastTier, equip: b.equip, source: b.source, unit: unitOf(b.equip)
+      };
+    }).sort(function (a, b) {
+      if (a.lastDate !== b.lastDate) return a.lastDate < b.lastDate ? 1 : -1;
+      return a.name < b.name ? -1 : 1;
+    });
+  }
+  function setBaseline(db, name, weight, opts) {
+    opts = opts || {};
+    name = String(name || '').trim();
+    if (!name) return { error: '请填写动作名' };
+    var lb = libFindIn(db, name);
+    var equip = (lb && lb.equip) || normEquip(opts.equip);
+    if (baselineSkipped(equip)) return { error: '自重和有氧不记基线' };
+    var w = Number(weight);
+    if (!(w > 0) || isNaN(w)) return { error: '重量需要大于 0' };
+    var map = ensureBaselines(db);
+    var prev = map[name] || {};
+    var tier = opts.tier || prev.lastTier || (lb && lb.tier) || 'T3';
+    if (tier !== 'T1' && tier !== 'T2' && tier !== 'T3') tier = 'T3';
+    map[name] = {
+      lastWeight: fix(w),
+      lastDate: /^\d{4}-\d{2}-\d{2}$/.test(opts.date || '') ? opts.date : today(),
+      lastTier: tier,
+      equip: equip,
+      source: opts.source === 'trained' || opts.source === 'imported' ? opts.source : 'manual',
+      updatedAt: Date.now()
+    };
+    return map[name];
+  }
+  /** 保存成功后，把这次非跳过、非减载、有重量的工作组写进基线。更晚的日期才覆盖。 */
+  function touchBaselines(db, rec) {
+    if (!rec || rec.deload) return;
+    var root = rootOf(db);
+    var owner = rec.programId || LEGACY_PID;
+    var view = owner === activePid(root) ? root : planView(root, owner);
+    if (!view) return;
+    var sess = null;
+    replay(view).sessions.forEach(function (s) { if (s.rec && s.rec.id === rec.id) sess = s; });
+    if (!sess) return;
+    var map = ensureBaselines(db);
+    var date = rec.date || today();
+    sess.items.forEach(function (it) {
+      if (!it || it.deload || it.judgment === '跳过' || !(it.weight > 0)) return;
+      var equip = baselineEquip(db, it.name, it.equip);
+      if (baselineSkipped(equip)) return;
+      var prev = map[it.name];
+      if (prev && prev.lastDate && date < prev.lastDate) return;
+      var tier = it.tier === 'T1' || it.tier === 'T2' || it.tier === 'T3' ? it.tier : 'T3';
+      map[it.name] = { lastWeight: fix(it.weight), lastDate: date, lastTier: tier, equip: equip, source: 'trained', updatedAt: Date.now() };
+    });
+  }
+  var REC_SOURCE_LABEL = { last: '上次', baseline: '个人基线', model: '公式' };
+  /**
    * 算出某个动作的推荐重量（含单位说明）。
-   * 优先级：用户上次实际用过的重量 > 按 1RM×系数×档位比例推算。
-   * @return { weight, unit, text, note, source, inc, equip }
+   * 优先级：有氧 / 自重沿用原逻辑 → 当前计划上次工作重量 → 个人基线 → 1RM 公式。
+   * preferLast === false 时跳过本计划历史（新计划播种、设置「采用推荐」），仍会用个人基线。
+   * @return { weight, unit, text, note, source, sourceLabel, inc, equip }
    */
   /**
    * 纯模型推算（不读训练历史）：1RM × 动作系数 × 档位比例，再按器械档位取整。
@@ -751,17 +851,24 @@
     opts = opts || {};
     var P = db.params, lb = libFindIn(db, name);
     var equip = (lb && lb.equip) || normEquip(opts.equip);
-    if (equip === '有氧') return { weight: 0, unit: '分钟', text: '—', source: 'cardio', equip: equip, inc: 0, note: '记分钟，不记重量' };
-    if (opts.preferLast !== false) {
+    if (equip === '有氧') return { weight: 0, unit: '分钟', text: '—', source: 'cardio', sourceLabel: '', equip: equip, inc: 0, note: '记分钟，不记重量' };
+    if (opts.preferLast !== false && equip !== '自重') {
       var last = lastWeights(opts.rp || replay(db))[name];
-      if (last !== undefined && last !== null && equip !== '自重') {
-        return { weight: fix(last), unit: unitOf(equip), text: fmtW(last), source: 'last', equip: equip, inc: (lb && lb.inc) || 0,
+      if (last !== undefined && last !== null) {
+        return { weight: fix(last), unit: unitOf(equip), text: fmtW(last), source: 'last', sourceLabel: REC_SOURCE_LABEL.last, equip: equip, inc: (lb && lb.inc) || 0,
           note: '沿用上次 ' + fmtW(last) + ' kg' };
       }
     }
+    if (equip !== '自重') {
+      var base = db.exerciseBaselines && db.exerciseBaselines[name];
+      if (base && base.lastWeight > 0) {
+        return { weight: fix(base.lastWeight), unit: unitOf(equip), text: fmtW(base.lastWeight), source: 'baseline', sourceLabel: REC_SOURCE_LABEL.baseline, equip: equip, inc: (lb && lb.inc) || 0,
+          note: '个人基线' + (base.lastDate ? ' · ' + base.lastDate : '') };
+      }
+    }
     var m = modelWeight(P, lb, tier, opts.e1rm);
-    if (m.bw) return { weight: 0, unit: unitOf(equip), text: '自重', source: 'bodyweight', equip: equip, inc: 0, note: '以体重做次数，达到次数上限后再加重' };
-    return { weight: m.weight, unit: unitOf(equip), text: fmtW(m.weight), source: 'model', equip: equip, inc: m.inc,
+    if (m.bw) return { weight: 0, unit: unitOf(equip), text: '自重', source: 'bodyweight', sourceLabel: '', equip: equip, inc: 0, note: '以体重做次数，达到次数上限后再加重' };
+    return { weight: m.weight, unit: unitOf(equip), text: fmtW(m.weight), source: 'model', sourceLabel: REC_SOURCE_LABEL.model, equip: equip, inc: m.inc,
       note: LIFTS[m.base] + (m.fromE1rm ? ' 估算 1RM ' : ' 1RM ') + fmtW(m.oneRM) + ' × ' + Math.round(m.ratio * 100) + '% × ' + Math.round(m.pct * 100) + '%' };
   }
   /** 重量单位：哑铃按单只，负重按外加，自重无重量 */
@@ -998,6 +1105,7 @@
    *   programs[]                   —— 全部计划的元数据；非当前计划另存 snap = { params: 计划参数, days, daysVersion }
    *   activeProgramId              —— 当前计划（同一时间只有一个）
    *   records[].programId          —— 记录归属；旧记录没有这个字段，一律归第一个计划 LEGACY_PID，记录本身不改写
+   *   exerciseBaselines            —— 档案级个人动作基线，跟 customLib 一起同步，不进计划 snap
    * 参数分两类：
    *   BASE_KEYS 共享底座（体重、器材、名片）——所有计划共用，切换计划不变。规范见 .cursor/rules/plan-base.mdc
    *   PLAN_KEYS 计划自己（规则参数、周期、减载、计划起始 1RM）——各计划独立，暂停时随计划冻结
@@ -1810,7 +1918,9 @@
         var ef0 = effectiveSlot(db, s0, week, hist), st0 = startState(s0, states[s0.id], ef0, week, progressionOf(db));
         if (e.ex === ef0.slot.name) { delete e.ex; }
         else {
-          subDefault = lastW[e.ex] !== undefined ? lastW[e.ex] : st0.weight;
+          var subRec = recommendWeight(db, e.ex, s0.tier, { preferLast: true, rp: full, e1rm: hist && hist.e1rm });
+          subDefault = subRec && subRec.weight > 0 ? subRec.weight : (lastW[e.ex] !== undefined ? lastW[e.ex] : st0.weight);
+          if (subRec && (subRec.source === 'bodyweight' || subRec.source === 'cardio')) subDefault = subRec.weight;
           if (manualW(e) === null) e.w = subDefault;
         }
       }
@@ -1820,6 +1930,10 @@
       var def = res.loads && res.loads.length ? { sets: res.loads.length, reps: res.loads[res.loads.length - 1].reps } : (res.inputMode ? { sets: res.sets, reps: res.reps } : run.prog.stageDef(s.tier, st.stage));
       var showW = deload && res.dWeight != null && !res.loads ? res.dWeight : res.weight;
       if (res.sub && !deload) showW = res.weight;
+      var shownManual = res.sub ? manualW(e) !== subDefault : res.manual;
+      var equipNow = equipOf(res.name, res.equip);
+      var recHit = !deload && equipNow !== '有氧' && equipNow !== '自重' ? recommendWeight(db, res.name, s.tier, { preferLast: true, rp: full, e1rm: hist && hist.e1rm }) : null;
+      var recSourceLabel = recHit && recHit.sourceLabel && !shownManual && Math.abs(Number(showW) - Number(recHit.weight)) < 0.051 ? recHit.sourceLabel : '';
       var showSets = deload ? res.dSets : def.sets;
       var doneLog = logged(s0, e);
       total += 1; if (doneLog || e.skip) filled += 1;
@@ -1832,6 +1946,7 @@
         autoNew: !!(run.eff.auto && run.eff.resetNow), autoPrev: run.eff.auto && run.eff.change ? run.eff.change.prev : '',
         stage: st.stage, sets: showSets, reps: def.reps, weight: showW, isCardio: res.inputMode === 'cardio',
         weightText: res.inputMode === 'cardio' ? String(def.reps) : equipOf(res.name, res.equip) === '自重' ? '自重' : fmtW(showW),
+        recSourceLabel: recSourceLabel,
         canAdjust: equipOf(res.name, res.equip) !== '自重' && res.inputMode !== 'wave' && res.inputMode !== 'cardio',
         plates: platesFor(showW, P, equipOf(res.name, res.equip)), fail: res.sub ? 0 : (st.fail || 0),
         restText: fmtRest(REST[s.tier]),
@@ -2455,6 +2570,7 @@
     var owner = rec.programId || (idx >= 0 ? recPid(db.records[idx]) : activePid(db));
     if (owner !== LEGACY_PID) r.programId = owner;
     if (idx >= 0) db.records[idx] = r; else db.records.push(r);
+    touchBaselines(db, r);
     return r;
   }
   // 删除会留下「删除标记」（tomb），多设备同步时另一台设备据此删除，而不是把记录同步回来
@@ -2473,8 +2589,8 @@
   }
 
   // ================= 多设备同步：合并 =================
-  /** 配置部分（参数、四天动作、自定义动作库）——任何一项变化都会刷新 cfgAt */
-  function cfgPart(db) { return JSON.stringify([db.params, db.days, db.customLib || [], db.daysVersion, db.programs || null, db.activeProgramId || null, db.onboarding || null]); }
+  /** 配置部分（参数、四天动作、自定义动作库、个人基线）——任何一项变化都会刷新 cfgAt */
+  function cfgPart(db) { return JSON.stringify([db.params, db.days, db.customLib || [], db.exerciseBaselines || {}, db.daysVersion, db.programs || null, db.activeProgramId || null, db.onboarding || null]); }
   /** 保存前调用：配置有变化就记下修改时间，同步时据此判断以哪台设备的配置为准 */
   function stampConfig(prevDb, db) {
     if (!prevDb || cfgPart(prevDb) !== cfgPart(db)) db.cfgAt = Date.now();
@@ -2502,11 +2618,14 @@
     records.sort(function (x, y) { return (x.createdAt || 0) - (y.createdAt || 0) || (x.id < y.id ? -1 : 1); });
     var cfgSrc = (a.cfgAt || 0) > (b.cfgAt || 0) ? a : b;
     var out = { version: cfgSrc.version || a.version, daysVersion: cfgSrc.daysVersion, params: cfgSrc.params, days: cfgSrc.days, customLib: cfgSrc.customLib || [],
+      exerciseBaselines: cfgSrc.exerciseBaselines,
       programs: cfgSrc.programs, activeProgramId: cfgSrc.activeProgramId, onboarding: cfgSrc.onboarding,
       cfgAt: Math.max(a.cfgAt || 0, b.cfgAt || 0), records: records, tomb: tomb };
     // 旧版客户端推上来的数据没有 programs：沿用另一方的计划元数据，避免一次同步把计划列表冲掉
     if (!out.programs) { var other = cfgSrc === a ? b : a; out.programs = other.programs; out.activeProgramId = other.activeProgramId; }
     if (!out.onboarding) { var o2 = cfgSrc === a ? b : a; out.onboarding = o2.onboarding; }
+    // 旧客户端没有基线字段时保留另一方，避免一次同步把个人基线冲掉
+    if (!out.exerciseBaselines) { var b2 = cfgSrc === a ? b : a; out.exerciseBaselines = (b2 && b2.exerciseBaselines) || {}; }
     return normalize(out);
   }
   /** 两份数据内容是否一致（忽略记录顺序），用于决定要不要写回本机 / 推送云端 */
@@ -3213,6 +3332,7 @@
     evaluate: evaluate, replay: replay, recommend: recommend, isDeloadWeek: isDeloadWeek, dayById: dayById,
     blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
     saveRecord: saveRecord, deleteRecord: deleteRecord, clearRecords: clearRecords, replaceDb: replaceDb, mergeDb: mergeDb, sameDb: sameDb, stampConfig: stampConfig, cfgPart: cfgPart, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
+    setBaseline: setBaseline, baselineList: baselineList,
     libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, PATTERNS: PATTERNS, patternOfPart: patternOfPart, slotCategory: slotCategory, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,

@@ -9,9 +9,29 @@ const TIER_TIP = {
 };
 
 Page({
-  data: { tier: 'T1', q: '', lib: null, tierTip: TIER_TIP, parts: GZ.PARTS, equips: GZ.EQUIPS, add: { show: false } },
+  data: { tier: 'T1', q: '', lib: null, baselines: [], tierTip: TIER_TIP, parts: GZ.PARTS, equips: GZ.EQUIPS, add: { show: false } },
   onShow() { this.refresh(); },
-  refresh() { this.setData({ lib: GZ.buildLibrary(store.load(), { tier: this.data.tier, q: this.data.q }) }); },
+  refresh() {
+    const db = store.load();
+    this.setData({ lib: GZ.buildLibrary(db, { tier: this.data.tier, q: this.data.q }), baselines: GZ.baselineList(db) });
+  },
+  onBaseline(e) {
+    const name = e.currentTarget.dataset.name;
+    const v = parseFloat(e.detail.value);
+    if (!(v > 0)) {
+      wx.showToast({ title: '重量需要大于 0', icon: 'none' });
+      return this.refresh();
+    }
+    const db = store.load();
+    const r = GZ.setBaseline(db, name, v, { source: 'manual' });
+    if (r && r.error) {
+      wx.showToast({ title: r.error, icon: 'none' });
+      return this.refresh();
+    }
+    store.save(db);
+    this.refresh();
+    wx.showToast({ title: '基线已更新', icon: 'none' });
+  },
   onTier(e) { this.setData({ tier: e.currentTarget.dataset.t }, () => this.refresh()); },
   onQ(e) { this.setData({ q: e.detail.value }, () => this.refresh()); },
   onDel(e) {

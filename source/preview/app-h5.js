@@ -30,6 +30,18 @@
           : '<div class="lib-rec">推荐 ' + esc(x.rec) + (x.recUnit === '自重' ? '' : ' ' + esc(x.recUnit)) + ' · ' + esc(x.recNote) + '</div>') + '</div>' + right + '</div>';
     }).join('');
   }
+  function baselineBlock(db) {
+    var rows = GZ.baselineList(db);
+    if (!rows.length) return '<div class="sec-h">我的基线</div><div class="sec-f">练过的动作会自动出现在这里。</div>';
+    return '<div class="sec-h">我的基线</div><div class="list">' + rows.map(function (b) {
+      return '<div class="cell"><span class="tier t-' + b.lastTier + '">' + esc(b.lastTier) + '</span><span class="flex1">' + esc(b.name) + '<span class="val"> · ' + esc(b.lastDate) + '</span></span>' +
+        '<input class="f-in num" inputmode="decimal" data-act="basew" data-name="' + esc(b.name) + '" value="' + esc(b.weightText) + '"><span class="f-u">kg</span></div>';
+    }).join('') + '</div>';
+  }
+  function baselineCountText(db) {
+    var n = Object.keys((db && db.exerciseBaselines) || {}).length;
+    return n ? n + ' 个' : '练过自动记下';
+  }
   function chips(items, act) {
     return '<div class="chip-row">' + items.map(function (it) {
       return '<div class="chip' + (it.on ? ' on' : '') + '" data-act="' + act + '" data-k="' + it.k + '" data-v="' + esc(it.id) + '">' + esc(it.label) + (it.n ? '<span class="chip-n">' + it.n + '</span>' : '') + '</div>';
@@ -437,7 +449,7 @@
       h += '<div class="ex-main">' + (!it.isBW
         ? '<div class="wbox ' + (it.editW ? 'editing' : '') + '"' + (it.canAdjust ? ' data-act="editW" data-slot="' + it.slotId + '"' : '') + '><span class="w-num num ' + (it.manual ? 'manual' : '') + '">' + it.weightText + '</span><span class="w-unit">' + esc(it.unitText) + '</span>' + (it.canAdjust ? '<span class="w-edit">' + (it.editW ? '完成' : '调整') + '</span>' : '') + '</div>'
         : '<div class="wbox bw-only"><span class="w-num bw-text">自重</span></div>') + '<span class="reps num">' + (it.isCardio ? '' : it.repsText) + '</span></div>';
-      if (it.manual || it.plates || it.fail > 0) h += '<div class="ex-sub">' + (it.manual ? '<span class="accent">已手动调整 · 建议 ' + it.autoText + ' kg' + (it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.plates || '') + (it.fail > 0 ? '<span class="amber">' + (it.plates ? ' · ' : '') + '已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
+      if (it.recSourceLabel || it.manual || it.plates || it.fail > 0) h += '<div class="ex-sub">' + (it.recSourceLabel ? '<span>' + esc(it.recSourceLabel) + (it.manual || it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.manual ? '<span class="accent">已手动调整 · 建议 ' + it.autoText + ' kg' + (it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.plates || '') + (it.fail > 0 ? '<span class="amber">' + (it.plates ? ' · ' : '') + '已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
       if (it.editW) {
         h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
           '<input class="st-val wide num" inputmode="decimal" data-act="winput" data-slot="' + it.slotId + '" value="' + it.weightText + '">' +
@@ -550,7 +562,7 @@
         if (ds.name === sw.curName) { sw.show = false; return true; }
         sw.sel = ds.name;
         var sr = GZ.recommendWeight(load(), ds.name, sw.slotTier, { preferLast: true });
-        sw.weight = String(sr.weight); sw.recText = sr.text; sw.recUnit = sr.unit; sw.recNote = sr.note; sw.selEquip = sr.equip;
+        sw.weight = String(sr.weight); sw.recText = sr.text; sw.recUnit = sr.unit; sw.recNote = sr.note; sw.recSourceLabel = sr.sourceLabel || ''; sw.selEquip = sr.equip;
         return true;
       case 'swapscope': t.swap.scope = ds.s; return true;
       case 'swapw': t.swap.weight = el.value; return false;
@@ -670,7 +682,7 @@
       '<div class="lib-list" id="swapList"><div class="list">' + libRows(lib, { pick: true, sel: sw.sel, empty: '没有找到，可在「我的 → 动作库」添加自定义动作' }) + '</div></div>';
     if (sw.sel) {
       if (!sw.editing) h += seg([{ html: '仅本次', on: sw.scope === 'once', data: ' data-s="once"' }, { html: '以后都用', on: sw.scope === 'perm', data: ' data-s="perm"' }], -1, 'swapscope', 'swap-scope');
-      h += '<div class="swap-rec">' + equipTag(sw.selEquip) + '<div><div class="swap-rec-v">推荐 ' + esc(sw.recText) + (sw.recUnit === '自重' ? '' : ' ' + esc(sw.recUnit)) + '</div><div class="swap-rec-n">' + esc(sw.recNote) + '</div></div></div>';
+      h += '<div class="swap-rec">' + equipTag(sw.selEquip) + '<div><div class="swap-rec-v">推荐 ' + esc(sw.recText) + (sw.recUnit === '自重' ? '' : ' ' + esc(sw.recUnit)) + '</div><div class="swap-rec-n">' + esc(sw.recSourceLabel || '') + (sw.recSourceLabel && sw.recNote ? ' · ' : '') + esc(sw.recNote) + '</div></div></div>';
       if (sw.scope === 'perm' && !sw.editing && sw.selEquip !== '自重') h += '<div class="list"><div class="cell"><span class="flex1">起始重量</span><input class="cell-in num" inputmode="decimal" data-act="swapw" value="' + esc(sw.weight) + '"><span class="unit">' + esc(sw.recUnit) + '</span></div></div>';
       h += '<div class="sec-f">' + (sw.scope === 'once' || sw.editing
         ? '本次用推荐重量练「' + esc(sw.sel) + '」，记录容量，不改变「' + esc(sw.planName) + '」的阶段和重量。'
@@ -1630,6 +1642,7 @@
   function renderLibrary() {
     var db = load(), st = S.settings, lib = GZ.buildLibrary(db, { catalog: true, pattern: st.pattern, part: st.part, equip: st.equip, q: st.q }), h = '';
     h += '<div class="lib-back" data-act="libback">‹ 设置</div><div class="pg-title">动作库</div>';
+    h += baselineBlock(db);
     h += '<div class="search"><span class="search-ic">⌕</span><input class="search-in" data-act="libq" value="' + esc(st.q) + '" placeholder="搜索动作、部位或器械"></div>';
     h += '<div class="filter-lab">动作模式</div>' + chips([{ id: '', k: 'pattern', label: '全部', on: !st.pattern }].concat(lib.patterns.map(function (x) { return { id: x.id, k: 'pattern', label: x.label, n: x.n, on: st.pattern === x.id }; })), 'libfilter');
     h += '<div class="filter-lab">部位</div>' + chips([{ id: '', k: 'part', label: '全部', on: !st.part }].concat(lib.parts.map(function (x) { return { id: x.id, k: 'part', label: x.label, n: x.n, on: st.part === x.id }; })), 'libfilter');
@@ -1684,7 +1697,8 @@
       GZ.LIFT_ORDER.map(function (k) { return '<div class="cell"><span class="flex1">' + GZ.LIFTS[k] + '</span><span class="tm">TM ' + GZ.fmtW(GZ.tm(P, k)) + '</span>' + inp('oneRM.' + k, P.oneRM[k], 'kg') + '</div>'; }).join('') +
       '<div class="cell"><span class="flex1">TM 比例</span>' + inp('tmRatio', tmPct, '%', 'data-pct="1"') + '</div>' +
       '<div class="cell"><span class="flex1">当前体重</span>' + inp('bodyWeight', P.bodyWeight || 70, 'kg') + '</div></div>' +
-      '<div class="sec-f">' + GZ.tierLabel(GZ.progressionOf(load()).id, 'T1') + '以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。</div>';
+      '<div class="sec-f">' + GZ.tierLabel(GZ.progressionOf(load()).id, 'T1') + '以四大项 1RM 推算；哑铃按单只、负重按外加重量、自重只记次数。训练时填写体重会自动同步这里。1RM 是四大项锚点，每个动作的起步重量在「我的基线」。</div>' +
+      '<div class="list"><div class="cell tap" data-act="openlib"><span class="flex1">我的基线</span><span class="val">' + baselineCountText(db) + '</span><span class="chev">›</span></div></div>';
     h += '\u0000adv\u0000';
     h += '<div class="sec-h">加重步幅</div><div class="list">' +
       GZ.STEP_KEYS.map(function (s) { return '<div class="cell"><span class="flex1">' + s.label + '</span>' + inp('steps.' + s.key, P.steps[s.key], 'kg') + '</div>'; }).join('') +
@@ -1793,6 +1807,17 @@
       case 'mode': return mutate(function (db) { db.params.ruleMode = ds.v; }, ds.v === 'full' ? '已切换：完整三阶规则' : '已切换：严格按表格公式');
       case 'adaptsw': return mutate(function (db) { db.params.adaptive = el.checked; }, el.checked ? '已开启：按末组次数自适应加重' : '已关闭：固定步幅加重');
       case 'openlib': st.view = 'lib'; st.q = ''; render(); return false;
+      case 'basew':
+        var bv = parseFloat(el.value);
+        if (!(bv > 0)) { toast('重量需要大于 0'); return true; }
+        var berr = null;
+        mutate(function (db) {
+          var r = GZ.setBaseline(db, ds.name, bv, { source: 'manual' });
+          if (r && r.error) berr = r.error;
+        }, false);
+        if (berr) { toast(berr); return true; }
+        toast('基线已更新');
+        return true;
       case 'libback': st.view = ''; st.add = null; render(); return false;
       case 'libfilter':
         if (ds.k === 'pattern') {
