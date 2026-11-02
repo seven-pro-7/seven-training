@@ -591,6 +591,68 @@ check('零记录动作仍返回同一份趋势详情', function () {
   assert.strictEqual(GZ.exerciseDetail(db, '单臂哑铃划船').n, 0);
 });
 
+check('进行中的训练：空白草稿不算已填写', function () {
+  var db = GZ.normalize(GZ.defaults(false));
+  var blank = GZ.packOpenSession({ day: 'A1', draft: GZ.blankDraft(db, 'A1'), drafts: {}, date: GZ.today(), bw: '', note: '' });
+  assert.strictEqual(GZ.sessionTouched(blank), false);
+  assert.strictEqual(GZ.applyOpenSession({}, blank), false);
+});
+
+check('进行中的训练：次数、体重、备注、非今天的日期都会保留', function () {
+  var t = { day: 'A1', draft: { A1_1: { v: 5, done: 1 } }, drafts: {}, date: GZ.today(), bw: '', note: '' };
+  var snap = GZ.packOpenSession(t);
+  assert.strictEqual(GZ.sessionTouched(snap), true);
+  var back = {};
+  assert.strictEqual(GZ.applyOpenSession(back, snap), true);
+  assert.strictEqual(back.day, 'A1');
+  assert.strictEqual(back.draft.A1_1.v, 5);
+  assert.strictEqual(back.draft.A1_1.done, 1);
+  assert.notStrictEqual(back.draft, t.draft);
+  assert.strictEqual(GZ.sessionTouched(GZ.packOpenSession({ day: 'A1', draft: { A1_1: { v: 0, done: 0 } }, date: GZ.today() })), true);
+  assert.strictEqual(GZ.sessionTouched({ bw: '70', date: GZ.today(), drafts: {} }), true);
+  assert.strictEqual(GZ.sessionTouched({ note: '睡得少', date: GZ.today(), drafts: {} }), true);
+  assert.strictEqual(GZ.sessionTouched({ date: '2000-01-01', drafts: {} }), true);
+  assert.strictEqual(GZ.sessionTouched({ recordId: 'abc', date: GZ.today(), drafts: {} }), true);
+  assert.strictEqual(GZ.sessionTouched({ deload: true, date: GZ.today(), drafts: {} }), true);
+});
+
+check('进行中的训练：本机和备份里留较新的一份', function () {
+  var older = { day: 'A1', drafts: { A1: { A1_1: { v: 3, done: 0 } } }, date: GZ.today(), savedAt: 10 };
+  var newer = { day: 'B1', drafts: { B1: { B1_1: { v: 8, done: 0 } } }, date: GZ.today(), savedAt: 20 };
+  assert.strictEqual(GZ.pickOpenSession(older, newer).day, 'B1');
+  assert.strictEqual(GZ.pickOpenSession(newer, null).day, 'B1');
+  assert.strictEqual(GZ.pickOpenSession(null, { date: GZ.today(), drafts: {} }), null);
+});
+
+check('启动不把空档案写到已有数据上', function () {
+  var full = GZ.normalize(GZ.defaults(false));
+  full.records = [{ id: 'r1', date: '2026-10-01', day: 'A1', entries: {}, createdAt: 50, updatedAt: 50 }];
+  var empty = GZ.normalize(GZ.defaults(false));
+  assert.ok(GZ.dbStamp(full) > GZ.dbStamp(empty));
+  assert.strictEqual(GZ.pickStoredDb(empty, full), full);
+  assert.strictEqual(GZ.pickStoredDb(full, empty), full);
+  var missing = GZ.storageDecision('missing', null, null);
+  assert.strictEqual(missing.writeDefault, true);
+  assert.strictEqual(missing.db, null);
+  var wiped = GZ.storageDecision('missing', null, full);
+  assert.strictEqual(wiped.writeDefault, false);
+  assert.strictEqual(wiped.writeBack, true);
+  assert.strictEqual(wiped.db, full);
+  var unreadable = GZ.storageDecision('error', null, full);
+  assert.strictEqual(unreadable.writeDefault, false);
+  assert.strictEqual(unreadable.writeBack, true);
+  var corruptOnly = GZ.storageDecision('corrupt', null, null);
+  assert.strictEqual(corruptOnly.writeDefault, false);
+  assert.strictEqual(corruptOnly.db, null);
+  var keepLocal = GZ.storageDecision('ok', full, empty);
+  assert.strictEqual(keepLocal.writeBack, false);
+  assert.strictEqual(keepLocal.db, full);
+  GZ.deleteRecord(full, 'r1');
+  var afterDelete = GZ.storageDecision('ok', full, { params: empty.params, days: empty.days, records: [{ id: 'r1', createdAt: 50, updatedAt: 50 }] });
+  assert.strictEqual(afterDelete.db, full);
+  assert.strictEqual(afterDelete.writeBack, false);
+});
+
 if (failed) {
   console.error('\n' + failed + ' failed');
   process.exit(1);

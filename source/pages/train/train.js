@@ -7,16 +7,44 @@ function fmtSec(s) { s = Math.max(0, s); const m = Math.floor(s / 60), r = s % 6
 Page({
   data: { vm: null, date: '', dateText: '', bw: '', note: '', rest: { show: false }, result: null, swap: { show: false }, share: { show: false, kind: 'day', recordId: '', week: 0, ym: '' } },
 
-  onLoad() { this.day = null; this.draft = null; this.drafts = {}; this.deloads = {}; this.recordId = null; this.deload = undefined; this.setDate(GZ.today()); },
-  setDate(d) { this.setData({ date: d, dateText: GZ.dateLabel(d) }); },
+  onLoad() {
+    this.day = null; this.draft = null; this.drafts = {}; this.deloads = {}; this.recordId = null; this.deload = undefined;
+    this.setDate(GZ.today());
+    this.restoreOpen();
+    this._openReady = true;
+  },
+  setDate(d) { this.date = d; this.setData({ date: d, dateText: GZ.dateLabel(d) }); },
 
   onShow() {
+    if (!this._openReady) { this.restoreOpen(); this._openReady = true; }
     const g = app.globalData;
     if (g.editRecordId) { this.startEdit(g.editRecordId); g.editRecordId = null; return; }
     if (g.gotoDay) { this.switchDay(g.gotoDay); g.gotoDay = null; return; }
     this.refresh();
   },
-  onUnload() { this.clearTimer(); },
+  onHide() { this.persistOpen(); },
+  onUnload() { this.persistOpen(); this.clearTimer(); },
+
+  openSnap() {
+    // setData 是异步的，体重和备注以页面字段为准，避免切后台时把刚输入的内容写成空的
+    return {
+      day: this.day, draft: this.draft, drafts: this.drafts, deloads: this.deloads,
+      date: this.date || this.data.date,
+      bw: this.bw != null ? this.bw : (this.data.bw || ''),
+      note: this.note != null ? this.note : (this.data.note || ''),
+      recordId: this.recordId, createdAt: this.editCreatedAt, deload: this.deload
+    };
+  },
+  persistOpen() { if (this._openReady) store.saveOpen(GZ.packOpenSession(this.openSnap())); },
+  restoreOpen() {
+    const snap = store.loadOpen();
+    if (!GZ.applyOpenSession(this, snap)) return;
+    if (this.recordId && !GZ.getRecord(store.load(), this.recordId)) {
+      this.recordId = null; this.editCreatedAt = null;
+    } else this.editCreatedAt = this.createdAt;
+    this.setDate(this.date || GZ.today());
+    this.setData({ bw: this.bw || '', note: this.note || '' });
+  },
 
   db() { return store.load(); },
 
@@ -30,6 +58,7 @@ Page({
     if (this.deload === undefined && this.deloads && this.deloads[this.day]) this.deload = true;
     const vm = GZ.buildTrain(db, { day: this.day, recordId: this.recordId, draft: this.draft, deload: this.deload });
     this.setData({ vm });
+    this.persistOpen();
   },
 
   rememberDay() {
@@ -64,6 +93,7 @@ Page({
   },
   cancelEdit() {
     this.recordId = null; this.day = null; this.draft = null; this.deload = undefined;
+    this.bw = ''; this.note = '';
     this.setDate(GZ.today()); this.setData({ bw: '', note: '' });
     this.refresh();
   },
@@ -173,8 +203,8 @@ Page({
   },
   onWReset(e) { const en = this.entry(e.currentTarget.dataset.slot); en.w = null; this.refresh(); },
   onSkip(e) { const en = this.entry(e.currentTarget.dataset.slot); en.skip = !en.skip; this.refresh(); },
-  onBw(e) { this.setData({ bw: e.detail.value }); },
-  onNote(e) { this.setData({ note: e.detail.value }); },
+  onBw(e) { this.bw = e.detail.value; this.setData({ bw: e.detail.value }); this.persistOpen(); },
+  onNote(e) { this.note = e.detail.value; this.setData({ note: e.detail.value }); this.persistOpen(); },
 
   onDot(e) {
     const { slot, i, rest, name } = e.currentTarget.dataset, en = this.entry(slot);
@@ -222,10 +252,11 @@ Page({
 
   save() {
     const db = this.db();
-    const bw = this.data.bw ? Number(this.data.bw) : null;
+    const bwRaw = this.bw != null ? this.bw : this.data.bw;
+    const bw = bwRaw ? Number(bwRaw) : null;
     const rec = GZ.saveRecord(db, {
-      id: this.recordId, date: this.data.date, day: this.day, deload: this.data.vm.deload,
-      note: this.data.note, bw, entries: this.draft,
+      id: this.recordId, date: this.date || this.data.date, day: this.day, deload: this.data.vm.deload,
+      note: this.note != null ? this.note : this.data.note, bw, entries: this.draft,
       createdAt: this.recordId ? this.editCreatedAt : Date.now()
     });
     if (bw > 0) db.params.bodyWeight = bw; // 负重动作推荐重量以最近体重为基准
@@ -251,8 +282,9 @@ Page({
     const doneDay = this.day;
     if (this.drafts) delete this.drafts[doneDay];
     if (this.deloads) delete this.deloads[doneDay];
-    this.recordId = null; this.deload = undefined;
+    this.recordId = null; this.deload = undefined; this.editCreatedAt = null;
     this.day = GZ.recommend(db).day; this.draft = null;
+    this.bw = ''; this.note = '';
     this.setDate(GZ.today()); this.setData({ result, bw: '', note: '' });
     this.refresh();
   },
