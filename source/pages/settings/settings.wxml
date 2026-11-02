@@ -104,6 +104,7 @@
       <view class="slot-cfg">
         <text class="cfg-l">首周</text>
         <view class="mini-seg">
+          <view class="ms {{s.init.type === 'model' ? 'on' : ''}}" data-si="{{si}}" data-v="model" bindtap="onInitType">模型</view>
           <view class="ms {{s.init.type === 'pct' ? 'on' : ''}}" data-si="{{si}}" data-v="pct" bindtap="onInitType">TM%</view>
           <view class="ms {{s.init.type === 'fixed' ? 'on' : ''}}" data-si="{{si}}" data-v="fixed" bindtap="onInitType">固定</view>
         </view>
@@ -112,9 +113,10 @@
           <text class="cap">×</text>
           <input class="f-in sm num" type="digit" value="{{s.pctText}}" data-si="{{si}}" bindblur="onPct" /><text class="cap">%</text>
         </block>
-        <block wx:else>
+        <block wx:elif="{{s.init.type === 'fixed'}}">
           <input class="f-in sm num" type="digit" value="{{s.init.value}}" data-si="{{si}}" bindblur="onFixed" /><text class="cap">kg</text>
         </block>
+        <text wx:else class="cap">1RM × 系数 × 档位</text>
       </view>
     </view>
   </view>
