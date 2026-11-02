@@ -17,7 +17,7 @@
 
   // ---------- 基础常量 ----------
   var VERSION = 1;
-  var DAYS_VERSION = 7; // 动作模板版本。v7：T1/T2 交错配对。胸、背、股四头、后链、肩每周至少 2 次，同一天不叠同模式的 T1 和 T2
+  var DAYS_VERSION = 8; // v7：T1/T2 交错配对。v8 不改动作名单，只把 T2/T3 首周 init 改成与 modelWeight 同一公式（基准 1RM × 动作系数 × 档位）。已练过的槽位沿用当时重量，不改历史记录。
   var LIFTS = { squat: '杠铃深蹲', bench: '平板卧推', deadlift: '传统硬拉', ohp: '站姿实力推' };
   var LIFT_ORDER = ['squat', 'bench', 'deadlift', 'ohp'];
   var STEP_KEYS = [
@@ -70,12 +70,14 @@
 
   /**
    * 动作库 —— 每个动作归入 5 类器械：杠铃 / 哑铃 / 自重 / 负重 / 器械（固定器械·绳索）
-   * 列：[层级, 名称, 部位, 器械, 说明, 基准主项, 系数, 取整档]
-   *  - 基准主项：该动作的重量挂在四大项哪一项的 1RM 上（squat/bench/deadlift/ohp）
-   *  - 系数：该动作「推荐重量」占基准主项 1RM 的比例（杠铃=总重；哑铃=单只；器械=配重片；负重=外加重量）
+   * 列：[层级, 名称, 部位, 器械, 说明, 基准主项, 系数, 取整档, 下限?]
+   *  - 基准主项：该动作挂在四大项哪一项的 1RM 上（squat/bench/deadlift/ohp）
+   *  - 系数：该动作估算 1RM ÷ 基准主项 1RM（杠铃=总重；哑铃=单只；器械=配重片；负重=外加）。不是工作重量本身。
+   *  - 工作重量 = 基准 1RM × 系数 × 档位。T2≈65%（同一个主项做 T2 容量时≈70%），T3≈50%。再按取整档对齐。
    *  - 取整档：该器械的最小可加重量（杠铃 2.5 / 哑铃 1 或 2 / 器械 5 / 负重 1.25 或 2.5）
-   *  依据：NSCA %1RM–次数表（10RM≈75%、15RM≈65%）、Strength Level / Symmetric Strength / ExRx 的动作间强度比例，
-   *  哑铃单只≈杠铃 1RM×(0.36~0.40)、变式相对主项 0.75~0.85 等，见 RULES_WEIGHT 的说明。
+   *  - 下限：可选。对齐前的绝对地板，例如侧平举不低于 2kg。只托底，不代替系数。
+   *  依据：NSCA %1RM–次数表（10RM≈75%、15RM≈65%）、Strength Level / Symmetric Strength / ExRx 的动作间强度比例。
+   *  水平拉与卧推对照，垂直推与实力推对照；哑铃系数按单只。见 source/README 的推荐模型。
    */
   var LIB = [
     // ---- T1：严格只保留四大项，不提供变式或其他复合动作 ----
@@ -84,11 +86,11 @@
     ['T1', '平板卧推', '上肢·水平推', '杠铃', '主项；胸大肌主导', 'bench', 1, 2.5],
     ['T1', '站姿实力推', '上肢·垂直推', '杠铃', '主项；站姿推举', 'ohp', 1, 2.5],
     // ---- T2：四大项的变式 + 次级复合动作 ----
-    ['T2', '前蹲', '下肢·蹲', '杠铃', '股四头肌与核心；约为深蹲的 82%', 'squat', 0.82, 2.5],
+    ['T2', '前蹲', '下肢·蹲', '杠铃', '股四头肌与核心；约为深蹲的 80%', 'squat', 0.8, 2.5],
     ['T2', '杠铃深蹲', '下肢·蹲', '杠铃', '与 T1 同源，中等强度做容量', 'squat', 1, 2.5],
     ['T2', '箱式深蹲', '下肢·蹲', '杠铃', '坐箱停顿，强化底部发力；约为深蹲的 90%', 'squat', 0.9, 2.5],
     ['T2', '泽奇深蹲', '下肢·蹲', '杠铃', '肘托杠深蹲，躯干承重更强；约为深蹲的 80%', 'squat', 0.8, 2.5],
-    ['T2', '罗马尼亚硬拉', '下肢·髋铰链', '杠铃', '腘绳肌主导；约为硬拉的 75%', 'deadlift', 0.75, 2.5],
+    ['T2', '罗马尼亚硬拉', '下肢·髋铰链', '杠铃', '腘绳肌主导；约为硬拉的 70%', 'deadlift', 0.7, 2.5],
     ['T2', '直腿硬拉', '下肢·髋铰链', '杠铃', '膝关节微屈的髋铰链变式；约为硬拉的 70%', 'deadlift', 0.7, 2.5],
     ['T2', '赤字硬拉', '下肢·髋铰链', '杠铃', '站垫高平台拉，强化起拉段；约为硬拉的 90%', 'deadlift', 0.9, 2.5],
     ['T2', '架上拉', '下肢·髋铰链', '杠铃', '膝上起拉，强化锁定段；约为硬拉的 105%', 'deadlift', 1.05, 2.5],
@@ -96,18 +98,18 @@
     ['T2', '早安式体前屈', '下肢·髋铰链', '杠铃', '杠铃早安，腘绳肌与竖脊肌；约为硬拉的 45%', 'deadlift', 0.45, 2.5],
     ['T2', '臀推', '下肢·髋伸', '杠铃', '臀大肌主导；可达硬拉的 100%', 'deadlift', 1, 2.5],
     ['T2', '暂停卧推', '上肢·水平推', '杠铃', '触胸停顿1秒，消除反弹借力；约为卧推的 92%', 'bench', 0.92, 2.5],
-    ['T2', '窄距卧推', '上肢·水平推', '杠铃', '三头侧重；约为卧推的 85%', 'bench', 0.85, 2.5],
+    ['T2', '窄距卧推', '上肢·水平推', '杠铃', '三头侧重；约为卧推的 90%', 'bench', 0.9, 2.5],
     ['T2', '上斜卧推', '上肢·水平推', '杠铃', '上胸侧重；约为卧推的 80%', 'bench', 0.8, 2.5],
     ['T2', '杠铃推举', '上肢·垂直推', '杠铃', '坐姿或站姿推举，约为站姿实力推的 110%', 'ohp', 1.1, 2.5],
-    ['T2', '潘德雷划船', '上肢·水平拉', '杠铃', '躯干平行地面，约为卧推的 90%', 'bench', 0.9, 2.5],
-    ['T2', '杠铃划船', '上肢·水平拉', '杠铃', '俯身杠铃划船，约为卧推的 95%', 'bench', 0.95, 2.5],
+    ['T2', '潘德雷划船', '上肢·水平拉', '杠铃', '躯干平行地面、离地再拉，约为卧推的 75%', 'bench', 0.75, 2.5],
+    ['T2', '杠铃划船', '上肢·水平拉', '杠铃', '俯身杠铃划船，约为卧推的 80%', 'bench', 0.8, 2.5],
     ['T2', 'T杠划船', '上肢·水平拉', '杠铃', '背部厚度，约为卧推的 80%', 'bench', 0.8, 2.5],
     ['T2', '胸部支撑划船', '上肢·水平拉', '器械', '胸靠消除腰部借力的水平拉；配重约为卧推的 70%', 'bench', 0.7, 2.5],
-    ['T2', '坐姿哑铃推肩', '上肢·垂直推', '哑铃', '肩部容量；单只≈卧推的 32%', 'bench', 0.32, 2],
-    ['T2', '阿诺德推举', '上肢·垂直推', '哑铃', '旋转推举，三角肌前中束；单只≈卧推的 26%', 'bench', 0.26, 2],
+    ['T2', '坐姿哑铃推肩', '上肢·垂直推', '哑铃', '肩部容量；单只≈实力推的 45%', 'ohp', 0.45, 2],
+    ['T2', '阿诺德推举', '上肢·垂直推', '哑铃', '旋转推举，三角肌前中束；单只≈实力推的 40%', 'ohp', 0.4, 2],
     ['T2', '哑铃卧推', '上肢·水平推', '哑铃', '活动范围大；单只≈卧推的 38%', 'bench', 0.38, 2],
-    ['T2', '上斜哑铃卧推', '上肢·水平推', '哑铃', '上胸容量；单只≈卧推的 30%', 'bench', 0.3, 2],
-    ['T2', '单臂哑铃划船', '上肢·水平拉', '哑铃', '单侧背阔；单只≈卧推的 35%', 'bench', 0.35, 2],
+    ['T2', '上斜哑铃卧推', '上肢·水平推', '哑铃', '上胸容量；单只≈卧推的 32%', 'bench', 0.32, 2],
+    ['T2', '单臂哑铃划船', '上肢·水平拉', '哑铃', '单侧背阔；单只≈卧推的 28%', 'bench', 0.28, 2],
     ['T2', '引体向上', '上肢·垂直拉', '自重', '垂直拉复合动作；以体重做次数，无外加重量', 'bench', 0, 0],
     ['T2', '负重引体向上', '上肢·垂直拉', '负重', '外加重量≈卧推的 10%，起步附加体重 5~10%', 'bench', 0.1, 2.5],
     ['T2', '反握引体向上', '上肢·垂直拉', '自重', '掌心朝内的垂直拉；以体重做次数', 'bench', 0, 0],
@@ -142,7 +144,7 @@
     ['T3', '哑铃弯举', '上肢·屈肘', '哑铃', '二头容量；单只≈卧推的 15%', 'bench', 0.15, 1],
     ['T3', '锤式弯举', '上肢·屈肘', '哑铃', '肱桡肌与二头；单只≈卧推的 17%', 'bench', 0.17, 1],
     ['T3', '上斜哑铃弯举', '上肢·屈肘', '哑铃', '肩伸位拉长二头长头；单只≈卧推的 12%', 'bench', 0.12, 1],
-    ['T3', '哑铃侧平举', '肩·中束', '哑铃', '三角肌中束；单只≈卧推的 14%', 'bench', 0.14, 1],
+    ['T3', '哑铃侧平举', '肩·中束', '哑铃', '三角肌中束；单只≈卧推的 14%，不低于 2kg', 'bench', 0.14, 1, 2],
     ['T3', '绳索侧平举', '肩·中束', '器械', '底部仍有张力；单侧配重约为卧推的 7%', 'bench', 0.07, 1.25],
     ['T3', '反向飞鸟', '肩·后束', '哑铃', '三角肌后束；单只≈卧推的 12%', 'bench', 0.12, 1],
     ['T3', '哑铃耸肩', '肩·斜方', '哑铃', '斜方肌容量；单只≈硬拉的 30%', 'deadlift', 0.3, 2],
@@ -155,7 +157,11 @@
     ['', '椭圆机', '有氧·椭圆', '有氧', '匀速踩踏，能完整说话；记实际分钟', 'bench', 0, 0],
     ['', '划船机', '有氧·划船', '有氧', '匀速划船，能完整说话；记实际分钟', 'bench', 0, 0],
     ['', '楼梯机', '有氧·台阶', '有氧', '匀速登阶，能说话但略喘；记实际分钟', 'bench', 0, 0]
-  ].map(function (r) { return { tier: r[0], name: r[1], part: r[2], equip: r[3], desc: r[4], base: r[5], ratio: r[6], inc: r[7] }; });
+  ].map(function (r) {
+    var o = { tier: r[0], name: r[1], part: r[2], equip: r[3], desc: r[4], base: r[5], ratio: r[6], inc: r[7] };
+    if (r[8]) o.floor = r[8];
+    return o;
+  });
 
   function libFind(name) {
     for (var i = 0; i < LIB.length; i++) if (LIB[i].name === name) return LIB[i];
@@ -251,6 +257,8 @@
   }
   function pct(base, p) { return { type: 'pct', base: base, pct: p }; }
   function fixed(v) { return { type: 'fixed', value: v }; }
+  /** T2/T3 首周：与 modelWeight 同一公式，不把动作系数当成 TM 百分比。 */
+  function modelInit() { return { type: 'model' }; }
 
   /**
    * GZCLP 四天（每天 1×T1 + 2×T2 + 2×T3），T1/T2 交错配对。
@@ -264,31 +272,31 @@
     return [
       { id: 'A1', name: '下肢蹲主导', slots: [
         slot('A1_1', 'T1', '杠铃深蹲', pct('squat', 0.85), 't1l', false, 'squat'),
-        slot('A1_2', 'T2', '罗马尼亚硬拉', pct('deadlift', 0.6), 't2l'),
-        slot('A1_3', 'T2', '高位下拉', pct('bench', 0.55), 't2u'),
-        slot('A1_4', 'T3', '坐姿腿屈伸', pct('squat', 0.35), 't3l', false),
-        slot('A1_5', 'T3', '哑铃侧平举', fixed(8), 't3u', true)
+        slot('A1_2', 'T2', '罗马尼亚硬拉', modelInit(), 't2l'),
+        slot('A1_3', 'T2', '高位下拉', modelInit(), 't2u'),
+        slot('A1_4', 'T3', '坐姿腿屈伸', modelInit(), 't3l', false),
+        slot('A1_5', 'T3', '哑铃侧平举', modelInit(), 't3u', true)
       ] },
       { id: 'B1', name: '垂直推主导', slots: [
         slot('B1_1', 'T1', '站姿实力推', pct('ohp', 0.85), 't1u', false, 'ohp'),
-        slot('B1_2', 'T2', '上斜哑铃卧推', pct('bench', 0.3), 't2u'),
-        slot('B1_3', 'T2', '引体向上', fixed(0), 't2u', true),
-        slot('B1_4', 'T3', '绳索夹胸', pct('bench', 0.15), 't3u', true),
-        slot('B1_5', 'T3', '面拉', fixed(15), 't3u', true)
+        slot('B1_2', 'T2', '上斜哑铃卧推', modelInit(), 't2u'),
+        slot('B1_3', 'T2', '引体向上', modelInit(), 't2u', true),
+        slot('B1_4', 'T3', '绳索夹胸', modelInit(), 't3u', true),
+        slot('B1_5', 'T3', '面拉', modelInit(), 't3u', true)
       ] },
       { id: 'A2', name: '水平推主导', slots: [
         slot('A2_1', 'T1', '平板卧推', pct('bench', 0.85), 't1u', false, 'bench'),
-        slot('A2_2', 'T2', '坐姿哑铃推肩', pct('ohp', 0.6), 't2u'),
-        slot('A2_3', 'T2', '坐姿划船', pct('bench', 0.55), 't2u'),
-        slot('A2_4', 'T3', '绳索三头屈伸', pct('bench', 0.25), 't3u', true),
-        slot('A2_5', 'T3', '杠铃弯举', fixed(20), 't3u', true)
+        slot('A2_2', 'T2', '坐姿哑铃推肩', modelInit(), 't2u'),
+        slot('A2_3', 'T2', '坐姿划船', modelInit(), 't2u'),
+        slot('A2_4', 'T3', '绳索三头屈伸', modelInit(), 't3u', true),
+        slot('A2_5', 'T3', '杠铃弯举', modelInit(), 't3u', true)
       ] },
       { id: 'B2', name: '髋铰链主导', slots: [
         slot('B2_1', 'T1', '传统硬拉', pct('deadlift', 0.85), 't1l', false, 'deadlift'),
-        slot('B2_2', 'T2', '前蹲', pct('squat', 0.6), 't2l'),
-        slot('B2_3', 'T2', '单臂哑铃划船', pct('bench', 0.35), 't2u'),
-        slot('B2_4', 'T3', '坐姿腿弯举', pct('squat', 0.3), 't3l', false),
-        slot('B2_5', 'T3', '哑铃弯举', fixed(12), 't3u', true)
+        slot('B2_2', 'T2', '前蹲', modelInit(), 't2l'),
+        slot('B2_3', 'T2', '单臂哑铃划船', modelInit(), 't2u'),
+        slot('B2_4', 'T3', '坐姿腿弯举', modelInit(), 't3l', false),
+        slot('B2_5', 'T3', '哑铃弯举', modelInit(), 't3u', true)
       ] }
     ];
   }
@@ -423,26 +431,59 @@
     return isNaN(n) ? null : n;
   }
   /**
-   * 升级模板前，记下每个动作下一次该用的重量，换槽位时带着走。
-   * 先记非替换、非减载、非跳过的历史实际重量，再用各训练日下一次的有效槽位下次重量覆盖。
+   * 升级模板前，记下每个已经练过的动作下一次该用的重量，换槽位时带着走。
+   * 先记非替换、非减载、非跳过的历史实际重量，再用该动作下一次的有效重量覆盖。
+   * 没练过的计划重量不进这张表：否则旧的偏重默认值会被冻成 fixed，盖掉新的模型起点。
    * 仅本次替换（it.sub）不进这张表：旧记录里一次性替换的重量不能当成新模板槽位的起点。
    */
   function nextExerciseWeights(db) {
     var rp = replay(db);
-    var map = {};
+    var map = {}, seen = {};
     rp.sessions.forEach(function (x) {
       x.items.forEach(function (it) {
-        if (!it.deload && !it.sub && it.judgment !== '跳过') map[it.name] = it.weight;
+        if (it.deload || it.sub || it.judgment === '跳过') return;
+        seen[it.name] = 1;
+        map[it.name] = it.weight;
       });
     });
     db.days.forEach(function (d) {
       var wk = (rp.counts[d.id] || 0) + 1;
       d.slots.forEach(function (s) {
         var ef = effectiveSlot(db, s, wk, rp.hist);
+        if (!seen[ef.slot.name]) return;
         map[ef.slot.name] = startState(s, rp.states[s.id], ef, wk, progressionOf(db, s)).weight;
       });
     });
     return map;
+  }
+  // v7 写进新档案的 T2/T3 首周。升级时只有这些「出厂值」且没练过，才换成模型；用户改过的固定重量或 TM% 留着。
+  var V7_SLOT_INIT = {
+    A1_2: { type: 'pct', base: 'deadlift', pct: 0.6 },
+    A1_3: { type: 'pct', base: 'bench', pct: 0.55 },
+    A1_4: { type: 'pct', base: 'squat', pct: 0.35 },
+    A1_5: { type: 'fixed', value: 8 },
+    B1_2: { type: 'pct', base: 'bench', pct: 0.3 },
+    B1_3: { type: 'fixed', value: 0 },
+    B1_4: { type: 'pct', base: 'bench', pct: 0.15 },
+    B1_5: { type: 'fixed', value: 15 },
+    A2_2: { type: 'pct', base: 'ohp', pct: 0.6 },
+    A2_3: { type: 'pct', base: 'bench', pct: 0.55 },
+    A2_4: { type: 'pct', base: 'bench', pct: 0.25 },
+    A2_5: { type: 'fixed', value: 20 },
+    B2_2: { type: 'pct', base: 'squat', pct: 0.6 },
+    B2_3: { type: 'pct', base: 'bench', pct: 0.35 },
+    B2_4: { type: 'pct', base: 'squat', pct: 0.3 },
+    B2_5: { type: 'fixed', value: 12 }
+  };
+  function sameInit(a, b) {
+    if (!a || !b || a.type !== b.type) return false;
+    if (a.type === 'fixed') return Number(a.value) === Number(b.value);
+    if (a.type === 'pct') return a.base === b.base && Number(a.pct) === Number(b.pct);
+    return a.type === 'model';
+  }
+  function stockSlotInit(s) {
+    if (!s.init || s.init.type === 'model') return true;
+    return !!(V7_SLOT_INIT[s.id] && sameInit(s.init, V7_SLOT_INIT[s.id]));
   }
   /**
    * 第 1 周样例记录写下时，各槽位的动作（days v3）。
@@ -550,8 +591,10 @@
           s.roundProg = ns.roundProg;
           s.lift = ns.lift;
           if (!done) {
+            var keepCustom = !stockSlotInit(s);
             s.name = ns.name; s.equip = ns.equip; s.tier = ns.tier; s.step = ns.step;
-            s.init = clone(ns.init); s.roundProg = ns.roundProg; s.lift = ns.lift;
+            if (!keepCustom) s.init = clone(ns.init);
+            s.roundProg = ns.roundProg; s.lift = ns.lift;
             if (carried !== null) s.init = { type: 'fixed', value: carried };
             delete s.changes;
           }
@@ -697,6 +740,8 @@
   function initWeight(s, P) {
     if (!s.init) return 0;
     if (s.init.type === 'fixed') return Number(s.init.value) || 0;
+    if (s.init.type === 'model') return modelWeight(P, libFind(s.name), s.tier).weight;
+    if (s.init.type !== 'pct' || !s.init.base) return 0;
     return roundTo(tm(P, s.init.base) * s.init.pct, P.rounding);
   }
   function fmtW(w) {
@@ -720,19 +765,25 @@
 
   // ---------- 推荐重量（按器械类型科学推算） ----------
   /**
-   * 档位目标 %1RM（NSCA %1RM–次数表）：
-   *   3 次 ≈ 93%  → T1 用 TM×0.85 已覆盖
-   *   10 次 ≈ 75% → T2 取 70%（留 1~2 次余量，GZCLP 要求 3×10 能干净完成）
-   *   15 次 ≈ 65% → T3 取 55%（末组要冲 15~25 次 AMRAP，起手不能太重）
+   * 档位是工作重量相对「该动作估算 1RM」的比例。
+   * 工作重量 = 基准主项 1RM × 动作系数 × 档位。
+   *   T1 = 76.5%（即 TM 90% × 85%，约 5×3+ 的起点）
+   *   T2 = 65%（3×10 留余量）。系数已经是 1、而且就是这个主项本身时用 70%（同动作容量）
+   *   T3 = 50%（3×15+，末组要能往阈值推，不取到 15RM 的 65%）
    */
-  var TIER_PCT = { T1: 0.765, T2: 0.65, T3: 0.5 }; // 对 1RM 的直接比例：T1=TM(90%)×85%，T2≈15RM~10RM 之间，T3≈15RM 以下
+  var TIER_PCT = { T1: 0.765, T2: 0.65, T3: 0.5 };
+  var T2_SAME_PCT = 0.70;
+  function tierPctOf(lb, tierKey) {
+    if (tierKey === 'T2' && lb && Number(lb.ratio) === 1 && LIFTS[lb.base] === lb.name) return T2_SAME_PCT;
+    return TIER_PCT[tierKey] || TIER_PCT.T3;
+  }
   /**
    * 算出某个动作的推荐重量（含单位说明）。
    * 优先级：用户上次实际用过的重量 > 按 1RM×系数×档位比例推算。
    * @return { weight, unit, text, note, source, inc, equip }
    */
   /**
-   * 纯模型推算（不读训练历史）：1RM × 动作系数 × 档位比例，再按器械档位取整。
+   * 纯模型推算（不读训练历史）：基准 1RM × 动作系数 × 档位比例，再按器械档位取整。
    * e1rm（可选）：训练中由 T1 末组 AMRAP 估算出的 1RM（Epley）。只取其 90% 参与，抵消高次数 AMRAP 的高估；
    * 且只在高于设置里填的 1RM 时才采用——体现「随训练变强，换入的新动作起点跟着变高」。
    */
@@ -742,10 +793,12 @@
     if (equip === '自重' || !lb || !lb.ratio) return { weight: 0, base: base, oneRM: P.oneRM[base], inc: 0, equip: equip, bw: true };
     var rm = P.oneRM[base], est = e1rm && e1rm[base] ? fix(e1rm[base] * 0.9) : 0, fromE = est > rm;
     if (fromE) rm = est;
-    var w = rm * lb.ratio * TIER_PCT[tierKey];
+    var pct = tierPctOf(lb, tierKey);
+    var w = rm * lb.ratio * pct;
+    if (lb.floor) w = Math.max(w, lb.floor);
     if (equip === '负重') w = Math.max(w, (Number(P.bodyWeight) || 70) * 0.05); // 起步至少加体重 5%
     if (equip === '杠铃') w = Math.max(w, P.barWeight || 20); // 杠铃动作不低于空杆
-    return { weight: alignTo(w, inc) || 0, base: base, oneRM: fix(rm), fromE1rm: fromE, ratio: lb.ratio, pct: TIER_PCT[tierKey], inc: inc, equip: equip };
+    return { weight: alignTo(w, inc) || 0, base: base, oneRM: fix(rm), fromE1rm: fromE, ratio: lb.ratio, pct: pct, inc: inc, equip: equip };
   }
   function recommendWeight(db, name, tier, opts) {
     opts = opts || {};

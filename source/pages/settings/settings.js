@@ -97,7 +97,9 @@ Page({
     this.slotMut(si, (s, db) => {
       if (s.init.type === v) return;
       const w = GZ.initWeight(s, db.params);
-      s.init = v === 'fixed' ? { type: 'fixed', value: w } : { type: 'pct', base: s.lift || 'bench', pct: 0.5 };
+      if (v === 'fixed') s.init = { type: 'fixed', value: w };
+      else if (v === 'model') s.init = { type: 'model' };
+      else s.init = { type: 'pct', base: s.lift || 'bench', pct: 0.5 };
     });
   },
   onBase(e) { const si = Number(e.currentTarget.dataset.si); this.slotMut(si, (s) => { s.init.base = GZ.LIFT_ORDER[Number(e.detail.value)]; }); },
