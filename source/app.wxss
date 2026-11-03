@@ -44,6 +44,8 @@ page {
 .cell + .cell::before { content: ''; position: absolute; top: 0; left: 32rpx; right: 0; height: 1rpx; background: var(--sep); }
 .cell.tap:active { background: var(--fill2); }
 .cell .val { color: var(--label2); }
+.f-in { width: 140rpx; height: 56rpx; text-align: right; font-size: 32rpx; color: var(--label); background: transparent; }
+.f-u { color: var(--label2); margin-left: 8rpx; font-size: 30rpx; }
 .chev { color: var(--label3); font-size: 30rpx; margin-left: 12rpx; }
 
 /* 分段控件 */

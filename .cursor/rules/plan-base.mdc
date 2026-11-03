@@ -12,6 +12,7 @@ alwaysApply: true
 - 底座 `BASE_KEYS`：`bodyWeight`、`barWeight`、`plates`、`rounding`、`shareProfile`（含头像、昵称、性别）
 - 切入 `onboarding`：资料与训练方向已下架，不在入口或设置里打开；字段仍留在档案里，不参与当前单机流程
 - 跨计划的 `oneRMProfile`：只用于新计划估算起始重量，不回写已暂停计划的历史
+- 跨计划的 `exerciseBaselines`：跟 `customLib` 一样留在档案上，不进某一套计划的 snap。非 GZCLP 播种走 `recommendWeight({ preferLast: false })`：跳过本计划上次重量，仍先用基线。GZCLP 的 T2/T3 首周是 `model` 槽，直接 `modelWeight`，不读基线。5/3/1 的训练最大重量仍按 1RM 向下取整
 
 ## 独立（属于某一套计划）
 

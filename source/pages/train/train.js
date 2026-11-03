@@ -158,8 +158,8 @@ Page({
     s.sel = name;
     const rec = GZ.recommendWeight(this.db(), name, s.slotTier, { preferLast: true });
     s.weight = String(rec.weight);
-    s.recText = rec.text; s.recUnit = rec.unit; s.recNote = rec.note; s.selEquip = rec.equip;
-    this.setData({ 'swap.sel': s.sel, 'swap.weight': s.weight, 'swap.recText': s.recText, 'swap.recUnit': s.recUnit, 'swap.recNote': s.recNote, 'swap.selEquip': s.selEquip });
+    s.recText = rec.text; s.recUnit = rec.unit; s.recNote = rec.note; s.recSourceLabel = rec.sourceLabel || ''; s.selEquip = rec.equip;
+    this.setData({ 'swap.sel': s.sel, 'swap.weight': s.weight, 'swap.recText': s.recText, 'swap.recUnit': s.recUnit, 'swap.recNote': s.recNote, 'swap.recSourceLabel': s.recSourceLabel, 'swap.selEquip': s.selEquip });
   },
   swapScope(e) { this.swapState.scope = e.currentTarget.dataset.s; this.setData({ 'swap.scope': this.swapState.scope }); },
   swapWeight(e) { this.swapState.weight = e.detail.value; },

@@ -1,4 +1,15 @@
 <view class="page">
+  <view class="sec-h">我的基线</view>
+  <view class="list" wx:if="{{baselines.length}}">
+    <view wx:for="{{baselines}}" wx:key="name" class="cell">
+      <text class="tier t-{{item.lastTier}}">{{item.lastTier}}</text>
+      <view class="flex1">{{item.name}}<text class="val"> · {{item.lastDate}}</text></view>
+      <input class="f-in num" type="digit" value="{{item.weightText}}" data-name="{{item.name}}" bindblur="onBaseline" />
+      <text class="f-u">kg</text>
+    </view>
+  </view>
+  <view class="sec-f" wx:else>练过的动作会自动出现在这里。</view>
+
   <view class="search"><text class="search-ic">⌕</text><input class="search-in" value="{{q}}" placeholder="搜索动作、部位或器械" placeholder-class="ph" bindinput="onQ" /></view>
   <view class="seg" wx:if="{{!q}}">
     <view wx:for="{{lib.tiers}}" wx:key="id" class="seg-i {{tier === item.id ? 'on' : ''}}" data-t="{{item.id}}" bindtap="onTier">{{item.label}}<text class="seg-n">{{item.n}}</text></view>

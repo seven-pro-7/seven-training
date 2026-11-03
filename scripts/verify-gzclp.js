@@ -590,6 +590,132 @@ check('零记录动作仍返回同一份趋势详情', function () {
   assert.strictEqual(GZ.exerciseDetail(db, '单臂哑铃划船').n, 0);
 });
 
+check('个人基线：瀑布、回写、播种、旧客户端合并', function () {
+  var db = GZ.normalize(GZ.defaults(false));
+  assert.deepStrictEqual(db.exerciseBaselines, {});
+  var model = GZ.recommendWeight(db, '平板卧推', 'T1', { preferLast: false });
+  assert.strictEqual(model.source, 'model');
+  assert.strictEqual(model.sourceLabel, '公式');
+  var cardio = GZ.recommendWeight(db, '跑步机坡走', 'T3');
+  assert.strictEqual(cardio.source, 'cardio');
+  var bw = GZ.recommendWeight(db, '引体向上', 'T2');
+  assert.strictEqual(bw.source, 'bodyweight');
+  assert.ok(GZ.setBaseline(db, '引体向上', 10).error);
+  assert.ok(GZ.setBaseline(db, '跑步机坡走', 10).error);
+
+  GZ.setBaseline(db, '平板卧推', 82.5, { source: 'manual', date: '2026-10-01' });
+  var base = GZ.recommendWeight(db, '平板卧推', 'T1', { preferLast: false });
+  assert.strictEqual(base.source, 'baseline');
+  assert.strictEqual(base.sourceLabel, '个人基线');
+  assert.strictEqual(base.weight, 82.5);
+
+  GZ.saveRecord(db, { date: '2026-10-20', day: 'A2', entries: { A2_1: { v: 5, w: 70 } } });
+  assert.strictEqual(db.exerciseBaselines['平板卧推'].lastWeight, 70);
+  assert.strictEqual(db.exerciseBaselines['平板卧推'].source, 'trained');
+  assert.strictEqual(db.exerciseBaselines['平板卧推'].lastTier, 'T1');
+  assert.strictEqual(db.exerciseBaselines['平板卧推'].lastDate, '2026-10-20');
+  var last = GZ.recommendWeight(db, '平板卧推', 'T1', { preferLast: true });
+  assert.strictEqual(last.source, 'last');
+  assert.strictEqual(last.sourceLabel, '上次');
+  assert.strictEqual(last.weight, 70);
+  var seeded = GZ.recommendWeight(db, '平板卧推', 'T1', { preferLast: false });
+  assert.strictEqual(seeded.source, 'baseline');
+  assert.strictEqual(seeded.weight, 70);
+
+  GZ.saveRecord(db, { date: '2026-10-02', day: 'A2', entries: { A2_1: { v: 3, w: 40 } } });
+  assert.strictEqual(db.exerciseBaselines['平板卧推'].lastWeight, 70);
+  GZ.saveRecord(db, { date: '2026-11-01', day: 'A2', deload: true, entries: { A2_1: { v: 5, w: 90 } } });
+  assert.strictEqual(db.exerciseBaselines['平板卧推'].lastWeight, 70);
+  GZ.saveRecord(db, { date: '2026-11-02', day: 'A2', entries: { A2_5: { v: 12, skip: true, w: 30 } } });
+  assert.ok(!db.exerciseBaselines['杠铃弯举']);
+  GZ.saveRecord(db, { date: '2026-11-02', day: 'B1', entries: { B1_3: { v: 8 } } });
+  assert.ok(!db.exerciseBaselines['引体向上']);
+
+  var phul = GZ.templateDef(db, 'phul');
+  var bench = null;
+  phul.days.forEach(function (d) { d.slots.forEach(function (s) { if (s.name === '平板卧推') bench = s; }); });
+  assert.ok(bench);
+  assert.strictEqual(bench.init.value, 70);
+  GZ.startProgram(db, phul);
+  var card = GZ.buildTrain(db).items.filter(function (it) { return it.name === '平板卧推'; })[0];
+  assert.ok(card);
+  assert.strictEqual(card.weight, 70);
+  assert.strictEqual(card.recSourceLabel, '个人基线');
+
+  db.exerciseBaselines['卷腹'] = { lastWeight: 20, lastTier: 'T3', equip: '自重', source: 'trained', lastDate: '2026-10-01', updatedAt: 1 };
+  db = GZ.normalize(db);
+  assert.ok(!db.exerciseBaselines['卷腹']);
+  assert.strictEqual(db.exerciseBaselines['平板卧推'].lastWeight, 70);
+
+  var old = JSON.parse(JSON.stringify(db));
+  delete old.exerciseBaselines;
+  old.cfgAt = (db.cfgAt || 0) + 10;
+  old.params.bodyWeight = 71;
+  var merged = GZ.mergeDb(db, old);
+  assert.strictEqual(merged.exerciseBaselines['平板卧推'].lastWeight, 70);
+  assert.strictEqual(merged.params.bodyWeight, 71);
+  assert.ok(GZ.cfgPart(db).indexOf('平板卧推') >= 0);
+});
+
+check('个人基线不改 GZCLP 模型周，非 GZCLP 播种仍先用基线', function () {
+  var db = GZ.normalize(GZ.defaults(false));
+  GZ.saveRecord(db, { date: '2026-10-20', day: 'A2', entries: { A2_1: { v: 5, w: 60 } } });
+  assert.strictEqual(db.exerciseBaselines['平板卧推'].lastWeight, 60);
+  GZ.setBaseline(db, '平板卧推', 82.5, { source: 'manual', date: '2026-10-21' });
+  var last = GZ.recommendWeight(db, '平板卧推', 'T1', { preferLast: true });
+  assert.strictEqual(last.source, 'last');
+  assert.strictEqual(last.weight, 60);
+  var seeded = GZ.recommendWeight(db, '平板卧推', 'T1', { preferLast: false });
+  assert.strictEqual(seeded.source, 'baseline');
+  assert.strictEqual(seeded.weight, 82.5);
+  var benchNow = GZ.buildTrain(db, { day: 'A2' }).items.filter(function (it) { return it.name === '平板卧推'; })[0];
+  assert.notStrictEqual(benchNow.weight, 82.5);
+
+  GZ.setBaseline(db, '罗马尼亚硬拉', 90, { source: 'manual', date: '2026-10-21' });
+  GZ.setBaseline(db, '哑铃侧平举', 12, { source: 'manual', date: '2026-10-21' });
+  var gz = GZ.templateDef(db, 'gzclp');
+  gz.days.forEach(function (d) {
+    d.slots.forEach(function (s) {
+      if (s.tier === 'T1') {
+        assert.strictEqual(s.init.type, 'pct', s.id);
+        return;
+      }
+      assert.strictEqual(s.init.type, 'model', s.id);
+      assert.strictEqual(GZ.initWeight(s, db.params), GZ.modelWeight(db.params, GZ.libFindIn(db, s.name), s.tier).weight, s.name);
+    });
+  });
+  var rdl = GZ.buildTrain(db, { day: 'A1' }).items.filter(function (it) { return it.name === '罗马尼亚硬拉'; })[0];
+  var rdlModel = GZ.modelWeight(db.params, GZ.libFindIn(db, '罗马尼亚硬拉'), 'T2').weight;
+  assert.strictEqual(rdl.weight, rdlModel);
+  assert.notStrictEqual(rdl.weight, 90);
+  assert.strictEqual(rdl.recSourceLabel, '');
+
+  var phul = GZ.templateDef(db, 'phul');
+  var bench = null, incline = null;
+  phul.days.forEach(function (d) { d.slots.forEach(function (s) {
+    if (s.name === '平板卧推' && s.tier === 'T1') bench = s;
+    if (s.name === '上斜哑铃卧推') incline = s;
+  }); });
+  assert.strictEqual(bench.init.value, 82.5);
+  assert.strictEqual(incline.init.value, GZ.modelWeight(db.params, GZ.libFindIn(db, '上斜哑铃卧推'), 'T2').weight);
+
+  GZ.setBaseline(db, '站姿实力推', 40, { source: 'manual', date: '2026-10-21' });
+  GZ.setBaseline(db, '高位下拉', 55, { source: 'manual', date: '2026-10-21' });
+  var five = GZ.templateDef(db, '531');
+  var ohp = five.days[0].slots[0];
+  var lat = five.days[0].slots.filter(function (s) { return s.name === '高位下拉'; })[0];
+  assert.strictEqual(ohp.name, '站姿实力推');
+  assert.strictEqual(ohp.init.value, 25);
+  assert.notStrictEqual(ohp.init.value, 40);
+  assert.strictEqual(lat.init.value, 55);
+
+  GZ.startProgram(db, phul);
+  var card = GZ.buildTrain(db).items.filter(function (it) { return it.name === '平板卧推'; })[0];
+  assert.ok(card);
+  assert.strictEqual(card.weight, 82.5);
+  assert.strictEqual(card.recSourceLabel, '个人基线');
+});
+
 check('进行中的训练：空白草稿不算已填写', function () {
   var db = GZ.normalize(GZ.defaults(false));
   var blank = GZ.packOpenSession({ day: 'A1', draft: GZ.blankDraft(db, 'A1'), drafts: {}, date: GZ.today(), bw: '', note: '' });

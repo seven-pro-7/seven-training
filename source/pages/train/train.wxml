@@ -90,7 +90,8 @@
       <view class="wbox bw-only" wx:else><text class="w-num bw-text">自重</text></view>
       <text class="reps num">{{item.repsText}}</text>
     </view>
-    <view class="ex-sub" wx:if="{{item.manual || item.plates || item.fail > 0}}">
+    <view class="ex-sub" wx:if="{{item.recSourceLabel || item.manual || item.plates || item.fail > 0}}">
+      <text wx:if="{{item.recSourceLabel}}">{{item.recSourceLabel}}{{item.manual || item.plates || item.fail > 0 ? ' · ' : ''}}</text>
       <text class="accent" wx:if="{{item.manual}}">已手动调整 · 建议 {{item.autoText}} kg{{item.plates || item.fail > 0 ? ' · ' : ''}}</text>
       <text wx:if="{{item.plates}}">{{item.plates}}</text>
       <text class="amber" wx:if="{{item.fail > 0}}">{{item.plates ? ' · ' : ''}}已预警 {{item.fail}} 次</text>
@@ -221,7 +222,7 @@
           <view class="seg-i {{swap.scope === 'once' ? 'on' : ''}}" data-s="once" bindtap="swapScope">仅本次</view>
           <view class="seg-i {{swap.scope === 'perm' ? 'on' : ''}}" data-s="perm" bindtap="swapScope">以后都用</view>
         </view>
-        <view class="swap-rec"><text class="equip-tag eq-{{swap.selEquip}}">{{swap.selEquip}}{{swap.selEquip === '哑铃' ? '·单只' : swap.selEquip === '负重' ? '·外加' : ''}}</text><view><view class="swap-rec-v">推荐 {{swap.recText}} {{swap.recUnit === '自重' ? '' : swap.recUnit}}</view><view class="swap-rec-n">{{swap.recNote}}</view></view></view>
+        <view class="swap-rec"><text class="equip-tag eq-{{swap.selEquip}}">{{swap.selEquip}}{{swap.selEquip === '哑铃' ? '·单只' : swap.selEquip === '负重' ? '·外加' : ''}}</text><view><view class="swap-rec-v">推荐 {{swap.recText}} {{swap.recUnit === '自重' ? '' : swap.recUnit}}</view><view class="swap-rec-n">{{swap.recSourceLabel}}{{swap.recSourceLabel && swap.recNote ? ' · ' : ''}}{{swap.recNote}}</view></view></view>
         <view class="list" wx:if="{{swap.scope === 'perm' && swap.selEquip !== '自重'}}">
           <view class="cell"><text class="flex1">起始重量</text><input class="cell-in num" type="digit" value="{{swap.weight}}" bindinput="swapWeight" /><text class="unit">{{swap.recUnit}}</text></view>
         </view>

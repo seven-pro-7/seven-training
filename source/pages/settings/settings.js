@@ -47,6 +47,7 @@ Page({
     const pRules = GZ.progressionRules ? GZ.progressionRules(curProg) : { name: curProg, summary: '' };
     this.setData({
       p: P, profile: Share.profile(P.shareProfile), isGz, mainLabel: GZ.tierLabel(curProg, 'T1'), progName: pRules.name, progSummary: pRules.summary, ruleNote: GZ.ruleModeNote(P), days, libCount: GZ.libAll(db).length, customCount: db.customLib.length, recordCount: db.records.length, tmPct: Math.round(P.tmRatio * 100), backupText: GZ.backupLabel(store.lastBackup()),
+      baselineText: Object.keys(db.exerciseBaselines || {}).length ? Object.keys(db.exerciseBaselines).length + ' 个' : '练过自动记下',
       lifts: GZ.LIFT_ORDER.map((k) => ({ key: k, name: GZ.LIFTS[k], oneRM: P.oneRM[k], tm: GZ.fmtW(GZ.tm(P, k)) })),
       steps: GZ.STEP_KEYS.map((s) => ({ key: s.key, label: s.label, note: s.note, v: P.steps[s.key] }))
     });
@@ -92,6 +93,7 @@ Page({
     wx.showToast({ title: r && r.base ? '已更换为 ' + name : '第 ' + r.fromWeek + ' 周起改为 ' + name, icon: 'none' });
   },
   openLib() { wx.navigateTo({ url: '/pages/library/library' }); },
+  openBaselines() { wx.navigateTo({ url: '/pages/library/library' }); },
   onInitType(e) {
     const si = Number(e.currentTarget.dataset.si), v = e.currentTarget.dataset.v;
     this.slotMut(si, (s, db) => {
