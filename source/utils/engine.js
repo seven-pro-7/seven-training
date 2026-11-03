@@ -2472,6 +2472,140 @@
     return nd;
   }
 
+  // ================= 本机持久化：进行中的训练 & 启动时选哪一份档案 =================
+  function entryTouched(e) {
+    if (!e || typeof e !== 'object') return false;
+    if (e.v !== null && e.v !== undefined && e.v !== '') return true;
+    if (e.done) return true;
+    if (e.skip || e.miss || e.ex) return true;
+    if (e.w !== undefined && e.w !== null && e.w !== '') return true;
+    if (e.reps !== undefined && e.reps !== null && e.reps !== '') return true;
+    if (e.new5RM || e.new10RM) return true;
+    if (e.sets && e.sets.length) {
+      for (var i = 0; i < e.sets.length; i++) {
+        var n = e.sets[i];
+        if (n !== null && n !== undefined && n !== '') return true;
+      }
+    }
+    return false;
+  }
+  function draftTouched(draft) {
+    if (!draft || typeof draft !== 'object') return false;
+    var keys = Object.keys(draft);
+    for (var i = 0; i < keys.length; i++) if (entryTouched(draft[keys[i]])) return true;
+    return false;
+  }
+  /**
+   * 进行中的训练有没有用户填过的内容。
+   * 刚打开训练页时的空白草稿不算，避免每次启动都把空状态写进存储、把上次没写完的盖掉。
+   */
+  function sessionTouched(snap) {
+    if (!snap || typeof snap !== 'object') return false;
+    if (snap.recordId) return true;
+    if (snap.bw) return true;
+    if (snap.note) return true;
+    if (snap.deload) return true;
+    if (snap.date && snap.date !== today()) return true;
+    var deloads = snap.deloads || {};
+    var dk = Object.keys(deloads);
+    for (var d = 0; d < dk.length; d++) if (deloads[dk[d]]) return true;
+    if (draftTouched(snap.draft)) return true;
+    var drafts = snap.drafts || {};
+    var days = Object.keys(drafts);
+    for (var i = 0; i < days.length; i++) if (draftTouched(drafts[days[i]])) return true;
+    return false;
+  }
+  /** 把训练页上还没点「完成训练」的内容收成一份可存档的快照（不进训练记录，不参与进阶回放） */
+  function packOpenSession(t) {
+    t = t || {};
+    var drafts = {};
+    if (t.drafts) Object.keys(t.drafts).forEach(function (k) { drafts[k] = t.drafts[k]; });
+    if (t.day && t.draft) drafts[t.day] = t.draft;
+    return {
+      v: 1,
+      savedAt: Date.now(),
+      day: t.day || null,
+      drafts: drafts,
+      deloads: t.deloads || null,
+      focusByDay: t.focusByDay || null,
+      focus: t.focus || null,
+      focusKey: t.focusKey || '',
+      date: t.date || null,
+      bw: t.bw != null ? String(t.bw) : '',
+      note: t.note != null ? String(t.note) : '',
+      recordId: t.recordId || null,
+      createdAt: t.createdAt || null,
+      deload: t.deload
+    };
+  }
+  /** 把存档快照填回训练页状态。没有用户内容时不改状态，返回 false */
+  function applyOpenSession(t, snap) {
+    if (!sessionTouched(snap)) return false;
+    var copy = JSON.parse(JSON.stringify(snap));
+    t.day = copy.day || null;
+    t.drafts = copy.drafts || {};
+    t.deloads = copy.deloads || {};
+    t.focusByDay = copy.focusByDay || {};
+    t.focus = copy.focus || null;
+    t.focusKey = copy.focusKey || '';
+    if (copy.date) t.date = copy.date;
+    t.bw = copy.bw || '';
+    t.note = copy.note || '';
+    t.recordId = copy.recordId || null;
+    t.createdAt = copy.createdAt || null;
+    t.deload = copy.deload;
+    t.draft = (t.day && t.drafts[t.day]) || null;
+    return true;
+  }
+  function pickOpenSession(local, backup) {
+    var a = sessionTouched(local) ? local : null;
+    var b = sessionTouched(backup) ? backup : null;
+    if (!a || !b) return a || b || null;
+    return (b.savedAt || 0) > (a.savedAt || 0) ? b : a;
+  }
+  function usableDb(d) {
+    return !!(d && typeof d === 'object' && d.params && Array.isArray(d.days));
+  }
+  /** 档案新旧：配置时间、记录修改时间、删除标记，取最晚的一个 */
+  function dbStamp(d) {
+    if (!d) return 0;
+    var stamp = d.cfgAt || 0;
+    (d.records || []).forEach(function (r) {
+      var t = r.updatedAt || r.createdAt || 0;
+      if (t > stamp) stamp = t;
+    });
+    var tomb = d.tomb || {};
+    Object.keys(tomb).forEach(function (id) { if (tomb[id] > stamp) stamp = tomb[id]; });
+    return stamp;
+  }
+  /**
+   * 两份都能用的档案里留更新的那份。
+   * 时间相同则留下记录更多的（空档案盖住完整档案时，以还有记录的那份为准）。
+   * 完全相同则留 local，避免每次启动来回写。
+   */
+  function pickStoredDb(local, backup) {
+    var a = usableDb(local) ? local : null;
+    var b = usableDb(backup) ? backup : null;
+    if (!a || !b) return a || b || null;
+    var as = dbStamp(a), bs = dbStamp(b);
+    if (as !== bs) return bs > as ? b : a;
+    var ar = (a.records || []).length, br = (b.records || []).length;
+    if (ar !== br) return br > ar ? b : a;
+    return a;
+  }
+  /**
+   * 启动时能不能写一份初始空档案。
+   * localStatus: 'ok' | 'missing' | 'corrupt' | 'error'
+   * 键不存在、并且备份里也没有档案，才允许写入默认值。
+   * 读抛错或 JSON 损坏时不写，避免把已有 localStorage 盖成空数据。
+   */
+  function storageDecision(localStatus, localValue, backup) {
+    var local = localStatus === 'ok' ? localValue : null;
+    var picked = pickStoredDb(local, backup);
+    var writeDefault = !picked && (localStatus === 'missing' || (localStatus === 'ok' && localValue == null));
+    return { db: picked, writeDefault: writeDefault, writeBack: !!(picked && picked !== local) };
+  }
+
   // ================= 多设备同步：合并 =================
   /** 配置部分（参数、四天动作、自定义动作库）——任何一项变化都会刷新 cfgAt */
   function cfgPart(db) { return JSON.stringify([db.params, db.days, db.customLib || [], db.daysVersion, db.programs || null, db.activeProgramId || null, db.onboarding || null]); }
@@ -3213,6 +3347,8 @@
     evaluate: evaluate, replay: replay, recommend: recommend, isDeloadWeek: isDeloadWeek, dayById: dayById,
     blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
     saveRecord: saveRecord, deleteRecord: deleteRecord, clearRecords: clearRecords, replaceDb: replaceDb, mergeDb: mergeDb, sameDb: sameDb, stampConfig: stampConfig, cfgPart: cfgPart, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
+    sessionTouched: sessionTouched, packOpenSession: packOpenSession, applyOpenSession: applyOpenSession, pickOpenSession: pickOpenSession,
+    usableDb: usableDb, dbStamp: dbStamp, pickStoredDb: pickStoredDb, storageDecision: storageDecision,
     libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, PATTERNS: PATTERNS, patternOfPart: patternOfPart, slotCategory: slotCategory, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
