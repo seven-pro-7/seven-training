@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly, Weekly = window.GZWeekly;
-  var KEY = 'training_db_v1', BK = 'training_last_backup', SYNC_KEY = 'training_sync_v1', WATCH_KEY = 'training_watch_v1', BK_DISMISS = 'training_bk_dismiss';
+  var KEY = 'training_db_v1', BK = 'training_last_backup', SYNC_KEY = 'training_sync_v1', WATCH_KEY = 'training_watch_v1', BK_DISMISS = 'training_bk_dismiss', OPEN_KEY = 'training_open_v1';
   [['training_db_v1', 'gzclp_db_v1'], ['training_last_backup', 'gzclp_last_backup'], ['training_sync_v1', 'gzclp_sync_v1'], ['training_watch_v1', 'gzclp_watch_v1'], ['training_bk_dismiss', 'gzclp_bk_dismiss']].forEach(function (pair) {
     try { if (localStorage.getItem(pair[0]) == null && localStorage.getItem(pair[1]) != null) localStorage.setItem(pair[0], localStorage.getItem(pair[1])); } catch (e) {}
   });
@@ -54,38 +54,197 @@
     return items;
   }
 
-  function rawLoad() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
+  /**
+   * 读一个 JSON 键。status 区分「没有这个键」和「读失败 / 内容损坏」：
+   * 后两种不能当成新用户，否则紧接着写入默认档案会把已有数据清掉。
+   */
+  function readJson(key) {
+    var text;
+    try { text = localStorage.getItem(key); }
+    catch (e) { return { status: 'error', value: null }; }
+    if (text == null) return { status: 'missing', value: null };
+    try { return { status: 'ok', value: JSON.parse(text) }; }
+    catch (e) { return { status: 'corrupt', value: null }; }
+  }
+  function rawLoad() { var r = readJson(KEY); return r.status === 'ok' ? r.value : null; }
+  var idbPromise = null;
+  function idbDb() {
+    if (!idbPromise) {
+      idbPromise = new Promise(function (resolve, reject) {
+        if (!window.indexedDB) { reject(new Error('no idb')); return; }
+        var req = indexedDB.open('seven-training', 1);
+        req.onupgradeneeded = function () {
+          if (!req.result.objectStoreNames.contains('kv')) req.result.createObjectStore('kv');
+        };
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { idbPromise = null; reject(req.error); };
+      });
+    }
+    return idbPromise;
+  }
+  function idbPut(key, value) {
+    return idbDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('kv', 'readwrite');
+        var store = tx.objectStore('kv');
+        if (value == null) store.delete(key); else store.put(value, key);
+        tx.oncomplete = function () { resolve(); };
+        tx.onerror = function () { reject(tx.error); };
+        tx.onabort = function () { reject(tx.error || new Error('abort')); };
+      });
+    }).catch(function () {});
+  }
+  function idbGet(key) {
+    return idbDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('kv', 'readonly');
+        var req = tx.objectStore('kv').get(key);
+        req.onsuccess = function () { resolve(req.result == null ? null : req.result); };
+        req.onerror = function () { reject(req.error); };
+      });
+    });
+  }
+  function idbGetOrNull(key) {
+    return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () { if (!done) { done = true; resolve({ timedOut: true, value: null }); } }, 1500);
+      idbGet(key).then(function (v) {
+        if (done) return; done = true; clearTimeout(timer); resolve({ timedOut: false, value: v == null ? null : v });
+      }, function () {
+        if (done) return; done = true; clearTimeout(timer); resolve({ timedOut: false, value: null });
+      });
+    });
+  }
+  function cloneJson(value) { return JSON.parse(JSON.stringify(value)); }
+  /** 同时写入 localStorage 和 IndexedDB。localStorage 写失败时仍尽量留下 IndexedDB 副本 */
+  function writeJson(key, value) {
+    var snap = cloneJson(value);
+    try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) {}
+    idbPut(key, snap);
+  }
+  function removeJson(key) {
+    try { localStorage.removeItem(key); } catch (e) {}
+    idbPut(key, null);
+  }
+  function quarantineCorrupt() {
+    try {
+      var text = localStorage.getItem(KEY);
+      if (text != null) localStorage.setItem(KEY + '_corrupt', text);
+    } catch (e) {}
+  }
   /** 手表数据单独存放（不进训练数据文件，避免每次拉取都触发配置冲突与重复推送） */
-  function watchLoad() { try { return JSON.parse(localStorage.getItem(WATCH_KEY)) || null; } catch (e) { return null; } }
-  function watchSave(w) { if (w) localStorage.setItem(WATCH_KEY, JSON.stringify(w)); else localStorage.removeItem(WATCH_KEY); }
+  function watchLoad() { var r = readJson(WATCH_KEY); return r.status === 'ok' ? (r.value || null) : null; }
+  function watchSave(w) { if (w) writeJson(WATCH_KEY, w); else removeJson(WATCH_KEY); }
   function load() {
-    var raw = rawLoad(), prevDays = raw ? raw.daysVersion : undefined;
-    var db = raw; if (!db) { db = GZ.defaults(false); save(db, { fromSync: true }); }
+    var read = readJson(KEY);
+    var raw = read.status === 'ok' ? read.value : null;
+    var had = !!(raw && raw.params && raw.days);
+    var prevDays = had ? raw.daysVersion : undefined;
+    // 没有可读档案时只在内存里用空默认值。不要在这里 save：读失败或 JSON 损坏会被当成新用户，把原键盖掉。
+    var db = had ? raw : GZ.defaults(false);
     db = GZ.normalize(db);
     var w = watchLoad();
     // 旧版把手表数据放在 params.watch：并入独立存储后从主数据里拿掉
-    if (db.params.watch) {
+    if (had && db.params.watch) {
       w = Badges.mergeWatch(w, { source: db.params.watch.source, workouts: db.params.watch.workouts || [], sleep: db.params.watch.sleep || {} });
       watchSave(w); delete db.params.watch;
       // 主数据里的旧副本必须落盘去掉，否则会被反复合并、甚至用旧值覆盖刚拉取的
-      var stored = rawLoad(); if (stored && stored.params) { delete stored.params.watch; localStorage.setItem(KEY, JSON.stringify(stored)); }
+      var stored = rawLoad(); if (stored && stored.params) { delete stored.params.watch; writeJson(KEY, stored); }
     }
-    if (raw && prevDays !== db.daysVersion) {
+    if (had && prevDays !== db.daysVersion) {
       var snap = JSON.parse(JSON.stringify(db));
       if (snap.params && snap.params.watch) delete snap.params.watch;
-      localStorage.setItem(KEY, JSON.stringify(snap));
+      writeJson(KEY, snap);
     }
     if (w) db.params.watch = w;
     return db;
   }
   /** 保存到本机；用户操作产生的保存会记下配置修改时间，并在 2 秒后自动同步到云端 */
   function save(db, opt) {
+    var read = readJson(KEY);
+    // 本机键读不出来时不写。一次失败的读取配上一份内存空档案，会把计划、1RM 和训练记录一起清掉。
+    if (read.status === 'error') return;
+    if (read.status === 'corrupt') quarantineCorrupt();
     var fromSync = opt && opt.fromSync, hasW = Object.prototype.hasOwnProperty.call(db.params || {}, 'watch'), w = hasW ? db.params.watch : undefined;
     if (hasW) { delete db.params.watch; watchSave(w || null); }  // 手表数据走独立键；主数据里不留
-    if (!fromSync) { var prev = rawLoad(); if (prev) { prev = GZ.normalize(prev); delete prev.params.watch; GZ.stampConfig(prev, db); } }
-    localStorage.setItem(KEY, JSON.stringify(db));
+    if (!fromSync) { var prev = rawLoad(); if (prev && prev.params && prev.days) { prev = GZ.normalize(prev); delete prev.params.watch; GZ.stampConfig(prev, db); } }
+    writeJson(KEY, db);
     if (hasW && w) db.params.watch = w;  // 调用方继续拿到完整对象
     if (!fromSync) Sync.schedule();
+  }
+  var bootReady = false, restoredOpen = null;
+  /** 启动：localStorage 与 IndexedDB 里留更新的那份。只有两边都没有档案时才写入空的初始档案 */
+  function boot() {
+    var read = readJson(KEY);
+    var local = read.status === 'ok' ? read.value : null;
+    return idbGetOrNull(KEY).then(function (got) {
+      var backup = got.value;
+      // 备份还没打开时，不能认定「没有档案」然后写入空的初始数据
+      if (got.timedOut && !GZ.usableDb(local)) return bootOpen();
+      var decision = GZ.storageDecision(read.status, local, backup || null);
+      if (decision.writeBack && decision.db) {
+        if (read.status === 'corrupt') quarantineCorrupt();
+        writeJson(KEY, decision.db);
+      } else if (decision.db) {
+        idbPut(KEY, cloneJson(decision.db));
+      } else if (decision.writeDefault) {
+        save(GZ.defaults(false), { fromSync: true });
+      }
+      return bootOpen();
+    });
+  }
+  function bootOpen() {
+    var read = readJson(OPEN_KEY);
+    var local = read.status === 'ok' ? read.value : null;
+    return idbGetOrNull(OPEN_KEY).then(function (got) {
+      var backup = got.timedOut ? null : got.value;
+      var picked = GZ.pickOpenSession(local, backup || null);
+      restoredOpen = GZ.sessionTouched(picked) ? picked : null;
+      if (!restoredOpen) return;
+      if (read.status !== 'ok' || local !== restoredOpen) writeJson(OPEN_KEY, restoredOpen);
+      else idbPut(OPEN_KEY, cloneJson(restoredOpen));
+    });
+  }
+  function tryRestoreOpen() {
+    if (!restoredOpen) return;
+    GZ.applyOpenSession(S.train, restoredOpen);
+    if (S.train.recordId && !GZ.getRecord(load(), S.train.recordId)) {
+      S.train.recordId = null;
+      S.train.createdAt = null;
+    }
+  }
+  /** 把还没提交的训练写到 training_open_v1。空白草稿会删掉这个键，避免盖住以后真正填过的内容 */
+  function persistOpen() {
+    if (!bootReady) return;
+    var t = S.train;
+    if (t.day && t.draft) {
+      if (!t.drafts) t.drafts = {};
+      t.drafts[t.day] = t.draft;
+    }
+    if (t.day) {
+      if (!t.deloads) t.deloads = {};
+      if (t.deload) t.deloads[t.day] = true; else delete t.deloads[t.day];
+    }
+    var snap = GZ.packOpenSession(t);
+    if (!GZ.sessionTouched(snap)) { removeJson(OPEN_KEY); return; }
+    writeJson(OPEN_KEY, snap);
+  }
+  var LIVE_INPUT = { amrap: 1, setin: 1, '5rm': 1, reps: 1, winput: 1, note: 1, bw: 1, date: 1 };
+  /** 切到后台或刷新前，把还没触发 change 的输入框收进草稿 */
+  function captureOpenInputs() {
+    var root = document.getElementById('body');
+    if (!root || S.tab !== 'train') return;
+    var fields = root.querySelectorAll('input[data-act], textarea[data-act]');
+    for (var i = 0; i < fields.length; i++) {
+      var el = fields[i], act = el.getAttribute('data-act');
+      if (!LIVE_INPUT[act]) continue;
+      try { trainAct(act, el.dataset, el); } catch (e) {}
+    }
+  }
+  function flushOpen() {
+    if (!bootReady) return;
+    captureOpenInputs();
+    persistOpen();
   }
 
   // ================= 云同步（GitHub 私有仓库） =================
@@ -128,6 +287,12 @@
     /** 一次完整同步：拉取 → 合并 → 写回本机（有变化时）→ 推送（云端不同时） */
     function run(manual) {
       var c = cfg(); if (!on()) return Promise.resolve(false);
+      var gate = readJson(KEY);
+      // 本机档案读不出来时不同步，避免用空档案合并后写回本机和云端
+      if (gate.status === 'error' || gate.status === 'corrupt') {
+        if (manual) toast('本机数据暂时读不出来，已停止同步，以免用空档案覆盖');
+        return Promise.resolve(false);
+      }
       if (busy) { again = true; return Promise.resolve(false); }
       busy = true; c.state = 'syncing'; setCfg(c); refresh();
       var attempt = function (n) {
@@ -150,18 +315,29 @@
             remote = GZ.normalize(rawRemoteObj);
             if (remote.params.watch) { var ow = remote.params.watch; delete remote.params.watch; try { watchSave(Badges.mergeWatch(watchLoad(), { source: ow.source, workouts: ow.workouts || [], sleep: ow.sleep || {} })); } catch (e) {} }
           }
-          var raw = rawLoad(), localVer = raw && raw.daysVersion, local = GZ.normalize(raw || GZ.defaults(false)), merged = GZ.mergeDb(local, remote);
-          var remoteChanged = g.status === 200 && remoteVer !== remote.daysVersion;
-          var localChanged = !!(raw && localVer !== local.daysVersion);
-          var pulled = !GZ.sameDb(merged, local);
-          if (pulled || !raw || localChanged) save(merged, { fromSync: true });
-          if (remote && GZ.sameDb(merged, remote) && !g.legacyFile && !remoteChanged) return { pulled: pulled, pushed: false, n: merged.records.length };
-          var body = { message: '同步训练数据 · ' + GZ.today() + ' · ' + merged.records.length + ' 条记录', content: b64enc(JSON.stringify(merged)) };
-          if (sha) body.sha = sha;
-          return req(c, 'PUT', filePath(c), body).then(function (pr) {
-            if ((pr.status === 409 || pr.status === 422) && n < 2) return attempt(n + 1); // 云端刚被别的设备改过：重新拉取合并
-            if (pr.status !== 200 && pr.status !== 201) throw pr.status;
-            return { pulled: pulled, pushed: true, n: merged.records.length };
+          var rawRead = readJson(KEY);
+          if (rawRead.status === 'error' || rawRead.status === 'corrupt') throw 'keep-local';
+          function finish(raw) {
+            var localVer = raw && raw.daysVersion, local = GZ.normalize(raw || GZ.defaults(false)), merged = GZ.mergeDb(local, remote);
+            var remoteChanged = g.status === 200 && remoteVer !== remote.daysVersion;
+            var localChanged = !!(raw && localVer !== local.daysVersion);
+            var pulled = !GZ.sameDb(merged, local);
+            if (pulled || !raw || localChanged) save(merged, { fromSync: true });
+            if (remote && GZ.sameDb(merged, remote) && !g.legacyFile && !remoteChanged) return { pulled: pulled, pushed: false, n: merged.records.length };
+            var body = { message: '同步训练数据 · ' + GZ.today() + ' · ' + merged.records.length + ' 条记录', content: b64enc(JSON.stringify(merged)) };
+            if (sha) body.sha = sha;
+            return req(c, 'PUT', filePath(c), body).then(function (pr) {
+              if ((pr.status === 409 || pr.status === 422) && n < 2) return attempt(n + 1); // 云端刚被别的设备改过：重新拉取合并
+              if (pr.status !== 200 && pr.status !== 201) throw pr.status;
+              return { pulled: pulled, pushed: true, n: merged.records.length };
+            });
+          }
+          var raw = rawRead.status === 'ok' ? rawRead.value : null;
+          if (GZ.usableDb(raw)) return finish(raw);
+          // localStorage 是空的时先看 IndexedDB，避免用空档案去覆盖还有记录的备份
+          return idbGetOrNull(KEY).then(function (got) {
+            if (!got.timedOut && GZ.usableDb(got.value)) { writeJson(KEY, got.value); return finish(got.value); }
+            return finish(raw);
           });
         });
       };
@@ -174,7 +350,12 @@
         if (again) { again = false; run(); }
         return true;
       }, function (st) {
-        busy = false; c = cfg(); if (!c) return false;
+        busy = false;
+        if (st === 'keep-local') {
+          c = cfg(); if (c && c.state === 'syncing') { c.state = 'ok'; setCfg(c); }
+          return false;
+        }
+        c = cfg(); if (!c) return false;
         c.state = 'err'; c.lastErr = errMsg(st); c.errAt = Date.now(); setCfg(c);
         if (manual) toast(c.lastErr);
         refresh(false);
@@ -653,6 +834,7 @@
         items: s.items.map(function (it) { return { tier: it.tier, badge: it.badge, name: it.name, j: it.judgment, color: GZ.JUDGE_COLORS[it.judgment], next: it.deload || it.judgment === '跳过' ? '—' : it.sub ? GZ.fmtW(it.weight) + ' kg · 替代 ' + it.origName : it.inputMode === 'cardio' ? it.nextStage : GZ.fmtW(it.barNext != null ? it.barNext : it.nextWeight) + ' kg · ' + it.nextStage }; }) } : null;
       dropTrainDay(t.day);
       t.recordId = null; t.deload = undefined; t.day = GZ.recommend(db).day; t.draft = null; t.focus = null; t.focusKey = ''; t.bw = ''; t.note = ''; t.date = GZ.today();
+      persistOpen();
       render();
     };
     if (missing.length) confirmBox('还有未填写的动作', missing.map(function (m) { return m.name; }).join('、') + ' 将按“跳过”保存，状态保持不变。', go); else go();
@@ -971,6 +1153,7 @@
     t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; t.focus = null; t.result = null; t.focusKey = '';
     clearTrainDays();
     S.plan.cycle = 0; S.plan.ov = 0; S.plan.slot = null; S.plan.detail = null;
+    persistOpen();
   }
   function planAct(act, ds, el) {
     var p = S.plan;
@@ -1774,7 +1957,7 @@
     markBackup(); render(true); toast('已下载备份文件');
   }
   function importText(txt) {
-    try { var inc = JSON.parse(txt); if (!inc || !inc.params || !inc.days) throw 0; save(GZ.replaceDb(load(), inc)); S.settings.imp = false; S.train.draft = null; S.train.day = null; clearTrainDays(); toast('恢复成功'); render(true); }
+    try { var inc = JSON.parse(txt); if (!inc || !inc.params || !inc.days) throw 0; save(GZ.replaceDb(load(), inc)); S.settings.imp = false; S.train.draft = null; S.train.day = null; S.train.recordId = null; S.train.bw = ''; S.train.note = ''; clearTrainDays(); persistOpen(); toast('恢复成功'); render(true); }
     catch (e) { toast('文件内容不正确'); }
   }
   function importWatch(txt) {
@@ -1874,8 +2057,8 @@
       case 'watchclear': confirmBox('清除手表数据？', '只清除导入的手表快照；训练记录不受影响。手表系列的里程碑会重新变为未获得。', function () { mutate(function (db) { db.params.watch = null; var c = Sync.cfg(); if (c) { c.watchAt = 0; c.watchErr = ''; localStorage.setItem(SYNC_KEY, JSON.stringify(c)); } }, '已清除手表数据'); st.wpaste = false; render(true); }); return false;
       case 'imp': st.imp = !st.imp; return true;
       case 'doImp': importText(document.getElementById('impText').value); return false;
-      case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { GZ.clearRecords(db); }, '已清空'); S.train.draft = null; S.train.day = null; clearTrainDays(); render(true); }); return false;
-      case 'restore': confirmBox('恢复 Excel 默认？', '参数、动作配置与记录将恢复为表格初始状态（含第 1 周 A1/B1 记录）。', function () { save(GZ.replaceDb(load(), GZ.defaults(true))); S.train = { day: null, draft: null, recordId: null, date: GZ.today(), bw: '', note: '', result: null }; render(true); toast('已恢复'); }); return false;
+      case 'clear': confirmBox('清空全部训练记录？', '参数与动作配置保留，记录无法恢复。', function () { mutate(function (db) { GZ.clearRecords(db); }, '已清空'); S.train.draft = null; S.train.day = null; S.train.recordId = null; S.train.bw = ''; S.train.note = ''; clearTrainDays(); persistOpen(); render(true); }); return false;
+      case 'restore': confirmBox('恢复 Excel 默认？', '参数、动作配置与记录将恢复为表格初始状态（含第 1 周 A1/B1 记录）。', function () { save(GZ.replaceDb(load(), GZ.defaults(true))); S.train = { day: null, draft: null, recordId: null, date: GZ.today(), bw: '', note: '', result: null }; persistOpen(); render(true); toast('已恢复'); }); return false;
     }
   }
 
@@ -1933,6 +2116,12 @@
     var tag = el.tagName, isField = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
     if (type === 'click' && isField) return;
     if (type === 'change' && !isField) return;
+    // 次数、重量、体重、备注在输入过程中就落盘，不等失焦。失焦前切到后台时，这些值也还在。
+    if (type === 'input' && LIVE_INPUT[el.dataset.act] && !gateOnboard() && S.tab === 'train') {
+      trainAct(el.dataset.act, el.dataset, el);
+      persistOpen();
+      return;
+    }
     if (type === 'input' && ['note', 'bw', 'swapq', 'libq', 'slotq', 'obbw'].indexOf(el.dataset.act) < 0) return;
     if (type === 'change' && (el.dataset.act === 'swapq' || el.dataset.act === 'libq')) return;
     if (el.classList.contains('mask') && e.target.closest('[data-stop]')) return;
@@ -1940,6 +2129,7 @@
     var actName = el.dataset.act;
     var SHARE_ACT = { shareopen: 1, shareclose: 1, sharetheme: 1, funswap: 1, funagain: 1, badgeswap: 1, badgeagain: 1, bodytoggle: 1, sharecopy: 1, shareexport: 1, sharesystem: 1, shareprofile: 1, weekopen: 1, weekpick: 1, monthopen: 1, monthpick: 1, wallopen: 1, wallclose: 1, watchgo: 1 };
     var res = (!gateOnboard() && SHARE_ACT[actName]) ? reviewAct(actName, el.dataset, el) : (gateOnboard() ? onboardAct(actName, el.dataset, el) : ACT[S.tab](actName, el.dataset, el));
+    if (!gateOnboard() && S.tab === 'train') persistOpen();
     if (res) render(prevTab === S.tab && !gateOnboard());
   }
   /** 当前如果在子目录里，返回上一级要触发的动作；根页面和弹层里不响应 */
@@ -2045,11 +2235,21 @@
       if (s) { clearInterval(rest.timer); rest.show = false; renderRest(); }
       if (e.target.closest('[data-rest-toggle]')) { rest.open = !rest.open; renderRest(); }
     });
-    document.addEventListener('visibilitychange', function () { var c = Sync.cfg(); if (document.visibilityState === 'visible' && Sync.on() && (!c.lastAt || Date.now() - c.lastAt > 30000)) Sync.run(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') { flushOpen(); return; }
+      var c = Sync.cfg(); if (Sync.on() && (!c.lastAt || Date.now() - c.lastAt > 30000)) Sync.run();
+    });
+    window.addEventListener('pagehide', flushOpen);
+    window.addEventListener('freeze', flushOpen);
     window.addEventListener('online', function () { if (Sync.on()) Sync.run(); });
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); else if (S.stats.ex) drawExercise(); }, 120); });
     bindSwipeBack();
-    render();
-    if (Sync.on()) Sync.run();
+    boot().catch(function () {}).then(function () {
+      bootReady = true;
+      tryRestoreOpen();
+      render();
+      persistOpen();
+      if (Sync.on()) Sync.run();
+    });
   });
 })();

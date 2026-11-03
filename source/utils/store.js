@@ -2,22 +2,44 @@
 const GZ = require('./engine.js');
 const KEY = 'training_db_v1';
 const KEY_OLD = 'gzclp_db_v1';
+const OPEN_KEY = 'training_open_v1';
+// 读存储抛错时不要把内存里的空档案写回去，否则一次失败的读取会清掉已有训练记录
+let readFailed = false;
 
 function load() {
   let db = null;
-  try { db = wx.getStorageSync(KEY); } catch (e) { db = null; }
-  if (!db) {
+  readFailed = false;
+  try { db = wx.getStorageSync(KEY); } catch (e) { readFailed = true; db = null; }
+  if (!db && !readFailed) {
     try { db = wx.getStorageSync(KEY_OLD); } catch (e) { db = null; }
     if (db) save(db);
   }
-  if (!db) { db = GZ.defaults(true); save(db); }
+  if (!db) {
+    // 读失败时只用空档案撑住界面，不写入、也不灌入 Excel 样例，避免盖掉还在磁盘上的数据
+    db = GZ.defaults(!readFailed);
+    if (!readFailed) save(db);
+  }
   var prevDays = db.daysVersion;
   db = GZ.normalize(db);
-  if (prevDays !== db.daysVersion) save(db);
+  if (!readFailed && prevDays !== db.daysVersion) save(db);
   return db;
 }
-function save(db) { wx.setStorageSync(KEY, db); }
-function reset(withSeed) { const db = GZ.defaults(withSeed); save(db); return db; }
+function save(db) {
+  if (readFailed) return;
+  wx.setStorageSync(KEY, db);
+}
+function reset(withSeed) { const db = GZ.defaults(withSeed); readFailed = false; save(db); return db; }
+
+/** 还没点「完成训练」的填写。和训练记录分开存，不参与进阶回放 */
+function loadOpen() {
+  try { return wx.getStorageSync(OPEN_KEY) || null; } catch (e) { return null; }
+}
+function saveOpen(snap) {
+  try {
+    if (!snap || !GZ.sessionTouched(snap)) wx.removeStorageSync(OPEN_KEY);
+    else wx.setStorageSync(OPEN_KEY, snap);
+  } catch (e) {}
+}
 
 const BK = 'training_last_backup';
 const BK_OLD = 'gzclp_last_backup';
@@ -30,4 +52,4 @@ function lastBackup() {
 }
 function markBackup() { wx.setStorageSync(BK, Date.now()); }
 
-module.exports = { load, save, reset, KEY, lastBackup, markBackup };
+module.exports = { load, save, reset, KEY, lastBackup, markBackup, loadOpen, saveOpen, OPEN_KEY };

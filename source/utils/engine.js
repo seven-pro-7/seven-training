@@ -17,7 +17,7 @@
 
   // ---------- 基础常量 ----------
   var VERSION = 1;
-  var DAYS_VERSION = 7; // 动作模板版本。v7：T1/T2 交错配对。胸、背、股四头、后链、肩每周至少 2 次，同一天不叠同模式的 T1 和 T2
+  var DAYS_VERSION = 8; // v7：T1/T2 交错配对。v8 不改动作名单，只把 T2/T3 首周改成与 modelWeight 同一公式。已练过的槽位沿用当时重量。
   var LIFTS = { squat: '杠铃深蹲', bench: '平板卧推', deadlift: '传统硬拉', ohp: '站姿实力推' };
   var LIFT_ORDER = ['squat', 'bench', 'deadlift', 'ohp'];
   var STEP_KEYS = [
@@ -118,6 +118,7 @@
     ['T2', '山羊挺身', '下背·伸髋', '器械', '髋铰链辅助；以体重做次数，需要时再手动加重', 'deadlift', 0, 0],
     ['T2', '高脚杯深蹲', '下肢·蹲', '哑铃', '深蹲模式变式；单只≈深蹲的 25%', 'squat', 0.25, 2],
     ['T2', '保加利亚分腿蹲', '下肢·单腿', '哑铃', '单腿蹲变式；单只≈深蹲的 25%', 'squat', 0.25, 2],
+    ['T2', '杠铃弓步', '下肢·单腿', '杠铃', '弓步；约为深蹲的 50%', 'squat', 0.5, 2.5],
     ['T2', '双杠臂屈伸', '上肢·水平推', '自重', '下胸与三头；以体重做次数', 'bench', 0, 0],
     ['T2', '负重双杠臂屈伸', '上肢·水平推', '负重', '外加重量≈卧推的 12%', 'bench', 0.12, 2.5],
     ['T2', '腿举', '下肢·蹲', '器械', '腿部容量；配重约为深蹲的 140%', 'squat', 1.4, 5],
@@ -131,12 +132,14 @@
     ['T3', '仰卧臂屈伸', '上肢·伸肘', '杠铃', 'EZ 杆仰卧臂屈伸，三头长头；约为卧推的 30%', 'bench', 0.3, 1.25],
     ['T3', '面拉', '肩·后束', '器械', '肩袖与后束；配重约为卧推的 22%', 'bench', 0.22, 2.5],
     ['T3', '绳索夹胸', '上肢·水平内收', '器械', '胸大肌孤立；单侧配重约为卧推的 15%', 'bench', 0.15, 2.5],
+    ['T3', '平板哑铃飞鸟', '上肢·水平内收', '哑铃', '胸大肌孤立；单只≈卧推的 16%', 'bench', 0.16, 2],
     ['T3', '俯卧腿弯举', '下肢·屈膝', '器械', '腘绳肌容量；配重约为深蹲的 30%', 'squat', 0.3, 2.5],
     ['T3', '坐姿腿弯举', '下肢·屈膝', '器械', '屈髋位拉长腘绳肌，增肌优于俯卧位（Maeo 2021）；配重约为深蹲的 35%', 'squat', 0.35, 2.5],
     ['T3', '坐姿腿屈伸', '下肢·伸膝', '器械', '股四头肌容量；配重约为深蹲的 40%', 'squat', 0.4, 2.5],
     ['T3', '单腿腿屈伸', '下肢·伸膝', '器械', '单侧股四头肌；配重约为深蹲的 25%', 'squat', 0.25, 2.5],
     ['T3', '腿外展', '下肢·髋外展', '器械', '臀中肌；配重约为深蹲的 40%', 'squat', 0.4, 5],
     ['T3', '提踵', '下肢·踝', '器械', '小腿容量；配重约为深蹲的 60%', 'squat', 0.6, 5],
+    ['T3', '腿举提踵', '下肢·踝', '器械', '腿举机提踵；配重约为深蹲的 90%', 'squat', 0.9, 5],
     ['T3', '杠铃弯举', '上肢·屈肘', '杠铃', '二头主项；约为卧推的 40%', 'bench', 0.4, 1.25],
     ['T3', 'EZ杆弯举', '上肢·屈肘', '杠铃', 'EZ 杆半旋握，腕部压力更小；约为卧推的 38%', 'bench', 0.38, 1.25],
     ['T3', '哑铃弯举', '上肢·屈肘', '哑铃', '二头容量；单只≈卧推的 15%', 'bench', 0.15, 1],
@@ -250,7 +253,8 @@
     };
   }
   function pct(base, p) { return { type: 'pct', base: base, pct: p }; }
-  function fixed(v) { return { type: 'fixed', value: v }; }
+  /** T2/T3 首周跟 modelWeight 同一条公式，不把动作系数当成 TM 百分比，也不写死公斤。 */
+  function modelInit() { return { type: 'model' }; }
 
   /**
    * GZCLP 四天（每天 1×T1 + 2×T2 + 2×T3），T1/T2 交错配对。
@@ -264,31 +268,31 @@
     return [
       { id: 'A1', name: '下肢蹲主导', slots: [
         slot('A1_1', 'T1', '杠铃深蹲', pct('squat', 0.85), 't1l', false, 'squat'),
-        slot('A1_2', 'T2', '罗马尼亚硬拉', pct('deadlift', 0.6), 't2l'),
-        slot('A1_3', 'T2', '高位下拉', pct('bench', 0.55), 't2u'),
-        slot('A1_4', 'T3', '坐姿腿屈伸', pct('squat', 0.35), 't3l', false),
-        slot('A1_5', 'T3', '哑铃侧平举', fixed(8), 't3u', true)
+        slot('A1_2', 'T2', '罗马尼亚硬拉', modelInit(), 't2l'),
+        slot('A1_3', 'T2', '高位下拉', modelInit(), 't2u'),
+        slot('A1_4', 'T3', '坐姿腿屈伸', modelInit(), 't3l', false),
+        slot('A1_5', 'T3', '哑铃侧平举', modelInit(), 't3u', true)
       ] },
       { id: 'B1', name: '垂直推主导', slots: [
         slot('B1_1', 'T1', '站姿实力推', pct('ohp', 0.85), 't1u', false, 'ohp'),
-        slot('B1_2', 'T2', '上斜哑铃卧推', pct('bench', 0.3), 't2u'),
-        slot('B1_3', 'T2', '引体向上', fixed(0), 't2u', true),
-        slot('B1_4', 'T3', '绳索夹胸', pct('bench', 0.15), 't3u', true),
-        slot('B1_5', 'T3', '面拉', fixed(15), 't3u', true)
+        slot('B1_2', 'T2', '上斜哑铃卧推', modelInit(), 't2u'),
+        slot('B1_3', 'T2', '引体向上', modelInit(), 't2u', true),
+        slot('B1_4', 'T3', '绳索夹胸', modelInit(), 't3u', true),
+        slot('B1_5', 'T3', '面拉', modelInit(), 't3u', true)
       ] },
       { id: 'A2', name: '水平推主导', slots: [
         slot('A2_1', 'T1', '平板卧推', pct('bench', 0.85), 't1u', false, 'bench'),
-        slot('A2_2', 'T2', '坐姿哑铃推肩', pct('ohp', 0.6), 't2u'),
-        slot('A2_3', 'T2', '坐姿划船', pct('bench', 0.55), 't2u'),
-        slot('A2_4', 'T3', '绳索三头屈伸', pct('bench', 0.25), 't3u', true),
-        slot('A2_5', 'T3', '杠铃弯举', fixed(20), 't3u', true)
+        slot('A2_2', 'T2', '坐姿哑铃推肩', modelInit(), 't2u'),
+        slot('A2_3', 'T2', '坐姿划船', modelInit(), 't2u'),
+        slot('A2_4', 'T3', '绳索三头屈伸', modelInit(), 't3u', true),
+        slot('A2_5', 'T3', '杠铃弯举', modelInit(), 't3u', true)
       ] },
       { id: 'B2', name: '髋铰链主导', slots: [
         slot('B2_1', 'T1', '传统硬拉', pct('deadlift', 0.85), 't1l', false, 'deadlift'),
-        slot('B2_2', 'T2', '前蹲', pct('squat', 0.6), 't2l'),
-        slot('B2_3', 'T2', '单臂哑铃划船', pct('bench', 0.35), 't2u'),
-        slot('B2_4', 'T3', '坐姿腿弯举', pct('squat', 0.3), 't3l', false),
-        slot('B2_5', 'T3', '哑铃弯举', fixed(12), 't3u', true)
+        slot('B2_2', 'T2', '前蹲', modelInit(), 't2l'),
+        slot('B2_3', 'T2', '单臂哑铃划船', modelInit(), 't2u'),
+        slot('B2_4', 'T3', '坐姿腿弯举', modelInit(), 't3l', false),
+        slot('B2_5', 'T3', '哑铃弯举', modelInit(), 't3u', true)
       ] }
     ];
   }
@@ -423,26 +427,59 @@
     return isNaN(n) ? null : n;
   }
   /**
-   * 升级模板前，记下每个动作下一次该用的重量，换槽位时带着走。
-   * 先记非替换、非减载、非跳过的历史实际重量，再用各训练日下一次的有效槽位下次重量覆盖。
+   * 升级模板前，记下每个已经练过的动作下一次该用的重量，换槽位时带着走。
+   * 先记非替换、非减载、非跳过的历史实际重量，再用该动作下一次的有效重量覆盖。
+   * 没练过的计划重量不进这张表：否则旧的偏重默认值会被冻成 fixed，盖掉新的模型起点。
    * 仅本次替换（it.sub）不进这张表：旧记录里一次性替换的重量不能当成新模板槽位的起点。
    */
   function nextExerciseWeights(db) {
     var rp = replay(db);
-    var map = {};
+    var map = {}, seen = {};
     rp.sessions.forEach(function (x) {
       x.items.forEach(function (it) {
-        if (!it.deload && !it.sub && it.judgment !== '跳过') map[it.name] = it.weight;
+        if (it.deload || it.sub || it.judgment === '跳过') return;
+        seen[it.name] = 1;
+        map[it.name] = it.weight;
       });
     });
     db.days.forEach(function (d) {
       var wk = (rp.counts[d.id] || 0) + 1;
       d.slots.forEach(function (s) {
         var ef = effectiveSlot(db, s, wk, rp.hist);
+        if (!seen[ef.slot.name]) return;
         map[ef.slot.name] = startState(s, rp.states[s.id], ef, wk, progressionOf(db, s)).weight;
       });
     });
     return map;
+  }
+  // v7 写进新档案的 T2/T3 首周。升级时只有这些出厂值、且这个槽位没练过，才换成模型；用户改过的固定重量或 TM% 留着。
+  var V7_SLOT_INIT = {
+    A1_2: { type: 'pct', base: 'deadlift', pct: 0.6 },
+    A1_3: { type: 'pct', base: 'bench', pct: 0.55 },
+    A1_4: { type: 'pct', base: 'squat', pct: 0.35 },
+    A1_5: { type: 'fixed', value: 8 },
+    B1_2: { type: 'pct', base: 'bench', pct: 0.3 },
+    B1_3: { type: 'fixed', value: 0 },
+    B1_4: { type: 'pct', base: 'bench', pct: 0.15 },
+    B1_5: { type: 'fixed', value: 15 },
+    A2_2: { type: 'pct', base: 'ohp', pct: 0.6 },
+    A2_3: { type: 'pct', base: 'bench', pct: 0.55 },
+    A2_4: { type: 'pct', base: 'bench', pct: 0.25 },
+    A2_5: { type: 'fixed', value: 20 },
+    B2_2: { type: 'pct', base: 'squat', pct: 0.6 },
+    B2_3: { type: 'pct', base: 'bench', pct: 0.35 },
+    B2_4: { type: 'pct', base: 'squat', pct: 0.3 },
+    B2_5: { type: 'fixed', value: 12 }
+  };
+  function sameInit(a, b) {
+    if (!a || !b || a.type !== b.type) return false;
+    if (a.type === 'fixed') return Number(a.value) === Number(b.value);
+    if (a.type === 'pct') return a.base === b.base && Number(a.pct) === Number(b.pct);
+    return a.type === 'model';
+  }
+  function stockSlotInit(s) {
+    if (!s.init || s.init.type === 'model') return true;
+    return !!(V7_SLOT_INIT[s.id] && sameInit(s.init, V7_SLOT_INIT[s.id]));
   }
   /**
    * 第 1 周样例记录写下时，各槽位的动作（days v3）。
@@ -550,8 +587,10 @@
           s.roundProg = ns.roundProg;
           s.lift = ns.lift;
           if (!done) {
+            var keepCustom = !stockSlotInit(s);
             s.name = ns.name; s.equip = ns.equip; s.tier = ns.tier; s.step = ns.step;
-            s.init = clone(ns.init); s.roundProg = ns.roundProg; s.lift = ns.lift;
+            if (!keepCustom) s.init = clone(ns.init);
+            s.roundProg = ns.roundProg; s.lift = ns.lift;
             if (carried !== null) s.init = { type: 'fixed', value: carried };
             delete s.changes;
           }
@@ -698,6 +737,8 @@
   function initWeight(s, P) {
     if (!s.init) return 0;
     if (s.init.type === 'fixed') return Number(s.init.value) || 0;
+    if (s.init.type === 'model') return modelWeight(P, libFind(s.name), s.tier).weight;
+    if (s.init.type !== 'pct' || !s.init.base) return 0;
     return roundTo(tm(P, s.init.base) * s.init.pct, P.rounding);
   }
   function fmtW(w) {
@@ -1339,11 +1380,17 @@
   var evaluate = gzEvaluate, stageDef = gzStageDef;
 
   // ---------- 计划库：双重进阶 / 线性 / 5/3/1（已确认的应用规则） ----------
-  // 向上取整到档位。对应 Wendler 原书 Excel 的 CEILING(..., 5)。
+  // 向上取整到档位。对应 Wendler 原书 Excel 的 CEILING(..., 5)，只用于各组工作重量。
   function ceilTo(x, inc) {
     inc = inc || 2.5;
     if (!(inc > 0)) return fix(x);
     return fix(Math.ceil(x / inc - 1e-9) * inc);
+  }
+  // 训练最大重量本身向下对齐。Wendler 要求宁轻勿重，不能先把 TM 抬到上一档再对各组上取整。
+  function floorTo(x, inc) {
+    inc = inc || 2.5;
+    if (!(inc > 0)) return fix(x);
+    return fix(Math.floor(x / inc + 1e-9) * inc);
   }
   function waveWeek(week) { return ((Math.max(1, week) - 1) % 4) + 1; }
   function waveTop(tm, wk, inc) {
@@ -1386,7 +1433,10 @@
     var best = Math.max.apply(null, nums);
     if (w > 0 && best > 0) r.e1rm = fix(w * (1 + Math.min(best, 12) / 30));
     if (nums.every(function (n) { return n >= sc.repMax; })) {
-      r.judgment = '加重'; r.nextWeight = alignTo(w + step, step); r.nextFail = 0;
+      var bwDual = equipOf(s.name, s.equip) === '自重' && !(w > 0);
+      if (bwDual) { r.judgment = '建议负重'; r.nextWeight = w; r.nextFail = 0; }
+      else if (!(step > 0)) { r.judgment = '保持'; r.nextWeight = w; r.nextFail = 0; }
+      else { r.judgment = '加重'; r.nextWeight = alignTo(w + step, step); r.nextFail = 0; }
     } else if (nums.some(function (n) { return n <= sc.repMin - 2; })) {
       r.judgment = '减轻'; r.nextWeight = Math.max(step, alignTo(w - step, step)); r.nextFail = 0;
     } else {
@@ -1446,7 +1496,7 @@
     } else {
       var streak = (st.fail || 0) + (cycleMiss ? 1 : 0);
       if (!cycleMiss) { r.judgment = '加重'; r.nextWeight = alignTo(tm0 + step, inc); r.nextFail = 0; }
-      else if (streak >= 2) { r.judgment = '重置'; r.nextWeight = Math.max(inc, ceilTo(tm0 * 0.9, inc)); r.nextFail = 0; }
+      else if (streak >= 2) { r.judgment = '重置'; r.nextWeight = Math.max(inc, floorTo(tm0 * 0.9, inc)); r.nextFail = 0; }
       else { r.judgment = '保持'; r.nextWeight = tm0; r.nextFail = streak; }
       r.nextCycleMiss = 0; r.nextStage = '第1周';
       r.barNext = waveTop(r.nextWeight, 1, inc);
@@ -1938,7 +1988,14 @@
       var doneLog = logged(s0, e);
       total += 1; if (doneLog || e.skip) filled += 1;
       var dots = [];
-      for (var k = 0; k < showSets; k++) dots.push({ i: k, on: k < (e.done || 0), amrap: !deload && run.prog.amrapLast(s.tier) && k === showSets - 1 });
+      for (var k = 0; k < showSets; k++) {
+        var amrapDot = false;
+        if (!deload) {
+          if (res.loads && res.loads[k]) amrapDot = !!res.loads[k].amrap;
+          else amrapDot = run.prog.amrapLast(s.tier) && k === showSets - 1;
+        }
+        dots.push({ i: k, on: k < (e.done || 0), amrap: amrapDot });
+      }
       return {
         slotId: s.id, tier: s.tier, badge: slotBadge(s), tierColor: TIER_COLORS[s.tier], name: res.name, equip: equipOf(res.name, res.equip), equipNote: EQUIP_NOTE[equipOf(res.name, res.equip)] || '',
         unitText: unitOf(equipOf(res.name, res.equip)), isBW: equipOf(res.name, res.equip) === '自重',
@@ -2588,6 +2645,140 @@
     return nd;
   }
 
+  // ================= 本机持久化：进行中的训练 & 启动时选哪一份档案 =================
+  function entryTouched(e) {
+    if (!e || typeof e !== 'object') return false;
+    if (e.v !== null && e.v !== undefined && e.v !== '') return true;
+    if (e.done) return true;
+    if (e.skip || e.miss || e.ex) return true;
+    if (e.w !== undefined && e.w !== null && e.w !== '') return true;
+    if (e.reps !== undefined && e.reps !== null && e.reps !== '') return true;
+    if (e.new5RM || e.new10RM) return true;
+    if (e.sets && e.sets.length) {
+      for (var i = 0; i < e.sets.length; i++) {
+        var n = e.sets[i];
+        if (n !== null && n !== undefined && n !== '') return true;
+      }
+    }
+    return false;
+  }
+  function draftTouched(draft) {
+    if (!draft || typeof draft !== 'object') return false;
+    var keys = Object.keys(draft);
+    for (var i = 0; i < keys.length; i++) if (entryTouched(draft[keys[i]])) return true;
+    return false;
+  }
+  /**
+   * 进行中的训练有没有用户填过的内容。
+   * 刚打开训练页时的空白草稿不算，避免每次启动都把空状态写进存储、把上次没写完的盖掉。
+   */
+  function sessionTouched(snap) {
+    if (!snap || typeof snap !== 'object') return false;
+    if (snap.recordId) return true;
+    if (snap.bw) return true;
+    if (snap.note) return true;
+    if (snap.deload) return true;
+    if (snap.date && snap.date !== today()) return true;
+    var deloads = snap.deloads || {};
+    var dk = Object.keys(deloads);
+    for (var d = 0; d < dk.length; d++) if (deloads[dk[d]]) return true;
+    if (draftTouched(snap.draft)) return true;
+    var drafts = snap.drafts || {};
+    var days = Object.keys(drafts);
+    for (var i = 0; i < days.length; i++) if (draftTouched(drafts[days[i]])) return true;
+    return false;
+  }
+  /** 把训练页上还没点「完成训练」的内容收成一份可存档的快照（不进训练记录，不参与进阶回放） */
+  function packOpenSession(t) {
+    t = t || {};
+    var drafts = {};
+    if (t.drafts) Object.keys(t.drafts).forEach(function (k) { drafts[k] = t.drafts[k]; });
+    if (t.day && t.draft) drafts[t.day] = t.draft;
+    return {
+      v: 1,
+      savedAt: Date.now(),
+      day: t.day || null,
+      drafts: drafts,
+      deloads: t.deloads || null,
+      focusByDay: t.focusByDay || null,
+      focus: t.focus || null,
+      focusKey: t.focusKey || '',
+      date: t.date || null,
+      bw: t.bw != null ? String(t.bw) : '',
+      note: t.note != null ? String(t.note) : '',
+      recordId: t.recordId || null,
+      createdAt: t.createdAt || null,
+      deload: t.deload
+    };
+  }
+  /** 把存档快照填回训练页状态。没有用户内容时不改状态，返回 false */
+  function applyOpenSession(t, snap) {
+    if (!sessionTouched(snap)) return false;
+    var copy = JSON.parse(JSON.stringify(snap));
+    t.day = copy.day || null;
+    t.drafts = copy.drafts || {};
+    t.deloads = copy.deloads || {};
+    t.focusByDay = copy.focusByDay || {};
+    t.focus = copy.focus || null;
+    t.focusKey = copy.focusKey || '';
+    if (copy.date) t.date = copy.date;
+    t.bw = copy.bw || '';
+    t.note = copy.note || '';
+    t.recordId = copy.recordId || null;
+    t.createdAt = copy.createdAt || null;
+    t.deload = copy.deload;
+    t.draft = (t.day && t.drafts[t.day]) || null;
+    return true;
+  }
+  function pickOpenSession(local, backup) {
+    var a = sessionTouched(local) ? local : null;
+    var b = sessionTouched(backup) ? backup : null;
+    if (!a || !b) return a || b || null;
+    return (b.savedAt || 0) > (a.savedAt || 0) ? b : a;
+  }
+  function usableDb(d) {
+    return !!(d && typeof d === 'object' && d.params && Array.isArray(d.days));
+  }
+  /** 档案新旧：配置时间、记录修改时间、删除标记，取最晚的一个 */
+  function dbStamp(d) {
+    if (!d) return 0;
+    var stamp = d.cfgAt || 0;
+    (d.records || []).forEach(function (r) {
+      var t = r.updatedAt || r.createdAt || 0;
+      if (t > stamp) stamp = t;
+    });
+    var tomb = d.tomb || {};
+    Object.keys(tomb).forEach(function (id) { if (tomb[id] > stamp) stamp = tomb[id]; });
+    return stamp;
+  }
+  /**
+   * 两份都能用的档案里留更新的那份。
+   * 时间相同则留下记录更多的（空档案盖住完整档案时，以还有记录的那份为准）。
+   * 完全相同则留 local，避免每次启动来回写。
+   */
+  function pickStoredDb(local, backup) {
+    var a = usableDb(local) ? local : null;
+    var b = usableDb(backup) ? backup : null;
+    if (!a || !b) return a || b || null;
+    var as = dbStamp(a), bs = dbStamp(b);
+    if (as !== bs) return bs > as ? b : a;
+    var ar = (a.records || []).length, br = (b.records || []).length;
+    if (ar !== br) return br > ar ? b : a;
+    return a;
+  }
+  /**
+   * 启动时能不能写一份初始空档案。
+   * localStatus: 'ok' | 'missing' | 'corrupt' | 'error'
+   * 键不存在、并且备份里也没有档案，才允许写入默认值。
+   * 读抛错或 JSON 损坏时不写，避免把已有 localStorage 盖成空数据。
+   */
+  function storageDecision(localStatus, localValue, backup) {
+    var local = localStatus === 'ok' ? localValue : null;
+    var picked = pickStoredDb(local, backup);
+    var writeDefault = !picked && (localStatus === 'missing' || (localStatus === 'ok' && localValue == null));
+    return { db: picked, writeDefault: writeDefault, writeBack: !!(picked && picked !== local) };
+  }
+
   // ================= 多设备同步：合并 =================
   /** 配置部分（参数、四天动作、自定义动作库、个人基线）——任何一项变化都会刷新 cfgAt */
   function cfgPart(db) { return JSON.stringify([db.params, db.days, db.customLib || [], db.exerciseBaselines || {}, db.daysVersion, db.programs || null, db.activeProgramId || null, db.onboarding || null]); }
@@ -2687,9 +2878,10 @@
           ['第 3 周 (5/3/1+)', '75%×5, 85%×3, 95%×1+', '极限周，冲 1+ 爆发力与信心'],
           ['第 4 周 (减载)', '40%×5, 50%×5, 60%×5', '减载恢复，不冲 AMRAP，促进神经修复']] },
         { title: '进阶与周期判定', rows: [
-          ['深蹲 / 硬拉', '完成一轮 4 周', '下轮 TM +5 kg（下肢）'],
-          ['卧推 / 实力推', '完成一轮 4 周', '下轮 TM +2.5 kg（上肢）'],
-          ['未达标保护', 'W3 未能完成 1 次', 'TM 下调 10%（TM × 0.9），从头循环']] },
+          ['深蹲 / 硬拉', '这一轮四周的规定组都完成', '下轮训练最大重量 +5 kg（下肢）'],
+          ['卧推 / 实力推', '这一轮四周的规定组都完成', '下轮训练最大重量 +2.5 kg（上肢）'],
+          ['有一周没完成', '这一轮里任一周规定次数没做满', '这一轮不加训练最大重量'],
+          ['连续两轮没完成', '连续两轮都有规定组没做满', '训练最大重量 × 0.9，向下对齐到档位']] },
         { title: 'BBB 与孤立', rows: [
           ['BBB (Boring But Big)', '主项后同动作 5×10', '重量固定为当前 TM 的 50%，专注肌肉量'],
           ['孤立', '推、拉、单腿/核心', '每类每天 25~50 次总量，双重进阶（8–12 次）']] }
@@ -2783,9 +2975,17 @@
     var rec = recommendWeight(db, name, tier, { preferLast: false });
     return rec && rec.weight > 0 ? rec.weight : (rec && rec.weight === 0 ? 0 : 20);
   }
+  /**
+   * 槽位层级是界面角色（主项/变式/孤立）。T1 的 76.5% 只对应 5×3 这类低次数。
+   * 主项若写的是 6 次以上或区间顶到 10 次，按变式/孤立的档位播种，避免第一练就跌破下限。
+   */
+  function seedTierFor(tier, lo, hi) {
+    if (tier === 'T1' && (lo >= 6 || hi >= 10)) return hi >= 15 ? 'T3' : 'T2';
+    return tier;
+  }
   function dualSlot(db, id, tier, name, sets, lo, hi, step, lift) {
     var bw = equipOf(name) === '自重';
-    return libSlot(id, tier, name, 'dual', { sets: sets, repMin: lo, repMax: hi, step: bw ? 0 : step, weight: seedFixed(db, name, tier) }, lift || null);
+    return libSlot(id, tier, name, 'dual', { sets: sets, repMin: lo, repMax: hi, step: bw ? 0 : step, weight: seedFixed(db, name, seedTierFor(tier, lo, hi)) }, lift || null);
   }
   function cardioSlot(id, name, minutes) {
     return libSlot(id, 'C', name, 'cardio', { minutes: minutes, weight: 0 }, null);
@@ -2844,8 +3044,7 @@
       acc('PX2', 'T2', '上斜哑铃卧推', 3, 8, 12, 2),
       acc('PX3', 'T3', '绳索下压', 3, 8, 12, 2.5),
       acc('PX4', 'T3', '哑铃侧平举', 3, 15, 20, 1),
-      acc('PX5', 'T3', '过头绳索臂屈伸', 3, 8, 12, 2.5),
-      acc('PX6', 'T3', '哑铃侧平举', 3, 15, 20, 1)
+      acc('PX5', 'T3', '过头绳索臂屈伸', 3, 8, 12, 2.5)
     ];
     function push(id, heavyName, heavyLift, lightName) {
       var slots = [lin(id + '1', 'T1', heavyName, 5, 2.5, heavyLift), acc(id + 'L', 'T2', lightName, 3, 8, 12, heavyLift === 'bench' ? 2.5 : 2.5)];
@@ -2886,7 +3085,7 @@
   }
   function fiveDays(db) {
     function main(id, name, lift, step) {
-      var tm0 = ceilTo(liftRM(db, lift) * 0.9, 2.5);
+      var tm0 = floorTo(liftRM(db, lift) * 0.9, 2.5);
       return libSlot(id, 'T1', name, 'w531', { step: step, inc: 2.5, weight: tm0 }, lift);
     }
     function bbb(id, name, link, lift) {
@@ -3333,11 +3532,13 @@
     blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
     saveRecord: saveRecord, deleteRecord: deleteRecord, clearRecords: clearRecords, replaceDb: replaceDb, mergeDb: mergeDb, sameDb: sameDb, stampConfig: stampConfig, cfgPart: cfgPart, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
     setBaseline: setBaseline, baselineList: baselineList,
+    sessionTouched: sessionTouched, packOpenSession: packOpenSession, applyOpenSession: applyOpenSession, pickOpenSession: pickOpenSession,
+    usableDb: usableDb, dbStamp: dbStamp, pickStoredDb: pickStoredDb, storageDecision: storageDecision,
     libAll: libAll, libFindIn: libFindIn, addCustomEx: addCustomEx, removeCustomEx: removeCustomEx, PARTS: PARTS, EQUIPS: EQUIPS, PATTERNS: PATTERNS, patternOfPart: patternOfPart, slotCategory: slotCategory, roundInfo: roundInfo, logView: logView, today: today, uid: uid,
     cycleOf: cycleOf, cycleLen: cycleLen, cycleStartWeek: cycleStartWeek, weekText: weekText,
     adaptiveUp: adaptiveUp, ADAPT: ADAPT, adjustSlot: adjustSlot, slotInfo: slotInfo, setNoRotate: setNoRotate, startState: startState, planCycles: planCycles, buildRotation: buildRotation, rotationOn: rotationOn, rotationPool: rotationPool, autoStartWeight: autoStartWeight,
     ROTATION: ROTATION, ROTATION_PRINCIPLES: ROTATION_PRINCIPLES, modelWeight: modelWeight,
-    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, TIER_LABELS: TIER_LABELS, tierLabel: tierLabel, slotBadge: slotBadge, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, recommendTemplates: recommendTemplates, ceilTo: ceilTo,
+    PROGRESSIONS: PROGRESSIONS, registerProgression: registerProgression, progressionOf: progressionOf, roleOf: roleOf, ROLE_NAME: ROLE_NAME, TIER_LABELS: TIER_LABELS, tierLabel: tierLabel, slotBadge: slotBadge, templateDef: templateDef, templateCatalog: templateCatalog, templatePreview: templatePreview, templateKey: templateKey, recommendTemplates: recommendTemplates, ceilTo: ceilTo, floorTo: floorTo,
     PROGRESSION_RULES: PROGRESSION_RULES, progressionRules: progressionRules, ruleModeNote: ruleModeNote,
     LEGACY_PID: LEGACY_PID, BASE_KEYS: BASE_KEYS, PLAN_KEYS: PLAN_KEYS, PROGRAM_STATUS: PROGRAM_STATUS, recPid: recPid, activePid: activePid, activeProgram: activeProgram, programById: programById,
     canTrain: canTrain, planView: planView, switchProgram: switchProgram, pauseProgram: pauseProgram, resumeProgram: resumeProgram, endProgram: endProgram, startProgram: startProgram, programList: programList, replayAll: replayAll, oneRMProfile: oneRMProfile,
