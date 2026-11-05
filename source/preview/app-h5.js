@@ -530,6 +530,7 @@
     t.deload = t.deloads && t.deloads[day] ? true : undefined;
     if (t.focusByDay && t.focusByDay[day]) { t.focus = t.focusByDay[day]; t.focusKey = day + '|'; }
     else { t.focus = null; t.focusKey = ''; }
+    t.open = false; t.more = '';
   }
   function dropTrainDay(day) {
     var t = S.train;
@@ -552,31 +553,205 @@
   }
   function entry(slot) { var d = S.train.draft; return d[slot] || (d[slot] = { v: null, done: 0 }); }
 
+  var CHEV = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5.2 3.2L9 7l-3.8 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var EXPAND = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M5 7.2l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var MORE = '<svg width="16" height="4" viewBox="0 0 16 4" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.6"/><circle cx="8" cy="2" r="1.6"/><circle cx="14" cy="2" r="1.6"/></svg>';
+  var CHECK = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.2 6.2l2.4 2.4L9.8 3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function homeIdentity() {
+    var pp = Share.profile(load().params.shareProfile);
+    return { name: (pp.name || '').trim() || 'Seven', avatar: pp.avatar || '' };
+  }
+  function goalStatusText(vm) {
+    if (vm.editing) return '编辑记录';
+    if (vm.locked) return '已完成';
+    if (vm.filled > 0) return '进行中';
+    if (vm.day === vm.recommended) return '待开练';
+    return '可开练';
+  }
+  function ensureFocus(vm) {
+    var t = S.train;
+    var fkey = vm.day + '|' + (t.recordId || '');
+    var missing = t.focus && !vm.items.some(function (x) { return x.slotId === t.focus; });
+    if (t.focusKey !== fkey || missing || !t.focus) {
+      var f0 = vm.items.filter(function (x) { return !(x.skip || x.preview); })[0];
+      t.focus = f0 ? f0.slotId : (vm.items[0] ? vm.items[0].slotId : null);
+      t.focusKey = fkey;
+      t.open = false;
+      t.more = '';
+    }
+  }
+  function avatarFace(id) {
+    if (id.avatar) return '<img class="avatar-photo" src="' + id.avatar + '" alt="">';
+    return '<div class="avatar-mark" aria-hidden="true"><span></span></div>';
+  }
+  function museFrame(goalBtn, trainInner, extra) {
+    var id = homeIdentity();
+    return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
+      '<button type="button" class="menu-btn" data-act="menu" aria-label="本次训练，日期与备注"><span></span><span></span><span></span></button>' +
+      '<div class="avatar-wrap"><div class="avatar-ring">' + avatarFace(id) + '</div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
+      goalBtn + '</section><section class="train-band" aria-label="训练">' + trainInner + '</section></div>' + (extra || '');
+  }
+  function goalBtn(vm) {
+    var label = '进入计划总览：' + vm.day + ' · ' + vm.dayName;
+    return '<button type="button" class="goal-entry" data-act="overview" aria-label="' + esc(label) + '">' +
+      '<div class="goal-primary"><span><span class="sid">' + esc(vm.day) + '</span> · ' + esc(vm.dayName) + '</span><span class="goal-chev" aria-hidden="true">' + CHEV + '</span></div>' +
+      '<div class="goal-secondary">' + esc(goalStatusText(vm)) + ' · 本周 <span class="warm">' + vm.round.done + '/' + vm.round.total + '</span></div></button>';
+  }
+  function daySeg(vm) {
+    return '<div class="seg day-seg' + (vm.days.length > 4 ? ' wide' : '') + '" role="tablist" aria-label="本周训练日">' + vm.days.map(function (d) {
+      var on = d.id === vm.day;
+      return '<div class="seg-i' + (on ? ' on' : '') + (d.done ? ' is-done' : '') + '" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-act="day" data-day="' + d.id + '">' +
+        (d.done ? '<span class="ds-ck">' + CHECK + '</span>' : (on ? '<span class="seg-dot"></span>' : '')) +
+        '<span class="num">' + esc(d.id) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function weekBar(vm) {
+    var rd = vm.round;
+    return '<div class="wk-slim" aria-label="本周进度"><span class="wk-lab">周进度</span><span class="wk-track"><span class="wk-fill" style="width:' + rd.pct + '%"></span></span><span class="wk-n num">' + rd.done + '/' + rd.total + '</span></div>';
+  }
+  function flagHtml(it) {
+    if (it.sub) return '<div class="ex-flags"><span class="ex-tag sub">替换 ' + esc(it.planName) + '</span></div>';
+    if (it.autoNew) return '<div class="ex-flags"><span class="ex-tag rot">本轮轮换 · 原 ' + esc(it.autoPrev) + '</span></div>';
+    if (it.changeNew) return '<div class="ex-flags"><span class="ex-tag new">新动作</span></div>';
+    return '';
+  }
+  function weightHtml(it) {
+    if (it.isCardio) return '<span class="weight num">' + esc(it.weightText) + '</span><span class="unit">分钟</span>';
+    if (it.isBW) return '<span class="weight num">自重</span>';
+    return '<span class="weight num' + (it.manual ? ' manual' : '') + '">' + esc(it.weightText) + '</span><span class="unit">' + esc(it.unitText) + '</span>';
+  }
+  function miniDots(it) {
+    if (!it.dots || !it.dots.length) return '';
+    var done = it.done || 0;
+    return '<div class="mini-dots" aria-hidden="true">' + it.dots.map(function (d) {
+      var cls = d.on ? 'done' : (d.i === done ? 'next' : '');
+      return '<span class="mini-dot ' + cls + '"></span>';
+    }).join('') + '</div>';
+  }
+  function progCap(it) {
+    if (it.skip) return '已跳过';
+    if (it.preview) return it.preview.judgment;
+    var n = it.sets || (it.dots ? it.dots.length : 0);
+    return (it.done || 0) + '/' + n + ' · 点开记组';
+  }
+  function followMeta(it) {
+    if (it.skip) return '<span class="follow-meta">已跳过</span>';
+    if (it.preview) return '<span class="follow-meta"><b style="color:' + it.preview.color + '">' + esc(it.preview.judgment) + '</b></span>';
+    var w = (it.isBW || it.isCardio) ? esc(it.weightText) : '<b>' + esc(it.weightText) + '</b> ' + esc(it.unitText);
+    return '<span class="follow-meta">' + w + ' · ' + esc(it.repsText) + '</span>';
+  }
+  function morePop(it) {
+    if (S.train.more !== it.slotId) return '';
+    return '<div class="more-pop">' +
+      (it.canAdjust ? '<button type="button" data-act="editW" data-slot="' + it.slotId + '">' + (it.editW ? '完成调整' : '调整重量') + '</button>' : '') +
+      '<button type="button" data-act="openswap" data-slot="' + it.slotId + '">更换</button>' +
+      '<button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
+  }
+  function museLog(it) {
+    var h = '';
+    if (it.editW) {
+      h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
+        '<input class="st-val wide num" inputmode="decimal" data-act="winput" data-slot="' + it.slotId + '" value="' + it.weightText + '">' +
+        '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">每次 ' + it.wStep + ' kg</span>' +
+        (it.manual ? '<span class="link we-reset" data-act="wreset" data-slot="' + it.slotId + '">恢复 ' + it.autoText + '</span>' : '') + '</div>';
+    }
+    if (!it.skip) {
+      if (it.inputType !== 'sets' && it.inputType !== 'fixed' && it.inputType !== 'cardio') {
+        h += '<div class="dots">' + it.dots.map(function (d) {
+          return '<div class="dot ' + (d.on ? 'on ' : '') + (d.amrap ? 'amrap' : '') + '" data-act="dot" data-slot="' + it.slotId + '" data-i="' + d.i + '" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">' + (d.amrap ? (d.i + 1) + '+' : d.i + 1) + '</div>';
+        }).join('') + '<div class="rest-btn" data-act="rest" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">休息 ' + it.restText + '</div></div>';
+      }
+      if (it.inputType === 'sets') h += setsBlock(it);
+      else if (it.inputType === 'linear' || it.inputType === 'wave') h += repBlock(it);
+      else if (it.inputType === 'fixed') h += fixedBlock(it);
+      else if (it.inputType === 'cardio') h += cardioBlock(it);
+      else if (it.inputType === 'amrap') {
+        h += '<div class="inrow"><div class="flex1"><div class="in-label">末组次数</div><div class="in-hint">' + esc(it.amrapHint) + '</div></div><div class="stepper">' +
+          '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null || it.value === undefined ? '' : it.value) + '" placeholder="' + (it.amrapTarget || '') + '">' +
+          '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="1">+</div></div></div>';
+      }
+      if (it.need5RM) h += '<div class="inrow"><div class="flex1"><div class="in-label">新 5RM</div><div class="in-hint">未达标时按新 5RM 的 85% 重置</div></div><input class="mini-in num" inputmode="decimal" data-act="5rm" data-slot="' + it.slotId + '" value="' + esc(it.new5RM) + '" placeholder="kg"></div>';
+      if (it.inputType === 'done') {
+        h += '<div class="inrow col"><div class="seg seg-done"><div class="seg-i ' + (it.value === '完成' ? 'on ok' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="完成">全部完成</div>' +
+          '<div class="seg-i ' + (it.value === '未完成' ? 'on bad' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="未完成">未完成</div></div>';
+        if (it.amrapHint) h += '<div class="in-hint">' + esc(it.amrapHint) + '</div>';
+        if (it.value === '未完成') h += '<div class="subrow"><span class="in-hint">实际总次数（选填，不填则这次不计入容量）</span><input class="mini-in num" inputmode="numeric" data-act="reps" data-slot="' + it.slotId + '" value="' + esc(it.reps2) + '" placeholder="次数"></div>';
+        h += '</div>';
+      }
+      if (it.preview) {
+        var p = it.preview;
+        h += '<div class="verdict"><div class="v-ic" style="background:' + p.color + '">' + p.icon + '</div><span class="v-j" style="color:' + p.color + '">' + p.judgment + '</span>' +
+          (p.sub ? '<span class="v-l">不影响 ' + esc(p.origName) + ' 的进阶</span>' : it.inputType === 'cardio' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + esc(p.nextStage) + '</span></div>' : p.judgment !== '减载' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + p.nextWeight + '</span><span class="v-u">kg</span>' + (p.stageChanged ? '<span class="v-stage">· ' + p.nextStage + '</span>' : '') + '</div>' : '<span class="v-l">按减载重量完成</span>') + '</div>' +
+          (p.boost && p.adaptNote ? '<div class="v-adapt"><span class="v-adapt-t">多加一档</span>' + esc(p.adaptNote) + '</div>' : '');
+      }
+    }
+    if (it.recSourceLabel || it.manual || it.plates || it.fail > 0) {
+      h += '<div class="ex-sub">' + (it.recSourceLabel ? '<span>' + esc(it.recSourceLabel) + '</span>' : '') +
+        (it.manual ? '<span class="accent">已手动调整 · 建议 ' + it.autoText + ' kg</span>' : '') +
+        (it.plates ? '<span>' + it.plates + '</span>' : '') +
+        (it.fail > 0 ? '<span class="amber">已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
+    }
+    return h;
+  }
+  function midCard(it, open) {
+    return '<section class="t1-mid' + (it.skip ? ' skipped' : '') + (open ? ' is-open' : '') + '" aria-label="' + esc(it.name) + '">' +
+      '<div class="t1-mid-row"><div class="t1-mid-main" data-act="expand" data-keep="1" data-slot="' + it.slotId + '">' +
+      '<div class="t1-top">' + tier(it.tier, it.badge) + '<span class="ex-name">' + esc(it.name) + '</span></div>' +
+      flagHtml(it) +
+      '<div class="t1-metrics">' + weightHtml(it) + '<span class="scheme-pill">' + esc(it.repsText) + '</span></div>' +
+      (open ? '' : '<div class="progress-row">' + miniDots(it) + '<span class="prog-cap">' + esc(progCap(it)) + '</span></div>') +
+      '</div><div class="t1-actions">' +
+      '<button type="button" class="more-btn" data-act="more" data-slot="' + it.slotId + '" aria-label="更多">' + MORE + '</button>' +
+      '<button type="button" class="expand-btn' + (open ? ' open' : '') + '" data-act="expand" data-slot="' + it.slotId + '" aria-label="' + (open ? '收起' : '展开记组') + '" aria-expanded="' + (open ? 'true' : 'false') + '">' + EXPAND + '</button>' +
+      '</div></div>' + morePop(it) +
+      (open ? '<div class="t1-open">' + museLog(it) + '</div>' : '') + '</section>';
+  }
+  function followList(items) {
+    if (!items.length) return '';
+    return '<section class="follow-list" aria-label="后续动作">' + items.map(function (it) {
+      return '<div class="follow-row' + (it.skip ? ' skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '" role="button">' +
+        tier(it.tier, it.badge) + '<span class="follow-name">' + esc(it.name) + '</span>' + followMeta(it) + '</div>';
+    }).join('') + '</section>';
+  }
+  function sessionMenu(vm, t) {
+    if (!t.menu) return '';
+    return '<div class="mask" data-act="menuclose"><div class="sheet session-sheet" data-stop="1"><div class="grabber"></div>' +
+      '<span class="sheet-cap">' + esc(vm.weekText) + (vm.editing ? ' · 编辑记录' : '') + '</span><div class="sheet-title">本次训练</div>' +
+      '<div class="list"><div class="cell"><span class="flex1">日期</span><label class="date-pick session-date"><span class="num">' + esc(GZ.dateLabel(t.date)) + '</span>' +
+      (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '">') + '</label></div>' +
+      '<div class="cell"><span class="flex1">体重</span><input class="cell-in num" inputmode="decimal" data-act="bw" value="' + esc(t.bw) + '" placeholder="可选"><span class="unit">kg</span></div>' +
+      '<div class="cell note-cell"><textarea class="note" data-act="note" rows="2" placeholder="备注：状态、睡眠、技术要点">' + esc(t.note) + '</textarea></div></div>' +
+      (vm.editing ? '<div class="sheet-btns"><div class="btn-ghost" data-act="cancelEdit">取消编辑</div></div>' : '') +
+      '</div></div>';
+  }
+  function submitBar(vm) {
+    return '<div class="submit-bar"><span class="sb-count num"><b>' + vm.filled + '</b> / ' + vm.total + '</span><button type="button" class="btn-primary sb-btn" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
+  }
+
   function renderTrainHold(cur) {
     var paused = cur.status === 'paused';
-    return '<div class="head"><div class="large-title">' + esc(cur.name) + '</div></div>' +
-      '<div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
+    var goal = '<button type="button" class="goal-entry" data-act="opendetail" aria-label="打开这套计划">' +
+      '<div class="goal-primary"><span>' + esc(cur.name) + '</span><span class="goal-chev" aria-hidden="true">' + CHEV + '</span></div>' +
+      '<div class="goal-secondary">' + (paused ? '已暂停' : '已结束') + '</div></button>';
+    var body = '<div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
       '<div class="hold-t">' + (paused ? '这套计划暂停了' : '这套计划已经结束') + '</div>' +
       '<div class="hold-s">' + (paused ? '要继续或结束，打开工具里计划库中的这套计划。' : '不能再往这套里记训练。要换一套，去工具里的计划库开始。') + '</div>' +
       '<div class="plan-ops"><div class="btn-ghost" data-act="opendetail">打开这套计划</div></div></div>';
+    return museFrame(goal, body, '');
   }
   function renderTrain() {
     var db0 = load(), cur0 = GZ.activeProgram(db0);
     if (cur0 && cur0.status !== 'active' && !S.train.recordId) return renderTrainHold(cur0);
     var vm = trainVM(), t = S.train, h = '';
-    h += '<div class="head"><div class="row between"><label class="date-pick"><span class="head-sub">' + (vm.editing ? '编辑记录 · ' : '') + vm.weekText + (vm.locked ? ' · 已完成' : ' · ' + GZ.dateLabel(t.date)) + '</span>' +
-      (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '">') + '</label>' + (vm.editing ? '<span class="link" data-act="cancelEdit">取消</span>' : '') + '</div>' +
-      '<div class="large-title"><span class="num">' + vm.day + '</span> ' + vm.dayName + '</div></div>';
+    ensureFocus(vm);
+    var focus = null, rest = [];
+    vm.items.forEach(function (it) { if (it.slotId === t.focus) focus = it; else rest.push(it); });
     if (!vm.editing) h += backupNag();
-    if (!vm.editing) {
-      h += '<div class="seg day-seg' + (vm.days.length > 4 ? ' wide' : '') + '">' + vm.days.map(function (d) {
-        return '<div class="seg-i ' + (d.id === vm.day ? 'on ' : '') + (d.done ? 'is-done' : '') + '" data-act="day" data-day="' + d.id + '">' + (d.done ? '<span class="ds-ck">✓</span>' : '') +
-          '<span class="num">' + d.id + '</span>' + (d.rec ? '<div class="rec-dot"></div>' : '') + '</div>';
-      }).join('') + '</div>';
-      var rd = vm.round;
-      h += '<div class="wk-prog"><div class="wk-bar"><div class="wk-in" style="width:' + rd.pct + '%"></div></div><span class="wk-t">本周 <span class="num strong">' + rd.done + '/' + rd.total + '</span>' +
-        (rd.left ? ' · 完成 ' + rd.leftText + ' 后进入' + rd.nextWeekText : '') + '</span></div>';
-      h += '<div class="card tap lib-entry" data-act="overview"><span class="flex1">计划总览</span><span class="cap" style="margin-right:8px">周期与动作状态</span><span class="chev">›</span></div>';
+    if (!vm.editing) h += daySeg(vm) + weekBar(vm);
+    if (!vm.locked && (vm.deloadSuggest || vm.deload)) {
+      h += '<div class="deload-slim"><span class="dl-t">减载周</span><span class="dl-s">' + esc(vm.deloadTip || '降低负荷恢复') + '</span>' +
+        '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
     }
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
@@ -585,100 +760,17 @@
         '<div class="lk-tip">下周的 ' + vm.day + ' 会在本周 ' + vm.round.leftText + ' 完成后开放</div>' +
         '<button type="button" class="btn-primary lk-share" data-act="shareopen" data-id="' + L.id + '">查看今日战报</button>' +
         '<div class="sheet-btns"><div class="btn-ghost" data-act="editLocked" data-id="' + L.id + '">修改这次</div><div class="btn-ghost solid" data-act="day" data-day="' + vm.recommended + '">去练 ' + vm.recommended + '</div></div></div>';
+    } else if (!vm.locked) {
+      if (vm.editing) h += '<button type="button" class="edit-cancel" data-act="cancelEdit">取消编辑</button>';
+      if (focus) h += midCard(focus, !!t.open);
+      h += followList(rest);
+      h += submitBar(vm);
     }
-    if (!vm.locked) {
-    if (vm.deloadSuggest || vm.deload) {
-      h += '<div class="card deload"><div class="dl-ic">↓</div><div class="flex1"><div class="dl-t">减载周</div><div class="dl-s">' + esc(vm.deloadTip || '减载周 · 降低负荷恢复') + '</div></div>' +
-        '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
-    }
-    // 专注模式：只展开「当前动作」，其余收成一行。焦点只在换训练日 / 首次进入时自动定位到第一个未完成的动作，
-    // 之后由用户点「下一个动作」或点某一行切换，避免刚填完就被收起、看不到判定结果。
-    var finished = function (x) { return x.skip || !!x.preview; };
-    var fkey = vm.day + '|' + (t.recordId || '');
-    if (t.focusKey !== fkey || (t.focus && !vm.items.some(function (x) { return x.slotId === t.focus; }))) {
-      var f0 = vm.items.filter(function (x) { return !finished(x); })[0];
-      t.focus = f0 ? f0.slotId : null; t.focusKey = fkey;
-    }
-    var nextOpen = function (cur) {
-      var idx = vm.items.map(function (x) { return x.slotId; }).indexOf(cur), rest0 = vm.items.slice(idx + 1).concat(vm.items.slice(0, idx));
-      var n = rest0.filter(function (x) { return !finished(x); })[0]; return n ? n.slotId : null;
-    };
-    var restBuf = '', flushRest = function () {
-      if (restBuf) {
-        h += '<div class="card rest-group"><div class="rg-head">后续动作</div>' + restBuf + '</div>';
-        restBuf = '';
-      }
-    };
-    vm.items.forEach(function (it) {
-      if (it.slotId !== t.focus) {
-        var p0 = it.preview, right;
-        if (it.skip) right = '<span class="exr-st">已跳过</span>';
-        else if (p0) right = '<span class="exr-st" style="color:' + p0.color + '">' + p0.icon + ' ' + p0.judgment + '</span>' + (p0.sub || p0.judgment === '减载' ? '' : '<span class="exr-nx num">下次 ' + (it.inputType === 'cardio' ? esc(p0.nextStage) : p0.nextWeight) + '</span>');
-        else if (it.isCardio) right = '<span class="exr-w num">' + esc(it.repsText) + '</span>';
-        else right = '<span class="exr-w num">' + (!it.isBW ? it.weightText + '<span class="exr-u"> ' + esc(it.unitText) + '</span>' : '自重') + '</span><span class="exr-r num">' + it.repsText + '</span>';
-        restBuf += '<div class="ex-row g ' + (finished(it) ? 'is-fin ' : '') + (it.skip ? 'skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '">' + tier(it.tier, it.badge) +
-          '<span class="exr-n">' + esc(it.name) + '</span><span class="exr-right">' + right + '</span><span class="exr-chev">›</span></div>';
-        return;
-      }
-      flushRest();
-      var nxt = nextOpen(it.slotId);
-      h += '<div class="card ex is-focus ' + (it.skip ? 'skipped' : '') + '">';
-      h += '<div class="ex-head">' + tier(it.tier, it.badge) + '<div class="ex-title"><span class="ex-name">' + esc(it.name) + '</span>' + equipTag(it.equip) +
-        (it.sub ? '<span class="ex-tag sub">替换 ' + esc(it.planName) + '</span>' : it.autoNew ? '<span class="ex-tag rot">本轮轮换 · 原 ' + esc(it.autoPrev) + '</span>' : it.changeNew ? '<span class="ex-tag new">新动作</span>' : '') + '</div>' +
-        '<span class="ex-act" data-act="openswap" data-slot="' + it.slotId + '">更换</span>' +
-        '<span class="ex-skip" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</span></div>';
-      h += '<div class="ex-main">' + (!it.isBW
-        ? '<div class="wbox ' + (it.editW ? 'editing' : '') + '"' + (it.canAdjust ? ' data-act="editW" data-slot="' + it.slotId + '"' : '') + '><span class="w-num num ' + (it.manual ? 'manual' : '') + '">' + it.weightText + '</span><span class="w-unit">' + esc(it.unitText) + '</span>' + (it.canAdjust ? '<span class="w-edit">' + (it.editW ? '完成' : '调整') + '</span>' : '') + '</div>'
-        : '<div class="wbox bw-only"><span class="w-num bw-text">自重</span></div>') + '<span class="reps num">' + (it.isCardio ? '' : it.repsText) + '</span></div>';
-      if (it.recSourceLabel || it.manual || it.plates || it.fail > 0) h += '<div class="ex-sub">' + (it.recSourceLabel ? '<span>' + esc(it.recSourceLabel) + (it.manual || it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.manual ? '<span class="accent">已手动调整 · 建议 ' + it.autoText + ' kg' + (it.plates || it.fail > 0 ? ' · ' : '') + '</span>' : '') + (it.plates || '') + (it.fail > 0 ? '<span class="amber">' + (it.plates ? ' · ' : '') + '已预警 ' + it.fail + ' 次</span>' : '') + '</div>';
-      if (it.editW) {
-        h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
-          '<input class="st-val wide num" inputmode="decimal" data-act="winput" data-slot="' + it.slotId + '" value="' + it.weightText + '">' +
-          '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">每次 ' + it.wStep + ' kg</span>' +
-          (it.manual ? '<span class="link we-reset" data-act="wreset" data-slot="' + it.slotId + '">恢复 ' + it.autoText + '</span>' : '') + '</div>';
-      }
-      if (!it.skip) {
-        if (it.inputType !== 'sets' && it.inputType !== 'fixed' && it.inputType !== 'cardio') {
-          h += '<div class="dots">' + it.dots.map(function (d) {
-            return '<div class="dot ' + (d.on ? 'on ' : '') + (d.amrap ? 'amrap' : '') + '" data-act="dot" data-slot="' + it.slotId + '" data-i="' + d.i + '" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">' + (d.amrap ? (d.i + 1) + '+' : d.i + 1) + '</div>';
-          }).join('') + '<div class="rest-btn" data-act="rest" data-rest="' + it.rest + '" data-name="' + esc(it.name) + '">休息 ' + it.restText + '</div></div>';
-        }
-        if (it.inputType === 'sets') h += setsBlock(it);
-        else if (it.inputType === 'linear' || it.inputType === 'wave') h += repBlock(it);
-        else if (it.inputType === 'fixed') h += fixedBlock(it);
-        else if (it.inputType === 'cardio') h += cardioBlock(it);
-        else if (it.inputType === 'amrap') {
-          h += '<div class="inrow"><div class="flex1"><div class="in-label">末组次数</div><div class="in-hint">目标 ' + it.amrapHint + '</div></div><div class="stepper">' +
-            '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="-1">−</div><input class="st-val num" inputmode="numeric" data-act="amrap" data-slot="' + it.slotId + '" value="' + (it.value === null || it.value === undefined ? '' : it.value) + '" placeholder="' + (it.amrapTarget || '') + '">' +
-            '<div class="st-btn" data-act="step" data-slot="' + it.slotId + '" data-d="1">+</div></div></div>';
-        }
-        if (it.need5RM) h += '<div class="inrow"><div class="flex1"><div class="in-label">新 5RM</div><div class="in-hint">未达标时按新 5RM 的 85% 重置</div></div><input class="mini-in num" inputmode="decimal" data-act="5rm" data-slot="' + it.slotId + '" value="' + esc(it.new5RM) + '" placeholder="kg"></div>';
-        if (it.inputType === 'done') {
-          h += '<div class="inrow col"><div class="seg seg-done"><div class="seg-i ' + (it.value === '完成' ? 'on ok' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="完成">全部完成</div>' +
-            '<div class="seg-i ' + (it.value === '未完成' ? 'on bad' : '') + '" data-act="done" data-slot="' + it.slotId + '" data-v="未完成">未完成</div></div>';
-          if (it.amrapHint) h += '<div class="in-hint">' + esc(it.amrapHint) + '</div>';
-          if (it.value === '未完成') h += '<div class="subrow"><span class="in-hint">实际总次数（选填，不填则这次不计入容量）</span><input class="mini-in num" inputmode="numeric" data-act="reps" data-slot="' + it.slotId + '" value="' + esc(it.reps2) + '" placeholder="次数"></div>';
-          h += '</div>';
-        }
-        if (it.preview) {
-          var p = it.preview;
-          h += '<div class="verdict"><div class="v-ic" style="background:' + p.color + '">' + p.icon + '</div><span class="v-j" style="color:' + p.color + '">' + p.judgment + '</span>' +
-            (p.sub ? '<span class="v-l">不影响 ' + esc(p.origName) + ' 的进阶</span>' : it.inputType === 'cardio' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + esc(p.nextStage) + '</span></div>' : p.judgment !== '减载' ? '<div class="v-next"><span class="v-l">下次</span><span class="num v-w">' + p.nextWeight + '</span><span class="v-u">kg</span>' + (p.stageChanged ? '<span class="v-stage">· ' + p.nextStage + '</span>' : '') + '</div>' : '<span class="v-l">按减载重量完成</span>') + '</div>' +
-            (p.boost && p.adaptNote ? '<div class="v-adapt"><span class="v-adapt-t">多加一档</span>' + esc(p.adaptNote) + '</div>' : '');
-        }
-      }
-      if ((it.preview || it.skip) && nxt) h += '<div class="ex-next" data-act="focus" data-slot="' + nxt + '">下一个动作<span class="exr-chev">›</span></div>';
-      h += '</div>';
-    });
-    flushRest();
-    h += '<div class="list"><div class="cell"><span class="flex1">体重</span><input class="cell-in num" inputmode="decimal" data-act="bw" value="' + esc(t.bw) + '" placeholder="可选"><span class="unit">kg</span></div>' +
-      '<div class="cell"><textarea class="note" data-act="note" rows="2" placeholder="备注：状态、睡眠、技术要点">' + esc(t.note) + '</textarea></div></div>';
-    h += '<div class="submit-bar"><span class="sb-count num"><b>' + vm.filled + '</b> / ' + vm.total + '</span><button class="btn-primary sb-btn" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
-    }
-    if (t.swap && t.swap.show) h += renderSwap();
+    var extra = sessionMenu(vm, t);
+    if (t.swap && t.swap.show) extra += renderSwap();
     if (t.result) {
       var r = t.result;
-      h += '<div class="mask" data-act="closeResult"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + r.day + ' ' + r.dayName + ' · ' + r.weekText + '</span><div class="sheet-title">' + (r.cycleDone ? '第 ' + r.cycle + ' 轮完成' : r.weekDone ? '本周完成' : '训练完成') + '</div>' +
+      extra += '<div class="mask" data-act="closeResult"><div class="sheet" data-stop="1"><div class="grabber"></div><span class="sheet-cap">' + r.day + ' ' + r.dayName + ' · ' + r.weekText + '</span><div class="sheet-title">' + (r.cycleDone ? '第 ' + r.cycle + ' 轮完成' : r.weekDone ? '本周完成' : '训练完成') + '</div>' +
         (r.cycleDone ? '<div class="wk-done">第 ' + r.cycle + ' 轮 ' + r.weeksPerCycle + ' 周全部完成，进入第 ' + (r.cycle + 1) + ' 轮' + (r.nextDeload ? '（含减载周）' : '') + '</div>' + (r.rotated ? '<div class="wk-left">' + ((vm.progression || 'gzclp') === 'gzclp' ? '已按轮换计划更换 ' + r.rotated + ' 个 T2/T3 动作，T1 四大项不变。当前动作在「计划总览」的当前状态里。' : '已按计划更换变式。当前动作在「计划总览」的当前状态里。') + '</div>' : '')
           : r.weekDone ? '<div class="wk-done">本周训练日全部完成，已进入' + r.nextWeekText + (r.nextDeload ? '（减载周）' : '') + '</div>'
           : (r.leftText ? '<div class="wk-left">本周还剩 ' + r.leftText + '</div>' : '')) +
@@ -686,7 +778,7 @@
         '<div class="list">' + r.items.map(function (x) { return '<div class="cell res-row">' + tier(x.tier, x.badge) + '<span class="res-name flex1">' + x.name + '</span><div class="res-r"><span class="jtag" style="color:' + x.color + '">' + x.j + '</span><span class="res-next num">' + x.next + '</span></div></div>'; }).join('') + '</div>' +
         '<div class="sheet-btns stack"><button type="button" class="btn-primary share-result" data-act="shareopen" data-id="' + r.logId + '">生成今日战报</button><div class="row"><div class="btn-ghost" data-act="gotoStats">查看数据</div><div class="btn-ghost solid" data-act="closeResult">好</div></div></div></div></div>';
     }
-    return h;
+    return museFrame(goalBtn(vm), h, extra);
   }
 
   function setsBlock(it) {
@@ -734,7 +826,7 @@
       case 'bkdismiss': localStorage.setItem(BK_DISMISS, GZ.today()); return true;
       case 'bkset': S.tab = 'settings'; S.settings.view = ''; render(); setTimeout(function () { var x = document.getElementById('syncSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false;
       case 'editLocked': startEdit(ds.id); return true;
-      case 'openswap': openSwap(ds.slot); return true;
+      case 'openswap': t.more = ''; openSwap(ds.slot); return true;
       case 'closeswap': t.swap.show = false; return true;
       case 'swapfit': if (t.swap.category && t.swap.category.locked) return false; t.swap.fit = ds.f; return true;
       case 'swapq': t.swap.q = el.value; updateSwapList(); return false;
@@ -751,7 +843,20 @@
       case 'swapok': return swapConfirm();
       case 'day': if (t.recordId || !ds.day || ds.day === t.day) return; rememberTrain(); takeTrainDay(ds.day); return true;
       case 'deload': t.deload = el.checked; return true;
-      case 'focus': t.focus = ds.slot; render(true); setTimeout(function () { var c = document.querySelector('.ex.is-focus'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 20); return false;
+      case 'focus':
+        t.focus = ds.slot; t.open = false; t.more = '';
+        if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = t.focus; t.focusKey = t.day + '|' + (t.recordId || ''); }
+        render(true);
+        setTimeout(function () { var c = document.querySelector('.t1-mid'); if (c) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 20);
+        return false;
+      case 'expand':
+        if (ds.slot && t.focus !== ds.slot) t.focus = ds.slot;
+        t.open = ds.keep === '1' ? true : !t.open;
+        t.more = '';
+        return true;
+      case 'menu': t.menu = !t.menu; t.more = ''; return true;
+      case 'menuclose': t.menu = false; return true;
+      case 'more': t.more = t.more === ds.slot ? '' : ds.slot; return true;
       case 'step':
         en = entry(ds.slot); vm = trainVM();
         var it = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
@@ -779,8 +884,8 @@
         en.sets[Number(ds.i)] = el.value === '' ? null : Math.max(0, Math.min(60, parseInt(el.value, 10) || 0)); return true;
       case 'miss': en = entry(ds.slot); en.miss = !!el.checked; return true;
       case 'reps': entry(ds.slot).reps = el.value; return true;
-      case 'skip': en = entry(ds.slot); en.skip = !en.skip; return true;
-      case 'editW': en = entry(ds.slot); en.editW = !en.editW; return true;
+      case 'skip': en = entry(ds.slot); en.skip = !en.skip; t.more = ''; return true;
+      case 'editW': en = entry(ds.slot); en.editW = !en.editW; t.open = true; t.more = ''; return true;
       case 'wstep':
         en = entry(ds.slot); vm = trainVM();
         var iw = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
@@ -800,7 +905,7 @@
         if (en.done === i + 1 && en.done < it2.sets) beginRest(Number(ds.rest), ds.name);
         return true;
       case 'rest': beginRest(Number(ds.rest), ds.name); return false;
-      case 'cancelEdit': t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; return true;
+      case 'cancelEdit': t.recordId = null; t.day = null; t.draft = null; t.deload = undefined; t.date = GZ.today(); t.bw = ''; t.note = ''; t.menu = false; t.open = false; return true;
       case 'submit': submit(); return false;
       case 'overview': S.tab = 'plan'; S.plan.view = ''; S.plan.from = 'train'; S.plan.slot = null; S.plan.detail = null; S.stats.ex = null; render(); return false;
       case 'opendetail':
@@ -945,7 +1050,7 @@
             (c.status === 'done' ? '<div class="cdot" style="background:' + c.color + '"></div>' : '') + '</div>';
         }).join('') + '</div>';
     });
-    h += '<div class="legend"><div class="lg"><div class="sw" style="background:#FF6B1A"></div>已完成 · 圆点为判定</div><div class="lg"><div class="sw" style="box-shadow:inset 0 0 0 2px #FF6B1A"></div>下一次</div><div class="lg"><div class="sw" style="background:#E5E5EA"></div>每次加重的推演</div></div></div>';
+    h += '<div class="legend"><div class="lg"><div class="sw" style="background:#0064D4"></div>已完成 · 圆点为判定</div><div class="lg"><div class="sw" style="box-shadow:inset 0 0 0 2px #0064D4"></div>下一次</div><div class="lg"><div class="sw" style="background:#E5E5EA"></div>每次加重的推演</div></div></div>';
     var ov = vm.overview[p.ov];
     h += '<div class="card"><div class="card-title"><span class="t">当前状态</span><span class="s">点动作看趋势</span></div>' +
       seg(vm.overview.map(function (o) { return { html: '<span class="num">' + o.day + '</span>' }; }), p.ov, 'ov') +
@@ -2079,6 +2184,11 @@
   function render(keepScroll) {
     var body = document.getElementById('body'), y = body.scrollTop;
     var tb = document.getElementById('tabbar');
+    var trainHome = !gateOnboard() && S.tab === 'train';
+    var appEl = document.querySelector('.app');
+    if (appEl) appEl.classList.toggle('on-train', trainHome);
+    var theme = document.querySelector('meta[name="theme-color"]');
+    if (theme) theme.setAttribute('content', trainHome ? '#EEF5FC' : '#F7F7F8');
     if (gateOnboard()) {
       syncOnboardStep(load());
       if (tb) tb.style.display = 'none';
@@ -2095,7 +2205,8 @@
     document.getElementById('navTitle').textContent = isLib ? '动作库' : toolsBrowse ? '计划详情' : title;
     var bigTitle = S.tab === 'train' || S.tab === 'plan' || isLib || toolsBrowse ? '' : '<div class="pg-title">' + title + '</div>';
     var shareHtml = S.review.share ? renderShareModal() : '';
-    body.innerHTML = '<div class="' + (PGCLS[S.tab] || ('pg-' + S.tab)) + '"><div class="page">' + bigTitle + RENDER[S.tab]() + '</div>' + shareHtml + '</div>';
+    var shellCls = (PGCLS[S.tab] || ('pg-' + S.tab)) + (trainHome ? ' muse' : '');
+    body.innerHTML = '<div class="' + shellCls + '"><div class="page' + (trainHome ? ' muse-page' : '') + '">' + bigTitle + RENDER[S.tab]() + '</div>' + shareHtml + '</div>';
     body.scrollTop = keepScroll ? y : 0;
     navState();
     var hl = S.tab === 'plan' ? 'train' : S.tab;
@@ -2221,6 +2332,7 @@
       var back = S.review.returnTo;
       var restore = back && prevTab === 'settings' && dest === back.from ? back : null;
       closeSheets();
+      S.train.menu = false; S.train.more = '';
       S.tab = dest;
       if (restore) {
         if (dest === 'stats') S.data.seg = 2;

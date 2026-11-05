@@ -1,4 +1,6 @@
 {
+  "navigationStyle": "custom",
   "navigationBarTitleText": "训练",
+  "backgroundColor": "#EEF5FC",
   "usingComponents": { "share-sheet": "/components/share-sheet/share-sheet" }
 }

@@ -17,4 +17,4 @@
 - `mock-shots/home-v5-muse-balance-icon.png` — 单屏截图
 - `mock-shots/home-v5-muse-balance-icon-vs-l.png` — 与上一版对照
 
-产品代码尚未按此视觉落地；确认后再改 `source/` / 网页打包。
+训练首页已按此稿落地（`source/pages/train/` 与 `source/preview/app-h5.js`）。网页包由 `source/preview/build.py` 生成。
