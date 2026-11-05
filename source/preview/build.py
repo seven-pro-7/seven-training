@@ -45,11 +45,11 @@ for name in ['train', 'plan', 'stats', 'review', 'me']:
 
 shell_css = """
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: #E5E5EA; font-family: -apple-system, "SF Pro Text", "PingFang SC", sans-serif; }
+html, body { margin: 0; height: 100%; background: #E8E8EC; font-family: "Figtree", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
 body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .side { width: 300px; color: #6E6E73; font-size: 14px; line-height: 1.7; }
 .side h1 { color: #1C1C1E; font-size: 28px; margin: 0 0 4px; letter-spacing: -0.5px; }
-.side h1 span { color: #E65A00; }
+.side h1 span { color: #0064D4; }
 .side b { color: #1C1C1E; font-weight: 600; }
 .side ul { padding-left: 18px; margin: 12px 0 18px; }
 .side .tag { display: inline-block; background: #fff; border-radius: 6px; padding: 1px 8px; margin: 3px 4px 3px 0; font-size: 12px; color: #3A3A3C; }
@@ -59,14 +59,14 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .nav { position: relative; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(242,242,247,0.92); color: #1C1C1E; font-size: 17px; font-weight: 600; z-index: 5; }
 .capsule { position: absolute; right: 8px; top: 7px; width: 87px; height: 31px; border-radius: 16px; border: 0.5px solid rgba(0,0,0,.12); display: flex; align-items: center; justify-content: space-around; color: #1C1C1E; font-size: 14px; background: rgba(255,255,255,.7); }
 .capsule i { width: 0.5px; height: 18px; background: rgba(0,0,0,.15); }
-#body { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; background: #F2F2F7; }
+#body { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; background: #F7F7F8; }
 #body::-webkit-scrollbar { display: none; }
 .tabbar { flex-shrink: 0; display: flex; padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); background: rgba(249,249,249,0.94); border-top: 0.5px solid rgba(0,0,0,0.16); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 .phone .tabbar { padding-bottom: 26px; }
 .tb-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; color: #6C6C70; cursor: pointer; user-select: none; }
 .tb-item img { width: 26px; height: 26px; margin-bottom: 1px; }
 .tb-item .on-i { display: none; }
-.tb-item.on { color: #E65A00; }
+.tb-item.on { color: #0064D4; }
 .tb-item.on .on-i { display: block; } .tb-item.on .off-i { display: none; }
 #toast { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.96); background: rgba(28,28,30,.86); color: #fff; padding: 12px 20px; border-radius: 14px; font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 300; max-width: 78%; text-align: center; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -164,13 +164,13 @@ body { display: flex; align-items: center; justify-content: center; gap: 56px; }
 .rp-n { font-size: 13px; color: #8E8E93; margin-bottom: 10px; }
 .rp-btns { display: flex; gap: 8px; }
 .rp-b { flex: 1; text-align: center; font-size: 13px; font-weight: 500; padding: 9px 0; border-radius: 10px; background: rgba(118,118,128,0.12); color: #1C1C1E; cursor: pointer; }
-.rp-b.main { background: #E65A00; color: #fff; }
+.rp-b.main { background: #0064D4; color: #fff; }
 
 
 input, textarea, select, button { font: inherit; color: inherit; outline: none; }
 input, textarea { border: none; background: transparent; -webkit-appearance: none; appearance: none; }
 .app input::placeholder, .app textarea::placeholder { color: #C7C7CC; }
-.app input { caret-color: #E65A00; }
+.app input { caret-color: #0064D4; }
 .app button.btn-primary { width: 100%; cursor: pointer; }
 .app button.btn-primary:disabled { opacity: 0.4; pointer-events: none; }
 .app .list .cell.col { flex-direction: column; align-items: stretch; }
@@ -199,11 +199,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app textarea.imp { resize: vertical; display: block; }
 .date-pick, .ex-pick, .base-pick, .pick-cell { position: relative; }
 .date-pick input, .ex-pick select, .base-pick select, .pick-cell select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-.lib-back { color: #E65A00; font-size: 17px; padding: 2px 0 12px; display: inline-block; }
-.app #body > div { background: #F2F2F7; min-height: 100%; }
+.lib-back { color: #0064D4; font-size: 17px; padding: 2px 0 12px; display: inline-block; }
+.app #body > div { background: #F7F7F8; min-height: 100%; }
 .app .lib-list { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .cyc-nav { display: flex; align-items: center; gap: 4px; }
-.cyc-btn { width: 24px; height: 24px; border-radius: 50%; background: #EFEFF4; color: #E65A00; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
+.cyc-btn { width: 24px; height: 24px; border-radius: 50%; background: #EFEFF4; color: #0064D4; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
 .cyc-btn.off { color: #C7C7CC; opacity: .5; cursor: default; }
 .cyc-label { font-size: 15px; }
 .total-cap { display: block; margin-top: 7px; }
@@ -211,11 +211,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .ios-sw input { display: none; }
 .ios-sw i { position: absolute; inset: 0; background: #E9E9EA; border-radius: 16px; transition: background .2s; }
 .ios-sw i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 1px 1px rgba(0,0,0,.16); transition: left .2s; }
-.ios-sw input:checked + i { background: #E65A00; }
+.ios-sw input:checked + i { background: #0064D4; }
 .ios-sw.green input:checked + i { background: #34C759; }
 .ios-sw input:checked + i::after { left: 22px; }
 @media (max-width: 760px) {
-  html, body { background: #F2F2F7; height: 100%; overflow: hidden; }
+  html, body { background: #F7F7F8; height: 100%; overflow: hidden; }
   body { display: block; }
   .side, .status, .capsule { display: none; }
   .phone { width: 100%; height: 100%; height: 100dvh; border-radius: 0; padding: 0; box-shadow: none; background: none; }
@@ -226,10 +226,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 }
 """
 
-tabs = [('train', 'train', '训练'), ('stats', 'stats', '数据'), ('tools', 'plan', '工具'), ('settings', 'me', '我的')]
+TAB_ICONS = {
+    'train': '<svg width="26" height="26" viewBox="0 0 26 26" fill="currentColor" aria-hidden="true"><path d="M5.5 10.5h3.2v5H5.5a1.6 1.6 0 0 1-1.6-1.6v-1.8A1.6 1.6 0 0 1 5.5 10.5z"/><path d="M17.3 10.5h3.2a1.6 1.6 0 0 1 1.6 1.6v1.8a1.6 1.6 0 0 1-1.6 1.6h-3.2v-5z"/><rect x="8.2" y="11.7" width="9.6" height="2.6" rx="1.2"/></svg>',
+    'stats': '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 17.5V11M11 17.5V8M16 17.5v-5M21 17.5V6.5"/></svg>',
+    'tools': '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="6.5" width="15" height="14" rx="2.2"/><path d="M5.5 11h15"/><path d="M10 4.5v3M16 4.5v3"/></svg>',
+    'settings': '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="17" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.4" fill="currentColor" stroke="none"/><circle cx="17" cy="17" r="1.4" fill="currentColor" stroke="none"/><path d="M9 5.5v1.2M9 10.8V19.5M17 5.5v1.2M17 10.8V19.5M5.5 9h1.2M10.8 9H19.5M5.5 17h1.2M10.8 17H19.5"/></svg>',
+}
+tabs = [('train', '训练'), ('stats', '数据'), ('tools', '工具'), ('settings', '我的')]
 tabbar = ''.join(
-    f'<div class="tb-item" data-tab="{tid}"><img class="off-i" src="{icons[ic]}" alt=""><img class="on-i" src="{icons[ic + "-on"]}" alt="">{txt}</div>'
-    for tid, ic, txt in tabs)
+    '<div class="tb-item" data-tab="%s"><span class="tb-ic">%s</span>%s</div>' % (tid, TAB_ICONS[tid], txt)
+    for tid, txt in tabs)
 
 side = """
 <div class="side">
@@ -250,7 +256,7 @@ side = """
 
 head = """<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F2F2F7">
+<meta name="theme-color" content="#EEF5FC">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -439,7 +445,7 @@ css.append(r"""
 .app .pg-plan .wide .cw, .app .pg-plan .wide .gh { font-size: 11px; }
 .app .pg-train .day-seg.wide .seg-i { font-size: 12px; padding: 6px 0; }
 .app .st-pill { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 8px; flex-shrink: 0; }
-.app .st-active { color: #E65A00; background: rgba(230,90,0,.12); }
+.app .st-active { color: #0064D4; background: #D8E9FF; }
 .app .st-paused { color: #C77700; background: rgba(255,159,10,.16); }
 .app .st-ended, .app .st-new { color: #6C6C70; background: rgba(108,108,112,.12); }
 .app .plan-ops { display: flex; gap: 8px; margin-top: 12px; }
@@ -455,10 +461,13 @@ css.append(r"""
 .app .chip-row { display: flex; gap: 8px; overflow-x: auto; padding: 0 0 8px; }
 .app .chip-row::-webkit-scrollbar { display: none; }
 .app .chip { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 6px 12px; background: var(--fill); color: var(--label); font-size: 13px; font-weight: 600; }
-.app .chip.on { background: #E65A00; color: #fff; }
+.app .chip.on { background: #0064D4; color: #fff; }
 .app .chip-n { margin-left: 4px; font-weight: 500; opacity: .72; }
 .app .filter-lab { font-size: 12px; color: var(--label2); margin: 8px 2px 4px; }
 """)
+_muse = pathlib.Path(__file__).with_name("muse-home.css")
+if _muse.exists():
+    css.append(_muse.read_text(encoding="utf-8"))
 
 
 html = f"""<!DOCTYPE html>
@@ -493,7 +502,7 @@ if not WEB.exists():
 (WEB / 'index.html').write_text(html)
 manifest = {
     'name': '训练手记', 'short_name': '训练手记', 'start_url': './', 'scope': './', 'display': 'standalone',
-    'background_color': '#F2F2F7', 'theme_color': '#F2F2F7', 'lang': 'zh-CN',
+    'background_color': '#F7F7F8', 'theme_color': '#EEF5FC', 'lang': 'zh-CN',
     'icons': [{'src': 'icon-180.png', 'sizes': '180x180', 'type': 'image/png'}, {'src': 'icon-512.png', 'sizes': '512x512', 'type': 'image/png'}]
 }
 (WEB / 'manifest.webmanifest').write_text(json.dumps(manifest, ensure_ascii=False, indent=2))

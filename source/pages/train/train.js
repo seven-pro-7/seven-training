@@ -57,7 +57,31 @@ Page({
     this.drafts[this.day] = this.draft;
     if (this.deload === undefined && this.deloads && this.deloads[this.day]) this.deload = true;
     const vm = GZ.buildTrain(db, { day: this.day, recordId: this.recordId, draft: this.draft, deload: this.deload });
-    this.setData({ vm });
+    const items = vm.items || [];
+    let focus = this.focus;
+    if (!focus || !items.some((x) => x.slotId === focus)) {
+      const open = items.find((x) => !x.skip && !x.preview);
+      focus = open ? open.slotId : (items[0] && items[0].slotId);
+      this.expanded = false;
+      this.moreOpen = false;
+    }
+    this.focus = focus;
+    const focusItem = items.find((x) => x.slotId === focus) || null;
+    const followItems = items.filter((x) => !focusItem || x.slotId !== focusItem.slotId);
+    const sp = (db.params && db.params.shareProfile) || {};
+    let goalStatus = '可开练';
+    if (vm.editing) goalStatus = '编辑记录';
+    else if (vm.locked) goalStatus = '已完成';
+    else if (vm.filled > 0) goalStatus = '进行中';
+    else if (vm.day === vm.recommended) goalStatus = '待开练';
+    this.setData({
+      vm, focusItem, followItems, goalStatus,
+      profileName: (sp.name || '').trim() || 'Seven',
+      profileAvatar: sp.avatar || '',
+      expanded: !!this.expanded,
+      moreOpen: !!this.moreOpen,
+      menuOpen: !!this.menuOpen
+    });
     this.persistOpen();
   },
 
@@ -77,6 +101,7 @@ Page({
       this.draft = this.drafts[day] || GZ.blankDraft(this.db(), day);
       this.drafts[day] = this.draft;
       this.deload = this.deloads && this.deloads[day] ? true : undefined;
+      this.focus = null; this.expanded = false; this.moreOpen = false;
     }
     this.refresh();
   },
@@ -94,12 +119,20 @@ Page({
   cancelEdit() {
     this.recordId = null; this.day = null; this.draft = null; this.deload = undefined;
     this.bw = ''; this.note = '';
+    this.menuOpen = false; this.expanded = false;
     this.setDate(GZ.today()); this.setData({ bw: '', note: '' });
     this.refresh();
   },
 
   // ---- 交互 ----
   onDay(e) { this.switchDay(e.currentTarget.dataset.day); },
+  onFocus(e) { this.focus = e.currentTarget.dataset.slot; this.expanded = false; this.moreOpen = false; this.refresh(); },
+  onExpand() { this.expanded = !this.expanded; this.moreOpen = false; this.refresh(); },
+  onExpandOpen() { if (!this.expanded) { this.expanded = true; this.moreOpen = false; this.refresh(); } },
+  onMore() { this.moreOpen = !this.moreOpen; this.setData({ moreOpen: this.moreOpen }); },
+  onMenu() { this.menuOpen = !this.menuOpen; this.setData({ menuOpen: this.menuOpen }); },
+  onMenuClose() { this.menuOpen = false; this.setData({ menuOpen: false }); },
+  goOverview() { wx.switchTab({ url: '/pages/plan/plan' }); },
   onEditLocked(e) { this.startEdit(e.currentTarget.dataset.id); },
   onDate(e) { this.setDate(e.detail.value); },
   onDeload(e) { this.deload = e.detail.value; this.refresh(); },
@@ -136,6 +169,7 @@ Page({
   onReps(e) { this.entry(e.currentTarget.dataset.slot).reps = e.detail.value; this.refresh(); },
   // ---- 更换动作 ----
   openSwap(e) {
+    this.moreOpen = false;
     const slot = e.currentTarget.dataset.slot, it = this.data.vm.items.find((x) => x.slotId === slot);
     const db = this.db(), ctx = GZ.swapContext(db, this.day, slot);
     this.swapState = {
@@ -185,7 +219,7 @@ Page({
   },
 
   // ---- 手动调整重量 ----
-  onEditW(e) { const en = this.entry(e.currentTarget.dataset.slot); en.editW = !en.editW; this.refresh(); },
+  onEditW(e) { const en = this.entry(e.currentTarget.dataset.slot); en.editW = !en.editW; this.expanded = true; this.moreOpen = false; this.refresh(); },
   onWStep(e) {
     const { slot, d } = e.currentTarget.dataset, en = this.entry(slot);
     const it = this.data.vm.items.find((x) => x.slotId === slot);
@@ -202,7 +236,7 @@ Page({
     this.refresh();
   },
   onWReset(e) { const en = this.entry(e.currentTarget.dataset.slot); en.w = null; this.refresh(); },
-  onSkip(e) { const en = this.entry(e.currentTarget.dataset.slot); en.skip = !en.skip; this.refresh(); },
+  onSkip(e) { const en = this.entry(e.currentTarget.dataset.slot); en.skip = !en.skip; this.moreOpen = false; this.refresh(); },
   onBw(e) { this.bw = e.detail.value; this.setData({ bw: e.detail.value }); this.persistOpen(); },
   onNote(e) { this.note = e.detail.value; this.setData({ note: e.detail.value }); this.persistOpen(); },
 
@@ -246,7 +280,7 @@ Page({
     };
     if (missing.length === vm.items.length) return wx.showToast({ title: '至少填写一个动作', icon: 'none' });
     if (missing.length) {
-      wx.showModal({ title: '还有未填写的动作', content: missing.map((m) => m.name).join('、') + ' 将按“跳过”保存，状态保持不变。', confirmText: '继续保存', confirmColor: '#FF6B1A', success: (r) => { if (r.confirm) go(); } });
+      wx.showModal({ title: '还有未填写的动作', content: missing.map((m) => m.name).join('、') + ' 将按“跳过”保存，状态保持不变。', confirmText: '继续保存', confirmColor: '#0064D4', success: (r) => { if (r.confirm) go(); } });
     } else go();
   },
 
