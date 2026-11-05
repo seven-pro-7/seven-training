@@ -554,6 +554,7 @@
   function entry(slot) { var d = S.train.draft; return d[slot] || (d[slot] = { v: null, done: 0 }); }
 
   var CHEV = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5.2 3.2L9 7l-3.8 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ME = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M5.5 19.2c1.4-3 3.7-4.4 6.5-4.4s5.1 1.4 6.5 4.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
   var EXPAND = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M5 7.2l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var MORE = '<svg width="16" height="4" viewBox="0 0 16 4" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.6"/><circle cx="8" cy="2" r="1.6"/><circle cx="14" cy="2" r="1.6"/></svg>';
   var CHECK = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.2 6.2l2.4 2.4L9.8 3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -588,7 +589,7 @@
   function museFrame(goalBtn, trainInner, extra) {
     var id = homeIdentity();
     return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
-      '<button type="button" class="menu-btn" data-act="menu" aria-label="本次训练，日期与备注"><span></span><span></span><span></span></button>' +
+      '<button type="button" class="menu-btn" data-act="me" aria-label="我的">' + ME + '</button>' +
       '<div class="avatar-wrap"><div class="avatar-ring">' + avatarFace(id) + '</div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
       goalBtn + '</section><section class="train-band" aria-label="训练">' + trainInner + '</section></div>' + (extra || '');
   }
@@ -642,7 +643,8 @@
     return '<div class="more-pop">' +
       (it.canAdjust ? '<button type="button" data-act="editW" data-slot="' + it.slotId + '">' + (it.editW ? '完成调整' : '调整重量') + '</button>' : '') +
       '<button type="button" data-act="openswap" data-slot="' + it.slotId + '">更换</button>' +
-      '<button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
+      '<button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button>' +
+      '<button type="button" data-act="menu">日期与备注</button></div>';
   }
   function museLog(it) {
     var h = '';
@@ -864,6 +866,7 @@
         t.more = '';
         return true;
       case 'menu': t.menu = !t.menu; t.more = ''; return true;
+      case 'me': t.menu = false; t.more = ''; S.tab = 'settings'; if (S.settings) S.settings.view = ''; render(); return false;
       case 'menuclose': t.menu = false; return true;
       case 'more': t.more = t.more === ds.slot ? '' : ds.slot; return true;
       case 'step':
@@ -1962,6 +1965,7 @@
     if (S.settings.view === 'lib') return renderLibrary();
     var db = load(), P = db.params, st = S.settings, h = '', tmPct = Math.round(P.tmRatio * 100), rp = GZ.replay(db), names = libNames(db);
     var inp = function (k, v, unit, extra) { return '<input class="f-in num" inputmode="decimal" data-act="param" data-k="' + k + '" ' + (extra || '') + ' value="' + v + '"><span class="f-u">' + unit + '</span>'; };
+    h += '<div class="lib-back" data-act="meback">‹ 训练</div><div class="pg-title">我的</div>';
     h += '\u0000base\u0000';
     var pp = Share.profile(P.shareProfile);
     h += '<div class="sec-h" id="shareProfileSec">分享名片</div><div class="list profile-list">' +
@@ -2116,6 +2120,7 @@
         toast('基线已更新');
         return true;
       case 'libback': st.view = ''; st.add = null; render(); return false;
+      case 'meback': S.tab = 'train'; render(); return false;
       case 'libfilter':
         if (ds.k === 'pattern') {
           st.pattern = ds.v;
@@ -2212,13 +2217,13 @@
     var isLib = S.tab === 'settings' && S.settings.view === 'lib';
     var toolsBrowse = S.tab === 'tools' && S.plan.view === 'browse';
     document.getElementById('navTitle').textContent = isLib ? '动作库' : toolsBrowse ? '计划详情' : title;
-    var bigTitle = S.tab === 'train' || S.tab === 'plan' || isLib || toolsBrowse ? '' : '<div class="pg-title">' + title + '</div>';
+    var bigTitle = S.tab === 'train' || S.tab === 'plan' || S.tab === 'settings' || isLib || toolsBrowse ? '' : '<div class="pg-title">' + title + '</div>';
     var shareHtml = S.review.share ? renderShareModal() : '';
     var shellCls = (PGCLS[S.tab] || ('pg-' + S.tab)) + (trainHome ? ' muse' : '');
     body.innerHTML = '<div class="' + shellCls + '"><div class="page' + (trainHome ? ' muse-page' : '') + '">' + bigTitle + RENDER[S.tab]() + '</div>' + shareHtml + '</div>';
     body.scrollTop = keepScroll ? y : 0;
     navState();
-    var hl = S.tab === 'plan' ? 'train' : S.tab;
+    var hl = (S.tab === 'plan' || S.tab === 'settings') ? 'train' : S.tab;
     document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === hl); });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
     else if (S.stats.ex) requestAnimationFrame(drawExercise);

@@ -500,7 +500,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .muse-home { flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
 .pg-train .avatar-band { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: calc(env(safe-area-inset-top) + 12px) 20px 28px; background: #EEF5FC; border-radius: 0 0 28px 28px; }
 .pg-train .menu-btn { position: absolute; left: 20px; top: calc(env(safe-area-inset-top) + 8px); width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px rgba(18,17,18,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
-.pg-train .menu-btn > view { width: 14px; height: 1.5px; border-radius: 999px; background: #121112; }
+.pg-train .me-btn { gap: 2px; }
+.pg-train .me-head { width: 8px; height: 8px; border-radius: 50%; background: #121112; }
+.pg-train .me-body { width: 14px; height: 6px; border-radius: 7px 7px 3px 3px; background: #121112; }
 .pg-train .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .pg-train .avatar-ring { width: 72px; height: 72px; border-radius: 50%; background: #F4F7FB; box-shadow: 0 4px 12px rgba(18,17,18,0.05), inset 0 0 0 1.5px rgba(18,17,18,0.06); display: flex; align-items: center; justify-content: center; position: relative; }
 .pg-train .avatar-ring::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(0,100,212,0.28); }
@@ -1293,13 +1295,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   justify-content: center;
   gap: 5px;
 }
-.app .menu-btn span {
-  display: block;
-  width: 14px;
-  height: 1.5px;
-  border-radius: 999px;
-  background: var(--label);
-}
+.app .menu-btn { color: var(--label); }
+.app .menu-btn svg { display: block; }
 .app .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .app .avatar-ring {
   width: 72px;
@@ -1702,7 +1699,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     <li><b>训练</b>：今天这一练；当前计划的周期与动作状态从「计划总览」进入</li>
     <li><b>数据</b>：记录、趋势与小结，看重量、容量和这一路的进步</li>
     <li><b>工具</b>：计划库在这里；1RM、BMI 等计算器以后也放这里</li>
-    <li><b>我的</b>：个人资料、云同步、备份和进阶参数</li>
+    <li><b>我的</b>：训练页左上角进入，个人资料、云同步、备份和进阶参数</li>
   </ul>
   <div>手机打开此链接 → 分享 → <b>添加到主屏幕</b>，即可全屏使用。</div>
   <div style="margin-top:14px">
@@ -1714,7 +1711,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   <div class="status"><span>9:41</span><span>●●● ▮</span></div>
   <div class="nav"><span id="navTitle">训练</span><div class="capsule">•••<i></i>◎</div></div>
   <div id="body"></div>
-  <div class="tabbar" id="tabbar"><div class="tb-item" data-tab="train"><span class="tb-ic"><svg width="26" height="26" viewBox="0 0 26 26" fill="currentColor" aria-hidden="true"><path d="M5.5 10.5h3.2v5H5.5a1.6 1.6 0 0 1-1.6-1.6v-1.8A1.6 1.6 0 0 1 5.5 10.5z"/><path d="M17.3 10.5h3.2a1.6 1.6 0 0 1 1.6 1.6v1.8a1.6 1.6 0 0 1-1.6 1.6h-3.2v-5z"/><rect x="8.2" y="11.7" width="9.6" height="2.6" rx="1.2"/></svg></span>训练</div><div class="tb-item" data-tab="stats"><span class="tb-ic"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 17.5V11M11 17.5V8M16 17.5v-5M21 17.5V6.5"/></svg></span>数据</div><div class="tb-item" data-tab="tools"><span class="tb-ic"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="6.5" width="15" height="14" rx="2.2"/><path d="M5.5 11h15"/><path d="M10 4.5v3M16 4.5v3"/></svg></span>工具</div><div class="tb-item" data-tab="settings"><span class="tb-ic"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="17" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.4" fill="currentColor" stroke="none"/><circle cx="17" cy="17" r="1.4" fill="currentColor" stroke="none"/><path d="M9 5.5v1.2M9 10.8V19.5M17 5.5v1.2M17 10.8V19.5M5.5 9h1.2M10.8 9H19.5M5.5 17h1.2M10.8 17H19.5"/></svg></span>我的</div></div>
+  <div class="tabbar" id="tabbar"><div class="tb-item" data-tab="train"><span class="tb-ic"><svg width="26" height="26" viewBox="0 0 26 26" fill="currentColor" aria-hidden="true"><path d="M5.5 10.5h3.2v5H5.5a1.6 1.6 0 0 1-1.6-1.6v-1.8A1.6 1.6 0 0 1 5.5 10.5z"/><path d="M17.3 10.5h3.2a1.6 1.6 0 0 1 1.6 1.6v1.8a1.6 1.6 0 0 1-1.6 1.6h-3.2v-5z"/><rect x="8.2" y="11.7" width="9.6" height="2.6" rx="1.2"/></svg></span>训练</div><div class="tb-item" data-tab="stats"><span class="tb-ic"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 17.5V11M11 17.5V8M16 17.5v-5M21 17.5V6.5"/></svg></span>数据</div><div class="tb-item" data-tab="tools"><span class="tb-ic"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="6.5" width="15" height="14" rx="2.2"/><path d="M5.5 11h15"/><path d="M10 4.5v3M16 4.5v3"/></svg></span>工具</div></div>
   <div id="rest"></div>
   <div id="toast" aria-live="polite"></div>
 </div></div>
@@ -7631,6 +7628,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function entry(slot) { var d = S.train.draft; return d[slot] || (d[slot] = { v: null, done: 0 }); }
 
   var CHEV = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5.2 3.2L9 7l-3.8 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ME = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M5.5 19.2c1.4-3 3.7-4.4 6.5-4.4s5.1 1.4 6.5 4.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
   var EXPAND = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M5 7.2l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var MORE = '<svg width="16" height="4" viewBox="0 0 16 4" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.6"/><circle cx="8" cy="2" r="1.6"/><circle cx="14" cy="2" r="1.6"/></svg>';
   var CHECK = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.2 6.2l2.4 2.4L9.8 3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -7665,7 +7663,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   function museFrame(goalBtn, trainInner, extra) {
     var id = homeIdentity();
     return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
-      '<button type="button" class="menu-btn" data-act="menu" aria-label="本次训练，日期与备注"><span></span><span></span><span></span></button>' +
+      '<button type="button" class="menu-btn" data-act="me" aria-label="我的">' + ME + '</button>' +
       '<div class="avatar-wrap"><div class="avatar-ring">' + avatarFace(id) + '</div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
       goalBtn + '</section><section class="train-band" aria-label="训练">' + trainInner + '</section></div>' + (extra || '');
   }
@@ -7719,7 +7717,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return '<div class="more-pop">' +
       (it.canAdjust ? '<button type="button" data-act="editW" data-slot="' + it.slotId + '">' + (it.editW ? '完成调整' : '调整重量') + '</button>' : '') +
       '<button type="button" data-act="openswap" data-slot="' + it.slotId + '">更换</button>' +
-      '<button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
+      '<button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button>' +
+      '<button type="button" data-act="menu">日期与备注</button></div>';
   }
   function museLog(it) {
     var h = '';
@@ -7941,6 +7940,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         t.more = '';
         return true;
       case 'menu': t.menu = !t.menu; t.more = ''; return true;
+      case 'me': t.menu = false; t.more = ''; S.tab = 'settings'; if (S.settings) S.settings.view = ''; render(); return false;
       case 'menuclose': t.menu = false; return true;
       case 'more': t.more = t.more === ds.slot ? '' : ds.slot; return true;
       case 'step':
@@ -9039,6 +9039,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (S.settings.view === 'lib') return renderLibrary();
     var db = load(), P = db.params, st = S.settings, h = '', tmPct = Math.round(P.tmRatio * 100), rp = GZ.replay(db), names = libNames(db);
     var inp = function (k, v, unit, extra) { return '<input class="f-in num" inputmode="decimal" data-act="param" data-k="' + k + '" ' + (extra || '') + ' value="' + v + '"><span class="f-u">' + unit + '</span>'; };
+    h += '<div class="lib-back" data-act="meback">‹ 训练</div><div class="pg-title">我的</div>';
     h += '\u0000base\u0000';
     var pp = Share.profile(P.shareProfile);
     h += '<div class="sec-h" id="shareProfileSec">分享名片</div><div class="list profile-list">' +
@@ -9193,6 +9194,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         toast('基线已更新');
         return true;
       case 'libback': st.view = ''; st.add = null; render(); return false;
+      case 'meback': S.tab = 'train'; render(); return false;
       case 'libfilter':
         if (ds.k === 'pattern') {
           st.pattern = ds.v;
@@ -9289,13 +9291,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var isLib = S.tab === 'settings' && S.settings.view === 'lib';
     var toolsBrowse = S.tab === 'tools' && S.plan.view === 'browse';
     document.getElementById('navTitle').textContent = isLib ? '动作库' : toolsBrowse ? '计划详情' : title;
-    var bigTitle = S.tab === 'train' || S.tab === 'plan' || isLib || toolsBrowse ? '' : '<div class="pg-title">' + title + '</div>';
+    var bigTitle = S.tab === 'train' || S.tab === 'plan' || S.tab === 'settings' || isLib || toolsBrowse ? '' : '<div class="pg-title">' + title + '</div>';
     var shareHtml = S.review.share ? renderShareModal() : '';
     var shellCls = (PGCLS[S.tab] || ('pg-' + S.tab)) + (trainHome ? ' muse' : '');
     body.innerHTML = '<div class="' + shellCls + '"><div class="page' + (trainHome ? ' muse-page' : '') + '">' + bigTitle + RENDER[S.tab]() + '</div>' + shareHtml + '</div>';
     body.scrollTop = keepScroll ? y : 0;
     navState();
-    var hl = S.tab === 'plan' ? 'train' : S.tab;
+    var hl = (S.tab === 'plan' || S.tab === 'settings') ? 'train' : S.tab;
     document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === hl); });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
     else if (S.stats.ex) requestAnimationFrame(drawExercise);

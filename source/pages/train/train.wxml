@@ -1,7 +1,7 @@
 <view class="page">
   <view class="muse-home" wx:if="{{vm}}">
     <view class="avatar-band">
-      <view class="menu-btn" bindtap="onMenu" aria-role="button" aria-label="本次训练，日期与备注"><view></view><view></view><view></view></view>
+      <view class="menu-btn me-btn" bindtap="goMe" aria-role="button" aria-label="我的"><view class="me-head"></view><view class="me-body"></view></view>
       <view class="avatar-wrap">
         <view class="avatar-ring">
           <image wx:if="{{profileAvatar}}" class="avatar-photo" src="{{profileAvatar}}" mode="aspectFill" />
@@ -95,6 +95,7 @@
             <view wx:if="{{block.item.canAdjust}}" data-slot="{{block.item.slotId}}" bindtap="onEditW">{{block.item.editW ? '完成调整' : '调整重量'}}</view>
             <view data-slot="{{block.item.slotId}}" bindtap="openSwap">更换</view>
             <view data-slot="{{block.item.slotId}}" bindtap="onSkip">{{block.item.skip ? '恢复' : '跳过'}}</view>
+            <view bindtap="onMenu">日期与备注</view>
           </view>
           <view class="t1-open" wx:if="{{expanded}}">
             <view class="wedit" wx:if="{{block.item.editW}}">

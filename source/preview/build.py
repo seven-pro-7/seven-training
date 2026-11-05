@@ -230,9 +230,8 @@ TAB_ICONS = {
     'train': '<svg width="26" height="26" viewBox="0 0 26 26" fill="currentColor" aria-hidden="true"><path d="M5.5 10.5h3.2v5H5.5a1.6 1.6 0 0 1-1.6-1.6v-1.8A1.6 1.6 0 0 1 5.5 10.5z"/><path d="M17.3 10.5h3.2a1.6 1.6 0 0 1 1.6 1.6v1.8a1.6 1.6 0 0 1-1.6 1.6h-3.2v-5z"/><rect x="8.2" y="11.7" width="9.6" height="2.6" rx="1.2"/></svg>',
     'stats': '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 17.5V11M11 17.5V8M16 17.5v-5M21 17.5V6.5"/></svg>',
     'tools': '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="6.5" width="15" height="14" rx="2.2"/><path d="M5.5 11h15"/><path d="M10 4.5v3M16 4.5v3"/></svg>',
-    'settings': '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="17" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.4" fill="currentColor" stroke="none"/><circle cx="17" cy="17" r="1.4" fill="currentColor" stroke="none"/><path d="M9 5.5v1.2M9 10.8V19.5M17 5.5v1.2M17 10.8V19.5M5.5 9h1.2M10.8 9H19.5M5.5 17h1.2M10.8 17H19.5"/></svg>',
 }
-tabs = [('train', '训练'), ('stats', '数据'), ('tools', '工具'), ('settings', '我的')]
+tabs = [('train', '训练'), ('stats', '数据'), ('tools', '工具')]
 tabbar = ''.join(
     '<div class="tb-item" data-tab="%s"><span class="tb-ic">%s</span>%s</div>' % (tid, TAB_ICONS[tid], txt)
     for tid, txt in tabs)
@@ -245,7 +244,7 @@ side = """
     <li><b>训练</b>：今天这一练；当前计划的周期与动作状态从「计划总览」进入</li>
     <li><b>数据</b>：记录、趋势与小结，看重量、容量和这一路的进步</li>
     <li><b>工具</b>：计划库在这里；1RM、BMI 等计算器以后也放这里</li>
-    <li><b>我的</b>：个人资料、云同步、备份和进阶参数</li>
+    <li><b>我的</b>：训练页左上角进入，个人资料、云同步、备份和进阶参数</li>
   </ul>
   <div>手机打开此链接 → 分享 → <b>添加到主屏幕</b>，即可全屏使用。</div>
   <div style="margin-top:14px">
