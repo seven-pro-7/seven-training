@@ -709,10 +709,25 @@
   }
   function followList(items) {
     if (!items.length) return '';
-    return '<section class="follow-list" aria-label="后续动作">' + items.map(function (it) {
+    return '<section class="follow-list">' + items.map(function (it) {
       return '<div class="follow-row' + (it.skip ? ' skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '" role="button">' +
         tier(it.tier, it.badge) + '<span class="follow-name">' + esc(it.name) + '</span>' + followMeta(it) + '</div>';
     }).join('') + '</section>';
+  }
+  /** 选中项留在原位展开成卡片，其余保持最小行，不把当前动作抽到列表最前。 */
+  function exerciseStack(vm) {
+    var t = S.train, h = '', buf = [];
+    function flush() {
+      if (!buf.length) return;
+      h += followList(buf);
+      buf = [];
+    }
+    vm.items.forEach(function (it) {
+      if (it.slotId === t.focus) { flush(); h += midCard(it, !!t.open); }
+      else buf.push(it);
+    });
+    flush();
+    return h;
   }
   function sessionMenu(vm, t) {
     if (!t.menu) return '';
@@ -745,8 +760,6 @@
     if (cur0 && cur0.status !== 'active' && !S.train.recordId) return renderTrainHold(cur0);
     var vm = trainVM(), t = S.train, h = '';
     ensureFocus(vm);
-    var focus = null, rest = [];
-    vm.items.forEach(function (it) { if (it.slotId === t.focus) focus = it; else rest.push(it); });
     if (!vm.editing) h += backupNag();
     if (!vm.editing) h += daySeg(vm) + weekBar(vm);
     if (!vm.locked && (vm.deloadSuggest || vm.deload)) {
@@ -762,8 +775,7 @@
         '<div class="sheet-btns"><div class="btn-ghost" data-act="editLocked" data-id="' + L.id + '">修改这次</div><div class="btn-ghost solid" data-act="day" data-day="' + vm.recommended + '">去练 ' + vm.recommended + '</div></div></div>';
     } else if (!vm.locked) {
       if (vm.editing) h += '<button type="button" class="edit-cancel" data-act="cancelEdit">取消编辑</button>';
-      if (focus) h += midCard(focus, !!t.open);
-      h += followList(rest);
+      h += exerciseStack(vm);
       h += submitBar(vm);
     }
     var extra = sessionMenu(vm, t);
@@ -844,6 +856,7 @@
       case 'day': if (t.recordId || !ds.day || ds.day === t.day) return; rememberTrain(); takeTrainDay(ds.day); return true;
       case 'deload': t.deload = el.checked; return true;
       case 'focus':
+        if (!ds.slot || ds.slot === t.focus) return false;
         t.focus = ds.slot; t.open = false; t.more = '';
         if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = t.focus; t.focusKey = t.day + '|' + (t.recordId || ''); }
         render(true);
