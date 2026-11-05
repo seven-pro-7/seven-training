@@ -66,8 +66,20 @@ Page({
       this.moreOpen = false;
     }
     this.focus = focus;
-    const focusItem = items.find((x) => x.slotId === focus) || null;
-    const followItems = items.filter((x) => !focusItem || x.slotId !== focusItem.slotId);
+    const exBlocks = [];
+    let rowBuf = [];
+    const flushRows = () => {
+      if (!rowBuf.length) return;
+      exBlocks.push({ key: 'r-' + rowBuf[0].slotId, card: false, items: rowBuf });
+      rowBuf = [];
+    };
+    items.forEach((it) => {
+      if (it.slotId === focus) {
+        flushRows();
+        exBlocks.push({ key: 'c-' + it.slotId, card: true, item: it });
+      } else rowBuf.push(it);
+    });
+    flushRows();
     const sp = (db.params && db.params.shareProfile) || {};
     let goalStatus = '可开练';
     if (vm.editing) goalStatus = '编辑记录';
@@ -75,7 +87,7 @@ Page({
     else if (vm.filled > 0) goalStatus = '进行中';
     else if (vm.day === vm.recommended) goalStatus = '待开练';
     this.setData({
-      vm, focusItem, followItems, goalStatus,
+      vm, exBlocks, focus, goalStatus,
       profileName: (sp.name || '').trim() || 'Seven',
       profileAvatar: sp.avatar || '',
       expanded: !!this.expanded,
@@ -126,7 +138,11 @@ Page({
 
   // ---- 交互 ----
   onDay(e) { this.switchDay(e.currentTarget.dataset.day); },
-  onFocus(e) { this.focus = e.currentTarget.dataset.slot; this.expanded = false; this.moreOpen = false; this.refresh(); },
+  onFocus(e) {
+    const slot = e.currentTarget.dataset.slot;
+    if (!slot || slot === this.focus) return;
+    this.focus = slot; this.expanded = false; this.moreOpen = false; this.refresh();
+  },
   onExpand() { this.expanded = !this.expanded; this.moreOpen = false; this.refresh(); },
   onExpandOpen() { if (!this.expanded) { this.expanded = true; this.moreOpen = false; this.refresh(); } },
   onMore() { this.moreOpen = !this.moreOpen; this.setData({ moreOpen: this.moreOpen }); },

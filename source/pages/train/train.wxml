@@ -67,27 +67,28 @@
 
       <block wx:if="{{!vm.locked}}">
         <view class="edit-cancel" wx:if="{{vm.editing}}" bindtap="cancelEdit">取消编辑</view>
-        <view class="t1-mid {{focusItem.skip ? 'skipped' : ''}} {{expanded ? 'is-open' : ''}}" wx:if="{{focusItem}}">
+        <block wx:for="{{exBlocks}}" wx:for-item="block" wx:key="key">
+        <view class="t1-mid {{block.item.skip ? 'skipped' : ''}} {{expanded ? 'is-open' : ''}}" wx:if="{{block.card}}">
           <view class="t1-mid-row">
             <view class="t1-mid-main" bindtap="onExpandOpen">
               <view class="t1-top">
-                <text class="tier t-{{focusItem.tier}}">{{focusItem.badge || focusItem.tier}}</text>
-                <text class="ex-name">{{focusItem.name}}</text>
+                <text class="tier t-{{block.item.tier}}">{{block.item.badge || block.item.tier}}</text>
+                <text class="ex-name">{{block.item.name}}</text>
               </view>
-              <view class="ex-flags" wx:if="{{focusItem.sub}}"><text class="ex-tag sub">替换 {{focusItem.planName}}</text></view>
-              <view class="ex-flags" wx:elif="{{focusItem.autoNew}}"><text class="ex-tag rot">本轮轮换 · 原 {{focusItem.autoPrev}}</text></view>
-              <view class="ex-flags" wx:elif="{{focusItem.changeNew}}"><text class="ex-tag new">新动作</text></view>
+              <view class="ex-flags" wx:if="{{block.item.sub}}"><text class="ex-tag sub">替换 {{block.item.planName}}</text></view>
+              <view class="ex-flags" wx:elif="{{block.item.autoNew}}"><text class="ex-tag rot">本轮轮换 · 原 {{block.item.autoPrev}}</text></view>
+              <view class="ex-flags" wx:elif="{{block.item.changeNew}}"><text class="ex-tag new">新动作</text></view>
               <view class="t1-metrics">
-                <block wx:if="{{focusItem.isCardio}}"><text class="weight num">{{focusItem.weightText}}</text><text class="unit">分钟</text></block>
-                <block wx:elif="{{focusItem.isBW}}"><text class="weight num">自重</text></block>
-                <block wx:else><text class="weight num {{focusItem.manual ? 'manual' : ''}}">{{focusItem.weightText}}</text><text class="unit">{{focusItem.unitText}}</text></block>
-                <text class="scheme-pill">{{focusItem.repsText}}</text>
+                <block wx:if="{{block.item.isCardio}}"><text class="weight num">{{block.item.weightText}}</text><text class="unit">分钟</text></block>
+                <block wx:elif="{{block.item.isBW}}"><text class="weight num">自重</text></block>
+                <block wx:else><text class="weight num {{block.item.manual ? 'manual' : ''}}">{{block.item.weightText}}</text><text class="unit">{{block.item.unitText}}</text></block>
+                <text class="scheme-pill">{{block.item.repsText}}</text>
               </view>
               <view class="progress-row" wx:if="{{!expanded}}">
                 <view class="mini-dots">
-                  <view wx:for="{{focusItem.dots}}" wx:for-item="d" wx:key="i" class="mini-dot {{d.on ? 'done' : (d.i === focusItem.done ? 'next' : '')}}"></view>
+                  <view wx:for="{{block.item.dots}}" wx:for-item="d" wx:key="i" class="mini-dot {{d.on ? 'done' : (d.i === block.item.done ? 'next' : '')}}"></view>
                 </view>
-                <text class="prog-cap">{{focusItem.skip ? '已跳过' : (focusItem.preview ? focusItem.preview.judgment : (focusItem.done || 0) + '/' + focusItem.sets + ' · 点开记组')}}</text>
+                <text class="prog-cap">{{block.item.skip ? '已跳过' : (block.item.preview ? block.item.preview.judgment : (block.item.done || 0) + '/' + block.item.sets + ' · 点开记组')}}</text>
               </view>
             </view>
             <view class="t1-actions">
@@ -96,86 +97,86 @@
             </view>
           </view>
           <view class="more-pop" wx:if="{{moreOpen}}" catchtap="noop">
-            <view wx:if="{{focusItem.canAdjust}}" data-slot="{{focusItem.slotId}}" bindtap="onEditW">{{focusItem.editW ? '完成调整' : '调整重量'}}</view>
-            <view data-slot="{{focusItem.slotId}}" bindtap="openSwap">更换</view>
-            <view data-slot="{{focusItem.slotId}}" bindtap="onSkip">{{focusItem.skip ? '恢复' : '跳过'}}</view>
+            <view wx:if="{{block.item.canAdjust}}" data-slot="{{block.item.slotId}}" bindtap="onEditW">{{block.item.editW ? '完成调整' : '调整重量'}}</view>
+            <view data-slot="{{block.item.slotId}}" bindtap="openSwap">更换</view>
+            <view data-slot="{{block.item.slotId}}" bindtap="onSkip">{{block.item.skip ? '恢复' : '跳过'}}</view>
           </view>
           <view class="t1-open" wx:if="{{expanded}}">
-            <view class="wedit" wx:if="{{focusItem.editW}}">
+            <view class="wedit" wx:if="{{block.item.editW}}">
               <view class="stepper">
-                <view class="st-btn" data-slot="{{focusItem.slotId}}" data-d="-1" bindtap="onWStep">−</view>
-                <input class="st-val wide num" type="digit" value="{{focusItem.weightText}}" data-slot="{{focusItem.slotId}}" bindblur="onWInput" bindconfirm="onWInput" />
-                <view class="st-btn" data-slot="{{focusItem.slotId}}" data-d="1" bindtap="onWStep">+</view>
+                <view class="st-btn" data-slot="{{block.item.slotId}}" data-d="-1" bindtap="onWStep">−</view>
+                <input class="st-val wide num" type="digit" value="{{block.item.weightText}}" data-slot="{{block.item.slotId}}" bindblur="onWInput" bindconfirm="onWInput" />
+                <view class="st-btn" data-slot="{{block.item.slotId}}" data-d="1" bindtap="onWStep">+</view>
               </view>
-              <text class="we-step">每次 {{focusItem.wStep}} kg</text>
-              <text class="link we-reset" wx:if="{{focusItem.manual}}" data-slot="{{focusItem.slotId}}" bindtap="onWReset">恢复 {{focusItem.autoText}}</text>
+              <text class="we-step">每次 {{block.item.wStep}} kg</text>
+              <text class="link we-reset" wx:if="{{block.item.manual}}" data-slot="{{block.item.slotId}}" bindtap="onWReset">恢复 {{block.item.autoText}}</text>
             </view>
-            <block wx:if="{{!focusItem.skip}}">
-              <view class="dots" wx:if="{{focusItem.inputType !== 'cardio'}}">
-                <view wx:for="{{focusItem.dots}}" wx:for-item="d" wx:key="i" class="dot {{d.on ? 'on' : ''}} {{d.amrap ? 'amrap' : ''}}"
-                  data-slot="{{focusItem.slotId}}" data-i="{{d.i}}" data-rest="{{focusItem.rest}}" data-name="{{focusItem.name}}" bindtap="onDot">{{d.amrap ? (d.i + 1) + '+' : d.i + 1}}</view>
-                <view class="rest-btn" data-rest="{{focusItem.rest}}" data-name="{{focusItem.name}}" bindtap="startRest">休息 {{focusItem.restText}}</view>
+            <block wx:if="{{!block.item.skip}}">
+              <view class="dots" wx:if="{{block.item.inputType !== 'cardio'}}">
+                <view wx:for="{{block.item.dots}}" wx:for-item="d" wx:key="i" class="dot {{d.on ? 'on' : ''}} {{d.amrap ? 'amrap' : ''}}"
+                  data-slot="{{block.item.slotId}}" data-i="{{d.i}}" data-rest="{{block.item.rest}}" data-name="{{block.item.name}}" bindtap="onDot">{{d.amrap ? (d.i + 1) + '+' : d.i + 1}}</view>
+                <view class="rest-btn" data-rest="{{block.item.rest}}" data-name="{{block.item.name}}" bindtap="startRest">休息 {{block.item.restText}}</view>
               </view>
-              <view class="inrow col" wx:if="{{focusItem.inputType === 'cardio'}}">
+              <view class="inrow col" wx:if="{{block.item.inputType === 'cardio'}}">
                 <view class="seg seg-done">
-                  <view class="seg-i {{focusItem.value !== null && focusItem.value !== '' && focusItem.value >= focusItem.amrapTarget ? 'on ok' : ''}}" data-slot="{{focusItem.slotId}}" bindtap="onCardioDone">完成</view>
+                  <view class="seg-i {{block.item.value !== null && block.item.value !== '' && block.item.value >= block.item.amrapTarget ? 'on ok' : ''}}" data-slot="{{block.item.slotId}}" bindtap="onCardioDone">完成</view>
                 </view>
               </view>
-              <view class="inrow" wx:if="{{focusItem.inputType === 'cardio'}}">
-                <view class="flex1"><view class="in-label">实际分钟</view><view class="in-hint">{{focusItem.amrapHint}}</view></view>
+              <view class="inrow" wx:if="{{block.item.inputType === 'cardio'}}">
+                <view class="flex1"><view class="in-label">实际分钟</view><view class="in-hint">{{block.item.amrapHint}}</view></view>
                 <view class="stepper">
-                  <view class="st-btn" data-slot="{{focusItem.slotId}}" data-d="-1" bindtap="onStep">−</view>
-                  <input class="st-val num" type="number" value="{{focusItem.value === null ? '' : focusItem.value}}" placeholder="{{focusItem.amrapTarget}}" placeholder-class="ph" data-slot="{{focusItem.slotId}}" bindinput="onAmrap" />
-                  <view class="st-btn" data-slot="{{focusItem.slotId}}" data-d="1" bindtap="onStep">+</view>
+                  <view class="st-btn" data-slot="{{block.item.slotId}}" data-d="-1" bindtap="onStep">−</view>
+                  <input class="st-val num" type="number" value="{{block.item.value === null ? '' : block.item.value}}" placeholder="{{block.item.amrapTarget}}" placeholder-class="ph" data-slot="{{block.item.slotId}}" bindinput="onAmrap" />
+                  <view class="st-btn" data-slot="{{block.item.slotId}}" data-d="1" bindtap="onStep">+</view>
                 </view>
               </view>
-              <view class="inrow" wx:if="{{focusItem.inputType === 'amrap'}}">
-                <view class="flex1"><view class="in-label">末组次数</view><view class="in-hint">{{focusItem.amrapHint}}</view></view>
+              <view class="inrow" wx:if="{{block.item.inputType === 'amrap'}}">
+                <view class="flex1"><view class="in-label">末组次数</view><view class="in-hint">{{block.item.amrapHint}}</view></view>
                 <view class="stepper">
-                  <view class="st-btn" data-slot="{{focusItem.slotId}}" data-d="-1" bindtap="onStep">−</view>
-                  <input class="st-val num" type="number" value="{{focusItem.value === null ? '' : focusItem.value}}" placeholder="—" placeholder-class="ph" data-slot="{{focusItem.slotId}}" bindinput="onAmrap" />
-                  <view class="st-btn" data-slot="{{focusItem.slotId}}" data-d="1" bindtap="onStep">+</view>
+                  <view class="st-btn" data-slot="{{block.item.slotId}}" data-d="-1" bindtap="onStep">−</view>
+                  <input class="st-val num" type="number" value="{{block.item.value === null ? '' : block.item.value}}" placeholder="—" placeholder-class="ph" data-slot="{{block.item.slotId}}" bindinput="onAmrap" />
+                  <view class="st-btn" data-slot="{{block.item.slotId}}" data-d="1" bindtap="onStep">+</view>
                 </view>
               </view>
-              <view class="inrow" wx:if="{{focusItem.need5RM}}">
+              <view class="inrow" wx:if="{{block.item.need5RM}}">
                 <view class="flex1"><view class="in-label">新 5RM</view><view class="in-hint">未达标时按新 5RM 的 85% 重置</view></view>
-                <input class="mini-in num" type="digit" value="{{focusItem.new5RM}}" placeholder="kg" placeholder-class="ph" data-slot="{{focusItem.slotId}}" bindinput="on5RM" />
+                <input class="mini-in num" type="digit" value="{{block.item.new5RM}}" placeholder="kg" placeholder-class="ph" data-slot="{{block.item.slotId}}" bindinput="on5RM" />
               </view>
-              <view class="inrow col" wx:if="{{focusItem.inputType === 'done'}}">
+              <view class="inrow col" wx:if="{{block.item.inputType === 'done'}}">
                 <view class="seg seg-done">
-                  <view class="seg-i {{focusItem.value === '完成' ? 'on ok' : ''}}" data-slot="{{focusItem.slotId}}" data-v="完成" bindtap="onDone">全部完成</view>
-                  <view class="seg-i {{focusItem.value === '未完成' ? 'on bad' : ''}}" data-slot="{{focusItem.slotId}}" data-v="未完成" bindtap="onDone">未完成</view>
+                  <view class="seg-i {{block.item.value === '完成' ? 'on ok' : ''}}" data-slot="{{block.item.slotId}}" data-v="完成" bindtap="onDone">全部完成</view>
+                  <view class="seg-i {{block.item.value === '未完成' ? 'on bad' : ''}}" data-slot="{{block.item.slotId}}" data-v="未完成" bindtap="onDone">未完成</view>
                 </view>
-                <view class="in-hint" wx:if="{{focusItem.amrapHint}}">{{focusItem.amrapHint}}</view>
-                <view class="subrow" wx:if="{{focusItem.value === '未完成'}}">
+                <view class="in-hint" wx:if="{{block.item.amrapHint}}">{{block.item.amrapHint}}</view>
+                <view class="subrow" wx:if="{{block.item.value === '未完成'}}">
                   <text class="in-hint">实际总次数（选填，不填则这次不计入容量）</text>
-                  <input class="mini-in num" type="number" value="{{focusItem.reps2}}" placeholder="次数" placeholder-class="ph" data-slot="{{focusItem.slotId}}" bindinput="onReps" />
+                  <input class="mini-in num" type="number" value="{{block.item.reps2}}" placeholder="次数" placeholder-class="ph" data-slot="{{block.item.slotId}}" bindinput="onReps" />
                 </view>
               </view>
-              <view class="verdict" wx:if="{{focusItem.preview}}">
-                <view class="v-ic" style="background: {{focusItem.preview.color}}">{{focusItem.preview.icon}}</view>
-                <text class="v-j" style="color: {{focusItem.preview.color}}">{{focusItem.preview.judgment}}</text>
-                <text class="v-l" wx:if="{{focusItem.preview.sub}}">不影响 {{focusItem.preview.origName}} 的进阶</text>
-                <view class="v-next" wx:elif="{{focusItem.isCardio}}"><text class="v-l">下次</text><text class="num v-w">{{focusItem.preview.nextStage}}</text></view>
-                <view class="v-next" wx:elif="{{focusItem.preview.judgment !== '减载'}}">
-                  <text class="v-l">下次</text><text class="num v-w">{{focusItem.preview.nextWeight}}</text><text class="v-u">kg</text>
-                  <text class="v-stage" wx:if="{{focusItem.preview.stageChanged}}">· {{focusItem.preview.nextStage}}</text>
+              <view class="verdict" wx:if="{{block.item.preview}}">
+                <view class="v-ic" style="background: {{block.item.preview.color}}">{{block.item.preview.icon}}</view>
+                <text class="v-j" style="color: {{block.item.preview.color}}">{{block.item.preview.judgment}}</text>
+                <text class="v-l" wx:if="{{block.item.preview.sub}}">不影响 {{block.item.preview.origName}} 的进阶</text>
+                <view class="v-next" wx:elif="{{block.item.isCardio}}"><text class="v-l">下次</text><text class="num v-w">{{block.item.preview.nextStage}}</text></view>
+                <view class="v-next" wx:elif="{{block.item.preview.judgment !== '减载'}}">
+                  <text class="v-l">下次</text><text class="num v-w">{{block.item.preview.nextWeight}}</text><text class="v-u">kg</text>
+                  <text class="v-stage" wx:if="{{block.item.preview.stageChanged}}">· {{block.item.preview.nextStage}}</text>
                 </view>
                 <text class="v-l" wx:else>按减载重量完成</text>
               </view>
-              <view class="v-adapt" wx:if="{{focusItem.preview.boost && focusItem.preview.adaptNote}}"><text class="v-adapt-t">多加一档</text>{{focusItem.preview.adaptNote}}</view>
-              <view class="ex-sub" wx:if="{{focusItem.recSourceLabel || focusItem.manual || focusItem.plates || focusItem.fail > 0}}">
-                <text wx:if="{{focusItem.recSourceLabel}}">{{focusItem.recSourceLabel}}</text>
-                <text class="accent" wx:if="{{focusItem.manual}}">已手动调整 · 建议 {{focusItem.autoText}} kg</text>
-                <text wx:if="{{focusItem.plates}}">{{focusItem.plates}}</text>
-                <text class="amber" wx:if="{{focusItem.fail > 0}}">已预警 {{focusItem.fail}} 次</text>
+              <view class="v-adapt" wx:if="{{block.item.preview.boost && block.item.preview.adaptNote}}"><text class="v-adapt-t">多加一档</text>{{block.item.preview.adaptNote}}</view>
+              <view class="ex-sub" wx:if="{{block.item.recSourceLabel || block.item.manual || block.item.plates || block.item.fail > 0}}">
+                <text wx:if="{{block.item.recSourceLabel}}">{{block.item.recSourceLabel}}</text>
+                <text class="accent" wx:if="{{block.item.manual}}">已手动调整 · 建议 {{block.item.autoText}} kg</text>
+                <text wx:if="{{block.item.plates}}">{{block.item.plates}}</text>
+                <text class="amber" wx:if="{{block.item.fail > 0}}">已预警 {{block.item.fail}} 次</text>
               </view>
             </block>
           </view>
         </view>
 
-        <view class="follow-list" wx:if="{{followItems.length}}">
-          <view wx:for="{{followItems}}" wx:key="slotId" class="follow-row {{item.skip ? 'skipped' : ''}}" data-slot="{{item.slotId}}" bindtap="onFocus">
+        <view class="follow-list" wx:else>
+          <view wx:for="{{block.items}}" wx:key="slotId" class="follow-row {{item.skip ? 'skipped' : ''}}" data-slot="{{item.slotId}}" bindtap="onFocus">
             <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
             <text class="follow-name">{{item.name}}</text>
             <view class="follow-meta">
@@ -190,6 +191,7 @@
             </view>
           </view>
         </view>
+        </block>
         <view class="submit-bar">
           <view class="sb-count num"><text class="b">{{vm.filled}}</text> / {{vm.total}}</view>
           <button class="btn-primary sb-btn" bindtap="onSubmit">{{vm.editing ? '保存修改' : '完成训练'}}</button>
