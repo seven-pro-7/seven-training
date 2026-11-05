@@ -523,10 +523,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .day-seg .seg-i { height: 28px; border-radius: 999px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 4px; }
 .pg-train .day-seg .seg-i.on { color: #0064D4; }
 .pg-train .seg-dot { width: 6px; height: 6px; border-radius: 50%; background: #0064D4; }
-.pg-train .wk-slim { height: 28px; border-radius: 999px; background: #F2F2F4; display: flex; align-items: center; padding: 0 12px; gap: 8px; font-size: 13px; color: #6B6B71; }
-.pg-train .wk-lab { color: #0064D4; font-weight: 600; }
-.pg-train .wk-track { flex: 1; height: 4px; border-radius: 999px; background: #E7E7EA; overflow: hidden; }
-.pg-train .wk-fill { height: 100%; background: #0064D4; }
 .pg-train .deload-slim { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border-radius: 16px; background: #F2F2F4; }
 .pg-train .deload-slim .dl-t { font-size: 15px; font-weight: 600; }
 .pg-train .deload-slim .dl-s { flex: 1; font-size: 13px; color: #6B6B71; }
@@ -1443,22 +1439,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   background: var(--accent);
 }
 .app .pg-train .day-seg.wide .seg-i { font-size: 12px; padding: 0 2px; }
-
-.app .wk-slim {
-  height: 28px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--label2);
-}
-.app .wk-lab { color: var(--accent); font-weight: 600; flex-shrink: 0; }
-.app .wk-track { flex: 1; height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
-.app .wk-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
-.app .wk-n { font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
 .app .deload-slim {
   display: flex;
@@ -7703,10 +7683,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         '<span class="num">' + esc(d.id) + '</span></div>';
     }).join('') + '</div>';
   }
-  function weekBar(vm) {
-    var rd = vm.round;
-    return '<div class="wk-slim" aria-label="本周进度"><span class="wk-lab">周进度</span><span class="wk-track"><span class="wk-fill" style="width:' + rd.pct + '%"></span></span><span class="wk-n num">' + rd.done + '/' + rd.total + '</span></div>';
-  }
   function flagHtml(it) {
     if (it.sub) return '<div class="ex-flags"><span class="ex-tag sub">替换 ' + esc(it.planName) + '</span></div>';
     if (it.autoNew) return '<div class="ex-flags"><span class="ex-tag rot">本轮轮换 · 原 ' + esc(it.autoPrev) + '</span></div>';
@@ -7858,7 +7834,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var vm = trainVM(), t = S.train, h = '';
     ensureFocus(vm);
     if (!vm.editing) h += backupNag();
-    if (!vm.editing) h += daySeg(vm) + weekBar(vm);
+    if (!vm.editing) h += daySeg(vm);
     if (!vm.locked && (vm.deloadSuggest || vm.deload)) {
       h += '<div class="deload-slim"><span class="dl-t">减载周</span><span class="dl-s">' + esc(vm.deloadTip || '降低负荷恢复') + '</span>' +
         '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';

@@ -23,11 +23,6 @@
           <text class="num">{{item.id}}</text>
         </view>
       </view>
-      <view class="wk-slim" wx:if="{{!vm.editing}}">
-        <text class="wk-lab">周进度</text>
-        <view class="wk-track"><view class="wk-fill" style="width: {{vm.round.pct}}%"></view></view>
-        <text class="wk-n num">{{vm.round.done}}/{{vm.round.total}}</text>
-      </view>
 
       <view class="deload-slim" wx:if="{{!vm.locked && (vm.deloadSuggest || vm.deload)}}">
         <text class="dl-t">减载周</text>
