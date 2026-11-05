@@ -606,10 +606,6 @@
         '<span class="num">' + esc(d.id) + '</span></div>';
     }).join('') + '</div>';
   }
-  function weekBar(vm) {
-    var rd = vm.round;
-    return '<div class="wk-slim" aria-label="本周进度"><span class="wk-lab">周进度</span><span class="wk-track"><span class="wk-fill" style="width:' + rd.pct + '%"></span></span><span class="wk-n num">' + rd.done + '/' + rd.total + '</span></div>';
-  }
   function flagHtml(it) {
     if (it.sub) return '<div class="ex-flags"><span class="ex-tag sub">替换 ' + esc(it.planName) + '</span></div>';
     if (it.autoNew) return '<div class="ex-flags"><span class="ex-tag rot">本轮轮换 · 原 ' + esc(it.autoPrev) + '</span></div>';
@@ -761,7 +757,7 @@
     var vm = trainVM(), t = S.train, h = '';
     ensureFocus(vm);
     if (!vm.editing) h += backupNag();
-    if (!vm.editing) h += daySeg(vm) + weekBar(vm);
+    if (!vm.editing) h += daySeg(vm);
     if (!vm.locked && (vm.deloadSuggest || vm.deload)) {
       h += '<div class="deload-slim"><span class="dl-t">减载周</span><span class="dl-s">' + esc(vm.deloadTip || '降低负荷恢复') + '</span>' +
         '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';

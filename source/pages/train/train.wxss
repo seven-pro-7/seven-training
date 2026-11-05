@@ -176,10 +176,6 @@
 .day-seg .seg-i { height: 28px; border-radius: 999px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 4px; }
 .day-seg .seg-i.on { color: #0064D4; }
 .seg-dot { width: 6px; height: 6px; border-radius: 50%; background: #0064D4; }
-.wk-slim { height: 28px; border-radius: 999px; background: #F2F2F4; display: flex; align-items: center; padding: 0 12px; gap: 8px; font-size: 12px; color: #6B6B71; }
-.wk-lab { color: #0064D4; font-weight: 600; }
-.wk-track { flex: 1; height: 4px; border-radius: 999px; background: #E7E7EA; overflow: hidden; }
-.wk-fill { height: 100%; background: #0064D4; }
 .deload-slim { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border-radius: 16px; background: #F2F2F4; }
 .deload-slim .dl-t { font-size: 14px; font-weight: 600; }
 .deload-slim .dl-s { flex: 1; font-size: 12px; color: #6B6B71; }
