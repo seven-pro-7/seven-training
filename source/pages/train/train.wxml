@@ -192,7 +192,7 @@
         </block>
         <view class="submit-bar">
           <view class="sb-count num"><text class="b">{{vm.filled}}</text> / {{vm.total}}</view>
-          <button class="sb-btn {{vm.total && vm.filled === vm.total ? 'is-ready' : ''}}" bindtap="onSubmit">{{vm.editing ? '保存修改' : '完成训练'}}</button>
+          <button wx:if="{{vm.total && vm.filled === vm.total}}" class="sb-btn is-ready" bindtap="onSubmit">{{vm.editing ? '保存修改' : '完成训练'}}</button>
         </view>
       </block>
     </view>
