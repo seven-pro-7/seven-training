@@ -35,6 +35,7 @@
     if (frozen || snap.frozen) {
       pose = target;
       svg.innerHTML = Core.frameInner(shown, 0, pose, { frozen: true, size: 'M' });
+      paintShadow(true);
       return;
     }
     var dt = 1 / 60, K = 170, D = 17;
@@ -45,6 +46,16 @@
     });
     tState += dt;
     svg.innerHTML = Core.frameInner(shown, tState, pose, { frozen: false, size: 'M' });
+    paintShadow(false);
+  }
+  function paintShadow(frozen) {
+    var sh = host && host.parentElement ? host.parentElement.querySelector('.ground-shadow') : null;
+    if (!sh) return;
+    var lift = frozen ? 0 : Math.max(0, -(Core.airLift ? Core.airLift(shown, tState, false) : 0));
+    var k = Math.min(1, lift / 46);
+    var scale = 1 - 0.32 * k;
+    sh.style.transform = 'translateX(-50%) scale(' + scale.toFixed(3) + ',' + (0.85 + 0.15 * scale).toFixed(3) + ')';
+    sh.style.opacity = (1 - 0.45 * k).toFixed(3);
   }
   function loop(now) {
     raf = 0;

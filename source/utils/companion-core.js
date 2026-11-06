@@ -100,11 +100,6 @@
     var ey = BASE - faceH + p.lookY * 6;
     var gap = 36 * p.eyeGap * (0.55 + 0.45 * p.W / 116);
     var r = 11.6 * p.eyeR, lx = p.lookX * 9, out = '';
-    var sh = clamp01(p.shadow);
-    if (sh > 0.01) {
-      var k = 1 - Math.min(1, -f.jy / 60);
-      out += '<ellipse cx="' + CX + '" cy="' + (BASE + 10) + '" rx="' + n1(p.W * 0.72 * (0.55 + 0.45 * k)) + '" ry="' + n1(6 * (0.6 + 0.4 * k)) + '" fill="' + C.ink + '" opacity="' + (0.12 * sh * (0.4 + 0.6 * k)).toFixed(3) + '"/>';
-    }
     var sp = clamp01(p.sparkle);
     if (sp > 0.01) {
       [[-1.05, 0.92, 11, C.yellow], [1.02, 1.0, 13, C.acc], [-1.3, 0.55, 8, C.acc], [1.28, 0.5, 9, C.yellow], [0.6, 1.12, 7, C.yellow]].forEach(function (q, i) {
@@ -176,6 +171,11 @@
   function staticInner(state, size) {
     var st = ALLOWED[state] ? state : 'idle';
     return frameInner(st, STATIC_T[st] || 0, targetOf(st), { frozen: true, size: size || 'M' });
+  }
+  function airLift(state, t, frozen) {
+    if (frozen) return 0;
+    var st = ALLOWED[state] ? state : 'idle';
+    return computeFrame(st, t || 0, targetOf(st), false).jy;
   }
   function staticDocument(state, px) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="' + (px || 108) + '" height="' + (px || 108) + '">' + staticInner(state, 'M') + '</svg>';
@@ -403,7 +403,7 @@
 
   return {
     ALLOWED: ALLOWED, ONCE_MS: ONCE_MS, PREVIEW_LOOP_MS: PREVIEW_LOOP_MS, PREVIEW_THROTTLE_MS: PREVIEW_THROTTLE_MS, COOLDOWN_MS: COOLDOWN_MS, QUEUE_MS: QUEUE_MS,
-    createMachine: createMachine, frameInner: frameInner, staticInner: staticInner, staticDocument: staticDocument,
+    createMachine: createMachine, frameInner: frameInner, staticInner: staticInner, staticDocument: staticDocument, airLift: airLift,
     targetOf: targetOf, isNight: isNight, defaultShanghai: defaultShanghai, KEYS: KEYS
   };
 });
