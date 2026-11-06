@@ -221,7 +221,10 @@
 .follow-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .follow-meta { flex-shrink: 0; font-size: 12px; color: #6B6B71; }
 .follow-meta .b { color: #121112; font-weight: 600; }
-.submit-bar { display: flex; align-items: center; gap: 10px; }
-.sb-count { height: 52px; min-width: 74px; padding: 0 16px; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; font-weight: 600; }
-.sb-btn { flex: 1; margin: 0; }
+.submit-bar { display: flex; align-items: center; gap: 8px; }
+.sb-count { display: none; }
+.ex-done { width: 16px; height: 16px; margin-left: 4px; border-radius: 50%; background: rgba(47,158,95,0.12); position: relative; flex-shrink: 0; }
+.ex-done::after { content: ""; position: absolute; left: 5px; top: 3px; width: 4px; height: 7px; border-right: 1.6px solid #2F9E5F; border-bottom: 1.6px solid #2F9E5F; transform: rotate(40deg); }
+.sb-btn { flex: 1; margin: 0; height: 40px; line-height: 40px; padding: 0 14px; border-radius: 999px; background: #0064D4; color: #fff; font-size: 14px; font-weight: 600; }
+.sb-btn::after { border: none; }
 .session-sheet .note { width: 100%; }

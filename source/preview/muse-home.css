@@ -231,6 +231,26 @@
 .app .train-band > .card,
 .app .train-band .bk-nag,
 .app .train-band .submit-bar { margin: 0; }
+.app .submit-bar { display: flex; align-items: center; gap: 8px; }
+.app .submit-bar button.sb-btn {
+  flex: 1;
+  height: 40px;
+  min-height: 40px;
+  margin: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  line-height: 40px;
+  cursor: pointer;
+}
+.app .submit-bar button.sb-btn:focus { outline: none; }
+.app .submit-bar button.sb-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .app .pg-train .day-seg {
   height: 34px;
   margin: 0;
@@ -301,6 +321,27 @@
   background: var(--bg);
   box-shadow: inset 0 0 0 0.5px var(--line);
 }
+.app .ex-done {
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: rgba(47, 158, 95, 0.12);
+  position: relative;
+  flex: 0 0 auto;
+}
+.app .ex-done::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 3px;
+  width: 4px;
+  height: 7px;
+  border-right: 1.6px solid var(--green);
+  border-bottom: 1.6px solid var(--green);
+  transform: rotate(40deg);
+}
+.app .t1-mid.is-open .ex-done { margin-top: 1px; }
 .app .t1-mid.skipped { opacity: 0.55; }
 .app .t1-mid-row { display: flex; align-items: center; gap: 12px; }
 .app .t1-mid.is-open .t1-mid-row { align-items: flex-start; }

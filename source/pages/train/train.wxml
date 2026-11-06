@@ -65,12 +65,13 @@
       <block wx:if="{{!vm.locked}}">
         <view class="edit-cancel" wx:if="{{vm.editing}}" bindtap="cancelEdit">取消编辑</view>
         <block wx:for="{{exBlocks}}" wx:for-item="block" wx:key="key">
-        <view class="t1-mid {{block.item.skip ? 'skipped' : ''}} {{expanded ? 'is-open' : ''}}" wx:if="{{block.card}}">
+        <view class="t1-mid {{block.item.skip ? 'skipped' : ''}} {{block.item.logged && block.item.value !== '未完成' ? 'is-done' : ''}} {{expanded ? 'is-open' : ''}}" wx:if="{{block.card}}">
           <view class="t1-mid-row">
             <view class="t1-mid-main" bindtap="onExpandOpen">
               <view class="t1-top">
                 <text class="tier t-{{block.item.tier}}">{{block.item.badge || block.item.tier}}</text>
                 <text class="ex-name">{{block.item.name}}</text>
+                <view wx:if="{{block.item.logged && block.item.value !== '未完成'}}" class="ex-done" aria-label="已完成"></view>
               </view>
               <view class="ex-flags" wx:if="{{block.item.sub}}"><text class="ex-tag sub">替换 {{block.item.planName}}</text></view>
               <view class="ex-flags" wx:elif="{{block.item.autoNew}}"><text class="ex-tag rot">本轮轮换 · 原 {{block.item.autoPrev}}</text></view>
@@ -85,7 +86,7 @@
                 <view class="mini-dots">
                   <view wx:for="{{block.item.dots}}" wx:for-item="d" wx:key="i" class="mini-dot {{d.on ? 'done' : (d.i === block.item.done ? 'next' : '')}}"></view>
                 </view>
-                <text class="prog-cap">{{block.item.skip ? '已跳过' : (block.item.preview ? block.item.preview.judgment : (block.item.done || 0) + '/' + block.item.sets + ' · 点开记组')}}</text>
+                <text class="prog-cap" wx:if="{{block.item.skip || block.item.preview || !(block.item.logged && block.item.value !== '未完成')}}">{{block.item.skip ? '已跳过' : (block.item.preview ? block.item.preview.judgment : (block.item.done || 0) + '/' + block.item.sets + ' · 点开记组')}}</text>
               </view>
             </view>
             <view class="t1-actions">
@@ -174,7 +175,7 @@
         </view>
 
         <view class="follow-list" wx:else>
-          <view wx:for="{{block.items}}" wx:key="slotId" class="follow-row {{item.skip ? 'skipped' : ''}}" data-slot="{{item.slotId}}" bindtap="onFocus">
+          <view wx:for="{{block.items}}" wx:key="slotId" class="follow-row {{item.skip ? 'skipped' : ''}} {{item.logged && item.value !== '未完成' ? 'is-done' : ''}}" data-slot="{{item.slotId}}" bindtap="onFocus">
             <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
             <text class="follow-name">{{item.name}}</text>
             <view class="follow-meta">
@@ -187,12 +188,12 @@
                 <text> · {{item.repsText}}</text>
               </block>
             </view>
+            <view wx:if="{{item.logged && item.value !== '未完成'}}" class="ex-done" aria-label="已完成"></view>
           </view>
         </view>
         </block>
-        <view class="submit-bar">
-          <view class="sb-count num"><text class="b">{{vm.filled}}</text> / {{vm.total}}</view>
-          <button class="btn-primary sb-btn" bindtap="onSubmit">{{vm.editing ? '保存修改' : '完成训练'}}</button>
+        <view class="submit-bar" wx:if="{{vm.total && vm.filled === vm.total}}">
+          <button class="sb-btn is-ready" bindtap="onSubmit">{{vm.editing ? '保存修改' : '完成训练'}}</button>
         </view>
       </block>
     </view>
