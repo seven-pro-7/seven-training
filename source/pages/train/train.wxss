@@ -151,20 +151,24 @@
 /* Muse v5m 训练首页。网页端的精确像素在 preview/muse-home.css，这里给小程序同一套结构。 */
 .page { min-height: 100vh; display: flex; flex-direction: column; padding: 0; background: #F7F7F8; }
 .muse-home { flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
-.avatar-band { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: 168px; padding: calc(env(safe-area-inset-top) + 12px) 20px 0; background: #EEF5FC; border-radius: 0; }
+.avatar-band { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: 168px; padding: calc(env(safe-area-inset-top) + 12px) 0 0; background: #EEF5FC; border-radius: 0; }
 .menu-btn { position: absolute; left: 20px; top: calc(env(safe-area-inset-top) + 8px); width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px rgba(18,17,18,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
 .me-btn { gap: 2px; }
 .me-head { width: 8px; height: 8px; border-radius: 50%; background: #121112; }
 .me-body { width: 14px; height: 6px; border-radius: 7px 7px 3px 3px; background: #121112; }
-.avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.companion-slot { width: 134px; height: 134px; margin: 0; background: transparent; }
+.avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 20px; }
+.companion-pedestal { position: relative; width: 134px; height: 134px; }
+.companion-slot { width: 134px; height: 134px; margin: 0; background: transparent; position: relative; z-index: 2; }
+.ground-shadow { position: absolute; left: 50%; top: 96px; width: 72px; height: 16px; margin-left: -36px; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(18,17,18,0.18) 0%, rgba(18,17,18,0.10) 38%, rgba(18,17,18,0) 78%); z-index: 1; }
 .avatar-ring { width: 72px; height: 72px; border-radius: 50%; background: #F4F7FB; box-shadow: 0 4px 12px rgba(18,17,18,0.05), inset 0 0 0 1.5px rgba(18,17,18,0.06); display: flex; align-items: center; justify-content: center; position: relative; }
 .avatar-ring::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(0,100,212,0.28); }
 .avatar-mark { width: 56px; height: 56px; border-radius: 50%; background: #E4EDF7; display: flex; align-items: center; justify-content: center; }
 .avatar-mark > view { width: 26px; height: 10px; border-radius: 999px; background: #0064D4; }
 .avatar-photo { width: 56px; height: 56px; border-radius: 50%; }
 .avatar-name { font-size: 16px; font-weight: 600; letter-spacing: -0.2px; color: #121112; }
-.goal-entry { margin-top: 10px; padding: 8px 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 290px; }
+.goal-entry { margin-top: 4px; padding: 6px 20px 0; display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 330px; }
+.info-safe { align-self: stretch; width: 100%; height: 20px; }
+.band-hem { align-self: stretch; width: 100%; height: 32px; display: block; }
 .goal-primary { display: flex; align-items: center; gap: 5px; font-size: 18px; font-weight: 700; letter-spacing: -0.35px; color: #121112; }
 .goal-primary .sid { color: #0064D4; }
 .goal-secondary { font-size: 12px; color: #6B6B71; }
@@ -173,7 +177,7 @@
 .chev-r { transform: rotate(-45deg); }
 .chev-d { transform: rotate(45deg); margin-top: -3px; }
 .expand-btn.open .chev-d { transform: rotate(-135deg); margin-top: 3px; }
-.train-band { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; margin-top: -28px; padding: 36px 20px calc(24px + env(safe-area-inset-bottom)); background: #fff; border-radius: 50% 50% 0 0 / 28px 28px 0 0; position: relative; z-index: 2; }
+.train-band { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; margin-top: -1px; padding: 10px 20px calc(24px + env(safe-area-inset-bottom)); background: #fff; border-radius: 0; position: relative; z-index: 2; }
 .train-band > .card { margin: 0; }
 .day-seg { margin: 0; height: 34px; padding: 3px; background: #F2F2F4; border-radius: 999px; }
 .day-seg .seg-i { height: 28px; border-radius: 999px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 4px; }

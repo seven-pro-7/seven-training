@@ -593,8 +593,8 @@
     var id = homeIdentity();
     return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
       '<button type="button" class="menu-btn" data-act="me" aria-label="我的">' + ME + '</button>' +
-      '<div class="avatar-wrap"><div class="companion-slot" id="companionSlot" aria-hidden="true"></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
-      goalBtn + '<svg class="curve-cap" viewBox="0 0 368 148" preserveAspectRatio="none" aria-hidden="true"><path fill="#FFFFFF" d="M0 40 A 717.33 717.33 0 0 1 368 40 L 368 148 L 0 148 Z"/></svg></section><section class="train-band" aria-label="训练"><div class="train-inner">' + trainInner + '</div></section></div>' + (extra || '');
+      '<div class="avatar-wrap"><div class="companion-pedestal"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button><span class="ground-shadow" aria-hidden="true"></span></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
+      goalBtn + '<div class="info-safe" aria-hidden="true"></div><svg class="band-hem" viewBox="0 0 368 32" preserveAspectRatio="none" aria-hidden="true"><rect width="368" height="32" fill="#EEF5FC"/><path fill="#FFFFFF" d="M0 2 A 949.4 949.4 0 0 0 368 2 L 368 32 L 0 32 Z"/></svg></section><section class="train-band" aria-label="训练"><div class="train-inner">' + trainInner + '</div></section></div>' + (extra || '');
   }
   function goalBtn(vm) {
     var label = '进入计划总览：' + vm.day + ' · ' + vm.dayName;

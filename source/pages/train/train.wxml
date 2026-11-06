@@ -3,13 +3,18 @@
     <view class="avatar-band">
       <view class="menu-btn me-btn" bindtap="goMe" aria-role="button" aria-label="我的"><view class="me-head"></view><view class="me-body"></view></view>
       <view class="avatar-wrap">
-        <image class="companion-slot" src="/assets/companion-idle.svg" mode="aspectFit" aria-label="训练伙伴" />
+        <view class="companion-pedestal">
+          <image class="companion-slot" src="/assets/companion-idle.svg" mode="aspectFit" aria-label="训练伙伴" />
+          <view class="ground-shadow"></view>
+        </view>
         <text class="avatar-name">{{profileName}}</text>
       </view>
       <view class="goal-entry" bindtap="goOverview" aria-role="button" aria-label="进入计划总览：{{vm.day}} · {{vm.dayName}}">
         <view class="goal-primary"><text><text class="sid">{{vm.day}}</text> · {{vm.dayName}}</text><view class="chev-r"></view></view>
         <view class="goal-secondary">{{goalStatus}} · 本周 <text class="warm">{{vm.round.done}}/{{vm.round.total}}</text></view>
       </view>
+      <view class="info-safe"></view>
+      <image class="band-hem" src="/assets/band-hem.svg" mode="scaleToFill" />
     </view>
 
     <view class="train-band">

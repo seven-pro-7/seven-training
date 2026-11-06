@@ -35,6 +35,7 @@
     if (frozen || snap.frozen) {
       pose = target;
       svg.innerHTML = Core.frameInner(shown, 0, pose, { frozen: true, size: 'M' });
+      paintShadow(true);
       return;
     }
     var dt = 1 / 60, K = 170, D = 17;
@@ -45,6 +46,16 @@
     });
     tState += dt;
     svg.innerHTML = Core.frameInner(shown, tState, pose, { frozen: false, size: 'M' });
+    paintShadow(false);
+  }
+  function paintShadow(frozen) {
+    var sh = host && host.parentElement ? host.parentElement.querySelector('.ground-shadow') : null;
+    if (!sh) return;
+    var lift = frozen ? 0 : Math.max(0, -(Core.airLift ? Core.airLift(shown, tState, false) : 0));
+    var k = Math.min(1, lift / 46);
+    var scale = 1 - 0.32 * k;
+    sh.style.transform = 'translateX(-50%) scale(' + scale.toFixed(3) + ',' + (0.85 + 0.15 * scale).toFixed(3) + ')';
+    sh.style.opacity = (1 - 0.45 * k).toFixed(3);
   }
   function loop(now) {
     raf = 0;
@@ -72,7 +83,7 @@
     host = el || null;
     if (!host) { stop(); svg = null; return; }
     if (!svg || !svg.isConnected) {
-      host.innerHTML = '<svg viewBox="0 0 400 400" width="134" height="134" role="img" aria-label="训练伙伴"></svg>';
+      host.innerHTML = '<svg viewBox="0 0 400 400" width="134" height="134" aria-hidden="true" focusable="false"></svg>';
       svg = host.querySelector('svg');
     }
     paint(machine.snapshot().frozen);
@@ -84,9 +95,14 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden) onHide(); else onShow(); });
   document.addEventListener('pointerdown', function (e) {
     if (document.hidden) return;
-    if (e.target && e.target.closest && e.target.closest('input, textarea, select')) return;
+    if (e.target && e.target.closest && e.target.closest('input, textarea, select, #companionSlot')) return;
     machine.dispatch('activity');
   }, true);
+  document.addEventListener('click', function (e) {
+    if (!e.target || !e.target.closest || !e.target.closest('#companionSlot')) return;
+    machine.dispatch('preview');
+    paint(machine.snapshot().frozen);
+  });
   if (window.matchMedia) {
     var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     var apply = function () { reduce = !!mq.matches; machine.setFlags({ reduceMotion: reduce }); paint(machine.snapshot().frozen); };

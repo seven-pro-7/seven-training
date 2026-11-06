@@ -61,10 +61,11 @@
   align-items: center;
   justify-content: flex-end;
   min-height: 168px;
-  padding: calc(var(--navh) + 8px) 20px 0;
+  padding: calc(var(--navh) + 8px) 0 0;
   background: var(--band);
   border-radius: 0;
   z-index: 1;
+  overflow: visible;
 }
 .app .menu-btn {
   position: absolute;
@@ -85,7 +86,24 @@
 }
 .app .menu-btn { color: var(--label); }
 .app .menu-btn svg { display: block; }
-.app .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; z-index: 5; }
+.app .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; z-index: 5; padding: 0 20px; box-sizing: border-box; }
+.app .companion-pedestal { position: relative; width: 134px; height: 134px; flex: 0 0 auto; }
+.app .ground-shadow {
+  position: absolute;
+  left: 50%;
+  top: 96px;
+  width: 72px;
+  height: 16px;
+  margin: 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(18, 17, 18, 0.18) 0%, rgba(18, 17, 18, 0.10) 38%, rgba(18, 17, 18, 0.03) 68%, rgba(18, 17, 18, 0) 78%);
+  filter: blur(3.5px);
+  opacity: 1;
+  z-index: 1;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transform-origin: center center;
+}
 .app .goal-entry { position: relative; z-index: 5; }
 .app .avatar-ring {
   width: 72px;
@@ -137,8 +155,8 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  margin-top: 10px;
-  padding: 8px 16px;
+  margin-top: 4px;
+  padding: 6px 20px 0;
   border: 0;
   border-radius: 18px;
   background: transparent;
@@ -179,17 +197,37 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: 0;
+  margin-top: -1px;
   padding: 0 0 calc(var(--tabh) + var(--tabbottom) + 28px);
   background: var(--surface);
   border-radius: 0;
   box-shadow: none;
 }
-.app .curve-cap { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 168px; z-index: 1; pointer-events: none; }
-.app .train-inner { background: transparent; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 10px; }
+.app .info-safe { align-self: stretch; width: 100%; height: 20px; flex: 0 0 auto; pointer-events: none; }
+.app .band-hem { display: block; align-self: stretch; width: 100%; height: 32px; flex: 0 0 auto; margin: 0; pointer-events: none; }
+.app .train-inner { background: transparent; padding: 10px 20px 0; display: flex; flex-direction: column; gap: 10px; }
 .app .companion-slot, .app .avatar-name, .app .goal-entry { position: relative; z-index: 2; }
-.app .companion-slot { width: 134px; height: 134px; margin: 0; background: transparent; overflow: visible; flex: 0 0 auto; }
-.app .companion-slot svg { width: 134px; height: 134px; display: block; overflow: visible; background: transparent; }
+.app .companion-slot {
+  width: 134px;
+  height: 134px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  flex: 0 0 auto;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.app .companion-slot:focus { outline: none; }
+.app .companion-slot:focus-visible { outline: 2px solid rgba(0, 100, 212, 0.55); outline-offset: 6px; }
+.app .companion-slot svg { width: 134px; height: 134px; display: block; overflow: visible; background: transparent; pointer-events: none; }
 .app .train-band > .card,
 .app .train-band .bk-nag,
 .app .train-band .submit-bar { margin: 0; }

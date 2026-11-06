@@ -13,6 +13,8 @@
   var C = { body: '#6CB6A0', ink: '#2C5A52', yellow: '#F4C64E', acc: '#5FAA93', lav: '#8E92D6', glow: '#F7E3A6' };
   var ALLOWED = { idle: 'loop', listen: 'loop', comfort: 'loop', sleep: 'loop', happy: 'once', surprise: 'once' };
   var ONCE_MS = { happy: 2000, surprise: 1700 };
+  var PREVIEW_LOOP_MS = 1600;
+  var PREVIEW_THROTTLE_MS = 400;
   var COOLDOWN_MS = 30000;
   var QUEUE_MS = 3000;
   var LISTEN_GAP_MS = 800;
@@ -98,11 +100,6 @@
     var ey = BASE - faceH + p.lookY * 6;
     var gap = 36 * p.eyeGap * (0.55 + 0.45 * p.W / 116);
     var r = 11.6 * p.eyeR, lx = p.lookX * 9, out = '';
-    var sh = clamp01(p.shadow);
-    if (sh > 0.01) {
-      var k = 1 - Math.min(1, -f.jy / 60);
-      out += '<ellipse cx="' + CX + '" cy="' + (BASE + 10) + '" rx="' + n1(p.W * 0.72 * (0.55 + 0.45 * k)) + '" ry="' + n1(6 * (0.6 + 0.4 * k)) + '" fill="' + C.ink + '" opacity="' + (0.12 * sh * (0.4 + 0.6 * k)).toFixed(3) + '"/>';
-    }
     var sp = clamp01(p.sparkle);
     if (sp > 0.01) {
       [[-1.05, 0.92, 11, C.yellow], [1.02, 1.0, 13, C.acc], [-1.3, 0.55, 8, C.acc], [1.28, 0.5, 9, C.yellow], [0.6, 1.12, 7, C.yellow]].forEach(function (q, i) {
@@ -175,6 +172,11 @@
     var st = ALLOWED[state] ? state : 'idle';
     return frameInner(st, STATIC_T[st] || 0, targetOf(st), { frozen: true, size: size || 'M' });
   }
+  function airLift(state, t, frozen) {
+    if (frozen) return 0;
+    var st = ALLOWED[state] ? state : 'idle';
+    return computeFrame(st, t || 0, targetOf(st), false).jy;
+  }
   function staticDocument(state, px) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="' + (px || 108) + '" height="' + (px || 108) + '">' + staticInner(state, 'M') + '</svg>';
   }
@@ -212,9 +214,23 @@
     var motionOn = opt.motionEnabled !== false;
     var reduce = !!opt.reduceMotion;
     var lastKindAt = { happy: -1e15, surprise: -1e15 };
+    var previewing = false;
+    var previewUntil = null;
+    var lastPreview = null;
+    var lastPreviewAt = -1e15;
 
     function snap() {
-      return { state: state, frozen: hidden || !motionOn || reduce, hidden: hidden, listening: listening, queued: queue ? queue.state : null, sensitive: sensitive, rest: restOn, comfortHold: comfortHold };
+      return { state: state, frozen: hidden || !motionOn || reduce, hidden: hidden, listening: listening, queued: queue ? queue.state : null, sensitive: sensitive, rest: restOn, comfortHold: comfortHold, preview: previewing };
+    }
+    function stopPreview() { previewing = false; previewUntil = null; }
+    function previewDuration(kind) { return ALLOWED[kind] === 'once' ? ONCE_MS[kind] : PREVIEW_LOOP_MS; }
+    function previewPool() {
+      return ['listen', 'comfort', 'sleep', 'happy', 'surprise'].filter(function (s) {
+        if (!ALLOWED[s]) return false;
+        if (s === 'comfort' && !comfortOn) return false;
+        if ((s === 'happy' || s === 'surprise') && sensitive) return false;
+        return true;
+      });
     }
     function loop(next) { state = next; since = now(); onceAt = null; }
     function remember(id) { if (!id) return; seen[id] = now(); store.set(seen); }
@@ -250,7 +266,10 @@
       listening = false;
       listenQuiet = null;
       dropQueue();
-      if (state !== 'idle' && state !== 'comfort') loop(comfortHold ? 'comfort' : 'idle');
+      var wasPreview = previewing;
+      stopPreview();
+      if (wasPreview) loop(comfortHold && comfortOn ? 'comfort' : 'idle');
+      else if (state !== 'idle' && state !== 'comfort') loop(comfortHold ? 'comfort' : 'idle');
       else if (state === 'sleep') loop('idle');
       return snap();
     }
@@ -264,6 +283,11 @@
       var t = now();
       if (queue && t - queue.at > QUEUE_MS) dropQueue();
       if (hidden) return snap();
+      if (previewing && previewUntil != null && t >= previewUntil) {
+        stopPreview();
+        loop(comfortHold && comfortOn ? 'comfort' : 'idle');
+        flushQueue();
+      }
       if ((state === 'happy' || state === 'surprise') && onceAt != null && t - onceAt >= ONCE_MS[state]) {
         loop(comfortHold ? 'comfort' : 'idle');
         flushQueue();
@@ -285,14 +309,45 @@
     function dispatch(type, payload) {
       payload = payload || {};
       if (type === 'think' || type === 'reply') return { ok: false, reason: 'forbidden', state: state };
-      if (type === 'hide') { hidden = true; dropQueue(); return snap(); }
+      if (type === 'hide') {
+        hidden = true;
+        dropQueue();
+        if (previewing) { stopPreview(); loop(comfortHold && comfortOn ? 'comfort' : 'idle'); }
+        return snap();
+      }
       if (type === 'show') { hidden = false; dropQueue(); lastActivity = now(); if (state === 'sleep') loop('idle'); return snap(); }
-      if (type === 'rest') { restOn = !!payload.on; lastActivity = now(); if (state === 'sleep') loop('idle'); return snap(); }
+      if (type === 'rest') {
+        restOn = !!payload.on;
+        lastActivity = now();
+        if (previewing) { stopPreview(); loop('idle'); }
+        if (state === 'sleep') loop('idle');
+        return snap();
+      }
+      if (type === 'preview') {
+        if (listening || hidden) return { ok: false, reason: 'busy', state: state };
+        if (now() - lastPreviewAt < PREVIEW_THROTTLE_MS) return { ok: false, reason: 'throttle', state: state };
+        var pool = previewPool().filter(function (s) { return s !== lastPreview; });
+        if (!pool.length) pool = previewPool();
+        if (!pool.length) return { ok: false, reason: 'empty', state: state };
+        var roll = typeof payload.random === 'function' ? payload.random() : Math.random();
+        var kind = pool[Math.min(pool.length - 1, Math.floor(roll * pool.length))];
+        lastPreview = kind;
+        lastPreviewAt = now();
+        lastActivity = now();
+        stopPreview();
+        previewing = true;
+        previewUntil = now() + previewDuration(kind);
+        state = kind;
+        since = now();
+        onceAt = null;
+        return { ok: true, state: kind, preview: true };
+      }
       if (type === 'activity' || type === 'set' || type === 'edit' || type === 'navigate') return business();
       if (type === 'input') {
         lastActivity = now();
         listenQuiet = null;
         listening = true;
+        stopPreview();
         if (state === 'sleep' || state === 'happy' || state === 'surprise' || state === 'comfort') loop('idle');
         if (state !== 'listen') loop('listen');
         return snap();
@@ -300,6 +355,7 @@
       if (type === 'inputEnd') { if (listening) listenQuiet = now(); return snap(); }
       if (type === 'support') {
         if (!comfortOn) return { ok: false, reason: 'comfort-off', state: state };
+        if (previewing) { stopPreview(); loop('idle'); }
         comfortHold = !!payload.on;
         lastActivity = now();
         if (payload.on) { if (state !== 'listen') loop('comfort'); }
@@ -308,11 +364,15 @@
       }
       if (type === 'sensitive') {
         sensitive = !!payload.on;
-        if (sensitive && (state === 'happy' || state === 'surprise')) loop(comfortHold && comfortOn ? 'comfort' : 'idle');
+        if (sensitive && (state === 'happy' || state === 'surprise')) {
+          stopPreview();
+          loop(comfortHold && comfortOn ? 'comfort' : 'idle');
+        }
         return snap();
       }
       if (type === 'complete') {
         lastActivity = now();
+        if (previewing) { stopPreview(); loop(comfortHold && comfortOn ? 'comfort' : 'idle'); }
         if (!payload.persisted) { wake(); return { ok: false, reason: 'persist', state: state }; }
         if (payload.backfill || payload.redo) { wake(); return { ok: false, reason: 'not-live', state: state }; }
         var kind = payload.levelUp ? 'surprise' : 'happy';
@@ -321,6 +381,7 @@
         return res;
       }
       if (type === 'once') {
+        if (previewing) { stopPreview(); loop('idle'); }
         var r = playOnce(payload.state, payload.eventId, true);
         r.state = state;
         return r;
@@ -332,7 +393,7 @@
       if (flags.motionEnabled != null) motionOn = !!flags.motionEnabled;
       if (flags.comfortEnabled != null) {
         comfortOn = !!flags.comfortEnabled;
-        if (!comfortOn && state === 'comfort') { comfortHold = false; loop('idle'); }
+        if (!comfortOn && state === 'comfort') { comfortHold = false; stopPreview(); loop('idle'); }
       }
       if (flags.reduceMotion != null) reduce = !!flags.reduceMotion;
       return snap();
@@ -341,8 +402,8 @@
   }
 
   return {
-    ALLOWED: ALLOWED, ONCE_MS: ONCE_MS, COOLDOWN_MS: COOLDOWN_MS, QUEUE_MS: QUEUE_MS,
-    createMachine: createMachine, frameInner: frameInner, staticInner: staticInner, staticDocument: staticDocument,
+    ALLOWED: ALLOWED, ONCE_MS: ONCE_MS, PREVIEW_LOOP_MS: PREVIEW_LOOP_MS, PREVIEW_THROTTLE_MS: PREVIEW_THROTTLE_MS, COOLDOWN_MS: COOLDOWN_MS, QUEUE_MS: QUEUE_MS,
+    createMachine: createMachine, frameInner: frameInner, staticInner: staticInner, staticDocument: staticDocument, airLift: airLift,
     targetOf: targetOf, isNight: isNight, defaultShanghai: defaultShanghai, KEYS: KEYS
   };
 });
