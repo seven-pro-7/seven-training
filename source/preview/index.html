@@ -504,8 +504,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .me-head { width: 8px; height: 8px; border-radius: 50%; background: #121112; }
 .pg-train .me-body { width: 14px; height: 6px; border-radius: 7px 7px 3px 3px; background: #121112; }
 .pg-train .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.pg-train .avatar-frame { width: 108px; height: 108px; border-radius: 50%; background: rgba(255,255,255,0.72); border: 1.5px solid rgba(0,100,212,0.28); display: flex; align-items: center; justify-content: center; overflow: visible; }
-.pg-train .companion-slot { width: 134px; height: 134px; margin: -13px; background: transparent; }
+.pg-train .avatar-frame { width: 96px; height: 96px; border-radius: 50%; background: rgba(255,255,255,0.72); border: 1.5px solid rgba(0,100,212,0.28); display: flex; align-items: center; justify-content: center; overflow: visible; }
+.pg-train .companion-slot { width: 134px; height: 134px; margin: -29px -19px -9px; background: transparent; }
 .pg-train .avatar-ring { width: 72px; height: 72px; border-radius: 50%; background: #F4F7FB; box-shadow: 0 4px 12px rgba(18,17,18,0.05), inset 0 0 0 1.5px rgba(18,17,18,0.06); display: flex; align-items: center; justify-content: center; position: relative; }
 .pg-train .avatar-ring::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(0,100,212,0.28); }
 .pg-train .avatar-mark { width: 56px; height: 56px; border-radius: 50%; background: #E4EDF7; display: flex; align-items: center; justify-content: center; }
@@ -1403,8 +1403,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .train-inner { background: transparent; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 10px; }
 .app .companion-slot, .app .avatar-name, .app .goal-entry, .app .avatar-frame { position: relative; z-index: 2; }
 .app .avatar-frame {
-  width: 108px;
-  height: 108px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.72);
   border: 1.5px solid rgba(0, 100, 212, 0.28);
@@ -1414,7 +1414,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   overflow: visible;
   flex: 0 0 auto;
 }
-.app .companion-slot { width: 134px; height: 134px; margin: -13px; background: transparent; overflow: visible; flex: 0 0 auto; }
+.app .companion-slot { width: 134px; height: 134px; margin: -29px -19px -9px; background: transparent; overflow: visible; flex: 0 0 auto; }
 .app .companion-slot svg { width: 134px; height: 134px; display: block; overflow: visible; background: transparent; }
 .app .train-band > .card,
 .app .train-band .bk-nag,
@@ -7255,7 +7255,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       }
     }
     out += '</g>';
-    return out;
+    /* 外框 96px，画布 134px，角色在框内上移 10px。中线以上可越出，中线以下只留在圆内。 */
+    var clipR = (96 / 2) * (400 / 134);
+    var clipY = 200 + 10 * (400 / 134);
+    return '<defs><clipPath id="cmpLower" clipPathUnits="userSpaceOnUse"><path d="M-600,-800 H1000 V' + clipY.toFixed(2) + ' H-600 Z"/><circle cx="200" cy="' + clipY.toFixed(2) + '" r="' + clipR.toFixed(2) + '"/></clipPath></defs><g clip-path="url(#cmpLower)">' + out + '</g>';
   }
   function frameInner(state, t, pose, opt) {
     opt = opt || {};

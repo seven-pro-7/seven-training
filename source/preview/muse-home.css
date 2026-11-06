@@ -189,8 +189,8 @@
 .app .train-inner { background: transparent; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 10px; }
 .app .companion-slot, .app .avatar-name, .app .goal-entry, .app .avatar-frame { position: relative; z-index: 2; }
 .app .avatar-frame {
-  width: 108px;
-  height: 108px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.72);
   border: 1.5px solid rgba(0, 100, 212, 0.28);
@@ -200,7 +200,7 @@
   overflow: visible;
   flex: 0 0 auto;
 }
-.app .companion-slot { width: 134px; height: 134px; margin: -13px; background: transparent; overflow: visible; flex: 0 0 auto; }
+.app .companion-slot { width: 134px; height: 134px; margin: -29px -19px -9px; background: transparent; overflow: visible; flex: 0 0 auto; }
 .app .companion-slot svg { width: 134px; height: 134px; display: block; overflow: visible; background: transparent; }
 .app .train-band > .card,
 .app .train-band .bk-nag,

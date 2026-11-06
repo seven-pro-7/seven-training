@@ -161,7 +161,10 @@
       }
     }
     out += '</g>';
-    return out;
+    /* 外框 96px，画布 134px，角色在框内上移 10px。中线以上可越出，中线以下只留在圆内。 */
+    var clipR = (96 / 2) * (400 / 134);
+    var clipY = 200 + 10 * (400 / 134);
+    return '<defs><clipPath id="cmpLower" clipPathUnits="userSpaceOnUse"><path d="M-600,-800 H1000 V' + clipY.toFixed(2) + ' H-600 Z"/><circle cx="200" cy="' + clipY.toFixed(2) + '" r="' + clipR.toFixed(2) + '"/></clipPath></defs><g clip-path="url(#cmpLower)">' + out + '</g>';
   }
   function frameInner(state, t, pose, opt) {
     opt = opt || {};
