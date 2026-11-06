@@ -14,4 +14,6 @@
 - 非休息、非输入时，前台空闲 5 分钟，或上海时间 23:30–6:00 空闲 1 分钟，才 `sleep`。后台只暂停。
 - 单次反馈最多排队 1 条，超过 3 秒丢掉。去重优先于 30 秒冷却。真实操作可以马上打断动画。
 
+网页上可以点头像（键盘 Enter / Space 同样）随机看一个已有动作：listen、comfort、sleep、happy、surprise。连续两次不重复。happy 2 秒、surprise 1.7 秒，其余 1.6 秒后回到 idle。这只是预览，不写训练记录，也不占用完成庆祝的去重和冷却。情绪陪伴关掉时不抽 comfort；敏感时不播 happy / surprise。真实输入、记组、保存和导航会马上打断。400ms 内的连点忽略。后台不补播。小程序仍是 idle 静态图，没有这套点按动画。
+
 网页动画在 `source/preview/companion-view.js`。检查：`node scripts/verify-companion.js`。

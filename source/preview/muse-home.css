@@ -188,8 +188,27 @@
 .app .curve-cap { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 168px; z-index: 1; pointer-events: none; }
 .app .train-inner { background: transparent; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 10px; }
 .app .companion-slot, .app .avatar-name, .app .goal-entry { position: relative; z-index: 2; }
-.app .companion-slot { width: 134px; height: 134px; margin: 0; background: transparent; overflow: visible; flex: 0 0 auto; }
-.app .companion-slot svg { width: 134px; height: 134px; display: block; overflow: visible; background: transparent; }
+.app .companion-slot {
+  width: 134px;
+  height: 134px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  flex: 0 0 auto;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.app .companion-slot:focus { outline: none; }
+.app .companion-slot:focus-visible { outline: 2px solid rgba(0, 100, 212, 0.55); outline-offset: 6px; }
+.app .companion-slot svg { width: 134px; height: 134px; display: block; overflow: visible; background: transparent; pointer-events: none; }
 .app .train-band > .card,
 .app .train-band .bk-nag,
 .app .train-band .submit-bar { margin: 0; }

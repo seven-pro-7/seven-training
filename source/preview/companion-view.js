@@ -72,7 +72,7 @@
     host = el || null;
     if (!host) { stop(); svg = null; return; }
     if (!svg || !svg.isConnected) {
-      host.innerHTML = '<svg viewBox="0 0 400 400" width="134" height="134" role="img" aria-label="训练伙伴"></svg>';
+      host.innerHTML = '<svg viewBox="0 0 400 400" width="134" height="134" aria-hidden="true" focusable="false"></svg>';
       svg = host.querySelector('svg');
     }
     paint(machine.snapshot().frozen);
@@ -84,9 +84,14 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden) onHide(); else onShow(); });
   document.addEventListener('pointerdown', function (e) {
     if (document.hidden) return;
-    if (e.target && e.target.closest && e.target.closest('input, textarea, select')) return;
+    if (e.target && e.target.closest && e.target.closest('input, textarea, select, #companionSlot')) return;
     machine.dispatch('activity');
   }, true);
+  document.addEventListener('click', function (e) {
+    if (!e.target || !e.target.closest || !e.target.closest('#companionSlot')) return;
+    machine.dispatch('preview');
+    paint(machine.snapshot().frozen);
+  });
   if (window.matchMedia) {
     var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     var apply = function () { reduce = !!mq.matches; machine.setFlags({ reduceMotion: reduce }); paint(machine.snapshot().frozen); };

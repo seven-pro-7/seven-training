@@ -148,5 +148,111 @@ check('M 档静态帧不含回复文字行', function () {
   assert.ok(svg.indexOf('<rect') < 0);
 });
 
+check('点按预览不重复，到点回 idle，不写庆祝', function () {
+  var c = clocked();
+  var prev = '';
+  for (var i = 0; i < 12; i++) {
+    c.at(i * 500);
+    var r = c.m.dispatch('preview', { random: Math.random });
+    assert.strictEqual(r.ok, true, r.reason);
+    assert.notStrictEqual(r.state, 'idle');
+    assert.notStrictEqual(r.state, prev);
+    assert.ok(C.ALLOWED[r.state]);
+    prev = r.state;
+  }
+  assert.deepStrictEqual(c.bag(), {});
+  var early = c.m.dispatch('preview', { random: function () { return 0; } });
+  assert.strictEqual(early.reason, 'throttle');
+  c.at(11 * 500 + 2000);
+  assert.strictEqual(c.m.snapshot().preview, false);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+});
+
+check('预览 happy / surprise 用原来的单次时长', function () {
+  var c = clocked();
+  assert.strictEqual(c.m.dispatch('preview', { random: function () { return 0.6; } }).state, 'happy');
+  c.at(1999);
+  assert.strictEqual(c.m.snapshot().state, 'happy');
+  c.at(2000);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  c.at(2400);
+  assert.strictEqual(c.m.dispatch('preview', { random: function () { return 0.8; } }).state, 'surprise');
+  c.at(2400 + 1699);
+  assert.strictEqual(c.m.snapshot().state, 'surprise');
+  c.at(2400 + 1700);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  assert.deepStrictEqual(c.bag(), {});
+});
+
+check('记组、输入、保存打断预览，且不消耗去重', function () {
+  var c = clocked();
+  c.m.dispatch('preview', { random: function () { return 0.6; } });
+  assert.strictEqual(c.m.snapshot().state, 'happy');
+  c.m.dispatch('set');
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  assert.strictEqual(c.m.snapshot().preview, false);
+  c.at(400);
+  c.m.dispatch('preview', { random: function () { return 0; } });
+  c.m.dispatch('input');
+  assert.strictEqual(c.m.snapshot().listening, true);
+  assert.strictEqual(c.m.snapshot().preview, false);
+  var blocked = c.m.dispatch('preview', { random: function () { return 0.2; } });
+  assert.strictEqual(blocked.reason, 'busy');
+  c.m.dispatch('activity');
+  var done = c.m.dispatch('complete', { persisted: true, eventId: 'live-1' });
+  assert.strictEqual(done.state, 'happy');
+  c.m.dispatch('activity');
+  assert.strictEqual(c.m.dispatch('complete', { persisted: true, eventId: 'live-1' }).reason, 'dedupe');
+  c.at(1000);
+  c.m.dispatch('preview', { random: function () { return 0.6; } });
+  var failedSave = c.m.dispatch('complete', { persisted: false, eventId: 'nope' });
+  assert.strictEqual(failedSave.reason, 'persist');
+  assert.notStrictEqual(c.m.snapshot().state, 'happy');
+});
+
+check('关掉情绪陪伴不抽 comfort，敏感不播庆祝预览', function () {
+  var off = clocked({ comfortEnabled: false });
+  var got = {};
+  for (var i = 0; i < 8; i++) {
+    off.at(i * 500);
+    var r = off.m.dispatch('preview', { random: function () { return (i % 4) / 4; } });
+    if (r.ok) got[r.state] = 1;
+  }
+  assert.ok(!got.comfort);
+  assert.ok(got.listen || got.sleep);
+  var sens = clocked();
+  sens.m.dispatch('sensitive', { on: true });
+  var mood = {};
+  for (var j = 0; j < 10; j++) {
+    sens.at(j * 500);
+    var s = sens.m.dispatch('preview', { random: function () { return j / 10; } });
+    if (s.ok) mood[s.state] = 1;
+  }
+  assert.ok(!mood.happy);
+  assert.ok(!mood.surprise);
+  sens.at(10 * 500);
+  sens.m.dispatch('preview', { random: function () { return 0.6; } });
+  assert.notStrictEqual(sens.m.snapshot().state, 'happy');
+  sens.m.dispatch('hide');
+  assert.strictEqual(sens.m.snapshot().preview, false);
+  sens.m.dispatch('show');
+  sens.at(10 * 500 + 50);
+  assert.notStrictEqual(sens.m.snapshot().state, 'happy');
+});
+
+check('预览会叫醒睡眠，到点后空闲规则仍在', function () {
+  var c = clocked();
+  c.at(5 * 60 * 1000);
+  assert.strictEqual(c.m.snapshot().state, 'sleep');
+  c.m.dispatch('preview', { random: function () { return 0; } });
+  assert.strictEqual(c.m.snapshot().state, 'listen');
+  c.at(5 * 60 * 1000 + C.PREVIEW_LOOP_MS);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  c.at(10 * 60 * 1000 - 1);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  c.at(10 * 60 * 1000);
+  assert.strictEqual(c.m.snapshot().state, 'sleep');
+});
+
 if (failed) { console.error(failed + ' failed'); process.exit(1); }
 console.log('companion ok');
