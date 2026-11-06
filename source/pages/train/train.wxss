@@ -223,11 +223,17 @@
 .follow-meta .b { color: #121112; font-weight: 600; }
 .submit-bar { display: flex; align-items: center; gap: 8px; }
 .sb-count { display: none; }
-.t1-mid.is-done { background: #E3F6EA; box-shadow: inset 0 0 0 0.5px rgba(47,158,95,0.35); }
-.follow-row.is-done { background: #E3F6EA; }
-.ex-done { width: 16px; height: 16px; margin-left: 4px; border-radius: 50%; background: rgba(47,158,95,0.12); position: relative; flex-shrink: 0; }
-.t1-mid.is-done .ex-done, .follow-row.is-done .ex-done { background: #fff; }
-.ex-done::after { content: ""; position: absolute; left: 5px; top: 3px; width: 4px; height: 7px; border-right: 1.6px solid #2F9E5F; border-bottom: 1.6px solid #2F9E5F; transform: rotate(40deg); }
+.t1-mid.is-done { background: #EAF6F0; box-shadow: inset 0 0 0 0.5px #C5E6D6; }
+.t1-mid.is-done .ex-name, .t1-mid.is-done .t1-metrics .weight, .t1-mid.is-done .t1-metrics .weight.manual, .follow-row.is-done .follow-name { color: #193520; }
+.t1-mid.is-done .unit, .t1-mid.is-done .prog-cap, .follow-row.is-done .follow-meta { color: #3E624C; }
+.t1-mid.is-done .scheme-pill, .t1-mid.is-done .tier, .follow-row.is-done .tier { background: #D7EFE3; color: #193520; }
+.t1-mid.is-done .mini-dot.done, .t1-mid.is-done .mini-dot.next { background: #2F7A4A; box-shadow: none; }
+.follow-row.is-done { background: #EAF6F0; }
+.ex-done { width: 16px; height: 16px; margin-left: 4px; border-radius: 50%; background: #fff; position: relative; flex-shrink: 0; }
+.ex-done::after { content: ""; position: absolute; left: 5px; top: 3px; width: 4px; height: 7px; border-right: 1.6px solid #2F7A4A; border-bottom: 1.6px solid #2F7A4A; transform: rotate(40deg); }
+.t1-mid.is-done .more-btn { background: #F7FBF8; }
+.t1-mid.is-done .more-btn > view { background: #3E624C; }
+.t1-mid.is-done .chev-d { border-right-color: #2F7A4A; border-bottom-color: #2F7A4A; }
 .sb-btn { flex: 1; margin: 0; height: 40px; line-height: 40px; padding: 0 14px; border-radius: 999px; background: #0064D4; color: #fff; font-size: 14px; font-weight: 600; }
 .sb-btn::after { border: none; }
 .session-sheet .note { width: 100%; }
