@@ -15,8 +15,8 @@
   var ONCE_MS = { happy: 2000, surprise: 1700 };
   var PREVIEW_LOOP_MS = 1600;
   var PREVIEW_THROTTLE_MS = 400;
-  var AUTO_MIN_MS = 45 * 1000;
-  var AUTO_MAX_MS = 90 * 1000;
+  var AUTO_MIN_MS = 15 * 1000;
+  var AUTO_MAX_MS = 30 * 1000;
   var AUTO_PLAY_MS = 1100;
   var COOLDOWN_MS = 30000;
   var QUEUE_MS = 3000;

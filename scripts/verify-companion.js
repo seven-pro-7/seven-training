@@ -278,14 +278,14 @@ check('空闲时偶尔自主跳一下，到点回 idle 再等一整段', functio
   assert.ok(c.m.snapshot().state === 'happy' || c.m.snapshot().state === 'surprise');
 });
 
-check('自主间隔落在 45 到 90 秒，最长不会提前', function () {
+check('自主间隔落在 15 到 30 秒，最长不会提前', function () {
   var late = clocked({ random: function () { return 1; } });
   late.m.dispatch('home', { on: true });
   late.at(C.AUTO_MAX_MS - 1);
   assert.strictEqual(late.m.snapshot().auto, false);
   late.at(C.AUTO_MAX_MS);
   assert.strictEqual(late.m.snapshot().auto, true);
-  assert.ok(C.AUTO_MIN_MS === 45000 && C.AUTO_MAX_MS === 90000);
+  assert.ok(C.AUTO_MIN_MS === 15000 && C.AUTO_MAX_MS === 30000);
   assert.ok(C.AUTO_PLAY_MS >= 1000 && C.AUTO_PLAY_MS <= 2000);
 });
 
