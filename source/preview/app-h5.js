@@ -593,7 +593,7 @@
     var id = homeIdentity();
     return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
       '<button type="button" class="menu-btn" data-act="me" aria-label="我的">' + ME + '</button>' +
-      '<div class="avatar-wrap"><div class="companion-slot" id="companionSlot" aria-hidden="true"></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
+      '<div class="avatar-wrap"><div class="avatar-frame"><div class="companion-slot" id="companionSlot" aria-hidden="true"></div></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
       goalBtn + '<svg class="curve-cap" viewBox="0 0 368 148" preserveAspectRatio="none" aria-hidden="true"><path fill="#FFFFFF" d="M0 40 A 717.33 717.33 0 0 1 368 40 L 368 148 L 0 148 Z"/></svg></section><section class="train-band" aria-label="训练"><div class="train-inner">' + trainInner + '</div></section></div>' + (extra || '');
   }
   function goalBtn(vm) {

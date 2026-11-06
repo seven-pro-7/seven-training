@@ -72,7 +72,7 @@
     host = el || null;
     if (!host) { stop(); svg = null; return; }
     if (!svg || !svg.isConnected) {
-      host.innerHTML = '<svg viewBox="0 0 400 400" width="108" height="108" role="img" aria-label="训练伙伴"></svg>';
+      host.innerHTML = '<svg viewBox="0 0 400 400" width="134" height="134" role="img" aria-label="训练伙伴"></svg>';
       svg = host.querySelector('svg');
     }
     paint(machine.snapshot().frozen);

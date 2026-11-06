@@ -3,7 +3,7 @@
     <view class="avatar-band">
       <view class="menu-btn me-btn" bindtap="goMe" aria-role="button" aria-label="我的"><view class="me-head"></view><view class="me-body"></view></view>
       <view class="avatar-wrap">
-        <image class="companion-slot" src="/assets/companion-idle.svg" mode="aspectFit" aria-label="训练伙伴" />
+        <view class="avatar-frame"><image class="companion-slot" src="/assets/companion-idle.svg" mode="aspectFit" aria-label="训练伙伴" /></view>
         <text class="avatar-name">{{profileName}}</text>
       </view>
       <view class="goal-entry" bindtap="goOverview" aria-role="button" aria-label="进入计划总览：{{vm.day}} · {{vm.dayName}}">
