@@ -570,7 +570,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .follow-meta .b { color: #121112; font-weight: 600; }
 .pg-train .submit-bar { display: flex; align-items: center; gap: 8px; }
 .pg-train .sb-count { display: none; }
+.pg-train .t1-mid.is-done { background: #E3F6EA; box-shadow: inset 0 0 0 0.5px rgba(47,158,95,0.35); }
+.pg-train .follow-row.is-done { background: #E3F6EA; }
 .pg-train .ex-done { width: 16px; height: 16px; margin-left: 4px; border-radius: 50%; background: rgba(47,158,95,0.12); position: relative; flex-shrink: 0; }
+.pg-train .t1-mid.is-done .ex-done, .pg-train .follow-row.is-done .ex-done { background: #fff; }
 .pg-train .ex-done::after { content: ""; position: absolute; left: 5px; top: 3px; width: 4px; height: 7px; border-right: 1.6px solid #2F9E5F; border-bottom: 1.6px solid #2F9E5F; transform: rotate(40deg); }
 .pg-train .sb-btn { flex: 1; margin: 0; height: 40px; line-height: 40px; padding: 0 14px; border-radius: 999px; background: #0064D4; color: #fff; font-size: 15px; font-weight: 600; }
 .pg-train .sb-btn::after { border: none; }
@@ -1561,6 +1564,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   border-bottom: 1.6px solid var(--green);
   transform: rotate(40deg);
 }
+.app .t1-mid.is-done {
+  background: #E3F6EA;
+  box-shadow: inset 0 0 0 0.5px rgba(47, 158, 95, 0.35);
+}
+.app .t1-mid.is-done .ex-done,
+.app .follow-row.is-done .ex-done { background: #fff; }
 .app .t1-mid.is-open .ex-done { margin-top: 1px; }
 .app .t1-mid.skipped { opacity: 0.55; }
 .app .t1-mid-row { display: flex; align-items: center; gap: 12px; }
@@ -1728,8 +1737,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   height: 0.5px;
   background: var(--line);
 }
+.app .follow-row.is-done { background: #E3F6EA; }
+.app .follow-row.is-done + .follow-row::before,
+.app .follow-row + .follow-row.is-done::before { background: rgba(47, 158, 95, 0.2); }
 .app .follow-row.skipped { opacity: 0.55; }
 .app .follow-row:active { background: rgba(0, 100, 212, 0.05); }
+.app .follow-row.is-done:active { background: #D4F0DF; }
 .app .follow-name {
   flex: 1;
   min-width: 0;
