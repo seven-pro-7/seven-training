@@ -504,8 +504,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .me-head { width: 8px; height: 8px; border-radius: 50%; background: #121112; }
 .pg-train .me-body { width: 14px; height: 6px; border-radius: 7px 7px 3px 3px; background: #121112; }
 .pg-train .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.pg-train .avatar-frame { width: 96px; height: 96px; border-radius: 50%; background: rgba(255,255,255,0.72); border: 1.5px solid rgba(0,100,212,0.28); display: flex; align-items: center; justify-content: center; overflow: visible; }
-.pg-train .companion-slot { width: 134px; height: 134px; margin: -29px -19px -9px; background: transparent; }
+.pg-train .companion-slot { width: 134px; height: 134px; margin: 0; background: transparent; }
 .pg-train .avatar-ring { width: 72px; height: 72px; border-radius: 50%; background: #F4F7FB; box-shadow: 0 4px 12px rgba(18,17,18,0.05), inset 0 0 0 1.5px rgba(18,17,18,0.06); display: flex; align-items: center; justify-content: center; position: relative; }
 .pg-train .avatar-ring::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(0,100,212,0.28); }
 .pg-train .avatar-mark { width: 56px; height: 56px; border-radius: 50%; background: #E4EDF7; display: flex; align-items: center; justify-content: center; }
@@ -1401,20 +1400,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 }
 .app .curve-cap { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 168px; z-index: 1; pointer-events: none; }
 .app .train-inner { background: transparent; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 10px; }
-.app .companion-slot, .app .avatar-name, .app .goal-entry, .app .avatar-frame { position: relative; z-index: 2; }
-.app .avatar-frame {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1.5px solid rgba(0, 100, 212, 0.28);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-  flex: 0 0 auto;
-}
-.app .companion-slot { width: 134px; height: 134px; margin: -29px -19px -9px; background: transparent; overflow: visible; flex: 0 0 auto; }
+.app .companion-slot, .app .avatar-name, .app .goal-entry { position: relative; z-index: 2; }
+.app .companion-slot { width: 134px; height: 134px; margin: 0; background: transparent; overflow: visible; flex: 0 0 auto; }
 .app .companion-slot svg { width: 134px; height: 134px; display: block; overflow: visible; background: transparent; }
 .app .train-band > .card,
 .app .train-band .bk-nag,
@@ -7255,10 +7242,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       }
     }
     out += '</g>';
-    /* 外框 96px，画布 134px，角色在框内上移 10px。中线以上可越出，中线以下只留在圆内。 */
-    var clipR = (96 / 2) * (400 / 134);
-    var clipY = 200 + 10 * (400 / 134);
-    return '<defs><clipPath id="cmpLower" clipPathUnits="userSpaceOnUse"><path d="M-600,-800 H1000 V' + clipY.toFixed(2) + ' H-600 Z"/><circle cx="200" cy="' + clipY.toFixed(2) + '" r="' + clipR.toFixed(2) + '"/></clipPath></defs><g clip-path="url(#cmpLower)">' + out + '</g>';
+    return out;
   }
   function frameInner(state, t, pose, opt) {
     opt = opt || {};
@@ -8143,7 +8127,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var id = homeIdentity();
     return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
       '<button type="button" class="menu-btn" data-act="me" aria-label="我的">' + ME + '</button>' +
-      '<div class="avatar-wrap"><div class="avatar-frame"><div class="companion-slot" id="companionSlot" aria-hidden="true"></div></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
+      '<div class="avatar-wrap"><div class="companion-slot" id="companionSlot" aria-hidden="true"></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
       goalBtn + '<svg class="curve-cap" viewBox="0 0 368 148" preserveAspectRatio="none" aria-hidden="true"><path fill="#FFFFFF" d="M0 40 A 717.33 717.33 0 0 1 368 40 L 368 148 L 0 148 Z"/></svg></section><section class="train-band" aria-label="训练"><div class="train-inner">' + trainInner + '</div></section></div>' + (extra || '');
   }
   function goalBtn(vm) {
