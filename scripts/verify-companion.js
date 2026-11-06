@@ -254,5 +254,90 @@ check('预览会叫醒睡眠，到点后空闲规则仍在', function () {
   assert.strictEqual(c.m.snapshot().state, 'sleep');
 });
 
+check('空闲时偶尔自主跳一下，到点回 idle 再等一整段', function () {
+  var c = clocked({ random: function () { return 0; } });
+  assert.strictEqual(c.m.dispatch('home', { on: true }).home, true);
+  c.at(C.AUTO_MIN_MS - 1);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  assert.strictEqual(c.m.snapshot().auto, false);
+  c.at(C.AUTO_MIN_MS);
+  var playing = c.m.snapshot();
+  assert.strictEqual(playing.auto, true);
+  assert.ok(playing.state === 'happy' || playing.state === 'surprise');
+  assert.notStrictEqual(playing.state, 'listen');
+  assert.deepStrictEqual(c.bag(), {});
+  c.at(C.AUTO_MIN_MS + C.AUTO_PLAY_MS - 1);
+  assert.strictEqual(c.m.snapshot().auto, true);
+  c.at(C.AUTO_MIN_MS + C.AUTO_PLAY_MS);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  assert.strictEqual(c.m.snapshot().auto, false);
+  c.at(C.AUTO_MIN_MS + C.AUTO_PLAY_MS + C.AUTO_MIN_MS - 1);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  c.at(C.AUTO_MIN_MS + C.AUTO_PLAY_MS + C.AUTO_MIN_MS);
+  assert.strictEqual(c.m.snapshot().auto, true);
+  assert.ok(c.m.snapshot().state === 'happy' || c.m.snapshot().state === 'surprise');
+});
+
+check('自主间隔落在 15 到 30 秒，最长不会提前', function () {
+  var late = clocked({ random: function () { return 1; } });
+  late.m.dispatch('home', { on: true });
+  late.at(C.AUTO_MAX_MS - 1);
+  assert.strictEqual(late.m.snapshot().auto, false);
+  late.at(C.AUTO_MAX_MS);
+  assert.strictEqual(late.m.snapshot().auto, true);
+  assert.ok(C.AUTO_MIN_MS === 15000 && C.AUTO_MAX_MS === 30000);
+  assert.ok(C.AUTO_PLAY_MS >= 1000 && C.AUTO_PLAY_MS <= 2000);
+});
+
+check('记组、后台和关动画打断自主表演，回来不补播', function () {
+  var c = clocked({ random: function () { return 0; } });
+  c.m.dispatch('home', { on: true });
+  c.at(C.AUTO_MIN_MS);
+  assert.strictEqual(c.m.snapshot().auto, true);
+  c.m.dispatch('set');
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  assert.strictEqual(c.m.snapshot().auto, false);
+  c.at(C.AUTO_MIN_MS + C.AUTO_PLAY_MS);
+  assert.strictEqual(c.m.snapshot().auto, false);
+  c.m.dispatch('home', { on: false });
+  c.at(C.AUTO_MIN_MS * 4);
+  c.m.dispatch('home', { on: true });
+  assert.strictEqual(c.m.snapshot().auto, false);
+  assert.strictEqual(c.m.snapshot().state, 'idle');
+  var off = clocked({ random: function () { return 0; }, motionEnabled: false });
+  off.m.dispatch('home', { on: true });
+  off.at(C.AUTO_MIN_MS);
+  assert.strictEqual(off.m.snapshot().auto, false);
+  var quiet = clocked({ random: function () { return 0; } });
+  quiet.m.setFlags({ reduceMotion: true });
+  quiet.m.dispatch('home', { on: true });
+  quiet.at(C.AUTO_MIN_MS);
+  assert.strictEqual(quiet.m.snapshot().auto, false);
+  var sens = clocked({ random: function () { return 0; } });
+  sens.m.dispatch('sensitive', { on: true });
+  sens.m.dispatch('home', { on: true });
+  sens.at(C.AUTO_MIN_MS);
+  assert.strictEqual(sens.m.snapshot().auto, false);
+});
+
+check('自主表演不重置睡眠，也不占用真实庆祝', function () {
+  var c = clocked({ random: function () { return 0; } });
+  c.m.dispatch('home', { on: true });
+  c.at(C.AUTO_MIN_MS);
+  assert.strictEqual(c.m.snapshot().auto, true);
+  c.at(5 * 60 * 1000);
+  assert.strictEqual(c.m.snapshot().state, 'sleep');
+  assert.strictEqual(c.m.snapshot().auto, false);
+  c.at(5 * 60 * 1000 + C.AUTO_MAX_MS);
+  assert.strictEqual(c.m.snapshot().state, 'sleep');
+  c.m.dispatch('activity');
+  var done = c.m.dispatch('complete', { persisted: true, eventId: 'real-1' });
+  assert.strictEqual(done.state, 'happy');
+  assert.strictEqual(c.m.snapshot().auto, false);
+  c.m.dispatch('activity');
+  assert.strictEqual(c.m.dispatch('complete', { persisted: true, eventId: 'real-1' }).reason, 'dedupe');
+  assert.ok(c.bag()['real-1'] === 0 || c.bag()['real-1'] > 0);
+});
+
 if (failed) { console.error(failed + ' failed'); process.exit(1); }
 console.log('companion ok');

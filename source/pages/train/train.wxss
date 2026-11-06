@@ -159,7 +159,7 @@
 .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 20px; }
 .companion-pedestal { position: relative; width: 134px; height: 134px; }
 .companion-slot { width: 134px; height: 134px; margin: 0; background: transparent; position: relative; z-index: 2; }
-.ground-shadow { position: absolute; left: 50%; top: 96px; width: 72px; height: 16px; margin-left: -36px; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(18,17,18,0.18) 0%, rgba(18,17,18,0.10) 38%, rgba(18,17,18,0) 78%); z-index: 1; }
+.ground-shadow { position: absolute; left: 50%; top: 110px; width: 72px; height: 16px; margin-left: -36px; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(18,17,18,0.18) 0%, rgba(18,17,18,0.10) 38%, rgba(18,17,18,0) 78%); z-index: 1; }
 .avatar-ring { width: 72px; height: 72px; border-radius: 50%; background: #F4F7FB; box-shadow: 0 4px 12px rgba(18,17,18,0.05), inset 0 0 0 1.5px rgba(18,17,18,0.06); display: flex; align-items: center; justify-content: center; position: relative; }
 .avatar-ring::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(0,100,212,0.28); }
 .avatar-mark { width: 56px; height: 56px; border-radius: 50%; background: #E4EDF7; display: flex; align-items: center; justify-content: center; }

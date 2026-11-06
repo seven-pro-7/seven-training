@@ -15,6 +15,9 @@
   var ONCE_MS = { happy: 2000, surprise: 1700 };
   var PREVIEW_LOOP_MS = 1600;
   var PREVIEW_THROTTLE_MS = 400;
+  var AUTO_MIN_MS = 15 * 1000;
+  var AUTO_MAX_MS = 30 * 1000;
+  var AUTO_PLAY_MS = 1100;
   var COOLDOWN_MS = 30000;
   var QUEUE_MS = 3000;
   var LISTEN_GAP_MS = 800;
@@ -64,7 +67,7 @@
     }
     return d + 'Z';
   }
-  function computeFrame(st, t, base, isStatic) {
+  function computeFrame(st, t, base, isStatic, soft) {
     var p = {}; KEYS.forEach(function (k) { p[k] = base[k]; });
     var jy = 0, op = 1, S = Math.sin;
     var blink = function (per, at) { if (isStatic) return; var ph = ((t % per) + per) % per, d = ph - at; if (d > 0 && d < 0.18) { var b = 1 - Math.abs(d - 0.09) / 0.09; p.eyeOpen *= 1 - 0.95 * b; } };
@@ -77,12 +80,13 @@
       if (t < 0.15) { var k = S(Math.PI * t / 0.15); p.W *= 1 + 0.14 * k; p.H *= 1 - 0.15 * k; }
       else if (t < 0.8) { var u = seg(0.15, 0.8); jy = -46 * 4 * u * (1 - u); var k2 = S(Math.PI * u); p.H *= 1 + 0.1 * k2; p.W *= 1 - 0.06 * k2; }
       else if (t < 0.95) { var k3 = S(Math.PI * seg(0.8, 0.95)); p.W *= 1 + 0.12 * k3; p.H *= 1 - 0.13 * k3; }
-      else if (t < 1.4) { var u2 = seg(0.95, 1.4); jy = -22 * 4 * u2 * (1 - u2); var k4 = S(Math.PI * u2); p.H *= 1 + 0.05 * k4; p.W *= 1 - 0.03 * k4; }
-      else if (t < 1.52) { var k5 = S(Math.PI * seg(1.4, 1.52)); p.W *= 1 + 0.06 * k5; p.H *= 1 - 0.06 * k5; }
+      else if (!soft && t < 1.4) { var u2 = seg(0.95, 1.4); jy = -22 * 4 * u2 * (1 - u2); var k4 = S(Math.PI * u2); p.H *= 1 + 0.05 * k4; p.W *= 1 - 0.03 * k4; }
+      else if (!soft && t < 1.52) { var k5 = S(Math.PI * seg(1.4, 1.52)); p.W *= 1 + 0.06 * k5; p.H *= 1 - 0.06 * k5; }
     } else if (st === 'surprise') {
       if (t < 0.1) { var k6 = S(Math.PI * t / 0.1); p.H *= 1 - 0.1 * k6; p.W *= 1 + 0.08 * k6; }
       jy = -14 * S(Math.PI * seg(0.1, 0.6)); blink(10, 1.25);
     }
+    if (soft) jy *= 0.62;
     p.eyeOpen = Math.max(0, p.eyeOpen);
     return { p: p, jy: jy, op: op, t: t, st: st, isStatic: isStatic };
   }
@@ -93,6 +97,7 @@
     var p = f.p, t = f.t, st = f.st, S = Math.sin, stat = f.isStatic;
     var size = f.size || 'M';
     if (size !== 'L') { p.sparkle = 0; p.lines = 0; }
+    if (f.soft) { p.burst *= 0.45; p.sparkle *= 0.4; }
     if (size === 'S') { p.waves = 0; p.glow = 0; p.burst = 0; p.zzz = 0; p.shadow = 0; }
     var pts = contour(p), topY = BASE - p.H;
     var faceH = p.eyeY * p.H;
@@ -164,18 +169,19 @@
     opt = opt || {};
     var st = ALLOWED[state] ? state : 'idle';
     var base = pose || targetOf(st);
-    var f = computeFrame(st, t, base, !!opt.frozen);
+    var f = computeFrame(st, t, base, !!opt.frozen, !!opt.soft);
     f.size = opt.size || 'M';
+    f.soft = !!opt.soft;
     return buildSVG(f);
   }
   function staticInner(state, size) {
     var st = ALLOWED[state] ? state : 'idle';
     return frameInner(st, STATIC_T[st] || 0, targetOf(st), { frozen: true, size: size || 'M' });
   }
-  function airLift(state, t, frozen) {
+  function airLift(state, t, frozen, soft) {
     if (frozen) return 0;
     var st = ALLOWED[state] ? state : 'idle';
-    return computeFrame(st, t || 0, targetOf(st), false).jy;
+    return computeFrame(st, t || 0, targetOf(st), false, !!soft).jy;
   }
   function staticDocument(state, px) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="' + (px || 108) + '" height="' + (px || 108) + '">' + staticInner(state, 'M') + '</svg>';
@@ -218,11 +224,45 @@
     var previewUntil = null;
     var lastPreview = null;
     var lastPreviewAt = -1e15;
+    var homeOn = false;
+    var autoing = false;
+    var autoUntil = null;
+    var autoAt = null;
+    var lastAuto = null;
+    var rng = opt.random || Math.random;
 
     function snap() {
-      return { state: state, frozen: hidden || !motionOn || reduce, hidden: hidden, listening: listening, queued: queue ? queue.state : null, sensitive: sensitive, rest: restOn, comfortHold: comfortHold, preview: previewing };
+      return { state: state, frozen: hidden || !motionOn || reduce, hidden: hidden, listening: listening, queued: queue ? queue.state : null, sensitive: sensitive, rest: restOn, comfortHold: comfortHold, preview: previewing, auto: autoing, home: homeOn };
     }
     function stopPreview() { previewing = false; previewUntil = null; }
+    function stopAuto() { autoing = false; autoUntil = null; }
+    function autoEligible() {
+      return homeOn && motionOn && !reduce && !sensitive && !hidden && !restOn && !listening && !comfortHold && state === 'idle' && !previewing && !autoing;
+    }
+    function rollDelay() {
+      var u = rng();
+      if (!(u >= 0)) u = 0;
+      if (u > 1) u = 1;
+      return AUTO_MIN_MS + Math.round(u * (AUTO_MAX_MS - AUTO_MIN_MS));
+    }
+    function armAuto() {
+      if (!autoEligible()) { autoAt = null; return; }
+      autoAt = now() + rollDelay();
+    }
+    function beginAuto() {
+      if (!autoEligible()) return;
+      var pool = ['happy', 'surprise'].filter(function (s) { return s !== lastAuto; });
+      if (!pool.length) pool = ['happy', 'surprise'];
+      var u = rng();
+      if (u < 0) u = 0;
+      var kind = pool[Math.min(pool.length - 1, Math.floor(u * pool.length))];
+      lastAuto = kind;
+      autoing = true;
+      autoUntil = now() + AUTO_PLAY_MS;
+      state = kind;
+      since = now();
+      onceAt = null;
+    }
     function previewDuration(kind) { return ALLOWED[kind] === 'once' ? ONCE_MS[kind] : PREVIEW_LOOP_MS; }
     function previewPool() {
       return ['listen', 'comfort', 'sleep', 'happy', 'surprise'].filter(function (s) {
@@ -267,8 +307,11 @@
       listenQuiet = null;
       dropQueue();
       var wasPreview = previewing;
+      var wasAuto = autoing;
       stopPreview();
-      if (wasPreview) loop(comfortHold && comfortOn ? 'comfort' : 'idle');
+      stopAuto();
+      autoAt = null;
+      if (wasPreview || wasAuto) loop(comfortHold && comfortOn ? 'comfort' : 'idle');
       else if (state !== 'idle' && state !== 'comfort') loop(comfortHold ? 'comfort' : 'idle');
       else if (state === 'sleep') loop('idle');
       return snap();
@@ -283,6 +326,10 @@
       var t = now();
       if (queue && t - queue.at > QUEUE_MS) dropQueue();
       if (hidden) return snap();
+      if (autoing && autoUntil != null && t >= autoUntil) {
+        stopAuto();
+        if (!onceAt && (state === 'happy' || state === 'surprise')) loop(comfortHold && comfortOn ? 'comfort' : 'idle');
+      }
       if (previewing && previewUntil != null && t >= previewUntil) {
         stopPreview();
         loop(comfortHold && comfortOn ? 'comfort' : 'idle');
@@ -304,6 +351,11 @@
         var need = isNight(t, shanghai) ? SLEEP_NIGHT_MS : SLEEP_MS;
         if (idleFor >= need) loop('sleep');
       }
+      if (homeOn && !autoing && autoAt != null && t >= autoAt) {
+        autoAt = null;
+        if (autoEligible()) beginAuto();
+      }
+      if (homeOn && autoAt == null && !autoing && autoEligible()) armAuto();
       return snap();
     }
     function dispatch(type, payload) {
@@ -313,6 +365,8 @@
         hidden = true;
         dropQueue();
         if (previewing) { stopPreview(); loop(comfortHold && comfortOn ? 'comfort' : 'idle'); }
+        if (autoing) { stopAuto(); if (state === 'happy' || state === 'surprise') loop('idle'); }
+        autoAt = null;
         return snap();
       }
       if (type === 'show') { hidden = false; dropQueue(); lastActivity = now(); if (state === 'sleep') loop('idle'); return snap(); }
@@ -320,7 +374,21 @@
         restOn = !!payload.on;
         lastActivity = now();
         if (previewing) { stopPreview(); loop('idle'); }
+        if (autoing) { stopAuto(); if (state === 'happy' || state === 'surprise') loop('idle'); }
+        autoAt = null;
         if (state === 'sleep') loop('idle');
+        return snap();
+      }
+      if (type === 'home') {
+        if (!payload.on) {
+          homeOn = false;
+          if (autoing) { stopAuto(); if (state === 'happy' || state === 'surprise') loop('idle'); }
+          autoAt = null;
+          return snap();
+        }
+        homeOn = true;
+        if (autoing) return snap();
+        if (autoAt == null || autoAt <= now()) armAuto();
         return snap();
       }
       if (type === 'preview') {
@@ -335,6 +403,8 @@
         lastPreviewAt = now();
         lastActivity = now();
         stopPreview();
+        stopAuto();
+        autoAt = null;
         previewing = true;
         previewUntil = now() + previewDuration(kind);
         state = kind;
@@ -348,6 +418,8 @@
         listenQuiet = null;
         listening = true;
         stopPreview();
+        stopAuto();
+        autoAt = null;
         if (state === 'sleep' || state === 'happy' || state === 'surprise' || state === 'comfort') loop('idle');
         if (state !== 'listen') loop('listen');
         return snap();
@@ -356,6 +428,8 @@
       if (type === 'support') {
         if (!comfortOn) return { ok: false, reason: 'comfort-off', state: state };
         if (previewing) { stopPreview(); loop('idle'); }
+        if (autoing) { stopAuto(); if (state === 'happy' || state === 'surprise') loop('idle'); }
+        autoAt = null;
         comfortHold = !!payload.on;
         lastActivity = now();
         if (payload.on) { if (state !== 'listen') loop('comfort'); }
@@ -366,6 +440,8 @@
         sensitive = !!payload.on;
         if (sensitive && (state === 'happy' || state === 'surprise')) {
           stopPreview();
+          stopAuto();
+          autoAt = null;
           loop(comfortHold && comfortOn ? 'comfort' : 'idle');
         }
         return snap();
@@ -373,6 +449,8 @@
       if (type === 'complete') {
         lastActivity = now();
         if (previewing) { stopPreview(); loop(comfortHold && comfortOn ? 'comfort' : 'idle'); }
+        if (autoing) { stopAuto(); if (state === 'happy' || state === 'surprise') loop('idle'); }
+        autoAt = null;
         if (!payload.persisted) { wake(); return { ok: false, reason: 'persist', state: state }; }
         if (payload.backfill || payload.redo) { wake(); return { ok: false, reason: 'not-live', state: state }; }
         var kind = payload.levelUp ? 'surprise' : 'happy';
@@ -382,6 +460,8 @@
       }
       if (type === 'once') {
         if (previewing) { stopPreview(); loop('idle'); }
+        if (autoing) { stopAuto(); if (state === 'happy' || state === 'surprise') loop('idle'); }
+        autoAt = null;
         var r = playOnce(payload.state, payload.eventId, true);
         r.state = state;
         return r;
@@ -396,13 +476,20 @@
         if (!comfortOn && state === 'comfort') { comfortHold = false; stopPreview(); loop('idle'); }
       }
       if (flags.reduceMotion != null) reduce = !!flags.reduceMotion;
+      if (!motionOn || reduce) {
+        var wasAuto = autoing;
+        stopAuto();
+        autoAt = null;
+        if (wasAuto) loop('idle');
+      }
       return snap();
     }
     return { dispatch: dispatch, tick: tick, snapshot: snap, setFlags: setFlags, allowed: Object.keys(ALLOWED) };
   }
 
   return {
-    ALLOWED: ALLOWED, ONCE_MS: ONCE_MS, PREVIEW_LOOP_MS: PREVIEW_LOOP_MS, PREVIEW_THROTTLE_MS: PREVIEW_THROTTLE_MS, COOLDOWN_MS: COOLDOWN_MS, QUEUE_MS: QUEUE_MS,
+    ALLOWED: ALLOWED, ONCE_MS: ONCE_MS, PREVIEW_LOOP_MS: PREVIEW_LOOP_MS, PREVIEW_THROTTLE_MS: PREVIEW_THROTTLE_MS,
+    AUTO_MIN_MS: AUTO_MIN_MS, AUTO_MAX_MS: AUTO_MAX_MS, AUTO_PLAY_MS: AUTO_PLAY_MS, COOLDOWN_MS: COOLDOWN_MS, QUEUE_MS: QUEUE_MS,
     createMachine: createMachine, frameInner: frameInner, staticInner: staticInner, staticDocument: staticDocument, airLift: airLift,
     targetOf: targetOf, isNight: isNight, defaultShanghai: defaultShanghai, KEYS: KEYS
   };
