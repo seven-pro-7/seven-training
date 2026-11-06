@@ -742,7 +742,8 @@
       '</div></div>';
   }
   function submitBar(vm) {
-    return '<div class="submit-bar"><span class="sb-count num"><b>' + vm.filled + '</b> / ' + vm.total + '</span><button type="button" class="btn-primary sb-btn" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
+    var ready = vm.total > 0 && vm.filled === vm.total;
+    return '<div class="submit-bar"><span class="sb-count num"><b>' + vm.filled + '</b> / ' + vm.total + '</span><button type="button" class="sb-btn' + (ready ? ' is-ready' : '') + '" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
   }
 
   function renderTrainHold(cur) {

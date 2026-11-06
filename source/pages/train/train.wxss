@@ -221,7 +221,9 @@
 .follow-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .follow-meta { flex-shrink: 0; font-size: 12px; color: #6B6B71; }
 .follow-meta .b { color: #121112; font-weight: 600; }
-.submit-bar { display: flex; align-items: center; gap: 10px; }
-.sb-count { height: 52px; min-width: 74px; padding: 0 16px; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; font-weight: 600; }
-.sb-btn { flex: 1; margin: 0; }
+.submit-bar { display: flex; align-items: center; gap: 8px; }
+.sb-count { height: 40px; min-width: 64px; padding: 0 12px; border-radius: 999px; background: #fff; border: 0.5px solid #E7E7EA; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+.sb-btn { flex: 1; margin: 0; height: 40px; line-height: 40px; padding: 0 14px; border-radius: 999px; background: #F2F2F4; color: #6B6B71; font-size: 14px; font-weight: 600; }
+.sb-btn::after { border: none; }
+.sb-btn.is-ready { background: #0064D4; color: #fff; }
 .session-sheet .note { width: 100%; }
