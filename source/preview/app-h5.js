@@ -629,9 +629,12 @@
       return '<span class="mini-dot ' + cls + '"></span>';
     }).join('') + '</div>';
   }
+  function setsLogged(it) { return !!(it.logged && it.value !== '未完成'); }
+  function doneMark() { return '<span class="ex-done" aria-label="已完成"></span>'; }
   function progCap(it) {
     if (it.skip) return '已跳过';
     if (it.preview) return it.preview.judgment;
+    if (setsLogged(it)) return '';
     var n = it.sets || (it.dots ? it.dots.length : 0);
     return (it.done || 0) + '/' + n + ' · 点开记组';
   }
@@ -696,12 +699,13 @@
     return h;
   }
   function midCard(it, open) {
-    return '<section class="t1-mid' + (it.skip ? ' skipped' : '') + (open ? ' is-open' : '') + '" aria-label="' + esc(it.name) + '">' +
+    var cap = progCap(it);
+    return '<section class="t1-mid' + (it.skip ? ' skipped' : '') + (setsLogged(it) ? ' is-done' : '') + (open ? ' is-open' : '') + '" aria-label="' + esc(it.name) + '">' +
       '<div class="t1-mid-row"><div class="t1-mid-main" data-act="expand" data-keep="1" data-slot="' + it.slotId + '">' +
-      '<div class="t1-top">' + tier(it.tier, it.badge) + '<span class="ex-name">' + esc(it.name) + '</span></div>' +
+      '<div class="t1-top">' + tier(it.tier, it.badge) + '<span class="ex-name">' + esc(it.name) + '</span>' + (setsLogged(it) ? doneMark() : '') + '</div>' +
       flagHtml(it) +
       '<div class="t1-metrics">' + weightHtml(it) + '<span class="scheme-pill">' + esc(it.repsText) + '</span></div>' +
-      (open ? '' : '<div class="progress-row">' + miniDots(it) + '<span class="prog-cap">' + esc(progCap(it)) + '</span></div>') +
+      (open ? '' : '<div class="progress-row">' + miniDots(it) + (cap ? '<span class="prog-cap">' + esc(cap) + '</span>' : '') + '</div>') +
       '</div><div class="t1-actions">' +
       '<button type="button" class="more-btn" data-act="more" data-slot="' + it.slotId + '" aria-label="更多">' + MORE + '</button>' +
       '<button type="button" class="expand-btn' + (open ? ' open' : '') + '" data-act="expand" data-slot="' + it.slotId + '" aria-label="' + (open ? '收起' : '展开记组') + '" aria-expanded="' + (open ? 'true' : 'false') + '">' + EXPAND + '</button>' +
@@ -711,8 +715,8 @@
   function followList(items) {
     if (!items.length) return '';
     return '<section class="follow-list">' + items.map(function (it) {
-      return '<div class="follow-row' + (it.skip ? ' skipped' : '') + '" data-act="focus" data-slot="' + it.slotId + '" role="button">' +
-        tier(it.tier, it.badge) + '<span class="follow-name">' + esc(it.name) + '</span>' + followMeta(it) + '</div>';
+      return '<div class="follow-row' + (it.skip ? ' skipped' : '') + (setsLogged(it) ? ' is-done' : '') + '" data-act="focus" data-slot="' + it.slotId + '" role="button">' +
+        tier(it.tier, it.badge) + '<span class="follow-name">' + esc(it.name) + '</span>' + followMeta(it) + (setsLogged(it) ? doneMark() : '') + '</div>';
     }).join('') + '</section>';
   }
   /** 选中项留在原位展开成卡片，其余保持最小行，不把当前动作抽到列表最前。 */
@@ -742,9 +746,8 @@
       '</div></div>';
   }
   function submitBar(vm) {
-    var ready = vm.total > 0 && vm.filled === vm.total;
-    var btn = ready ? '<button type="button" class="sb-btn is-ready" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button>' : '';
-    return '<div class="submit-bar"><span class="sb-count num"><b>' + vm.filled + '</b> / ' + vm.total + '</span>' + btn + '</div>';
+    if (!(vm.total > 0 && vm.filled === vm.total)) return '';
+    return '<div class="submit-bar"><button type="button" class="sb-btn is-ready" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
   }
 
   function renderTrainHold(cur) {
