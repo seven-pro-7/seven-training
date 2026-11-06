@@ -3,10 +3,7 @@
     <view class="avatar-band">
       <view class="menu-btn me-btn" bindtap="goMe" aria-role="button" aria-label="我的"><view class="me-head"></view><view class="me-body"></view></view>
       <view class="avatar-wrap">
-        <view class="avatar-ring">
-          <image wx:if="{{profileAvatar}}" class="avatar-photo" src="{{profileAvatar}}" mode="aspectFill" />
-          <view wx:else class="avatar-mark"><view></view></view>
-        </view>
+        <image class="companion-slot" src="/assets/companion-idle.svg" mode="aspectFit" aria-label="训练伙伴" />
         <text class="avatar-name">{{profileName}}</text>
       </view>
       <view class="goal-entry" bindtap="goOverview" aria-role="button" aria-label="进入计划总览：{{vm.day}} · {{vm.dayName}}">

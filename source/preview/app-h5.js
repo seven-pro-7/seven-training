@@ -119,8 +119,10 @@
   /** 同时写入 localStorage 和 IndexedDB。localStorage 写失败时仍尽量留下 IndexedDB 副本 */
   function writeJson(key, value) {
     var snap = cloneJson(value);
-    try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) {}
+    var ok = true;
+    try { localStorage.setItem(key, JSON.stringify(snap)); } catch (e) { ok = false; }
     idbPut(key, snap);
+    return ok;
   }
   function removeJson(key) {
     try { localStorage.removeItem(key); } catch (e) {}
@@ -163,14 +165,15 @@
   function save(db, opt) {
     var read = readJson(KEY);
     // 本机键读不出来时不写。一次失败的读取配上一份内存空档案，会把计划、1RM 和训练记录一起清掉。
-    if (read.status === 'error') return;
+    if (read.status === 'error') return false;
     if (read.status === 'corrupt') quarantineCorrupt();
     var fromSync = opt && opt.fromSync, hasW = Object.prototype.hasOwnProperty.call(db.params || {}, 'watch'), w = hasW ? db.params.watch : undefined;
     if (hasW) { delete db.params.watch; watchSave(w || null); }  // 手表数据走独立键；主数据里不留
     if (!fromSync) { var prev = rawLoad(); if (prev && prev.params && prev.days) { prev = GZ.normalize(prev); delete prev.params.watch; GZ.stampConfig(prev, db); } }
-    writeJson(KEY, db);
+    var wrote = writeJson(KEY, db);
     if (hasW && w) db.params.watch = w;  // 调用方继续拿到完整对象
     if (!fromSync) Sync.schedule();
+    return wrote !== false;
   }
   var bootReady = false, restoredOpen = null;
   /** 启动：localStorage 与 IndexedDB 里留更新的那份。只有两边都没有档案时才写入空的初始档案 */
@@ -590,8 +593,8 @@
     var id = homeIdentity();
     return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
       '<button type="button" class="menu-btn" data-act="me" aria-label="我的">' + ME + '</button>' +
-      '<div class="avatar-wrap"><div class="avatar-ring">' + avatarFace(id) + '</div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
-      goalBtn + '</section><section class="train-band" aria-label="训练">' + trainInner + '</section></div>' + (extra || '');
+      '<div class="avatar-wrap"><div class="companion-slot" id="companionSlot" aria-hidden="true"></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
+      goalBtn + '<svg class="curve-cap" viewBox="0 0 368 148" preserveAspectRatio="none" aria-hidden="true"><path fill="#FFFFFF" d="M0 40 A 717.33 717.33 0 0 1 368 40 L 368 148 L 0 148 Z"/></svg></section><section class="train-band" aria-label="训练"><div class="train-inner">' + trainInner + '</div></section></div>' + (extra || '');
   }
   function goalBtn(vm) {
     var label = '进入计划总览：' + vm.day + ' · ' + vm.dayName;
@@ -928,6 +931,13 @@
       case 'gotoStats': t.result = null; S.tab = 'stats'; S.data.seg = 1; return true;
     }
   }
+  function shDate(ms) {
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms || Date.now())); }
+    catch (e2) { return GZ.today(); }
+  }
+  function companionBus(type, payload) {
+    if (window.CompanionView) CompanionView.machine.dispatch(type, payload || {});
+  }
   function submit() {
     var db0 = load(), cur0 = GZ.activeProgram(db0);
     if (cur0 && cur0.status !== 'active' && !S.train.recordId) return toast(cur0.status === 'paused' ? '计划已暂停' : '计划已结束');
@@ -939,9 +949,11 @@
       missing.forEach(function (it) { entry(it.slotId).skip = true; });
       var db = load();
       var bw = t.bw ? Number(t.bw) : null;
+      var editing = !!t.recordId, sessionDate = t.date;
       var rec = GZ.saveRecord(db, { id: t.recordId, date: t.date, day: t.day, deload: vm.deload, note: t.note, bw: bw, entries: t.draft, createdAt: t.recordId ? t.createdAt : Date.now() });
       if (bw > 0) db.params.bodyWeight = bw;
-      save(db);
+      var persisted = save(db);
+      if (window.CompanionView) CompanionView.machine.dispatch('complete', { persisted: !!persisted, eventId: rec && rec.id ? ('session:' + rec.id) : '', redo: editing, backfill: sessionDate !== shDate(), levelUp: false });
       var s = GZ.sessionResult(db, rec.id), rdn = GZ.roundInfo(db), wDone = !t.recordId && s && rdn.week > s.week;
       var dCyc = s ? GZ.cycleOf(s.week, db.params).cycle : 1, nCyc = GZ.cycleOf(rdn.week, db.params).cycle, cDone = wDone && nCyc > dCyc;
       var rotated = cDone ? GZ.buildRotation(db, nCyc).changed : 0;
@@ -1016,10 +1028,10 @@
     S.tab = 'train';
   }
   function beginRest(sec, name) {
-    clearInterval(rest.timer); rest.show = true; rest.open = false; rest.left = sec; rest.total = sec; rest.name = name; renderRest();
+    clearInterval(rest.timer); rest.show = true; rest.open = false; rest.left = sec; rest.total = sec; rest.name = name; companionBus('rest', { on: true }); renderRest();
     rest.timer = setInterval(function () {
       rest.left -= 1;
-      if (rest.left <= 0) { clearInterval(rest.timer); rest.show = false; renderRest(); toast('休息结束，开始下一组'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); return; }
+      if (rest.left <= 0) { clearInterval(rest.timer); rest.show = false; companionBus('rest', { on: false }); renderRest(); toast('休息结束，开始下一组'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); return; }
       renderRest();
     }, 1000);
   }
@@ -1967,6 +1979,11 @@
     var inp = function (k, v, unit, extra) { return '<input class="f-in num" inputmode="decimal" data-act="param" data-k="' + k + '" ' + (extra || '') + ' value="' + v + '"><span class="f-u">' + unit + '</span>'; };
     h += '<div class="lib-back" data-act="meback">‹ 训练</div><div class="pg-title">我的</div>';
     h += '\u0000base\u0000';
+    var cp = window.CompanionView ? CompanionView.pref() : { motion: true, comfort: true };
+    h += '<div class="sec-h">训练伙伴</div><div class="list">' +
+      '<div class="cell"><span class="flex1">角色动画</span><label class="ios-sw"><input type="checkbox" data-act="compmotion" ' + (cp.motion !== false ? 'checked' : '') + '><i></i></label></div>' +
+      '<div class="cell"><span class="flex1">情绪陪伴</span><label class="ios-sw"><input type="checkbox" data-act="compcomfort" ' + (cp.comfort !== false ? 'checked' : '') + '><i></i></label></div></div>' +
+      '<div class="sec-f">情绪陪伴只在你主动打开支持时使用。现在没有单独的求助入口，这个开关先记住选择。</div>';
     var pp = Share.profile(P.shareProfile);
     h += '<div class="sec-h" id="shareProfileSec">分享名片</div><div class="list profile-list">' +
       '<div class="cell"><span class="flex1">头像</span><label class="profile-avatar">' + (pp.avatar ? '<img src="' + pp.avatar + '" alt="头像">' : '<span>' + esc(pp.name.slice(0,1) || '我') + '</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-act="profileavatar"></label><span class="btn-small" data-act="profilenoavatar">移除</span></div>' +
@@ -2121,6 +2138,8 @@
         return true;
       case 'libback': st.view = ''; st.add = null; render(); return false;
       case 'meback': S.tab = 'train'; render(); return false;
+      case 'compmotion': if (window.CompanionView) CompanionView.setMotion(!!el.checked); return false;
+      case 'compcomfort': if (window.CompanionView) CompanionView.setComfort(!!el.checked); return false;
       case 'libfilter':
         if (ds.k === 'pattern') {
           st.pattern = ds.v;
@@ -2228,6 +2247,8 @@
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
     else if (S.stats.ex) requestAnimationFrame(drawExercise);
     if (S.review.share) paintSharePreview();
+    if (S.tab === 'train' && window.CompanionView) CompanionView.attach(document.getElementById('companionSlot'));
+    else if (window.CompanionView) CompanionView.attach(null);
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
   function navState() {
@@ -2242,6 +2263,16 @@
     if (type === 'click' && isField) return;
     if (type === 'change' && !isField) return;
     // 次数、重量、体重、备注在输入过程中就落盘，不等失焦。失焦前切到后台时，这些值也还在。
+    if (!gateOnboard() && S.tab === 'train' && window.CompanionView) {
+      var ca = el.dataset.act;
+      if (type === 'input' && { note: 1, amrap: 1, winput: 1, bw: 1, '5rm': 1, reps: 1, setin: 1 }[ca]) {
+        CompanionView.machine.dispatch('input');
+        clearTimeout(companionBus._t);
+        companionBus._t = setTimeout(function () { companionBus('inputEnd'); }, 800);
+      } else if (type === 'click') {
+        CompanionView.machine.dispatch({ dot: 1, step: 1, wstep: 1, setrep: 1, done: 1, cardiodone: 1 }[ca] ? 'set' : 'activity');
+      }
+    }
     if (type === 'input' && LIVE_INPUT[el.dataset.act] && !gateOnboard() && S.tab === 'train') {
       trainAct(el.dataset.act, el.dataset, el);
       persistOpen();
