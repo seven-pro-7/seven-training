@@ -10,6 +10,7 @@
 ## 目录
 ```
 utils/engine.js   规则引擎（小程序与 H5 共用）：参数、动作库、判定、回放、统计、回归、总结
+utils/companion-core.js  训练伙伴一期六态（idle/listen/comfort/sleep/happy/surprise）与静态 SVG。小程序不跑弹簧动画，首页用 idle 静态图。
 utils/chart.js    Canvas2D 图表：折线 / 堆叠柱 / 环形
 utils/store.js    wx.setStorageSync 本地存储
 pages/train       训练：推荐训练日、实时判定、组进度点、休息计时、结算
