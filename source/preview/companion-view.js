@@ -7,7 +7,7 @@
   var Core = window.CompanionCore;
   if (!Core) return;
   var KEY = 'training_companion_v1';
-  var host = null, svg = null, raf = 0, running = false, last = 0;
+  var host = null, svg = null, raf = 0, running = false, last = 0, watch = null;
   var reduce = false;
   function pref() {
     try { return JSON.parse(localStorage.getItem(KEY)) || { motion: true, comfort: true }; }
@@ -32,6 +32,7 @@
     var snap = machine.snapshot();
     if (snap.state !== shown) { shown = snap.state; tState = 0; }
     var target = Core.targetOf(shown);
+    var soft = !!(snap.auto && !snap.preview);
     if (frozen || snap.frozen) {
       pose = target;
       svg.innerHTML = Core.frameInner(shown, 0, pose, { frozen: true, size: 'M' });
@@ -45,13 +46,13 @@
       pose[k] += vel[k] * dt;
     });
     tState += dt;
-    svg.innerHTML = Core.frameInner(shown, tState, pose, { frozen: false, size: 'M' });
-    paintShadow(false);
+    svg.innerHTML = Core.frameInner(shown, tState, pose, { frozen: false, size: 'M', soft: soft });
+    paintShadow(false, soft);
   }
-  function paintShadow(frozen) {
+  function paintShadow(frozen, soft) {
     var sh = host && host.parentElement ? host.parentElement.querySelector('.ground-shadow') : null;
     if (!sh) return;
-    var lift = frozen ? 0 : Math.max(0, -(Core.airLift ? Core.airLift(shown, tState, false) : 0));
+    var lift = frozen ? 0 : Math.max(0, -(Core.airLift ? Core.airLift(shown, tState, false, soft) : 0));
     var k = Math.min(1, lift / 46);
     var scale = 1 - 0.32 * k;
     sh.style.transform = 'translateX(-50%) scale(' + scale.toFixed(3) + ',' + (0.85 + 0.15 * scale).toFixed(3) + ')';
@@ -79,19 +80,44 @@
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
   }
+  function clearWatch() {
+    if (watch) { watch.disconnect(); watch = null; }
+  }
+  function hostVisible() {
+    if (!host || document.hidden) return false;
+    var r = host.getBoundingClientRect();
+    return r.width > 0 && r.bottom > 0 && r.top < window.innerHeight;
+  }
+  function setHome(on) { machine.dispatch('home', { on: !!on }); }
   function attach(el) {
-    host = el || null;
-    if (!host) { stop(); svg = null; return; }
+    if (!el) {
+      setHome(false);
+      clearWatch();
+      stop();
+      svg = null;
+      host = null;
+      return;
+    }
+    host = el;
     if (!svg || !svg.isConnected) {
       host.innerHTML = '<svg viewBox="0 0 400 400" width="134" height="134" aria-hidden="true" focusable="false"></svg>';
       svg = host.querySelector('svg');
     }
     paint(machine.snapshot().frozen);
+    clearWatch();
+    if (window.IntersectionObserver) {
+      watch = new IntersectionObserver(function (entries) {
+        var on = entries.some(function (en) { return en.isIntersecting; });
+        setHome(on && !document.hidden);
+      }, { threshold: [0, 0.2] });
+      watch.observe(host);
+    }
+    setHome(hostVisible());
     if (document.hidden) stop();
     else start();
   }
-  function onHide() { machine.dispatch('hide'); stop(); paint(true); }
-  function onShow() { machine.dispatch('show'); if (host) start(); }
+  function onHide() { machine.dispatch('hide'); setHome(false); stop(); paint(true); }
+  function onShow() { machine.dispatch('show'); if (host) { setHome(hostVisible()); start(); } }
   document.addEventListener('visibilitychange', function () { if (document.hidden) onHide(); else onShow(); });
   document.addEventListener('pointerdown', function (e) {
     if (document.hidden) return;
@@ -114,6 +140,6 @@
     pref: pref,
     setMotion: function (on) { var p = pref(); p.motion = !!on; savePref(p); machine.setFlags({ motionEnabled: !!on }); paint(machine.snapshot().frozen); },
     setComfort: function (on) { var p = pref(); p.comfort = !!on; savePref(p); machine.setFlags({ comfortEnabled: !!on }); },
-    destroy: function () { stop(); if (host) host.innerHTML = ''; svg = null; host = null; }
+    destroy: function () { setHome(false); clearWatch(); stop(); if (host) host.innerHTML = ''; svg = null; host = null; }
   };
 })();
