@@ -657,7 +657,7 @@
     if (it.editW) {
       h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
         '<input class="st-val wide num" inputmode="decimal" data-act="winput" data-slot="' + it.slotId + '" value="' + it.weightText + '">' +
-        '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">每次 ' + it.wStep + ' kg</span>' +
+        '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">每次 ' + it.wStepText + ' kg</span>' +
         (it.manual ? '<span class="link we-reset" data-act="wreset" data-slot="' + it.slotId + '">恢复 ' + it.autoText + '</span>' : '') + '</div>';
     }
     if (!it.skip) {
@@ -909,7 +909,7 @@
       case 'wstep':
         en = entry(ds.slot); vm = trainVM();
         var iw = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
-        var nw = Math.max(0, Math.round((Number(iw.weight) + Number(ds.d) * iw.wStep) * 100) / 100);
+        var nw = GZ.nudgeWeight(iw.name, iw.equip, iw.weight, Number(ds.d), iw.wStep);
         en.w = nw === iw.autoWeight ? null : nw; if (navigator.vibrate) navigator.vibrate(8); return true;
       case 'winput':
         en = entry(ds.slot); vm = trainVM();
@@ -1124,10 +1124,11 @@
       '<div class="slot-meta"><span class="slot-reps">' + esc(info.repsText) + '</span>' +
       '<span class="slot-when">' + (info.adjusted ? '已手动调整 · ' : '') + '下次 ' + info.when + ' · ' + esc(info.weekText) + '</span></div></div>';
     if (info.canAdjust) {
+      var stepNow = GZ.weightStepView(info.name, info.equip, Number(sl.w) || 0, info.wStep);
       h += '<div class="list"><div class="cell slot-adj"><span class="flex1">调整重量</span><div class="stepper">' +
         '<div class="st-btn" data-act="swstep" data-d="-1">−</div><input class="st-val num" inputmode="decimal" data-act="swin" value="' + esc(sl.w) + '">' +
         '<div class="st-btn" data-act="swstep" data-d="1">+</div></div></div></div>' +
-        '<div class="sec-f">只改重量，阶段和失败次数都不变，也不会改动已有记录，之后照常按规则加重。</div>';
+        '<div class="sec-f">只改重量，阶段和失败次数都不变，也不会改动已有记录，之后照常按规则加重。' + (info.equip === '哑铃' ? ('每次 ' + esc(stepNow.text) + ' kg。') : '') + '</div>';
     }
     if (info.category && !info.category.locked) {
       h += '<div class="list"><div class="cell tap" data-act="slotpick"><span class="flex1">更换动作</span><span class="val">' +
@@ -1391,7 +1392,7 @@
     if (act === 'slotq') { p.slot.q = el.value; return true; }
     if (act === 'swstep') {
       var inf = p.slot.info, cur = Number(p.slot.w) || 0;
-      p.slot.w = String(Math.max(0, Math.round((cur + Number(ds.d) * inf.wStep) * 100) / 100));
+      p.slot.w = String(GZ.nudgeWeight(inf.name, inf.equip, cur, Number(ds.d), inf.wStep));
       return true;
     }
     if (act === 'swin') { p.slot.w = el.value; return false; }

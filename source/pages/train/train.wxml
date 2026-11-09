@@ -107,7 +107,7 @@
                 <input class="st-val wide num" type="digit" value="{{block.item.weightText}}" data-slot="{{block.item.slotId}}" bindblur="onWInput" bindconfirm="onWInput" />
                 <view class="st-btn" data-slot="{{block.item.slotId}}" data-d="1" bindtap="onWStep">+</view>
               </view>
-              <text class="we-step">每次 {{block.item.wStep}} kg</text>
+              <text class="we-step">每次 {{block.item.wStepText}} kg</text>
               <text class="link we-reset" wx:if="{{block.item.manual}}" data-slot="{{block.item.slotId}}" bindtap="onWReset">恢复 {{block.item.autoText}}</text>
             </view>
             <block wx:if="{{!block.item.skip}}">

@@ -98,7 +98,7 @@
         <picker class="flex1" range="{{s.opts}}" value="{{s.optIdx}}" data-si="{{si}}" bindchange="onEx">
           <view class="ex-pick">{{s.name}}<text class="equip-tag eq-{{s.equip}}">{{s.equipLabel}}</text><text class="chev">⌄</text></view>
         </picker>
-        <text class="init-step">每次 +{{s.stepText}}</text>
+        <text class="init-step">{{s.stepText}}</text>
         <text class="init num">{{s.initW}}<text class="f-u"> kg</text></text>
       </view>
       <view class="slot-chg" wx:if="{{s.changeText}}">{{s.changeText}}</view>

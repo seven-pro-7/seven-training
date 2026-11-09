@@ -40,7 +40,7 @@ Page({
         baseIdx: s.init.type === 'pct' ? GZ.LIFT_ORDER.indexOf(s.init.base) : 0,
         baseName: s.init.type === 'pct' ? GZ.LIFTS[s.init.base] : '',
         pctText: s.init.type === 'pct' ? Math.round(s.init.pct * 100) : '',
-        stepText: eq === '自重' ? '达阈值后改负重' : GZ.stepOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg · 按 ' + GZ.incOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg 档'
+        stepText: eq === '自重' ? '每次 +达阈值后改负重' : eq === '哑铃' ? GZ.dumbbellStepText(GZ.dumbbellFineInc(ef.slot.name, eq, GZ.incOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P))) : ('每次 +' + GZ.stepOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg · 按 ' + GZ.incOf(Object.assign({}, s, { name: ef.slot.name, equip: eq }), P) + ' kg 档')
       }; })
     }));
     const isGz = curProg === 'gzclp';
