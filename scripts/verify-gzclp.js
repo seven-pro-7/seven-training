@@ -906,6 +906,63 @@ check('没练过的出厂重量会换成模型，手改过的固定重量留着'
   assert.strictEqual(slotOf(trained, 'B1_5').init.type, 'model');
 });
 
+check('哑铃阶梯：10 kg 及以下保留细档，10–20 每 2 kg，20 kg 起每 2.5 kg', function () {
+  function seq(fine, max) {
+    return GZ.dumbbellWeights(fine, max).filter(function (w) { return w > 0 && w <= max + 1e-9; });
+  }
+  assert.deepStrictEqual(seq(1, 30), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 22.5, 25, 27.5, 30]);
+  assert.deepStrictEqual(seq(2, 30), [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22.5, 25, 27.5, 30]);
+  assert.strictEqual(GZ.dumbbellFineInc('哑铃弯举', '哑铃'), 1);
+  assert.strictEqual(GZ.dumbbellFineInc('坐姿哑铃推肩', '哑铃'), 2);
+  assert.strictEqual(GZ.dumbbellFineInc('哑铃侧平举', '哑铃'), 1);
+  assert.strictEqual(GZ.dumbbellFineInc('上斜哑铃卧推', '哑铃'), 2);
+  function climb(name, from, dir) { return GZ.nudgeWeight(name, '哑铃', from, dir, GZ.dumbbellFineInc(name, '哑铃')); }
+  assert.strictEqual(climb('哑铃弯举', 8, 1), 9);
+  assert.strictEqual(climb('哑铃弯举', 9, 1), 10);
+  assert.strictEqual(climb('哑铃弯举', 10, 1), 12);
+  assert.strictEqual(climb('哑铃弯举', 10, -1), 9);
+  assert.strictEqual(climb('哑铃弯举', 12, -1), 10);
+  assert.strictEqual(climb('坐姿哑铃推肩', 8, 1), 10);
+  assert.strictEqual(climb('坐姿哑铃推肩', 10, -1), 8);
+  assert.strictEqual(climb('坐姿哑铃推肩', 18, 1), 20);
+  assert.strictEqual(climb('坐姿哑铃推肩', 20, 1), 22.5);
+  assert.strictEqual(climb('坐姿哑铃推肩', 20, -1), 18);
+  assert.strictEqual(climb('坐姿哑铃推肩', 22.5, 1), 25);
+  assert.strictEqual(climb('坐姿哑铃推肩', 25, -1), 22.5);
+  assert.strictEqual(climb('哑铃弯举', 11, 1), 12);
+  assert.strictEqual(climb('哑铃弯举', 11, -1), 10);
+  assert.strictEqual(climb('坐姿哑铃推肩', 21, 1), 22.5);
+  assert.strictEqual(climb('坐姿哑铃推肩', 23, -1), 22.5);
+  assert.strictEqual(GZ.dumbbellSnap(24.7, 2, 'round'), 25);
+  assert.strictEqual(GZ.dumbbellSnap(13, 2, 'round'), 14);
+  assert.strictEqual(GZ.dumbbellSnap(5.25, 1, 'round'), 5);
+
+  var db = GZ.defaults(false);
+  var shoulder = slotOf(db, 'A2_2');
+  assert.strictEqual(shoulder.name, '坐姿哑铃推肩');
+  var up20 = ev(shoulder, { stage: '3×10', weight: 20, fail: 0, last3x10: 20 }, { v: '完成' });
+  assert.strictEqual(up20.nextWeight, 22.5);
+  var up18 = ev(shoulder, { stage: '3×10', weight: 18, fail: 0, last3x10: 18 }, { v: '完成' });
+  assert.strictEqual(up18.nextWeight, 20);
+  var up22 = ev(shoulder, { stage: '3×10', weight: 22.5, fail: 0, last3x10: 22.5 }, { v: '完成' });
+  assert.strictEqual(up22.nextWeight, 25);
+  var curl = slotOf(db, 'B2_5');
+  assert.strictEqual(curl.name, '哑铃弯举');
+  assert.strictEqual(ev(curl, { stage: '3×15+', weight: 9, fail: 0 }, { v: 25 }).nextWeight, 10);
+  assert.strictEqual(ev(curl, { stage: '3×15+', weight: 10, fail: 0 }, { v: 25 }).nextWeight, 12);
+  assert.strictEqual(ev(curl, { stage: '3×15+', weight: 8, fail: 0 }, { v: 25 }).nextWeight, 9);
+  assert.strictEqual(ev(curl, { stage: '3×15+', weight: 22.5, fail: 0 }, { v: 10 }).nextWeight, 20);
+  var row = { id: 'x', tier: 'T2', name: '单臂哑铃划船', equip: '哑铃', prog: 'dual', scheme: { sets: 3, repMin: 8, repMax: 12, step: 2 } };
+  var dualUp = GZ.PROGRESSIONS.dual.evaluate(row, { stage: '8–12', weight: 20, fail: 0 }, { sets: [12, 12, 12] });
+  assert.strictEqual(dualUp.nextWeight, 22.5);
+  var dualDown = GZ.PROGRESSIONS.dual.evaluate(row, { stage: '8–12', weight: 22.5, fail: 0 }, { sets: [6, 8, 8] });
+  assert.strictEqual(dualDown.nextWeight, 20);
+  var card = GZ.buildTrain(db, { day: 'A2' }).items.filter(function (it) { return it.slotId === 'A2_2'; })[0];
+  var shown = GZ.nudgeWeight(card.name, card.equip, card.weight, 1, card.wStep);
+  assert.strictEqual(card.wStep, Math.round((shown - card.weight) * 100) / 100);
+  assert.ok(card.wStepText);
+});
+
 if (failed) {
   console.error('\n' + failed + ' failed');
   process.exit(1);

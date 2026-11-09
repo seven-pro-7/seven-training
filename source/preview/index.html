@@ -1883,7 +1883,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    * 列：[层级, 名称, 部位, 器械, 说明, 基准主项, 系数, 取整档]
    *  - 基准主项：该动作的重量挂在四大项哪一项的 1RM 上（squat/bench/deadlift/ohp）
    *  - 系数：该动作「推荐重量」占基准主项 1RM 的比例（杠铃=总重；哑铃=单只；器械=配重片；负重=外加重量）
-   *  - 取整档：该器械的最小可加重量（杠铃 2.5 / 哑铃 1 或 2 / 器械 5 / 负重 1.25 或 2.5）
+   *  - 取整档：该器械的最小可加重量（杠铃 2.5 / 哑铃见哑铃阶梯 / 器械 5 / 负重 1.25 或 2.5）
    *  依据：NSCA %1RM–次数表（10RM≈75%、15RM≈65%）、Strength Level / Symmetric Strength / ExRx 的动作间强度比例，
    *  哑铃单只≈杠铃 1RM×(0.36~0.40)、变式相对主项 0.75~0.85 等，见 RULES_WEIGHT 的说明。
    */
@@ -2488,9 +2488,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   // ---------- 器械感知的取整档位与加重步幅 ----------
   /**
-   * 不同器械能加的最小重量完全不同：杠铃按配重片 2.5kg、哑铃按单只 1~2kg、
+   * 不同器械能加的最小重量完全不同：杠铃按配重片 2.5kg、
+   * 哑铃按阶梯（10kg 及以下沿用动作细档，10–20kg 每 2kg，20kg 起每 2.5kg）、
    * 固定器械按配重销 2.5~5kg、负重（腰带/背心）按 1.25~2.5kg。
    * 取整档位 = 该器械的最小可加重量；步幅 = 一次加重实际跨几档。
+   * 哑铃的 inc 只表示 10kg 及以下的细档，更高重量走 dumbbellWeights。
    */
   var EQUIP_RULE = {
     '杠铃': { inc: 2.5, step: 2.5, incL: 2.5, stepL: 5 },
@@ -2520,7 +2522,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   /**
    * 该槽位的加重步幅
-   *  - T1/T2：按器械和上下肢取（杠铃上肢 2.5、下肢 5；哑铃 1~2；器械 2.5~5；负重 1.25~2.5）
+   *  - T1/T2：按器械和上下肢取（杠铃上肢 2.5、下肢 5；哑铃细档 1~2，更高走阶梯；器械 2.5~5；负重 1.25~2.5）
    *  - T3：孤立动作肌群小，一律只跨 1 个最小档位，避免一次加得太猛
    *  - 自重：没有"加重"，步幅为 0（想加重请换成「负重」版本）
    *  - 严格按表格模式：沿用设置里的旧步幅，保证与 Excel 逐格一致
@@ -2549,11 +2551,126 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (s.init.type === 'fixed') return Number(s.init.value) || 0;
     if (s.init.type === 'model') return modelWeight(P, libFind(s.name), s.tier).weight;
     if (s.init.type !== 'pct' || !s.init.base) return 0;
-    return roundTo(tm(P, s.init.base) * s.init.pct, P.rounding);
+    var raw = tm(P, s.init.base) * s.init.pct;
+    if (equipOf(s.name, s.equip) === '哑铃') return dumbbellSnap(raw, dumbbellFineInc(s.name, s.equip), 'round') || 0;
+    return roundTo(raw, P.rounding);
   }
   function fmtW(w) {
     if (w === null || w === undefined || isNaN(w)) return '—';
     return (Math.round(w * 100) / 100).toString();
+  }
+  /**
+   * 哑铃可选重量（单只）。
+   * 10kg 及以下：沿用该动作原来的细档（动作库 inc，常见 1kg 或 2kg），不改这一段。
+   * 超过 10kg、直到 20kg：+2kg，即 10 → 12 → 14 → 16 → 18 → 20。
+   * 从 20kg 起：+2.5kg，即 20 → 22.5 → 25 → 27.5 → …
+   * 0 只是减号的下限，不是商品哑铃。
+   */
+  var DB_FINE_UNTIL = 10, DB_COARSE_UNTIL = 20, DB_MID_STEP = 2, DB_HIGH_STEP = 2.5;
+  function dumbbellFineInc(name, equip, fallback) {
+    if (equipOf(name, equip) !== '哑铃') return 0;
+    var lb = libFindIn(null, name);
+    if (lb && lb.inc > 0) return lb.inc;
+    if (fallback > 0) return fallback;
+    return EQUIP_RULE['哑铃'].inc || 1;
+  }
+  function dumbbellWeights(fineInc, maxKg) {
+    fineInc = fineInc > 0 ? fineInc : 1;
+    maxKg = maxKg > DB_FINE_UNTIL ? maxKg : 50;
+    var out = [0], guard = 0;
+    while (out[out.length - 1] < maxKg - 1e-9 && guard < 400) {
+      var w = out[out.length - 1];
+      var step = w < DB_FINE_UNTIL - 1e-9 ? fineInc : (w < DB_COARSE_UNTIL - 1e-9 ? DB_MID_STEP : DB_HIGH_STEP);
+      var next = fix(w + step);
+      if (w < DB_FINE_UNTIL - 1e-9 && next > DB_FINE_UNTIL + 1e-9) next = DB_FINE_UNTIL;
+      else if (w < DB_COARSE_UNTIL - 1e-9 && next > DB_COARSE_UNTIL + 1e-9) next = DB_COARSE_UNTIL;
+      if (!(next > w + 1e-9)) break;
+      out.push(next);
+      guard++;
+    }
+    return out;
+  }
+  function dumbbellListPast(fineInc, w) {
+    var list = dumbbellWeights(fineInc, Math.max(50, (Number(w) || 0) + DB_HIGH_STEP + 5));
+    var guard = 0;
+    while (list[list.length - 1] < (Number(w) || 0) + DB_HIGH_STEP - 1e-9 && guard < 80) {
+      list.push(fix(list[list.length - 1] + DB_HIGH_STEP));
+      guard++;
+    }
+    return list;
+  }
+  function dumbbellSnap(w, fineInc, mode) {
+    w = Number(w);
+    if (isNaN(w) || w <= 1e-9) return 0;
+    var list = dumbbellListPast(fineInc, w);
+    if (mode === 'ceil') {
+      for (var i = 0; i < list.length; i++) if (list[i] >= w - 1e-9) return list[i];
+      return list[list.length - 1];
+    }
+    if (mode === 'floor') {
+      var f = 0;
+      for (var j = 0; j < list.length; j++) if (list[j] <= w + 1e-9) f = list[j];
+      return f;
+    }
+    var best = list[0], bestD = Math.abs(w - best);
+    for (var k = 1; k < list.length; k++) {
+      var d = Math.abs(list[k] - w);
+      if (d < bestD - 1e-9 || (Math.abs(d - bestD) <= 1e-9 && list[k] > best)) { best = list[k]; bestD = d; }
+    }
+    return best;
+  }
+  function dumbbellNudge(w, dir, fineInc) {
+    w = Math.max(0, Number(w) || 0);
+    var list = dumbbellListPast(fineInc, w + (dir > 0 ? DB_HIGH_STEP : 0));
+    if (dir > 0) {
+      for (var i = 0; i < list.length; i++) if (list[i] > w + 1e-9) return list[i];
+      return fix(list[list.length - 1] + DB_HIGH_STEP);
+    }
+    for (var j = list.length - 1; j >= 0; j--) if (list[j] < w - 1e-9) return list[j];
+    return 0;
+  }
+  function dumbbellMove(w, rungs, fineInc) {
+    var n = Math.abs(Math.round(rungs));
+    var dir = rungs < 0 ? -1 : 1;
+    var cur = Math.max(0, Number(w) || 0);
+    if (!n) return dumbbellSnap(cur, fineInc, 'round');
+    for (var i = 0; i < n; i++) cur = dumbbellNudge(cur, dir, fineInc);
+    return cur;
+  }
+  function nudgeWeight(name, equip, w, dir, kgStep) {
+    w = Math.max(0, Number(w) || 0);
+    dir = Number(dir) < 0 ? -1 : 1;
+    if (equipOf(name, equip) === '哑铃') return dumbbellNudge(w, dir, dumbbellFineInc(name, equip, kgStep));
+    var step = kgStep > 0 ? Number(kgStep) : 1;
+    return Math.max(0, fix(w + dir * step));
+  }
+  /** 训练卡「每次」文案。哑铃在 10kg、20kg 两边的加减步长不同，分开写。 */
+  function weightStepView(name, equip, w, kgStep) {
+    var upW = nudgeWeight(name, equip, w, 1, kgStep);
+    var up = fix(upW - (Number(w) || 0));
+    if (!(up > 0)) up = kgStep > 0 ? Number(kgStep) : 1;
+    if (equipOf(name, equip) !== '哑铃') return { wStep: up, text: fmtW(up) };
+    var downW = nudgeWeight(name, equip, w, -1, kgStep);
+    var down = fix((Number(w) || 0) - downW);
+    var text = down > 1e-9 && Math.abs(up - down) > 1e-9 ? ('+' + fmtW(up) + ' / −' + fmtW(down)) : fmtW(up);
+    return { wStep: up, text: text };
+  }
+  function dumbbellStepText(fineInc) {
+    fineInc = fineInc > 0 ? fineInc : 1;
+    if (Math.abs(fineInc - DB_MID_STEP) < 1e-9) return '哑铃档：直到 20 kg 每 2 kg，20 kg 起每 2.5 kg';
+    return '哑铃档：10 kg 及以下每 ' + fmtW(fineInc) + ' kg，直到 20 kg 每 2 kg，20 kg 起每 2.5 kg';
+  }
+  /**
+   * 一次进阶的下一档。杠铃等仍是「加 kg 再按 inc 取整」。
+   * 哑铃把这次加减折成若干档，再沿阶梯走，避免 20kg 之后还在加 2kg。
+   */
+  function advanceWeight(name, equip, w, kgDelta, inc) {
+    if (equipOf(name, equip) !== '哑铃') return alignTo(fix(Number(w) + kgDelta), inc);
+    var fine = dumbbellFineInc(name, equip, inc);
+    var unit = inc > 0 ? inc : (Math.abs(kgDelta) || fine);
+    var rungs = Math.round(kgDelta / unit);
+    if (!rungs) rungs = kgDelta > 0 ? 1 : (kgDelta < 0 ? -1 : 0);
+    return Math.max(0, dumbbellMove(w, rungs, fine));
   }
   function platesFor(weight, P, equip) {
     if (equip !== '杠铃') return '';
@@ -2696,7 +2813,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var w = rm * lb.ratio * TIER_PCT[tierKey];
     if (equip === '负重') w = Math.max(w, (Number(P.bodyWeight) || 70) * 0.05); // 起步至少加体重 5%
     if (equip === '杠铃') w = Math.max(w, P.barWeight || 20); // 杠铃动作不低于空杆
-    return { weight: alignTo(w, inc) || 0, base: base, oneRM: fix(rm), fromE1rm: fromE, ratio: lb.ratio, pct: TIER_PCT[tierKey], inc: inc, equip: equip };
+    var snapped = equip === '哑铃' ? dumbbellSnap(w, inc, 'round') : alignTo(w, inc);
+    return { weight: snapped || 0, base: base, oneRM: fix(rm), fromE1rm: fromE, ratio: lb.ratio, pct: TIER_PCT[tierKey], inc: inc, equip: equip };
   }
   function recommendWeight(db, name, tier, opts) {
     opts = opts || {};
@@ -2782,8 +2900,25 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
    * 加 2 档会碰到或超过这次失败重量时退回加 1 档；两者都必须低于失败重量。
    * 填了 new10RM 时直接采用该重量。都没有时退到失败重量的 85%。
    */
-  function t2ResetWeight(w, step, inc, last, e) {
+  function t2ResetWeight(s, w, step, inc, last, e) {
     var manual = e && e.new10RM !== undefined && e.new10RM !== null && e.new10RM !== '' ? Number(e.new10RM) : NaN;
+    if (s && equipOf(s.name, s.equip) === '哑铃') {
+      var fine = dumbbellFineInc(s.name, s.equip, inc);
+      if (!isNaN(manual) && manual > 0) return dumbbellSnap(manual, fine, 'round');
+      if (!(last > 0)) {
+        var scaled0 = dumbbellSnap(w * 0.85, fine, 'floor');
+        if (scaled0 > 0 && scaled0 < w - 1e-9) return scaled0;
+        return dumbbellNudge(w, -1, fine);
+      }
+      var plus1 = dumbbellMove(last, 1, fine);
+      var plus2 = dumbbellMove(last, 2, fine);
+      if (step > 0 && plus2 > plus1 && plus2 < w - 1e-9) return plus2;
+      if (plus1 > 0 && plus1 < w - 1e-9) return plus1;
+      if (last < w - 1e-9) return dumbbellSnap(last, fine, 'floor');
+      var fallbackDb = dumbbellSnap(w * 0.85, fine, 'floor');
+      if (fallbackDb > 0 && fallbackDb < w - 1e-9) return fallbackDb;
+      return dumbbellNudge(w, -1, fine);
+    }
     if (!isNaN(manual) && manual > 0) return alignTo(manual, inc);
     var bump = step > 0 ? step : (inc > 0 ? inc : 0);
     if (!(last > 0)) {
@@ -2855,7 +2990,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (deload) {
       var f = s.tier === 'T1' ? 0.5 : s.tier === 'T2' ? 0.6 : 1;
       r.deload = true;
-      r.autoWeight = s.tier === 'T3' ? planned : alignTo(planned * f, inc);
+      r.autoWeight = s.tier === 'T3' ? planned : (equipOf(s.name, s.equip) === '哑铃' ? dumbbellSnap(planned * f, dumbbellFineInc(s.name, s.equip, inc), 'round') : alignTo(planned * f, inc));
       r.dWeight = mw !== null ? mw : r.autoWeight;
       r.dSets = s.tier === 'T3' ? Math.max(1, def.sets - 1) : def.sets;
       r.judgment = '减载';
@@ -2885,13 +3020,15 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         var target = def.reps;
         if (a >= target) {
           var ad = adaptiveUp(P, w, a, target, step, inc);
-          r.judgment = '加重'; r.nextStage = st.stage; r.nextWeight = alignTo(fix(w + ad.up), inc); r.nextFail = 0;
+          r.judgment = '加重'; r.nextStage = st.stage; r.nextWeight = advanceWeight(s.name, s.equip, w, ad.up, inc); r.nextFail = 0;
           if (ad.boost) { r.boost = true; r.adaptNote = ad.note; }
         } else if (def.next === null) {
           // 10×1+ 未达标。新 5RM 已经约是 1RM 的 85%，只再乘 5×3+ 的起始比例，不再乘一遍 TM。
           r.judgment = '重置'; r.nextStage = FIRST_STAGE.T1; r.nextFail = 0;
           var p0 = s.init && s.init.type === 'pct' ? s.init.pct : 0.85;
-          r.nextWeight = e.new5RM ? alignTo(Number(e.new5RM) * p0, inc) : alignTo(w * 0.85, inc);
+          r.nextWeight = e.new5RM
+            ? (equipOf(s.name, s.equip) === '哑铃' ? dumbbellSnap(Number(e.new5RM) * p0, dumbbellFineInc(s.name, s.equip, inc), 'round') : alignTo(Number(e.new5RM) * p0, inc))
+            : (equipOf(s.name, s.equip) === '哑铃' ? dumbbellSnap(w * 0.85, dumbbellFineInc(s.name, s.equip, inc), 'round') : alignTo(w * 0.85, inc));
           r.reset5RM = e.new5RM || null;
         } else {
           r.judgment = '降阶'; r.nextStage = def.next; r.nextWeight = w; r.nextFail = 0;
@@ -2915,14 +3052,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       } else if (done) {
         r.judgment = '加重';
         r.nextStage = mode === 'excel' ? '3×10' : st.stage;
-        r.nextWeight = alignTo(fix(w + step), inc);
+        r.nextWeight = advanceWeight(s.name, s.equip, w, step, inc);
       } else if (st.stage === '3×6') {
         r.nextStage = '3×10';
         if (mode === 'excel') {
-          r.judgment = '退阶'; r.nextWeight = alignTo(fix(w + step), inc);
+          r.judgment = '退阶'; r.nextWeight = advanceWeight(s.name, s.equip, w, step, inc);
         } else {
           r.judgment = '重置';
-          r.nextWeight = t2ResetWeight(w, step, inc, r.nextLast3x10, e);
+          r.nextWeight = t2ResetWeight(s, w, step, inc, r.nextLast3x10, e);
           r.nextLast3x10 = r.nextWeight;
         }
       } else { r.judgment = '退阶'; r.nextStage = def.next; r.nextWeight = w; }
@@ -2939,10 +3076,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           up3 = Math.min(ADAPT.t3MaxSteps, 2) * step; r.boost = true;
           r.adaptNote = '末组 ' + t + ' 次，超过加重线（' + P.t3Threshold + ' 次）' + (t - P.t3Threshold) + ' 次：本次多加一档 +' + fmtW(up3) + ' kg（常规 +' + fmtW(step) + '）';
         }
-        r.judgment = '加重'; r.nextWeight = alignTo(fix(w + up3), inc);
+        r.judgment = '加重'; r.nextWeight = advanceWeight(s.name, s.equip, w, up3, inc);
       } else if (mode !== 'excel' && t < def.reps) {
         r.judgment = '减轻';
-        r.nextWeight = Math.max(0, alignTo(fix(w - step), inc));
+        r.nextWeight = Math.max(0, advanceWeight(s.name, s.equip, w, -step, inc));
       } else { r.judgment = '保持'; r.nextWeight = w; }
     }
     r.delta = fix(r.nextWeight - w);
@@ -3246,9 +3383,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var bwDual = equipOf(s.name, s.equip) === '自重' && !(w > 0);
       if (bwDual) { r.judgment = '建议负重'; r.nextWeight = w; r.nextFail = 0; }
       else if (!(step > 0)) { r.judgment = '保持'; r.nextWeight = w; r.nextFail = 0; }
-      else { r.judgment = '加重'; r.nextWeight = alignTo(w + step, step); r.nextFail = 0; }
+      else { r.judgment = '加重'; r.nextWeight = advanceWeight(s.name, s.equip, w, step, step); r.nextFail = 0; }
     } else if (nums.some(function (n) { return n <= sc.repMin - 2; })) {
-      r.judgment = '减轻'; r.nextWeight = Math.max(step, alignTo(w - step, step)); r.nextFail = 0;
+      r.judgment = '减轻'; r.nextWeight = Math.max(step, advanceWeight(s.name, s.equip, w, -step, step)); r.nextFail = 0;
     } else {
       r.judgment = '保持'; r.nextWeight = w; r.nextFail = 0;
     }
@@ -3269,10 +3406,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     r.volume = fix(w * r.workReps);
     if (w > 0 && amrap > 0) r.e1rm = fix(w * (1 + amrap / 30));
     var ok = !e.miss && amrap >= sc.reps;
-    if (ok) { r.judgment = '加重'; r.nextWeight = alignTo(w + step, inc); r.nextFail = 0; }
+    if (ok) { r.judgment = '加重'; r.nextWeight = advanceWeight(s.name, s.equip, w, step, inc); r.nextFail = 0; }
     else {
       var fails = (st.fail || 0) + 1;
-      if (fails >= 3) { r.judgment = '减载'; r.nextWeight = Math.max(inc, alignTo(w * 0.9, inc)); r.nextFail = 0; }
+      if (fails >= 3) {
+        var cut = equipOf(s.name, s.equip) === '哑铃' ? dumbbellSnap(w * 0.9, dumbbellFineInc(s.name, s.equip, inc), 'round') : alignTo(w * 0.9, inc);
+        r.judgment = '减载'; r.nextWeight = Math.max(equipOf(s.name, s.equip) === '哑铃' ? dumbbellFineInc(s.name, s.equip, inc) : inc, cut); r.nextFail = 0;
+      }
       else { r.judgment = '保持'; r.nextWeight = w; r.nextFail = fails; }
     }
     r.delta = fix(r.nextWeight - planned);
@@ -3490,7 +3630,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var lb = libFindIn(db, name), m = modelWeight(db.params, lb, s.tier, hist && hist.e1rm);
     if (m.bw) return 0;
     var last = hist && hist.lastW ? hist.lastW[name] : undefined;
-    if (last > 0) return Math.max(m.weight, alignTo(last * 0.9, m.inc));
+    if (last > 0) {
+      var scaled = m.equip === '哑铃' ? dumbbellSnap(last * 0.9, m.inc || dumbbellFineInc(name, m.equip), 'round') : alignTo(last * 0.9, m.inc);
+      return Math.max(m.weight, scaled);
+    }
     return m.weight;
   }
   /** 第 cycle 轮该位置的自动轮换信息（不轮换返回 null） */
@@ -3806,6 +3949,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         }
         dots.push({ i: k, on: k < (e.done || 0), amrap: amrapDot });
       }
+      var stepSlot = Object.assign({}, s, { name: res.name, equip: equipNow });
+      var stepView = weightStepView(res.name, equipNow, showW, incOf(stepSlot, P) || 1);
       return {
         slotId: s.id, tier: s.tier, badge: slotBadge(s), tierColor: TIER_COLORS[s.tier], name: res.name, equip: equipOf(res.name, res.equip), equipNote: EQUIP_NOTE[equipOf(res.name, res.equip)] || '',
         unitText: unitOf(equipOf(res.name, res.equip)), isBW: equipOf(res.name, res.equip) === '自重',
@@ -3817,7 +3962,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         canAdjust: equipOf(res.name, res.equip) !== '自重' && res.inputMode !== 'wave' && res.inputMode !== 'cardio',
         plates: platesFor(showW, P, equipOf(res.name, res.equip)), fail: res.sub ? 0 : (st.fail || 0),
         restText: fmtRest(REST[s.tier]),
-        manual: res.sub ? manualW(e) !== subDefault : res.manual, autoWeight: res.sub ? subDefault : res.autoWeight, autoText: fmtW(res.sub ? subDefault : res.autoWeight), wStep: incOf(Object.assign({}, s, { name: res.name, equip: equipOf(res.name, res.equip) }), P) || 1, editW: !!e.editW,
+        manual: res.sub ? manualW(e) !== subDefault : res.manual, autoWeight: res.sub ? subDefault : res.autoWeight, autoText: fmtW(res.sub ? subDefault : res.autoWeight), wStep: stepView.wStep, wStepText: stepView.text, editW: !!e.editW,
         repsText: res.inputMode === 'cardio' ? (def.reps + ' 分钟') : res.inputMode === 'sets' && s.scheme ? (res.sets + '×' + s.scheme.repMin + '–' + s.scheme.repMax) : (res.loads ? res.loads.map(function (ld) { return (ld.pct ? Math.round(ld.pct * 100) + '%×' : '') + ld.reps + (ld.amrap ? '+' : ''); }).join(' · ') : showSets + '×' + def.reps + (res.inputMode === 'linear' || (s.tier !== 'T2' && !deload && !res.inputMode) ? '+' : '')),
         inputType: res.inputMode || (deload ? 'deload' : s.tier === 'T2' ? 'done' : 'amrap'),
         loads: res.loads || null,
@@ -4271,7 +4416,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var fromWeek = (rp.counts[dayId] || 0) + 1, roundWeek = roundInfo(db, rp).week;
     var cyc = cycleOf(fromWeek, P).cycle, plan = planCycles(db, cyc + 1), cat = slotCategory(db, s, it.name);
     return { dayId: dayId, dayName: d.name, slotId: slotId, tier: s.tier, name: it.name, equip: it.equip, unitText: it.unitText,
-      weight: it.weight, weightText: it.weightText, repsText: it.repsText, stage: it.stage, canAdjust: it.canAdjust, wStep: it.wStep,
+      weight: it.weight, weightText: it.weightText, repsText: it.repsText, stage: it.stage, canAdjust: it.canAdjust, wStep: it.wStep, wStepText: it.wStepText,
       role: cat.label, why: cat.hint, category: cat,
       rotTier: progressionOf(db, s).id === 'gzclp' && s.tier !== 'T1', autoRotate: P.autoRotate !== false, locked: !!s.noRotate,
       nextCycle: cyc + 1, nextName: s.tier === 'T1' ? '' : plan.actual[cyc + 1][s.id],
@@ -4674,6 +4819,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         'T1 降阶：完整三阶下，末组低于目标次数即进入下一阶。3～5 次的保持区只在「严格按表格」里保留',
         '严格按表格：T1 仍是 ≥6 加重、3～5 保持、<3 切到 6×2+；T2 完成任何组次都加重并回到 3×10，3×6 失败也加重回到 3×10',
         '推荐重量：T1=1RM×76.5%；T2≈1RM×动作系数×65%；T3≈1RM×动作系数×50%',
+        '哑铃档位：10 kg 及以下沿用原细档（常见每 1 kg 或每 2 kg），超过 10 kg 直到 20 kg 每档 +2 kg，从 20 kg 起每档 +2.5 kg',
         '动作轮换：T1 四大项固定；T2/T3 每轮（8 周）在同一动作模式内自动换一次。换入的新动作从 3×10 或 3×15+ 重新开始，不接着上一轮没走完的 3×8 / 3×6',
         '记录原则：只填 AMRAP 次数或完成情况，阶段与重量自动推算'
       ]
@@ -4714,7 +4860,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           ['双重进阶', '区间 8–12 或 15–20 次', '所有组达到上限时加重回到下限；某组低于下限降重']] }
       ],
       general: [
-        '加重步幅：上肢动作 2.5kg（哑铃 1~2kg），下肢深蹲硬拉 2.5~5kg',
+        '加重步幅：上肢动作 2.5kg（哑铃 10 kg 及以下沿用细档，10–20 kg 每档 2 kg，20 kg 起每档 2.5 kg），下肢深蹲硬拉 2.5~5kg',
         '安全与动作质量：末组 AMRAP 保持动作标准，保留 1 次余力（RPE 9），切忌力竭变形',
         '三大项高频：深蹲每周 2~3 次高频刺激，强化神经募集'
       ]
@@ -4733,7 +4879,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           ['孤立 (10–15 / 12–20)', '侧平举、面拉、弯举、腿屈伸', '单关节孤立，保护关节，高泵感']] }
       ],
       general: [
-        '加重不要激进：加重幅度越小（杠铃 2.5kg，哑铃 1~2kg，绳索 2.5kg），平台期越少',
+        '加重不要激进：加重幅度越小（杠铃 2.5kg，哑铃 10 kg 内按细档、10–20 kg 加 2 kg、20 kg 起加 2.5 kg，绳索 2.5kg），平台期越少',
         '控制离心：离心 2~3 秒下落，向心充分发力，最大化肌纤维破坏与机械张力',
         '各计划保持固定动作编排，不强制自动轮换，专注该周期的渐进超负荷'
       ]
@@ -5338,6 +5484,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     REST: REST, LIB: LIB, JUDGE_COLORS: JUDGE_COLORS, JUDGE_ICON: JUDGE_ICON, dateLabel: dateLabel, backupLabel: backupLabel, TIER_COLORS: TIER_COLORS, RULES: RULES, GENERAL_RULES: GENERAL_RULES,
     defaults: defaults, defaultDays: defaultDays, defaultParams: defaultParams, excelSeedRecords: excelSeedRecords, normalize: normalize,
     roundTo: roundTo, tm: tm, recommendWeight: recommendWeight, equipOf: equipOf, unitOf: unitOf, incOf: incOf, stepOf: stepOf, EQUIP_NOTE: EQUIP_NOTE, EQUIP_RULE: EQUIP_RULE, normEquip: normEquip, initWeight: initWeight, fmtW: fmtW, platesFor: platesFor, linreg: linreg,
+    dumbbellWeights: dumbbellWeights, dumbbellFineInc: dumbbellFineInc, dumbbellSnap: dumbbellSnap, nudgeWeight: nudgeWeight, weightStepView: weightStepView, dumbbellStepText: dumbbellStepText, advanceWeight: advanceWeight,
     evaluate: evaluate, replay: replay, recommend: recommend, isDeloadWeek: isDeloadWeek, dayById: dayById,
     blankDraft: blankDraft, buildTrain: buildTrain, buildPlan: buildPlan, buildStats: buildStats, buildReview: buildReview,
     saveRecord: saveRecord, deleteRecord: deleteRecord, clearRecords: clearRecords, replaceDb: replaceDb, mergeDb: mergeDb, sameDb: sameDb, stampConfig: stampConfig, cfgPart: cfgPart, getRecord: getRecord, sessionResult: sessionResult, swapSlot: swapSlot, buildLibrary: buildLibrary, swapContext: swapContext, effectiveSlot: effectiveSlot,
@@ -8467,7 +8614,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (it.editW) {
       h += '<div class="wedit"><div class="stepper"><div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="-1">−</div>' +
         '<input class="st-val wide num" inputmode="decimal" data-act="winput" data-slot="' + it.slotId + '" value="' + it.weightText + '">' +
-        '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">每次 ' + it.wStep + ' kg</span>' +
+        '<div class="st-btn" data-act="wstep" data-slot="' + it.slotId + '" data-d="1">+</div></div><span class="we-step">每次 ' + it.wStepText + ' kg</span>' +
         (it.manual ? '<span class="link we-reset" data-act="wreset" data-slot="' + it.slotId + '">恢复 ' + it.autoText + '</span>' : '') + '</div>';
     }
     if (!it.skip) {
@@ -8719,7 +8866,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'wstep':
         en = entry(ds.slot); vm = trainVM();
         var iw = vm.items.filter(function (x) { return x.slotId === ds.slot; })[0];
-        var nw = Math.max(0, Math.round((Number(iw.weight) + Number(ds.d) * iw.wStep) * 100) / 100);
+        var nw = GZ.nudgeWeight(iw.name, iw.equip, iw.weight, Number(ds.d), iw.wStep);
         en.w = nw === iw.autoWeight ? null : nw; if (navigator.vibrate) navigator.vibrate(8); return true;
       case 'winput':
         en = entry(ds.slot); vm = trainVM();
@@ -8934,10 +9081,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       '<div class="slot-meta"><span class="slot-reps">' + esc(info.repsText) + '</span>' +
       '<span class="slot-when">' + (info.adjusted ? '已手动调整 · ' : '') + '下次 ' + info.when + ' · ' + esc(info.weekText) + '</span></div></div>';
     if (info.canAdjust) {
+      var stepNow = GZ.weightStepView(info.name, info.equip, Number(sl.w) || 0, info.wStep);
       h += '<div class="list"><div class="cell slot-adj"><span class="flex1">调整重量</span><div class="stepper">' +
         '<div class="st-btn" data-act="swstep" data-d="-1">−</div><input class="st-val num" inputmode="decimal" data-act="swin" value="' + esc(sl.w) + '">' +
         '<div class="st-btn" data-act="swstep" data-d="1">+</div></div></div></div>' +
-        '<div class="sec-f">只改重量，阶段和失败次数都不变，也不会改动已有记录，之后照常按规则加重。</div>';
+        '<div class="sec-f">只改重量，阶段和失败次数都不变，也不会改动已有记录，之后照常按规则加重。' + (info.equip === '哑铃' ? ('每次 ' + esc(stepNow.text) + ' kg。') : '') + '</div>';
     }
     if (info.category && !info.category.locked) {
       h += '<div class="list"><div class="cell tap" data-act="slotpick"><span class="flex1">更换动作</span><span class="val">' +
@@ -9201,7 +9349,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (act === 'slotq') { p.slot.q = el.value; return true; }
     if (act === 'swstep') {
       var inf = p.slot.info, cur = Number(p.slot.w) || 0;
-      p.slot.w = String(Math.max(0, Math.round((cur + Number(ds.d) * inf.wStep) * 100) / 100));
+      p.slot.w = String(GZ.nudgeWeight(inf.name, inf.equip, cur, Number(ds.d), inf.wStep));
       return true;
     }
     if (act === 'swin') { p.slot.w = el.value; return false; }

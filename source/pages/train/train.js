@@ -240,7 +240,7 @@ Page({
   onWStep(e) {
     const { slot, d } = e.currentTarget.dataset, en = this.entry(slot);
     const it = this.data.vm.items.find((x) => x.slotId === slot);
-    const next = Math.max(0, Math.round((Number(it.weight) + Number(d) * it.wStep) * 100) / 100);
+    const next = GZ.nudgeWeight(it.name, it.equip, it.weight, Number(d), it.wStep);
     en.w = next === it.autoWeight ? null : next;
     wx.vibrateShort && wx.vibrateShort({ type: 'light' });
     this.refresh();
