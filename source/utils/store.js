@@ -25,8 +25,9 @@ function load() {
   return db;
 }
 function save(db) {
-  if (readFailed) return;
-  wx.setStorageSync(KEY, db);
+  if (readFailed) return false;
+  try { wx.setStorageSync(KEY, db); return true; }
+  catch (e) { return false; }
 }
 function reset(withSeed) { const db = GZ.defaults(withSeed); readFailed = false; save(db); return db; }
 
@@ -38,7 +39,8 @@ function saveOpen(snap) {
   try {
     if (!snap || !GZ.sessionTouched(snap)) wx.removeStorageSync(OPEN_KEY);
     else wx.setStorageSync(OPEN_KEY, snap);
-  } catch (e) {}
+    return true;
+  } catch (e) { return false; }
 }
 
 const BK = 'training_last_backup';

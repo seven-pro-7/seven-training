@@ -1,36 +1,122 @@
 <view class="page">
-  <view class="muse-home" wx:if="{{vm}}">
-    <view class="avatar-band">
-      <view class="menu-btn me-btn" bindtap="goMe" aria-role="button" aria-label="我的"><view class="me-head"></view><view class="me-body"></view></view>
-      <view class="avatar-wrap">
-        <view class="companion-pedestal">
+  <view class="set-screen screen-{{log.screen}}" wx:if="{{log}}">
+    <view class="set-top">
+      <view class="back-btn" bindtap="logBack" aria-role="button" aria-label="返回今日列表">‹</view>
+      <view class="gear-btn" bindtap="goMe" aria-role="button" aria-label="设置"><view class="gear-dot"></view></view>
+    </view>
+    <view class="set-scroll" wx:if="{{log.screen === 'rest'}}">
+      <text class="rest-kicker">{{log.restKicker}}</text>
+      <text class="rest-clock">{{log.restText}}</text>
+      <view class="rest-track"><view class="rest-fill" style="width: {{log.restPct}}%"></view></view>
+      <text class="rest-name">{{log.name}} · 组间休息</text>
+      <text class="rest-next">{{log.restNext}}</text>
+    </view>
+    <view class="set-scroll" wx:elif="{{log.screen === 'done'}}">
+      <text class="done-kicker">本动作已记下</text>
+      <text class="set-name">{{log.name}}</text>
+      <text class="set-scheme">{{log.scheme}}</text>
+      <view class="set-path">
+        <view wx:for="{{log.dots}}" wx:key="i" class="sp {{item.cls}}" aria-label="第 {{item.lab}} 组"><text class="dot"></text><text class="lab">{{item.lab}}</text></view>
+      </view>
+      <view class="set-log">
+        <view wx:for="{{log.rows}}" wx:key="i" class="set-log-row" data-i="{{item.i}}" bindtap="logFix"><text>{{item.label}}</text><text class="b">{{item.text}}</text><text class="fix">更正</text></view>
+      </view>
+      <view class="engine-card" wx:if="{{log.engineJudgment}}">
+        <text class="engine-j">{{log.engineJudgment}}</text>
+        <text class="engine-next">{{log.engineNext}}</text>
+        <text class="hint">{{log.engineNote}}</text>
+      </view>
+    </view>
+    <view class="set-scroll" wx:elif="{{log.screen === 'correct'}}">
+      <text class="set-meta">{{log.stamp}}</text>
+      <text class="set-name">{{log.corTitle}}</text>
+      <text class="set-scheme">{{log.name}} · {{log.scheme}}</text>
+      <view class="origin-card"><text>原记录</text><text class="b">{{log.origin}}</text></view>
+      <text class="block-label">更正次数</text>
+      <view class="rep-step">
+        <view class="st-btn" data-k="r" data-d="-1" bindtap="corStep">−</view>
+        <text class="st-val">{{log.corReps}}</text>
+        <view class="st-btn" data-k="r" data-d="1" bindtap="corStep">+</view>
+      </view>
+      <text class="block-label">重量</text>
+      <view class="rep-step">
+        <view class="st-btn" data-k="w" data-d="-1" bindtap="corStep">−</view>
+        <text class="st-val">{{log.corW}}</text>
+        <view class="st-btn" data-k="w" data-d="1" bindtap="corStep">+</view>
+      </view>
+      <text class="hint">保存后会标明已更正。后面的组还在。中间组次数不改写进阶。</text>
+    </view>
+    <view class="set-scroll" wx:elif="{{log.screen === 'fail'}}">
+      <text class="set-name">{{log.failTitle}}</text>
+      <text class="hint">本机写入没有成功。不是云同步问题。你刚填的重量和次数都还在，可以再试一次。</text>
+      <view class="origin-card"><text>仍保留的输入</text><text class="b">{{log.failKeep}}</text><text>{{log.name}}</text></view>
+    </view>
+    <view class="set-scroll" wx:else>
+      <text class="set-meta">{{log.stamp}}</text>
+      <text class="set-name">{{log.name}}</text>
+      <text class="set-scheme">{{log.scheme}}</text>
+      <view class="weight-row" wx:if="{{log.showWeight}}"><text class="big-kg">{{log.weight}}</text><text class="unit">{{log.unit}}</text></view>
+      <view class="set-path">
+        <view wx:for="{{log.dots}}" wx:key="i" class="sp {{item.cls}}" aria-label="第 {{item.lab}} 组"><text class="dot"></text><text class="lab">{{item.lab}}</text></view>
+      </view>
+      <text class="path-cap">{{log.pathCap}}</text>
+      <view class="set-log" wx:if="{{log.collapsed}}"><view class="set-log-row"><text>{{log.collapsed}}</text></view></view>
+      <view class="set-log" wx:elif="{{log.rows.length}}">
+        <view wx:for="{{log.rows}}" wx:key="i" class="set-log-row" data-i="{{item.i}}" bindtap="logFix"><text>{{item.label}}</text><text class="b">{{item.text}}</text><text class="fix">{{item.note}}</text></view>
+      </view>
+      <text class="target">{{log.target}}</text>
+      <view class="rep-step">
+        <view class="st-btn" data-k="r" data-d="-1" bindtap="logStep">−</view>
+        <input class="st-val" type="number" value="{{log.reps}}" bindinput="onLogReps" />
+        <view class="st-btn" data-k="r" data-d="1" bindtap="logStep">+</view>
+      </view>
+      <text class="hint" wx:if="{{log.hint}}">{{log.hint}}</text>
+    </view>
+    <view class="log-bottom" wx:if="{{log.screen === 'rest'}}">
+      <view class="rest-controls">
+        <view class="st-btn" data-d="-30" bindtap="logRest">−30</view>
+        <view class="rest-skip" bindtap="logSkipRest">跳过休息</view>
+        <view class="st-btn" data-d="30" bindtap="logRest">+30</view>
+      </view>
+      <text class="rest-suggest">{{log.badge}} 建议 {{log.restMin}} 分钟</text>
+      <view class="text-link" bindtap="logUndo">撤销这一组</view>
+    </view>
+    <view class="log-bottom" wx:elif="{{log.screen === 'done'}}">
+      <button class="home-cta" wx:if="{{log.nextSlot}}" data-slot="{{log.nextSlot}}" bindtap="logNext">{{log.nextLabel}}</button>
+      <button class="home-cta" wx:else bindtap="logBack">返回今日列表</button>
+      <view class="text-link" wx:if="{{log.nextSlot}}" bindtap="logBack">返回今日列表</view>
+    </view>
+    <view class="log-bottom" wx:elif="{{log.screen === 'correct'}}">
+      <button class="home-cta" bindtap="logCorrectSave">保存更正</button>
+      <view class="home-links"><text wx:if="{{log.showUndo}}" bindtap="logUndo">撤销这一组</text><text bindtap="logWork">返回</text></view>
+    </view>
+    <view class="log-bottom" wx:elif="{{log.screen === 'fail'}}">
+      <button class="home-cta" bindtap="logSave">再试一次</button>
+      <view class="text-link" bindtap="logWork">先留在本页</view>
+    </view>
+    <view class="log-bottom" wx:else>
+      <button class="home-cta" bindtap="logSave" disabled="{{!log.canSave}}">{{log.cta}}</button>
+      <view class="home-links"><text data-slot="{{log.slot}}" bindtap="openSwap">换动作</text><text class="sep">·</text><text data-slot="{{log.slot}}" bindtap="onSkip">跳过</text></view>
+      <view class="text-link" wx:if="{{log.rows.length}}" bindtap="logUndo">撤销上一组</view>
+    </view>
+  </view>
+  <view class="muse-home {{home.live ? 'session-live' : 'session-ready'}}" wx:elif="{{vm}}">
+    <view class="home-wash"></view>
+    <view class="gear-btn" bindtap="goMe" aria-role="button" aria-label="设置"><view class="gear-dot"></view></view>
+    <view class="home-scroll">
+      <view class="session-guide">
+        <view class="pedestal">
           <image class="companion-slot" src="/assets/companion-idle.svg" mode="aspectFit" aria-label="训练伙伴" />
           <view class="ground-shadow"></view>
         </view>
-        <text class="avatar-name">{{profileName}}</text>
+        <text class="guide-title">{{home.prompt}}</text>
       </view>
-      <view class="goal-entry" bindtap="goOverview" aria-role="button" aria-label="进入计划总览：{{vm.day}} · {{vm.dayName}}">
-        <view class="goal-primary"><text><text class="sid">{{vm.day}}</text> · {{vm.dayName}}</text><view class="chev-r"></view></view>
-        <view class="goal-secondary">{{goalStatus}} · 本周 <text class="warm">{{vm.round.done}}/{{vm.round.total}}</text></view>
+      <view class="training-block">
+      <view class="session-context">
+        <text class="when-line">{{home.stamp}}</text>
+        <text class="session-position">第 {{home.index}} / {{home.total}} 个动作</text>
       </view>
-      <view class="info-safe"></view>
-      <image class="band-hem" src="/assets/band-hem.svg" mode="scaleToFill" />
-    </view>
-
-    <view class="train-band">
-      <view class="seg day-seg {{vm.days.length > 4 ? 'wide' : ''}}" wx:if="{{!vm.editing}}">
-        <view wx:for="{{vm.days}}" wx:key="id" class="seg-i {{item.id === vm.day ? 'on' : ''}} {{item.done ? 'is-done' : ''}}" data-day="{{item.id}}" bindtap="onDay">
-          <text class="ds-ck" wx:if="{{item.done}}">✓</text>
-          <view class="seg-dot" wx:elif="{{item.id === vm.day}}"></view>
-          <text class="num">{{item.id}}</text>
-        </view>
-      </view>
-
-      <view class="deload-slim" wx:if="{{!vm.locked && (vm.deloadSuggest || vm.deload)}}">
-        <text class="dl-t">减载周</text>
-        <text class="dl-s">{{vm.deloadTip || '降低负荷恢复'}}</text>
-        <switch checked="{{vm.deload}}" color="#0064D4" bindchange="onDeload" />
-      </view>
+      <view class="bk-nag" wx:if="{{saveFail}}">这次训练还没记到本机。草稿还在，可以再点完成训练。这不是云同步问题。</view>
 
       <view class="card locked" wx:if="{{vm.locked && vm.lockedInfo}}">
         <view class="lk-head">
@@ -65,33 +151,28 @@
       <block wx:if="{{!vm.locked}}">
         <view class="edit-cancel" wx:if="{{vm.editing}}" bindtap="cancelEdit">取消编辑</view>
         <block wx:for="{{exBlocks}}" wx:for-item="block" wx:key="key">
-        <view class="t1-mid {{block.item.skip ? 'skipped' : ''}} {{block.item.logged && block.item.value !== '未完成' ? 'is-done' : ''}} {{expanded ? 'is-open' : ''}}" wx:if="{{block.card}}">
-          <view class="t1-mid-row">
-            <view class="t1-mid-main" bindtap="onExpandOpen">
-              <view class="t1-top">
-                <text class="tier t-{{block.item.tier}}">{{block.item.badge || block.item.tier}}</text>
-                <text class="ex-name">{{block.item.name}}</text>
-                <view wx:if="{{block.item.logged && block.item.value !== '未完成'}}" class="ex-done" aria-label="已完成"></view>
+        <view class="ex {{block.item.current ? 'current' : 'upcoming'}} {{block.item.doneLogged ? 'is-done' : ''}} {{block.item.skip ? 'skipped' : ''}} {{expanded && block.item.current ? 'is-open' : ''}}">
+          <view class="ex-hit" data-slot="{{block.item.slotId}}" bindtap="onRow" aria-role="button" aria-label="{{block.item.current ? '当前动作' : '后续动作'}} · {{block.item.name}}">
+            <view class="ordinal"><text>{{block.item.ord}}</text></view>
+            <view class="ex-body">
+              <view class="ex-top">
+                <view class="name">{{block.item.name}}<view wx:if="{{block.item.doneLogged}}" class="ex-done" aria-label="已完成"></view></view>
+                <view class="wt">
+                  <block wx:if="{{block.item.isCardio}}"><text class="kg">{{block.item.weightText}}</text><text class="unit">分钟</text></block>
+                  <block wx:elif="{{block.item.isBW}}"><text class="kg bw">自重</text></block>
+                  <block wx:else><text class="kg {{block.item.manual ? 'manual' : ''}}">{{block.item.weightText}}</text><text class="unit">{{block.item.unitText}}</text></block>
+                </view>
+              </view>
+              <view class="ex-meta">
+                <text class="scheme">{{block.item.skip ? '已跳过' : block.item.schemeText}}</text>
+                <view class="sets" wx:if="{{block.item.current && block.item.done > 0 && !block.item.doneLogged && !block.item.skip}}">
+                  <view class="set-pips"><view wx:for="{{block.item.pips}}" wx:for-item="pip" wx:key="i" class="pip {{pip.cls}}"></view></view>
+                  <text class="sets-count">{{block.item.done}} / {{block.item.sets}} 组</text>
+                </view>
               </view>
               <view class="ex-flags" wx:if="{{block.item.sub}}"><text class="ex-tag sub">替换 {{block.item.planName}}</text></view>
               <view class="ex-flags" wx:elif="{{block.item.autoNew}}"><text class="ex-tag rot">本轮轮换 · 原 {{block.item.autoPrev}}</text></view>
               <view class="ex-flags" wx:elif="{{block.item.changeNew}}"><text class="ex-tag new">新动作</text></view>
-              <view class="t1-metrics">
-                <block wx:if="{{block.item.isCardio}}"><text class="weight num">{{block.item.weightText}}</text><text class="unit">分钟</text></block>
-                <block wx:elif="{{block.item.isBW}}"><text class="weight num">自重</text></block>
-                <block wx:else><text class="weight num {{block.item.manual ? 'manual' : ''}}">{{block.item.weightText}}</text><text class="unit">{{block.item.unitText}}</text></block>
-                <text class="scheme-pill">{{block.item.repsText}}</text>
-              </view>
-              <view class="progress-row" wx:if="{{!expanded}}">
-                <view class="mini-dots">
-                  <view wx:for="{{block.item.dots}}" wx:for-item="d" wx:key="i" class="mini-dot {{d.on ? 'done' : (d.i === block.item.done ? 'next' : '')}}"></view>
-                </view>
-                <text class="prog-cap" wx:if="{{block.item.skip || block.item.preview || !(block.item.logged && block.item.value !== '未完成')}}">{{block.item.skip ? '已跳过' : (block.item.preview ? block.item.preview.judgment : (block.item.done || 0) + '/' + block.item.sets + ' · 点开记组')}}</text>
-              </view>
-            </view>
-            <view class="t1-actions">
-              <view class="more-btn" catchtap="onMore" aria-role="button" aria-label="更多"><view></view><view></view><view></view></view>
-              <view class="expand-btn {{expanded ? 'open' : ''}}" catchtap="onExpand" aria-role="button" aria-label="{{expanded ? '收起' : '展开记组'}}"><view class="chev-d"></view></view>
             </view>
           </view>
           <view class="more-pop" wx:if="{{moreOpen}}" catchtap="noop">
@@ -100,7 +181,8 @@
             <view data-slot="{{block.item.slotId}}" bindtap="onSkip">{{block.item.skip ? '恢复' : '跳过'}}</view>
             <view bindtap="onMenu">日期与备注</view>
           </view>
-          <view class="t1-open" wx:if="{{expanded}}">
+          <view class="t1-open ex-log" wx:if="{{expanded && block.item.current}}">
+            <view class="log-tool" wx:if="{{block.item.canAdjust}}" data-slot="{{block.item.slotId}}" catchtap="onEditW">{{block.item.editW ? '完成调整' : '调整重量'}}</view>
             <view class="wedit" wx:if="{{block.item.editW}}">
               <view class="stepper">
                 <view class="st-btn" data-slot="{{block.item.slotId}}" data-d="-1" bindtap="onWStep">−</view>
@@ -174,28 +256,15 @@
           </view>
         </view>
 
-        <view class="follow-list" wx:else>
-          <view wx:for="{{block.items}}" wx:key="slotId" class="follow-row {{item.skip ? 'skipped' : ''}} {{item.logged && item.value !== '未完成' ? 'is-done' : ''}}" data-slot="{{item.slotId}}" bindtap="onFocus">
-            <text class="tier t-{{item.tier}}">{{item.badge || item.tier}}</text>
-            <text class="follow-name">{{item.name}}</text>
-            <view class="follow-meta">
-              <block wx:if="{{item.skip}}">已跳过</block>
-              <block wx:elif="{{item.preview}}"><text class="b" style="color: {{item.preview.color}}">{{item.preview.judgment}}</text></block>
-              <block wx:else>
-                <text class="b" wx:if="{{!item.isBW && !item.isCardio}}">{{item.weightText}}</text>
-                <text wx:if="{{!item.isBW && !item.isCardio}}"> {{item.unitText}}</text>
-                <text wx:else>{{item.weightText}}</text>
-                <text> · {{item.repsText}}</text>
-              </block>
-            </view>
-            <view wx:if="{{item.logged && item.value !== '未完成'}}" class="ex-done" aria-label="已完成"></view>
-          </view>
-        </view>
         </block>
-        <view class="submit-bar" wx:if="{{vm.total && vm.filled === vm.total}}">
-          <button class="sb-btn is-ready" bindtap="onSubmit">{{vm.editing ? '保存修改' : '完成训练'}}</button>
+        <view class="home-action" wx:if="{{!vm.locked && home.cta}}">
+          <button class="home-cta" bindtap="onStart">{{home.cta}}</button>
+          <view class="home-links" wx:if="{{!home.started && !home.ready}}"><text bindtap="onAdjust">调整今天</text></view>
+          <view class="home-links" wx:elif="{{!home.ready}}"><text data-slot="{{home.slot}}" bindtap="openSwap">换动作</text><text class="sep">·</text><text data-slot="{{home.slot}}" bindtap="onSkip">{{home.skipLabel}}</text></view>
+          <view class="home-links" wx:else><text bindtap="onAdjust">日期与备注</text></view>
         </view>
       </block>
+      </view>
     </view>
   </view>
 
@@ -203,7 +272,15 @@
     <view class="sheet session-sheet" catchtap="noop">
       <view class="grabber"></view>
       <text class="sheet-cap">{{vm.weekText}}{{vm.editing ? ' · 编辑记录' : ''}}</text>
-      <view class="sheet-title">本次训练</view>
+      <view class="sheet-title">调整今天</view>
+      <view class="seg day-seg" wx:if="{{vm && !vm.editing}}">
+        <view wx:for="{{vm.days}}" wx:key="id" class="seg-i {{item.id === vm.day ? 'on' : ''}}" data-day="{{item.id}}" bindtap="onDay">{{item.id}}</view>
+      </view>
+      <view class="deload-slim" wx:if="{{vm && !vm.locked && (vm.deloadSuggest || vm.deload)}}">
+        <text class="dl-t">减载周</text>
+        <text class="dl-s">{{vm.deloadTip || '降低负荷恢复'}}</text>
+        <switch checked="{{vm.deload}}" color="#5BB887" bindchange="onDeload" />
+      </view>
       <view class="list">
         <view class="cell">
           <text class="flex1">日期</text>
@@ -264,7 +341,7 @@
   </view>
 
   <!-- 组间休息 -->
-  <view class="mask center rest-mask" wx:if="{{rest.show}}">
+  <view class="mask center rest-mask" wx:if="{{rest.show && !log}}">
     <view class="rest-box">
       <text class="rest-name">{{rest.name}} · 组间休息</text>
       <text class="rest-num num">{{rest.text}}</text>

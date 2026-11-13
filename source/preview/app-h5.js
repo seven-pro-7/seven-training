@@ -1,14 +1,14 @@
 /* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
 (function () {
   'use strict';
-  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly, Weekly = window.GZWeekly;
+  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly, Weekly = window.GZWeekly, Home = window.HomeCopy, SL = window.SetLog;
   var KEY = 'training_db_v1', BK = 'training_last_backup', SYNC_KEY = 'training_sync_v1', WATCH_KEY = 'training_watch_v1', BK_DISMISS = 'training_bk_dismiss', OPEN_KEY = 'training_open_v1';
   [['training_db_v1', 'gzclp_db_v1'], ['training_last_backup', 'gzclp_last_backup'], ['training_sync_v1', 'gzclp_sync_v1'], ['training_watch_v1', 'gzclp_watch_v1'], ['training_bk_dismiss', 'gzclp_bk_dismiss']].forEach(function (pair) {
     try { if (localStorage.getItem(pair[0]) == null && localStorage.getItem(pair[1]) != null) localStorage.setItem(pair[0], localStorage.getItem(pair[1])); } catch (e) {}
   });
   var TABS = [
-    { id: 'train', title: '训练' }, { id: 'stats', title: '数据' }, { id: 'tools', title: '工具' },
-    { id: 'plan', title: '计划总览' }, { id: 'settings', title: '我的' }
+    { id: 'train', title: '今天' }, { id: 'stats', title: '数据' }, { id: 'tools', title: '计划库' },
+    { id: 'plan', title: '计划' }, { id: 'settings', title: '设置' }
   ];
   function libNames(db) {
     var m = { T1: [], T2: [], T3: [] };
@@ -170,6 +170,7 @@
     var fromSync = opt && opt.fromSync, hasW = Object.prototype.hasOwnProperty.call(db.params || {}, 'watch'), w = hasW ? db.params.watch : undefined;
     if (hasW) { delete db.params.watch; watchSave(w || null); }  // 手表数据走独立键；主数据里不留
     if (!fromSync) { var prev = rawLoad(); if (prev && prev.params && prev.days) { prev = GZ.normalize(prev); delete prev.params.watch; GZ.stampConfig(prev, db); } }
+    if (window.__SEVEN_FAIL_DB) return false;
     var wrote = writeJson(KEY, db);
     if (hasW && w) db.params.watch = w;  // 调用方继续拿到完整对象
     if (!fromSync) Sync.schedule();
@@ -218,7 +219,8 @@
   }
   /** 把还没提交的训练写到 training_open_v1。空白草稿会删掉这个键，避免盖住以后真正填过的内容 */
   function persistOpen() {
-    if (!bootReady) return;
+    if (!bootReady) return false;
+    if (window.__SEVEN_FAIL_OPEN) return false;
     var t = S.train;
     if (t.day && t.draft) {
       if (!t.drafts) t.drafts = {};
@@ -229,10 +231,10 @@
       if (t.deload) t.deloads[t.day] = true; else delete t.deloads[t.day];
     }
     var snap = GZ.packOpenSession(t);
-    if (!GZ.sessionTouched(snap)) { removeJson(OPEN_KEY); return; }
-    writeJson(OPEN_KEY, snap);
+    if (!GZ.sessionTouched(snap)) { removeJson(OPEN_KEY); return true; }
+    return writeJson(OPEN_KEY, snap) !== false;
   }
-  var LIVE_INPUT = { amrap: 1, setin: 1, '5rm': 1, reps: 1, winput: 1, note: 1, bw: 1, date: 1 };
+  var LIVE_INPUT = { amrap: 1, setin: 1, '5rm': 1, reps: 1, winput: 1, note: 1, bw: 1, date: 1, logreps: 1, logw: 1, correps: 1, corw: 1 };
   /** 切到后台或刷新前，把还没触发 change 的输入框收进草稿 */
   function captureOpenInputs() {
     var root = document.getElementById('body');
@@ -557,7 +559,7 @@
   function entry(slot) { var d = S.train.draft; return d[slot] || (d[slot] = { v: null, done: 0 }); }
 
   var CHEV = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5.2 3.2L9 7l-3.8 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var ME = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M5.5 19.2c1.4-3 3.7-4.4 6.5-4.4s5.1 1.4 6.5 4.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  var GEAR = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8.1 1.9h3.8l.3 1.95c.62.15 1.2.4 1.72.74l1.86-.76 1.86 3.22-1.56 1.26c.12.5.2 1.04.2 1.59 0 .55-.08 1.09-.2 1.59l1.56 1.26-1.86 3.22-1.86-.76a5.9 5.9 0 0 1-1.72.74L11.9 18.1H8.1l-.3-1.95a5.9 5.9 0 0 1-1.72-.74l-1.86.76-1.86-3.22 1.56-1.26A5.8 5.8 0 0 1 3.66 10c0-.55.08-1.09.2-1.59L2.3 7.15 4.16 3.93l1.86.76c.52-.34 1.1-.59 1.72-.74L8.1 1.9Z" stroke="#141414" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.4" stroke="#141414" stroke-width="1.5"/></svg>';
   var EXPAND = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M5 7.2l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var MORE = '<svg width="16" height="4" viewBox="0 0 16 4" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.6"/><circle cx="8" cy="2" r="1.6"/><circle cx="14" cy="2" r="1.6"/></svg>';
   var CHECK = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.2 6.2l2.4 2.4L9.8 3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -589,18 +591,11 @@
     if (id.avatar) return '<img class="avatar-photo" src="' + id.avatar + '" alt="">';
     return '<div class="avatar-mark" aria-hidden="true"><span></span></div>';
   }
-  function museFrame(goalBtn, trainInner, extra) {
-    var id = homeIdentity();
-    return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
-      '<button type="button" class="menu-btn" data-act="me" aria-label="我的">' + ME + '</button>' +
-      '<div class="avatar-wrap"><div class="companion-pedestal"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button><span class="ground-shadow" aria-hidden="true"></span></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
-      goalBtn + '<div class="info-safe" aria-hidden="true"></div><svg class="band-hem" viewBox="0 0 368 32" preserveAspectRatio="none" aria-hidden="true"><rect width="368" height="32" fill="#EEF5FC"/><path fill="#FFFFFF" d="M0 2 A 949.4 949.4 0 0 0 368 2 L 368 32 L 0 32 Z"/></svg></section><section class="train-band" aria-label="训练"><div class="train-inner">' + trainInner + '</div></section></div>' + (extra || '');
-  }
-  function goalBtn(vm) {
-    var label = '进入计划总览：' + vm.day + ' · ' + vm.dayName;
-    return '<button type="button" class="goal-entry" data-act="overview" aria-label="' + esc(label) + '">' +
-      '<div class="goal-primary"><span><span class="sid">' + esc(vm.day) + '</span> · ' + esc(vm.dayName) + '</span><span class="goal-chev" aria-hidden="true">' + CHEV + '</span></div>' +
-      '<div class="goal-secondary">' + esc(goalStatusText(vm)) + ' · 本周 <span class="warm">' + vm.round.done + '/' + vm.round.total + '</span></div></button>';
+  function homeShell(live, inner, extra) {
+    return '<div class="muse-home' + (live ? ' session-live' : ' session-ready') + '">' +
+      '<div class="home-wash" aria-hidden="true"></div>' +
+      '<button type="button" class="gear-btn" data-act="me" aria-label="设置">' + GEAR + '</button>' +
+      '<div class="home-scroll">' + inner + '</div></div>' + (extra || '');
   }
   function daySeg(vm) {
     return '<div class="seg day-seg' + (vm.days.length > 4 ? ' wide' : '') + '" role="tablist" aria-label="本周训练日">' + vm.days.map(function (d) {
@@ -621,13 +616,15 @@
     if (it.isBW) return '<span class="weight num">自重</span>';
     return '<span class="weight num' + (it.manual ? ' manual' : '') + '">' + esc(it.weightText) + '</span><span class="unit">' + esc(it.unitText) + '</span>';
   }
-  function miniDots(it) {
-    if (!it.dots || !it.dots.length) return '';
-    var done = it.done || 0;
-    return '<div class="mini-dots" aria-hidden="true">' + it.dots.map(function (d) {
-      var cls = d.on ? 'done' : (d.i === done ? 'next' : '');
-      return '<span class="mini-dot ' + cls + '"></span>';
-    }).join('') + '</div>';
+  function setPips(it) {
+    var done = it.done || 0, n = it.sets || (it.dots ? it.dots.length : 0);
+    if (!n || done <= 0 || setsLogged(it)) return '';
+    var h = '<span class="set-pips" aria-hidden="true">';
+    for (var i = 0; i < n; i++) {
+      var cls = i < done ? 'done' : (i === done ? 'next' : 'todo');
+      h += '<i class="' + cls + '"></i>';
+    }
+    return h + '</span><span class="sets-count">' + done + ' / ' + n + ' 组</span>';
   }
   function setsLogged(it) { return !!(it.logged && it.value !== '未完成'); }
   function doneMark() { return '<span class="ex-done" aria-label="已完成"></span>'; }
@@ -698,46 +695,56 @@
     }
     return h;
   }
-  function midCard(it, open) {
-    var cap = progCap(it);
-    return '<section class="t1-mid' + (it.skip ? ' skipped' : '') + (setsLogged(it) ? ' is-done' : '') + (open ? ' is-open' : '') + '" aria-label="' + esc(it.name) + '">' +
-      '<div class="t1-mid-row"><div class="t1-mid-main" data-act="expand" data-keep="1" data-slot="' + it.slotId + '">' +
-      '<div class="t1-top">' + tier(it.tier, it.badge) + '<span class="ex-name">' + esc(it.name) + '</span>' + (setsLogged(it) ? doneMark() : '') + '</div>' +
-      flagHtml(it) +
-      '<div class="t1-metrics">' + weightHtml(it) + '<span class="scheme-pill">' + esc(it.repsText) + '</span></div>' +
-      (open ? '' : '<div class="progress-row">' + miniDots(it) + (cap ? '<span class="prog-cap">' + esc(cap) + '</span>' : '') + '</div>') +
-      '</div><div class="t1-actions">' +
-      '<button type="button" class="more-btn" data-act="more" data-slot="' + it.slotId + '" aria-label="更多">' + MORE + '</button>' +
-      '<button type="button" class="expand-btn' + (open ? ' open' : '') + '" data-act="expand" data-slot="' + it.slotId + '" aria-label="' + (open ? '收起' : '展开记组') + '" aria-expanded="' + (open ? 'true' : 'false') + '">' + EXPAND + '</button>' +
-      '</div></div>' + morePop(it) +
-      (open ? '<div class="t1-open">' + museLog(it) + '</div>' : '') + '</section>';
+  function ordinalText(i) { return (i < 9 ? '0' : '') + (i + 1); }
+  function weightBlock(it) {
+    if (it.isCardio) return '<span class="kg">' + esc(it.weightText) + '</span><span class="unit">分钟</span>';
+    if (it.isBW) return '<span class="kg bw">自重</span>';
+    return '<span class="kg' + (it.manual ? ' manual' : '') + '">' + esc(it.weightText) + '</span><span class="unit">' + esc(it.unitText || 'kg') + '</span>';
   }
-  function followList(items) {
-    if (!items.length) return '';
-    return '<section class="follow-list">' + items.map(function (it) {
-      return '<div class="follow-row' + (it.skip ? ' skipped' : '') + (setsLogged(it) ? ' is-done' : '') + '" data-act="focus" data-slot="' + it.slotId + '" role="button">' +
-        tier(it.tier, it.badge) + '<span class="follow-name">' + esc(it.name) + '</span>' + followMeta(it) + (setsLogged(it) ? doneMark() : '') + '</div>';
-    }).join('') + '</section>';
-  }
-  /** 选中项留在原位展开成卡片，其余保持最小行，不把当前动作抽到列表最前。 */
+  /** 原列表顺序。当前项白卡片，已完成只加小对勾，不整卡变绿。 */
   function exerciseStack(vm) {
-    var t = S.train, h = '', buf = [];
-    function flush() {
-      if (!buf.length) return;
-      h += followList(buf);
-      buf = [];
-    }
-    vm.items.forEach(function (it) {
-      if (it.slotId === t.focus) { flush(); h += midCard(it, !!t.open); }
-      else buf.push(it);
+    var t = S.train, h = '<div class="ex-list">';
+    vm.items.forEach(function (it, i) {
+      var current = it.slotId === t.focus;
+      var done = setsLogged(it);
+      var open = current && !!t.open;
+      var cls = 'ex' + (current ? ' current' : ' upcoming') + (done ? ' is-done' : '') + (it.skip ? ' skipped' : '') + (open ? ' is-open' : '');
+      var label = (current ? '当前动作' : '后续动作') + ' · ' + it.name + (done ? '，已完成' : '') + (it.skip ? '，已跳过' : '');
+      h += '<section class="' + cls + '">';
+      h += '<button type="button" class="ex-hit" data-act="row" data-slot="' + it.slotId + '" aria-label="' + esc(label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">';
+      h += '<div class="ordinal"><span>' + ordinalText(i) + '</span></div>';
+      h += '<div class="ex-body"><div class="ex-top"><div class="name">' + esc(it.name) + (done ? doneMark() : '') + '</div>';
+      h += '<div class="wt">' + weightBlock(it) + '</div></div>';
+      h += '<div class="ex-meta"><div class="scheme">' + esc(it.skip ? '已跳过' : Home.schemeLine(it)) + '</div>';
+      if (current && !it.skip) h += '<div class="sets">' + setPips(it) + '</div>';
+      h += '</div>' + flagHtml(it) + '</div></button>';
+      h += '</section>';
     });
-    flush();
-    return h;
+    return h + '</div>';
+  }
+  function homeAction(vm, it, started) {
+    if (!it) return '';
+    var ready = vm.total > 0 && vm.filled === vm.total;
+    var label = Home.ctaLabel({ ready: ready, editing: vm.editing, started: started, name: it.name });
+    var act = ready ? 'submit' : 'startlog';
+    var h = '<div class="home-action"><button type="button" class="home-cta" data-act="' + act + '" data-slot="' + it.slotId + '">' + esc(label) + '</button>';
+    if (!started && !ready) {
+      h += '<div class="home-links"><button type="button" data-act="adjust">调整今天</button></div>';
+    } else if (!ready) {
+      h += '<div class="home-links"><button type="button" data-act="openswap" data-slot="' + it.slotId + '">换动作</button><i></i><button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
+    } else h += '<div class="home-links"><button type="button" data-act="adjust">日期与备注</button></div>';
+    return h + '</div>';
   }
   function sessionMenu(vm, t) {
     if (!t.menu) return '';
+    var deload = '';
+    if (!vm.locked && (vm.deloadSuggest || vm.deload)) {
+      deload = '<div class="deload-slim"><span class="dl-t">减载周</span><span class="dl-s">' + esc(vm.deloadTip || '降低负荷恢复') + '</span>' +
+        '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
+    }
     return '<div class="mask" data-act="menuclose"><div class="sheet session-sheet" data-stop="1"><div class="grabber"></div>' +
-      '<span class="sheet-cap">' + esc(vm.weekText) + (vm.editing ? ' · 编辑记录' : '') + '</span><div class="sheet-title">本次训练</div>' +
+      '<span class="sheet-cap">' + esc(vm.weekText) + (vm.editing ? ' · 编辑记录' : '') + '</span><div class="sheet-title">调整今天</div>' +
+      (vm.editing ? '' : daySeg(vm)) + deload +
       '<div class="list"><div class="cell"><span class="flex1">日期</span><label class="date-pick session-date"><span class="num">' + esc(GZ.dateLabel(t.date)) + '</span>' +
       (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '">') + '</label></div>' +
       '<div class="cell"><span class="flex1">体重</span><input class="cell-in num" inputmode="decimal" data-act="bw" value="' + esc(t.bw) + '" placeholder="可选"><span class="unit">kg</span></div>' +
@@ -750,28 +757,287 @@
     return '<div class="submit-bar"><button type="button" class="sb-btn is-ready" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
   }
 
+  var BACK = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12.2 4.2L6.4 10l5.8 5.8" stroke="#141414" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function logCtx(vm) {
+    var t = S.train, it = vm.items.filter(function (x) { return x.slotId === t.log.slot; })[0];
+    if (!it) return null;
+    var en = entry(it.slotId);
+    SL.migrate(en, it);
+    if (!en.pending) en.pending = SL.defaultPending(en, it);
+    return { it: it, en: en };
+  }
+  function putEntry(slot, next) {
+    var en = entry(slot);
+    Object.keys(en).forEach(function (k) { delete en[k]; });
+    Object.assign(en, next);
+  }
+  function openSetLog(slot) {
+    var t = S.train, vm = trainVM(), it = vm.items.filter(function (x) { return x.slotId === slot; })[0];
+    if (!it) return;
+    t.focus = slot; t.open = false;
+    if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = slot; t.focusKey = t.day + '|' + (t.recordId || ''); }
+    var en = entry(slot); SL.migrate(en, it);
+    var screen = 'work';
+    if ((en.groups || []).length >= it.sets) screen = 'done';
+    else if (rest.show && rest.slot === slot && rest.until > Date.now()) screen = 'rest';
+    t.log = { slot: slot, screen: screen, correct: null };
+  }
+  function renderSetLog(vm) {
+    var ctx = logCtx(vm); if (!ctx) { S.train.log = null; return renderTrain(); }
+    var t = S.train, it = ctx.it, en = ctx.en, screen = t.log.screen || 'work';
+    var index = (en.groups || []).length;
+    var target = SL.targetOf(it, Math.min(index, it.sets - 1));
+    var pending = en.pending || SL.defaultPending(en, it);
+    var stamp = Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day);
+    var h = '<div class="set-screen screen-' + screen + '">';
+    h += '<div class="set-wash" aria-hidden="true"></div>';
+    var backAct = screen === 'correct' ? 'logwork' : 'logback';
+    var backLabel = screen === 'correct' ? '取消更正，回到这一组' : '返回今日列表';
+    h += '<div class="set-top"><button type="button" class="back-btn" data-act="' + backAct + '" aria-label="' + backLabel + '">' + BACK + '</button>';
+    h += '<button type="button" class="gear-btn" data-act="me" aria-label="设置">' + GEAR + '</button></div>';
+    h += '<div class="set-scroll">';
+    if (screen === 'rest') {
+      var left = restLeft();
+      var nextN = index + 1;
+      h += '<p class="rest-kicker">第 ' + index + ' 组已记在本机</p>';
+      h += '<div class="rest-clock" aria-live="polite">' + fmtSec(left) + '</div>';
+      h += '<div class="rest-track" aria-hidden="true"><i class="rest-fill" style="width:' + Math.max(0, Math.min(100, left / (rest.total || 1) * 100)) + '%"></i></div>';
+      h += '<p class="rest-name">' + esc(it.name) + ' · 组间休息</p>';
+      h += '<p class="rest-next">接着第 ' + nextN + ' 组 · 目标 ' + esc(target.text) + (it.inputType === 'cardio' ? ' 分钟' : ' 次') + '</p>';
+      h += '</div><div class="log-bottom rest-controls">';
+      h += '<button type="button" data-act="logrest" data-d="-30">−30</button>';
+      h += '<button type="button" class="rest-skip" data-act="logrestskip">跳过休息</button>';
+      h += '<button type="button" data-act="logrest" data-d="30">+30</button>';
+      h += '<p class="rest-suggest">' + esc(it.badge || '') + ' 建议 ' + Math.round((it.rest || 0) / 60) + ' 分钟</p>';
+      h += '<button type="button" class="text-link" data-act="logundo">撤销这一组</button>';
+      h += '</div>';
+    } else if (screen === 'done') {
+      var p = it.preview;
+      var nxt = null;
+      vm.items.forEach(function (x) { if (!nxt && x.slotId !== it.slotId && !x.skip && !setsLogged(x)) nxt = x; });
+      h += '<p class="done-kicker">本动作已记下</p><h2 class="set-name">' + esc(it.name) + '</h2>';
+      h += '<p class="set-scheme">' + esc(Home.schemeLine(it)) + '</p>';
+      h += logDots(it, en, it.sets);
+      h += '<div class="set-log">';
+      (en.groups || []).forEach(function (g, i) {
+        h += '<button type="button" class="set-log-row" data-act="logfix" data-i="' + i + '"><span>第 ' + (i + 1) + ' 组</span><b>' + esc(g.weight) + ' kg × ' + esc(g.reps) + '</b><span class="fix">更正</span></button>';
+      });
+      h += '</div>';
+      if (p) {
+        h += '<div class="engine-card"><div class="engine-j">' + esc(p.judgment) + '</div>';
+        h += '<div class="engine-next">下次 <b>' + esc(p.nextWeight) + '</b> kg · ' + esc(p.nextStage) + '</div>';
+        h += '<p>由进阶引擎计算。界面不另算下次重量。' + (p.adaptNote ? esc(p.adaptNote) : '') + '</p></div>';
+      }
+      h += '</div><div class="log-bottom">';
+      if (nxt) h += '<button type="button" class="home-cta" data-act="lognext" data-slot="' + nxt.slotId + '">下一动作 · ' + esc(Home.shortLift(nxt.name)) + '</button>';
+      else h += '<button type="button" class="home-cta" data-act="logback">返回今日列表</button>';
+      if (nxt) h += '<button type="button" class="text-link" data-act="logback">返回今日列表</button>';
+      h += '</div>';
+    } else if (screen === 'correct') {
+      var ci = t.log.correct || 0;
+      var g = (en.groups || [])[ci] || { reps: 0, weight: it.weight };
+      var shownReps = en.correctPending && en.correctPending.reps != null ? en.correctPending.reps : g.reps;
+      var shownW = en.correctPending && en.correctPending.weight != null ? en.correctPending.weight : g.weight;
+      h += '<p class="set-meta">' + esc(stamp) + '</p>';
+      h += '<h2 class="set-name">更正第 ' + (ci + 1) + ' 组</h2>';
+      h += '<p class="set-scheme">' + esc(it.name) + ' · ' + esc(Home.schemeLine(it)) + '</p>';
+      h += '<div class="origin-card"><span>原记录</span><b>' + esc(g.weight) + ' kg × ' + esc(g.correctedFrom != null ? g.correctedFrom : g.reps) + ' 次</b></div>';
+      h += '<p class="block-label">更正次数</p>' + stepperHtml('correps', shownReps, '次');
+      h += '<p class="block-label">重量</p>' + stepperHtml('corw', shownW, 'kg');
+      h += '<p class="hint">保存后会标明已更正。后面的组还在。中间组次数不改写进阶。</p>';
+      h += '</div><div class="log-bottom">';
+      h += '<button type="button" class="home-cta" data-act="logcorrectsave">保存更正</button>';
+      h += '<div class="home-links">';
+      if (ci === (en.groups || []).length - 1) h += '<button type="button" data-act="logundo">撤销这一组</button><i></i>';
+      h += '<button type="button" data-act="logwork">返回</button></div></div>';
+    } else if (screen === 'fail') {
+      var fail = t.log.fail || { index: index, reps: pending.reps, weight: pending.weight };
+      h += '<h2 class="set-name">第 ' + (fail.index + 1) + ' 组还没有记到本机</h2>';
+      h += '<p class="hint">本机写入没有成功。不是云同步问题。你刚填的重量和次数都还在，可以再试一次。</p>';
+      h += '<div class="origin-card"><span>仍保留的输入</span><b>' + esc(fail.weight) + ' kg × ' + esc(fail.reps) + ' 次</b><span>' + esc(it.name) + ' · 第 ' + (fail.index + 1) + ' 组</span></div>';
+      h += '</div><div class="log-bottom">';
+      h += '<button type="button" class="home-cta" data-act="logretry">再试一次</button>';
+      h += '<button type="button" class="text-link" data-act="logwork">先留在本页</button></div>';
+    } else {
+      var cur = Math.min(index, it.sets - 1);
+      var amrap = SL.isAmrapIndex(it, cur);
+      h += '<p class="set-meta">' + esc(stamp) + '</p>';
+      h += '<h2 class="set-name">' + esc(it.name) + '</h2>';
+      h += '<p class="set-scheme">' + esc(Home.schemeLine(it)) + '</p>';
+      if (!it.isBW && !it.isCardio) {
+        h += '<div class="weight-row"><span class="big-kg">' + esc(pending.weight) + '</span><span class="unit">' + esc(it.unitText || 'kg') + '</span>';
+        h += '<button type="button" class="w-adjust" data-act="logwedit">' + (t.log.wedit ? '完成' : '调整') + '</button></div>';
+        if (t.log.wedit) h += stepperHtml('logw', pending.weight, it.unitText || 'kg');
+      }
+      h += logDots(it, en, cur);
+      h += '<p class="path-cap">第 ' + (cur + 1) + ' / ' + it.sets + ' 组' + (amrap ? ' · 末组' : '') + '</p>';
+      var samePrev = index > 0 && en.groups.every(function (g) { return g.reps === en.groups[0].reps && g.weight === en.groups[0].weight; });
+      if (amrap && samePrev) {
+        h += '<div class="set-log"><div class="set-log-row"><span>第 1–' + index + ' 组</span><b>均 ' + esc(en.groups[0].weight) + ' kg × ' + esc(en.groups[0].reps) + '</b></div></div>';
+      } else if ((en.groups || []).length) {
+        h += '<div class="set-log">';
+        en.groups.forEach(function (g, i) {
+          var note = g.correctedFrom != null ? '已更正（原 ' + g.correctedFrom + ' 次）' : '';
+          h += '<button type="button" class="set-log-row" data-act="logfix" data-i="' + i + '"><span>第 ' + (i + 1) + ' 组</span><b>' + esc(g.weight) + ' kg × ' + esc(g.reps) + '</b><span class="fix">' + (note || '更正') + '</span></button>';
+        });
+        h += '</div>';
+      }
+      h += '<div class="rep-panel"><p class="target">目标 <em>' + esc(amrap ? target.text : target.reps) + '</em> ' + (it.isCardio ? '分钟' : '次') + '</p>';
+      h += stepperHtml('logreps', pending.reps, it.isCardio ? '分钟' : '次');
+      if (amrap) h += '<p class="hint">至少 ' + esc(target.reps) + ' 次。按实际完成填写，多做如实记录。</p>';
+      h += '</div></div><div class="log-bottom">';
+      var can = pending.reps !== '' && pending.reps != null;
+      h += '<button type="button" class="home-cta" data-act="logsave"' + (can ? '' : ' disabled') + '>记下第 ' + (cur + 1) + ' 组</button>';
+      h += '<div class="home-links"><button type="button" data-act="openswap" data-slot="' + it.slotId + '">换动作</button><i></i>';
+      h += '<button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
+      if ((en.groups || []).length) h += '<button type="button" class="text-link" data-act="logundo">撤销上一组</button>';
+      h += '</div>';
+    }
+    h += '</div>';
+    if (t.swap && t.swap.show) h += renderSwap();
+    return h;
+  }
+  function logDots(it, en, current) {
+    var h = '<div class="set-path" role="list">';
+    var logged = (en.groups || []).length;
+    for (var i = 0; i < it.sets; i++) {
+      var done = i < logged;
+      var now = !done && i === current;
+      var amrap = SL.isAmrapIndex(it, i) && !done;
+      var label = (i + 1) + (amrap ? '+' : '');
+      var state = done ? '已记下' : (now ? '当前' : '未记');
+      h += '<div class="sp ' + (done ? 'done' : (now ? 'now' : '')) + '" role="listitem" aria-label="第 ' + (i + 1) + ' 组，' + state + (amrap ? '，末组' : '') + '">';
+      h += '<span class="dot" aria-hidden="true"></span><span class="lab">' + label + '</span></div>';
+    }
+    return h + '</div>';
+  }
+  function logField(key, value) {
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    ctx.en.pending = ctx.en.pending || SL.defaultPending(ctx.en, ctx.it);
+    ctx.en.pending[key] = value;
+    return false;
+  }
+  function logCorrectField(key, value) {
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var g = (ctx.en.groups || [])[S.train.log.correct || 0] || {};
+    ctx.en.correctPending = ctx.en.correctPending || { reps: g.reps, weight: g.weight };
+    ctx.en.correctPending[key] = value;
+    return false;
+  }
+  function logStep(ds) {
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var key = ds.k === 'logw' || ds.k === 'corw' ? 'weight' : 'reps';
+    var bag = (ds.k === 'correps' || ds.k === 'corw') ? (ctx.en.correctPending || (ctx.en.correctPending = { reps: 0, weight: ctx.it.weight })) : (ctx.en.pending || (ctx.en.pending = SL.defaultPending(ctx.en, ctx.it)));
+    if (key === 'reps') {
+      var cur = bag.reps === '' || bag.reps == null ? 0 : Number(bag.reps);
+      bag.reps = SL.clampReps((isNaN(cur) ? 0 : cur) + Number(ds.d), ctx.it.inputType);
+    } else {
+      var dir = Number(ds.d) < 0 ? -1 : 1;
+      bag.weight = GZ.nudgeWeight(ctx.it.name, ctx.it.equip, Number(bag.weight) || 0, dir, ctx.it.wStep);
+    }
+    return true;
+  }
+  function commitSet() {
+    var t = S.train; if (t._writing) return false;
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var field = document.querySelector('[data-act=logreps]');
+    var pending = ctx.en.pending || SL.defaultPending(ctx.en, ctx.it);
+    if (field) pending.reps = field.value;
+    t._writing = true;
+    var result = SL.commitGroup(ctx.en, ctx.it, pending, function (next) {
+      var prev = JSON.parse(JSON.stringify(ctx.en));
+      putEntry(ctx.it.slotId, next);
+      var ok = persistOpen();
+      if (!ok) putEntry(ctx.it.slotId, prev);
+      return ok;
+    });
+    t._writing = false;
+    if (!result.ok && result.reason === 'empty') { toast('填写本次次数'); return false; }
+    if (!result.ok && result.reason === 'write') {
+      t.log.screen = 'fail';
+      t.log.fail = { index: (ctx.en.groups || []).length, reps: pending.reps, weight: pending.weight };
+      return true;
+    }
+    if (!result.ok) return false;
+    if (result.last) t.log.screen = 'done';
+    else { t.log.screen = 'rest'; beginRest(ctx.it.rest || 60, ctx.it.name, ctx.it.slotId); }
+    return true;
+  }
+  function saveCorrection() {
+    var t = S.train; if (t._writing) return false;
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var bag = ctx.en.correctPending || {};
+    var repsField = document.querySelector('[data-act=correps]');
+    var wField = document.querySelector('[data-act=corw]');
+    var reps = repsField ? repsField.value : bag.reps;
+    var weight = wField ? wField.value : bag.weight;
+    var next = SL.correctGroup(ctx.en, ctx.it, t.log.correct || 0, reps, weight);
+    if (!next) { toast('填写本次次数'); return false; }
+    t._writing = true;
+    var prev = JSON.parse(JSON.stringify(ctx.en));
+    putEntry(ctx.it.slotId, next);
+    var ok = persistOpen();
+    t._writing = false;
+    if (!ok) { putEntry(ctx.it.slotId, prev); t.log.screen = 'fail'; t.log.fail = { index: t.log.correct || 0, reps: reps, weight: weight }; return true; }
+    t.log.screen = 'work'; t.log.correct = null; return true;
+  }
+  function undoSet() {
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var undone = SL.undoLast(ctx.en, ctx.it);
+    if (!undone) return false;
+    var prev = JSON.parse(JSON.stringify(ctx.en));
+    putEntry(ctx.it.slotId, undone.entry);
+    var ok = persistOpen();
+    if (!ok) { putEntry(ctx.it.slotId, prev); toast('这一组还没从本机撤下'); return false; }
+    if (rest.show && rest.slot === ctx.it.slotId) { clearInterval(rest.timer); rest.show = false; rest.until = 0; companionBus('rest', { on: false }); renderRest(); }
+    S.train.log.screen = 'work'; S.train.log.correct = null;
+    return true;
+  }
+  function nudgeLogRest(delta) {
+    if (!rest.until) return false;
+    var left = Math.max(5, restLeft() + delta);
+    rest.until = Date.now() + left * 1000;
+    rest.total = Math.max(rest.total, left);
+    rest.left = left;
+    tickRest();
+    return false;
+  }
+  function stepperHtml(act, value, unit) {
+    return '<div class="rep-step"><button type="button" class="st-btn" data-act="logstep" data-k="' + act + '" data-d="-1" aria-label="减少">−</button>' +
+      '<input class="st-val" inputmode="numeric" data-act="' + act + '" value="' + esc(value) + '" aria-label="' + esc(unit) + '">' +
+      '<button type="button" class="st-btn" data-act="logstep" data-k="' + act + '" data-d="1" aria-label="增加">+</button></div><p class="st-unit">' + esc(unit) + '</p>';
+  }
   function renderTrainHold(cur) {
     var paused = cur.status === 'paused';
-    var goal = '<button type="button" class="goal-entry" data-act="opendetail" aria-label="打开这套计划">' +
-      '<div class="goal-primary"><span>' + esc(cur.name) + '</span><span class="goal-chev" aria-hidden="true">' + CHEV + '</span></div>' +
-      '<div class="goal-secondary">' + (paused ? '已暂停' : '已结束') + '</div></button>';
-    var body = '<div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
-      '<div class="hold-t">' + (paused ? '这套计划暂停了' : '这套计划已经结束') + '</div>' +
-      '<div class="hold-s">' + (paused ? '要继续或结束，打开工具里计划库中的这套计划。' : '不能再往这套里记训练。要换一套，去工具里的计划库开始。') + '</div>' +
-      '<div class="plan-ops"><div class="btn-ghost" data-act="opendetail">打开这套计划</div></div></div>';
-    return museFrame(goal, body, '');
+    var body = '<header class="session-guide"><div class="pedestal"><div class="seven-frame"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button></div><span class="ground-shadow" aria-hidden="true"></span></div>' +
+      '<p class="guide-title">' + (paused ? '这套计划先停着。' : '这套计划已经结束。') + '</p></header>' +
+      '<section class="training-block"><div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
+      '<div class="hold-t">' + esc(cur.name) + '</div>' +
+      '<div class="hold-s">' + (paused ? '要继续或结束，打开计划库里的这套计划。' : '不能再往这套里记训练。要换一套，去计划库开始。') + '</div>' +
+      '<div class="plan-ops"><div class="btn-ghost" data-act="opendetail">打开这套计划</div></div></div></section>';
+    return homeShell(false, body, '');
   }
   function renderTrain() {
     var db0 = load(), cur0 = GZ.activeProgram(db0);
     if (cur0 && cur0.status !== 'active' && !S.train.recordId) return renderTrainHold(cur0);
     var vm = trainVM(), t = S.train, h = '';
     ensureFocus(vm);
+    if (t.log && !vm.locked) return renderSetLog(vm);
+    var it = Home.focusItem(vm, t.focus);
+    var started = Home.sessionStarted(vm);
+    var pos = Home.positionOf(vm, it && it.slotId);
+    var ready = vm.total > 0 && vm.filled === vm.total;
+    var prompt = vm.locked ? ('本周的 ' + vm.day + ' 已经完成。') : Home.guidePrompt({
+      dayName: vm.dayName, name: it && it.name, done: it && it.done, sets: it && it.sets,
+      logged: it && setsLogged(it), skipped: it && it.skip, ready: ready && !vm.locked, started: started, editing: vm.editing
+    });
+    h += '<header class="session-guide"><div class="pedestal"><div class="seven-frame"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button></div><span class="ground-shadow" aria-hidden="true"></span></div>';
+    h += '<p class="guide-title" aria-live="polite">' + esc(prompt) + '</p></header>';
+    h += '<section class="training-block" aria-label="训练">';
+    if (t.saveFail) h += '<div class="bk-nag"><div class="flex1"><div class="bk-t">这次训练还没记到本机</div><div class="bk-s">草稿还在，可以再点完成训练。这不是云同步问题。</div></div></div>';
     if (!vm.editing) h += backupNag();
-    if (!vm.editing) h += daySeg(vm);
-    if (!vm.locked && (vm.deloadSuggest || vm.deload)) {
-      h += '<div class="deload-slim"><span class="dl-t">减载周</span><span class="dl-s">' + esc(vm.deloadTip || '降低负荷恢复') + '</span>' +
-        '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
-    }
+    h += '<div class="session-context"><p class="when-line">' + esc(Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day)) + '</p>';
+    h += '<span class="session-position">第 <b>' + pos.index + '</b> / ' + pos.total + ' 个动作</span></div>';
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
       h += '<div class="card locked"><div class="lk-head"><div class="lk-ic">✓</div><div class="flex1"><div class="lk-t">本周 ' + vm.day + ' 已完成</div><div class="lk-s">' + L.dateText + ' · 容量 ' + L.vol + ' kg</div></div></div>' +
@@ -782,8 +1048,9 @@
     } else if (!vm.locked) {
       if (vm.editing) h += '<button type="button" class="edit-cancel" data-act="cancelEdit">取消编辑</button>';
       h += exerciseStack(vm);
-      h += submitBar(vm);
+      h += homeAction(vm, it, started);
     }
+    h += '</section>';
     var extra = sessionMenu(vm, t);
     if (t.swap && t.swap.show) extra += renderSwap();
     if (t.result) {
@@ -796,7 +1063,7 @@
         '<div class="list">' + r.items.map(function (x) { return '<div class="cell res-row">' + tier(x.tier, x.badge) + '<span class="res-name flex1">' + x.name + '</span><div class="res-r"><span class="jtag" style="color:' + x.color + '">' + x.j + '</span><span class="res-next num">' + x.next + '</span></div></div>'; }).join('') + '</div>' +
         '<div class="sheet-btns stack"><button type="button" class="btn-primary share-result" data-act="shareopen" data-id="' + r.logId + '">生成今日战报</button><div class="row"><div class="btn-ghost" data-act="gotoStats">查看数据</div><div class="btn-ghost solid" data-act="closeResult">好</div></div></div></div></div>';
     }
-    return museFrame(goalBtn(vm), h, extra);
+    return homeShell(started && !vm.locked, h, extra);
   }
 
   function setsBlock(it) {
@@ -862,17 +1129,49 @@
       case 'day': if (t.recordId || !ds.day || ds.day === t.day) return; rememberTrain(); takeTrainDay(ds.day); return true;
       case 'deload': t.deload = el.checked; return true;
       case 'focus':
-        if (!ds.slot || ds.slot === t.focus) return false;
-        t.focus = ds.slot; t.open = false; t.more = '';
-        if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = t.focus; t.focusKey = t.day + '|' + (t.recordId || ''); }
-        render(true);
-        setTimeout(function () { var c = document.querySelector('.t1-mid'); if (c) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 20);
-        return false;
+      case 'row':
+      case 'startlog':
+        if (!ds.slot && !t.focus) return false;
+        openSetLog(ds.slot || t.focus);
+        return true;
+      case 'logback':
+        if (t.log && t.log.screen === 'correct') {
+          var cancelCtx = logCtx(trainVM());
+          if (cancelCtx) cancelCtx.en.correctPending = null;
+          t.log.screen = cancelCtx && (cancelCtx.en.groups || []).length >= cancelCtx.it.sets ? 'done' : 'work';
+          t.log.correct = null;
+          return true;
+        }
+        if (t.log) persistOpen();
+        t.log = null; t.open = false; return true;
+      case 'logwork':
+        if (t.log) {
+          var backDone = logCtx(trainVM());
+          if (backDone) backDone.en.correctPending = null;
+          t.log.screen = backDone && (backDone.en.groups || []).length >= backDone.it.sets ? 'done' : 'work';
+          t.log.correct = null;
+        }
+        return true;
+      case 'lognext': openSetLog(ds.slot); return true;
+      case 'logfix': if (t.log) { t.log.screen = 'correct'; t.log.correct = Number(ds.i); var cen = entry(t.log.slot); cen.correctPending = null; } return true;
+      case 'logwedit': if (t.log) t.log.wedit = !t.log.wedit; return true;
+      case 'logstep': return logStep(ds);
+      case 'logreps': return logField('reps', el.value);
+      case 'logw': return logField('weight', el.value);
+      case 'correps': return logCorrectField('reps', el.value);
+      case 'corw': return logCorrectField('weight', el.value);
+      case 'logsave':
+      case 'logretry': return commitSet();
+      case 'logcorrectsave': return saveCorrection();
+      case 'logundo': return undoSet();
+      case 'logrest': return nudgeLogRest(Number(ds.d));
+      case 'logrestskip': finishRest(false); return false;
       case 'expand':
         if (ds.slot && t.focus !== ds.slot) t.focus = ds.slot;
         t.open = ds.keep === '1' ? true : !t.open;
         t.more = '';
         return true;
+      case 'adjust':
       case 'menu': t.menu = !t.menu; t.more = ''; return true;
       case 'me': t.menu = false; t.more = ''; S.tab = 'settings'; if (S.settings) S.settings.view = ''; render(); return false;
       case 'menuclose': t.menu = false; return true;
@@ -904,7 +1203,18 @@
         en.sets[Number(ds.i)] = el.value === '' ? null : Math.max(0, Math.min(60, parseInt(el.value, 10) || 0)); return true;
       case 'miss': en = entry(ds.slot); en.miss = !!el.checked; return true;
       case 'reps': entry(ds.slot).reps = el.value; return true;
-      case 'skip': en = entry(ds.slot); en.skip = !en.skip; t.more = ''; return true;
+      case 'skip':
+        en = entry(ds.slot);
+        var skipIt = trainVM().items.filter(function (x) { return x.slotId === ds.slot; })[0];
+        if (!en.skip && ((en.groups && en.groups.length) || en.done)) {
+          confirmBox('跳过这个动作？', '已记下的组留在草稿里，这次不按这些组进阶。恢复后还能看到。', function () {
+            en.skip = true; t.more = ''; t.log = null; persistOpen(); render();
+          });
+          return false;
+        }
+        en.skip = !en.skip; t.more = '';
+        if (skipIt) SL.syncEngine(en, skipIt);
+        return true;
       case 'editW': en = entry(ds.slot); en.editW = !en.editW; t.open = true; t.more = ''; return true;
       case 'wstep':
         en = entry(ds.slot); vm = trainVM();
@@ -930,7 +1240,7 @@
       case 'overview': S.tab = 'plan'; S.plan.view = ''; S.plan.from = 'train'; S.plan.slot = null; S.plan.detail = null; S.stats.ex = null; render(); return false;
       case 'opendetail':
         var curOpen = GZ.activeProgram(load());
-        S.tab = 'tools'; S.plan.view = 'browse'; S.plan.tpl = curOpen ? GZ.templateKey(curOpen.template) : '';
+        S.tab = 'plan'; S.plan.view = 'browse'; S.plan.tpl = curOpen ? GZ.templateKey(curOpen.template) : '';
         render(); return false;
       case 'closeResult': t.result = null; return true;
       case 'gotoStats': t.result = null; S.tab = 'stats'; S.data.seg = 1; return true;
@@ -958,7 +1268,14 @@
       var rec = GZ.saveRecord(db, { id: t.recordId, date: t.date, day: t.day, deload: vm.deload, note: t.note, bw: bw, entries: t.draft, createdAt: t.recordId ? t.createdAt : Date.now() });
       if (bw > 0) db.params.bodyWeight = bw;
       var persisted = save(db);
-      if (window.CompanionView) CompanionView.machine.dispatch('complete', { persisted: !!persisted, eventId: rec && rec.id ? ('session:' + rec.id) : '', redo: editing, backfill: sessionDate !== shDate(), levelUp: false });
+      if (!persisted) {
+        t.saveFail = true;
+        toast('这次训练还没记到本机');
+        render();
+        return;
+      }
+      t.saveFail = false;
+      if (window.CompanionView) CompanionView.machine.dispatch('complete', { persisted: true, eventId: rec && rec.id ? ('session:' + rec.id) : '', redo: editing, backfill: sessionDate !== shDate(), levelUp: false });
       var s = GZ.sessionResult(db, rec.id), rdn = GZ.roundInfo(db), wDone = !t.recordId && s && rdn.week > s.week;
       var dCyc = s ? GZ.cycleOf(s.week, db.params).cycle : 1, nCyc = GZ.cycleOf(rdn.week, db.params).cycle, cDone = wDone && nCyc > dCyc;
       var rotated = cDone ? GZ.buildRotation(db, nCyc).changed : 0;
@@ -1007,23 +1324,51 @@
     }
     return h + '</div></div>';
   }
+  function loggedSwap(en) {
+    return !!((en.groups && en.groups.length) || en.done || (en.v != null && en.v !== '') || (en.held && Object.keys(en.held).length));
+  }
+  function retargetLogged(en, fromName, toName) {
+    var stashed = SL.holdForSwap(en, fromName);
+    var back = SL.restoreHeld(stashed, toName);
+    var keep = stashed.held;
+    Object.keys(en).forEach(function (k) { delete en[k]; });
+    Object.assign(en, back, { held: keep });
+  }
   function swapConfirm() {
     var t = S.train, sw = t.swap, en = entry(sw.slotId);
     var wEl = document.querySelector('[data-act=swapw]'); if (wEl) sw.weight = wEl.value;
+    var had = loggedSwap(en);
     if (sw.scope === 'once' || sw.editing) {
-      en.ex = sw.sel; en.w = Number(sw.weight) || 0;
-      toast('本次改为 ' + sw.sel + ' · ' + sw.recText + (sw.recUnit === '自重' ? '' : ' ' + sw.recUnit));
+      var applyOnce = function () {
+        retargetLogged(en, sw.curName, sw.sel);
+        en.ex = sw.sel; en.w = Number(sw.weight) || 0;
+        toast('本次改为 ' + sw.sel + ' · ' + sw.recText + (sw.recUnit === '自重' ? '' : ' ' + sw.recUnit));
+        sw.show = false; persistOpen(); render();
+      };
+      if (had) {
+        confirmBox('更换这个动作？', '已记下的组留在原来的动作上，不会算进新动作。换回来还能看到。', applyOnce);
+        return false;
+      }
+      applyOnce();
+      return false;
     }
-    else {
+    var applyPerm = function () {
       var w = parseFloat(sw.weight);
-      if (isNaN(w) || w < 0) { toast('请填写起始重量'); return false; }
+      if (isNaN(w) || w < 0) { toast('请填写起始重量'); return; }
       var db = load(), r = GZ.swapSlot(db, sw.dayId, sw.slotId, sw.sel, w);
-      if (r && r.error) { toast(r.error); return false; }
-      save(db);
+      if (r && r.error) { toast(r.error); return; }
+      if (!save(db)) { toast('这次更换还没记到本机'); return; }
+      retargetLogged(en, sw.curName, sw.sel);
       delete en.ex; en.w = null; en.editW = false;
       toast(r && r.base ? '已更换为 ' + sw.sel : '第 ' + r.fromWeek + ' 周起改为 ' + sw.sel);
+      sw.show = false; persistOpen(); render();
+    };
+    if (had) {
+      confirmBox('更换这个动作？', '已记下的组留在原来的动作上，不会算进新动作。换回来还能看到。', applyPerm);
+      return false;
     }
-    sw.show = false; return true;
+    applyPerm();
+    return false;
   }
   function startEdit(id) {
     var db = load(), rec = GZ.getRecord(db, id), t = S.train; if (!rec) return;
@@ -1032,17 +1377,36 @@
     t.recordId = id; t.day = rec.day; t.deload = !!rec.deload; t.draft = draft; t.date = rec.date; t.bw = rec.bw || ''; t.note = rec.note || ''; t.createdAt = rec.createdAt;
     S.tab = 'train';
   }
-  function beginRest(sec, name) {
-    clearInterval(rest.timer); rest.show = true; rest.open = false; rest.left = sec; rest.total = sec; rest.name = name; companionBus('rest', { on: true }); renderRest();
-    rest.timer = setInterval(function () {
-      rest.left -= 1;
-      if (rest.left <= 0) { clearInterval(rest.timer); rest.show = false; companionBus('rest', { on: false }); renderRest(); toast('休息结束，开始下一组'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); return; }
-      renderRest();
-    }, 1000);
+  function restLeft() { return rest.until ? Math.max(0, Math.ceil((rest.until - Date.now()) / 1000)) : 0; }
+  function tickRest() {
+    rest.left = restLeft();
+    if (rest.left <= 0) { finishRest(true); return; }
+    if (S.train.log && S.train.log.screen === 'rest') {
+      var num = document.querySelector('.rest-clock');
+      var bar = document.querySelector('.rest-fill');
+      if (num) num.textContent = fmtSec(rest.left);
+      if (bar) bar.style.width = Math.max(0, Math.min(100, rest.left / rest.total * 100)) + '%';
+      return;
+    }
+    renderRest();
+  }
+  function finishRest(expired) {
+    clearInterval(rest.timer); rest.timer = null; rest.show = false; rest.until = 0; companionBus('rest', { on: false });
+    var backToWork = S.train.log && S.train.log.screen === 'rest';
+    if (backToWork) S.train.log.screen = 'work';
+    renderRest();
+    if (expired) { toast('休息结束'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); }
+    if (backToWork) render();
+  }
+  function beginRest(sec, name, slot) {
+    clearInterval(rest.timer); rest.show = true; rest.open = false; rest.total = sec; rest.name = name; rest.slot = slot || '';
+    rest.until = Date.now() + sec * 1000; rest.left = sec; companionBus('rest', { on: true });
+    if (!(S.train.log && S.train.log.screen === 'rest')) renderRest();
+    rest.timer = setInterval(tickRest, 250);
   }
   function renderRest() {
     var el = document.getElementById('rest');
-    if (!rest.show) { el.innerHTML = ''; return; }
+    if (!rest.show || (S.train.log && S.train.log.screen === 'rest')) { if (el) el.innerHTML = ''; return; }
     var pct = Math.max(0, Math.min(100, rest.left / rest.total * 100)), app = document.querySelector('.app'), tb = document.getElementById('tabbar');
     var bottom = 12 + (app && tb ? app.getBoundingClientRect().bottom - tb.getBoundingClientRect().top : 60) + (S.tab === 'train' && !S.train.result ? 72 : 0);
     el.innerHTML = '<div class="rest-float" style="bottom:' + Math.round(bottom) + 'px">' +
@@ -1059,6 +1423,7 @@
     var live = !cur || cur.status === 'active', holding = cur && cur.status === 'paused';
     h += '<div class="lib-back" data-act="overviewback">‹ 训练</div><div class="pg-title">计划总览</div>';
     h += planStatusCard(cur);
+    h += '<div class="list plan-lib-entry"><div class="cell tap" data-act="openlib" role="button"><span class="flex1">计划库</span><span class="chev">›</span></div></div>';
     if (live) {
       h += '<div class="card next-card"><div class="row"><div class="flex1"><span class="cap">下一次训练</span><div class="next-t"><span class="num accent">' + vm.next.day + '</span> ' + vm.next.name + '</div>' +
         '<span class="cap">' + vm.next.weekText + (vm.next.deload ? ' · 减载周' : '') + '</span></div><div class="go-btn" data-act="go" data-day="' + vm.next.day + '">去训练</div></div>' +
@@ -1173,7 +1538,7 @@
       '<div class="tpl-blurb">' + esc(c.blurb) + '</div><div class="lib-more">查看安排 <span class="chev">›</span></div></div>';
   }
   function renderPlanLib() {
-    return '<div class="lib-back" data-act="libback">‹ 工具</div><div class="pg-title">计划库</div>' + renderPlanLibBody();
+    return '<div class="lib-back" data-act="libback">‹ 计划</div><div class="pg-title">计划库</div>' + renderPlanLibBody();
   }
   function renderPlanLibBody() {
     var db = load(), h = '';
@@ -1220,7 +1585,7 @@
   function renderTools() {
     var p = S.plan;
     if (p.view === 'browse') return renderPlanBrowse();
-    var h = '<div class="sec-h" style="padding-top:6px">计划库</div>';
+    var h = '<div class="lib-back" data-act="openplan">‹ 计划</div><div class="sec-h" style="padding-top:6px">计划库</div>';
     h += renderPlanLibBody();
     h += '<div class="sec-h">计算器</div><div class="list">' +
       '<div class="cell"><span class="flex1">1RM 计算</span><span class="val">即将推出</span></div>' +
@@ -1314,8 +1679,9 @@
     if (act === 'exopen') { closeSheets(); S.stats.ex = ds.name; return true; }
     if (act === 'exclose') { S.stats.ex = null; return true; }
     if (act === 'overviewback') { S.tab = 'train'; p.from = ''; p.slot = null; p.detail = null; S.stats.ex = null; render(); return false; }
+    if (act === 'openplan') { S.tab = 'plan'; p.view = ''; p.slot = null; p.detail = null; render(); return false; }
     if (act === 'openlib') { p.view = 'lib'; return true; }
-    if (act === 'libback') { p.view = ''; if (S.tab === 'plan') { S.tab = 'tools'; } return true; }
+    if (act === 'libback') { p.view = ''; if (S.tab === 'tools') S.tab = 'plan'; return true; }
     if (act === 'backlib') { p.view = 'lib'; return true; }
     if (act === 'browse') { p.tpl = ds.id; p.view = 'browse'; return true; }
     if (act === 'plannum') {
@@ -2225,9 +2591,12 @@
     var tb = document.getElementById('tabbar');
     var trainHome = !gateOnboard() && S.tab === 'train';
     var appEl = document.querySelector('.app');
-    if (appEl) appEl.classList.toggle('on-train', trainHome);
+    if (appEl) {
+      appEl.classList.toggle('on-train', trainHome);
+      appEl.classList.toggle('on-log', trainHome && !!(S.train && S.train.log));
+    }
     var theme = document.querySelector('meta[name="theme-color"]');
-    if (theme) theme.setAttribute('content', trainHome ? '#EEF5FC' : '#F7F7F8');
+    if (theme) theme.setAttribute('content', trainHome ? '#F8F8F8' : '#F7F7F8');
     if (gateOnboard()) {
       syncOnboardStep(load());
       if (tb) tb.style.display = 'none';
@@ -2248,13 +2617,22 @@
     body.innerHTML = '<div class="' + shellCls + '"><div class="page' + (trainHome ? ' muse-page' : '') + '">' + bigTitle + RENDER[S.tab]() + '</div>' + shareHtml + '</div>';
     body.scrollTop = keepScroll ? y : 0;
     navState();
-    var hl = (S.tab === 'plan' || S.tab === 'settings') ? 'train' : S.tab;
-    document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === hl); });
+    var hl = S.tab === 'tools' ? 'plan' : (S.tab === 'settings' ? '' : S.tab);
+    document.querySelectorAll('.tb-item').forEach(function (el) {
+      var on = el.dataset.tab === hl;
+      el.classList.toggle('on', on);
+      el.setAttribute('aria-current', on ? 'page' : 'false');
+    });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
     else if (S.stats.ex) requestAnimationFrame(drawExercise);
     if (S.review.share) paintSharePreview();
     if (S.tab === 'train' && window.CompanionView) CompanionView.attach(document.getElementById('companionSlot'));
     else if (window.CompanionView) CompanionView.attach(null);
+    if (S.train && S.train._scrollLog) {
+      S.train._scrollLog = false;
+      var logEl = document.querySelector('.ex.current .ex-log, .ex.current');
+      if (logEl && logEl.scrollIntoView) logEl.scrollIntoView({ block: 'nearest' });
+    }
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
   function navState() {
@@ -2373,17 +2751,18 @@
     body.addEventListener('scroll', navState, { passive: true });
     document.getElementById('tabbar').addEventListener('click', function (e) {
       var it = e.target.closest('.tb-item'); if (!it) return;
-      if (S.tab === it.dataset.tab || (it.dataset.tab === 'train' && S.tab === 'plan')) {
+      var dest = it.dataset.tab;
+      if (S.tab === dest && !(dest === 'plan' && S.plan.view)) {
         if (document.querySelector('#body .mask')) { closeSheets(); render(); }
         body.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
       var prevTab = S.tab;
-      var dest = it.dataset.tab;
       var back = S.review.returnTo;
       var restore = back && prevTab === 'settings' && dest === back.from ? back : null;
       closeSheets();
       S.train.menu = false; S.train.more = '';
+      if (dest === 'plan') { S.plan.view = ''; S.plan.slot = null; S.plan.detail = null; }
       S.tab = dest;
       if (restore) {
         if (dest === 'stats') S.data.seg = 2;
@@ -2394,12 +2773,20 @@
     });
     document.getElementById('rest').addEventListener('click', function (e) {
       var a = e.target.closest('[data-rest-adj]'), s = e.target.closest('[data-rest-stop]');
-      if (a) { rest.left = Math.max(5, rest.left + Number(a.dataset.restAdj)); rest.total = Math.max(rest.total, rest.left); renderRest(); }
-      if (s) { clearInterval(rest.timer); rest.show = false; renderRest(); }
+      if (a) {
+        var delta = Number(a.dataset.restAdj);
+        var left = Math.max(5, restLeft() + delta);
+        rest.until = Date.now() + left * 1000;
+        rest.total = Math.max(rest.total, left);
+        rest.left = left;
+        tickRest();
+      }
+      if (s) finishRest(false);
       if (e.target.closest('[data-rest-toggle]')) { rest.open = !rest.open; renderRest(); }
     });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'hidden') { flushOpen(); return; }
+      if (rest.show && rest.until) tickRest();
       var c = Sync.cfg(); if (Sync.on() && (!c.lastAt || Date.now() - c.lastAt > 30000)) Sync.run();
     });
     window.addEventListener('pagehide', flushOpen);
@@ -2407,6 +2794,14 @@
     window.addEventListener('online', function () { if (Sync.on()) Sync.run(); });
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); else if (S.stats.ex) drawExercise(); }, 120); });
     bindSwipeBack();
+    if (window.visualViewport) {
+      var liftKb = function () {
+        var gap = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+        document.documentElement.style.setProperty('--kb', gap + 'px');
+      };
+      window.visualViewport.addEventListener('resize', liftKb);
+      window.visualViewport.addEventListener('scroll', liftKb);
+    }
     boot().catch(function () {}).then(function () {
       bootReady = true;
       tryRestoreOpen();
