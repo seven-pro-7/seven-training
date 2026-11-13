@@ -100,7 +100,7 @@
     }
     host = el;
     if (!svg || !svg.isConnected) {
-      host.innerHTML = '<svg viewBox="0 0 400 400" width="134" height="134" aria-hidden="true" focusable="false"></svg>';
+      host.innerHTML = '<svg viewBox="0 0 400 400" width="100%" height="100%" aria-hidden="true" focusable="false"></svg>';
       svg = host.querySelector('svg');
     }
     paint(machine.snapshot().frozen);

@@ -1,4 +1,5 @@
 const GZ = require('../../utils/engine.js');
+const Home = require('../../utils/home-copy.js');
 const store = require('../../utils/store.js');
 const app = getApp();
 
@@ -66,20 +67,31 @@ Page({
       this.moreOpen = false;
     }
     this.focus = focus;
-    const exBlocks = [];
-    let rowBuf = [];
-    const flushRows = () => {
-      if (!rowBuf.length) return;
-      exBlocks.push({ key: 'r-' + rowBuf[0].slotId, card: false, items: rowBuf });
-      rowBuf = [];
-    };
-    items.forEach((it) => {
-      if (it.slotId === focus) {
-        flushRows();
-        exBlocks.push({ key: 'c-' + it.slotId, card: true, item: it });
-      } else rowBuf.push(it);
+    const started = Home.sessionStarted(vm);
+    const curItem = items.find((x) => x.slotId === focus) || items[0] || null;
+    const pos = Home.positionOf(vm, curItem && curItem.slotId);
+    const ready = vm.total > 0 && vm.filled === vm.total && !vm.locked;
+    items.forEach((it, i) => {
+      it.schemeText = Home.schemeLine(it);
+      it.ord = (i < 9 ? '0' : '') + (i + 1);
+      it.current = it.slotId === focus;
+      it.doneLogged = !!(it.logged && it.value !== '未完成');
+      it.pips = (it.dots || []).map((d) => ({ i: d.i, cls: d.on ? 'done' : (d.i === (it.done || 0) ? 'next' : 'todo') }));
     });
-    flushRows();
+    const exBlocks = items.map((it) => ({ key: it.slotId, item: it }));
+    const loggedCur = !!(curItem && curItem.doneLogged);
+    const home = {
+      prompt: Home.guidePrompt({
+        dayName: vm.dayName, name: curItem && curItem.name, done: curItem && curItem.done, sets: curItem && curItem.sets,
+        logged: loggedCur, skipped: curItem && curItem.skip, ready: ready, started: started, editing: vm.editing
+      }),
+      stamp: Home.sessionStamp(this.date || GZ.today(), vm.weekInCycle, vm.cycle, vm.day),
+      index: pos.index, total: pos.total, started: started, ready: ready,
+      cta: Home.ctaLabel({ ready: ready, editing: vm.editing, started: started, name: curItem && curItem.name }),
+      live: started && !vm.locked,
+      skipLabel: curItem && curItem.skip ? '恢复' : '跳过',
+      slot: curItem ? curItem.slotId : ''
+    };
     const sp = (db.params && db.params.shareProfile) || {};
     let goalStatus = '可开练';
     if (vm.editing) goalStatus = '编辑记录';
@@ -87,7 +99,7 @@ Page({
     else if (vm.filled > 0) goalStatus = '进行中';
     else if (vm.day === vm.recommended) goalStatus = '待开练';
     this.setData({
-      vm, exBlocks, focus, goalStatus,
+      vm, exBlocks, focus, goalStatus, home,
       profileName: (sp.name || '').trim() || 'Seven',
       profileAvatar: sp.avatar || '',
       expanded: !!this.expanded,
@@ -138,6 +150,20 @@ Page({
 
   // ---- 交互 ----
   onDay(e) { this.switchDay(e.currentTarget.dataset.day); },
+  onRow(e) {
+    const slot = e.currentTarget.dataset.slot;
+    if (!slot) return;
+    if (slot === this.focus) { this.expanded = !this.expanded; this.moreOpen = false; }
+    else { this.focus = slot; this.expanded = false; this.moreOpen = false; }
+    this.refresh();
+  },
+  onStart() {
+    if (this.data.home && this.data.home.ready) return this.onSubmit();
+    this.expanded = true;
+    this.moreOpen = false;
+    this.refresh();
+  },
+  onAdjust() { this.menuOpen = true; this.moreOpen = false; this.setData({ menuOpen: true, moreOpen: false }); },
   onFocus(e) {
     const slot = e.currentTarget.dataset.slot;
     if (!slot || slot === this.focus) return;

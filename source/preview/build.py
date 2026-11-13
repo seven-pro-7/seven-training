@@ -45,17 +45,17 @@ for name in ['train', 'plan', 'stats', 'review', 'me']:
 
 shell_css = """
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: #E8E8EC; font-family: "Figtree", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
-body { display: flex; align-items: center; justify-content: center; gap: 56px; }
-.side { width: 300px; color: #6E6E73; font-size: 14px; line-height: 1.7; }
+html, body { margin: 0; height: 100%; background: #F8F8F8; font-family: "Figtree", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; overflow: hidden; }
+body { display: block; }
+.side { display: none; width: 300px; color: #6E6E73; font-size: 14px; line-height: 1.7; }
 .side h1 { color: #1C1C1E; font-size: 28px; margin: 0 0 4px; letter-spacing: -0.5px; }
 .side h1 span { color: #0064D4; }
 .side b { color: #1C1C1E; font-weight: 600; }
 .side ul { padding-left: 18px; margin: 12px 0 18px; }
 .side .tag { display: inline-block; background: #fff; border-radius: 6px; padding: 1px 8px; margin: 3px 4px 3px 0; font-size: 12px; color: #3A3A3C; }
-.phone { width: 390px; height: 844px; border-radius: 54px; padding: 11px; background: #1C1C1E; box-shadow: 0 40px 90px rgba(0,0,0,.25), inset 0 0 0 2px #3A3A3C; flex-shrink: 0; }
-.app { position: relative; width: 100%; height: 100%; border-radius: 44px; overflow: hidden; display: flex; flex-direction: column; }
-.status { height: 47px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 32px 6px; font-size: 15px; font-weight: 600; color: #1C1C1E; background: #F2F2F7; }
+.phone { width: 100%; height: 100%; height: 100dvh; border-radius: 0; padding: 0; box-shadow: none; background: none; }
+.app { position: relative; width: 100%; height: 100%; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; }
+.status, .capsule { display: none; }
 .nav { position: relative; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(242,242,247,0.92); color: #1C1C1E; font-size: 17px; font-weight: 600; z-index: 5; }
 .capsule { position: absolute; right: 8px; top: 7px; width: 87px; height: 31px; border-radius: 16px; border: 0.5px solid rgba(0,0,0,.12); display: flex; align-items: center; justify-content: space-around; color: #1C1C1E; font-size: 14px; background: rgba(255,255,255,.7); }
 .capsule i { width: 0.5px; height: 18px; background: rgba(0,0,0,.15); }
@@ -214,26 +214,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .ios-sw input:checked + i { background: #0064D4; }
 .ios-sw.green input:checked + i { background: #34C759; }
 .ios-sw input:checked + i::after { left: 22px; }
-@media (max-width: 760px) {
-  html, body { background: #F7F7F8; height: 100%; overflow: hidden; }
-  body { display: block; }
-  .side, .status, .capsule { display: none; }
-  .phone { width: 100%; height: 100%; height: 100dvh; border-radius: 0; padding: 0; box-shadow: none; background: none; }
-  .app { border-radius: 0; }
-  .nav { padding-top: env(safe-area-inset-top); height: calc(44px + env(safe-area-inset-top)); }
-  .phone .tabbar { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
-  .app .f-in.sm, .app .note, .app .imp { font-size: 16px; }
-}
+.nav { padding-top: env(safe-area-inset-top); height: calc(44px + env(safe-area-inset-top)); }
+.phone .tabbar { padding-bottom: 0; }
+.app .f-in.sm, .app .note, .app .imp { font-size: 16px; }
 """
 
-TAB_ICONS = {
-    'train': '<svg width="26" height="26" viewBox="0 0 26 26" fill="currentColor" aria-hidden="true"><path d="M5.5 10.5h3.2v5H5.5a1.6 1.6 0 0 1-1.6-1.6v-1.8A1.6 1.6 0 0 1 5.5 10.5z"/><path d="M17.3 10.5h3.2a1.6 1.6 0 0 1 1.6 1.6v1.8a1.6 1.6 0 0 1-1.6 1.6h-3.2v-5z"/><rect x="8.2" y="11.7" width="9.6" height="2.6" rx="1.2"/></svg>',
-    'stats': '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 17.5V11M11 17.5V8M16 17.5v-5M21 17.5V6.5"/></svg>',
-    'tools': '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="6.5" width="15" height="14" rx="2.2"/><path d="M5.5 11h15"/><path d="M10 4.5v3M16 4.5v3"/></svg>',
-}
-tabs = [('train', '训练'), ('stats', '数据'), ('tools', '工具')]
+tabs = [('train', '今天'), ('plan', '计划'), ('stats', '趋势')]
 tabbar = ''.join(
-    '<div class="tb-item" data-tab="%s"><span class="tb-ic">%s</span>%s</div>' % (tid, TAB_ICONS[tid], txt)
+    '<button type="button" class="tb-item" data-tab="%s">%s</button>' % (tid, txt)
     for tid, txt in tabs)
 
 side = """
@@ -241,10 +229,10 @@ side = """
   <h1>训练<span>手记</span></h1>
   <div>8 周 · A1 → B1 → A2 → B2 循环</div>
   <ul>
-    <li><b>训练</b>：今天这一练；当前计划的周期与动作状态从「计划总览」进入</li>
-    <li><b>数据</b>：记录、趋势与小结，看重量、容量和这一路的进步</li>
-    <li><b>工具</b>：计划库在这里；1RM、BMI 等计算器以后也放这里</li>
-    <li><b>我的</b>：训练页左上角进入，个人资料、云同步、备份和进阶参数</li>
+    <li><b>今天</b>：这一练的动作、记组和完成</li>
+    <li><b>计划</b>：当前计划总览；计划库从这里进入</li>
+    <li><b>趋势</b>：记录、趋势与小结</li>
+    <li><b>设置</b>：训练页右上角齿轮，个人资料、云同步、备份和进阶参数</li>
   </ul>
   <div>手机打开此链接 → 分享 → <b>添加到主屏幕</b>，即可全屏使用。</div>
   <div style="margin-top:14px">
@@ -255,7 +243,7 @@ side = """
 
 head = """<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#EEF5FC">
+<meta name="theme-color" content="#F8F8F8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -491,6 +479,7 @@ html = f"""<!DOCTYPE html>
 <script>{(ROOT / 'utils' / 'monthly.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'weekly.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'companion-core.js').read_text()}</script>
+<script>{(ROOT / 'utils' / 'home-copy.js').read_text()}</script>
 <script>{(ROOT / 'preview' / 'companion-view.js').read_text()}</script>
 <script>{(ROOT / 'preview' / 'app-h5.js').read_text()}</script>
 </body></html>"""

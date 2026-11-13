@@ -1,14 +1,14 @@
 /* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
 (function () {
   'use strict';
-  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly, Weekly = window.GZWeekly;
+  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly, Weekly = window.GZWeekly, Home = window.HomeCopy;
   var KEY = 'training_db_v1', BK = 'training_last_backup', SYNC_KEY = 'training_sync_v1', WATCH_KEY = 'training_watch_v1', BK_DISMISS = 'training_bk_dismiss', OPEN_KEY = 'training_open_v1';
   [['training_db_v1', 'gzclp_db_v1'], ['training_last_backup', 'gzclp_last_backup'], ['training_sync_v1', 'gzclp_sync_v1'], ['training_watch_v1', 'gzclp_watch_v1'], ['training_bk_dismiss', 'gzclp_bk_dismiss']].forEach(function (pair) {
     try { if (localStorage.getItem(pair[0]) == null && localStorage.getItem(pair[1]) != null) localStorage.setItem(pair[0], localStorage.getItem(pair[1])); } catch (e) {}
   });
   var TABS = [
-    { id: 'train', title: '训练' }, { id: 'stats', title: '数据' }, { id: 'tools', title: '工具' },
-    { id: 'plan', title: '计划总览' }, { id: 'settings', title: '我的' }
+    { id: 'train', title: '今天' }, { id: 'stats', title: '数据' }, { id: 'tools', title: '计划库' },
+    { id: 'plan', title: '计划' }, { id: 'settings', title: '设置' }
   ];
   function libNames(db) {
     var m = { T1: [], T2: [], T3: [] };
@@ -557,7 +557,7 @@
   function entry(slot) { var d = S.train.draft; return d[slot] || (d[slot] = { v: null, done: 0 }); }
 
   var CHEV = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5.2 3.2L9 7l-3.8 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var ME = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M5.5 19.2c1.4-3 3.7-4.4 6.5-4.4s5.1 1.4 6.5 4.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  var GEAR = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8.1 1.9h3.8l.3 1.95c.62.15 1.2.4 1.72.74l1.86-.76 1.86 3.22-1.56 1.26c.12.5.2 1.04.2 1.59 0 .55-.08 1.09-.2 1.59l1.56 1.26-1.86 3.22-1.86-.76a5.9 5.9 0 0 1-1.72.74L11.9 18.1H8.1l-.3-1.95a5.9 5.9 0 0 1-1.72-.74l-1.86.76-1.86-3.22 1.56-1.26A5.8 5.8 0 0 1 3.66 10c0-.55.08-1.09.2-1.59L2.3 7.15 4.16 3.93l1.86.76c.52-.34 1.1-.59 1.72-.74L8.1 1.9Z" stroke="#141414" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.4" stroke="#141414" stroke-width="1.5"/></svg>';
   var EXPAND = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M5 7.2l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var MORE = '<svg width="16" height="4" viewBox="0 0 16 4" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.6"/><circle cx="8" cy="2" r="1.6"/><circle cx="14" cy="2" r="1.6"/></svg>';
   var CHECK = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.2 6.2l2.4 2.4L9.8 3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -589,18 +589,11 @@
     if (id.avatar) return '<img class="avatar-photo" src="' + id.avatar + '" alt="">';
     return '<div class="avatar-mark" aria-hidden="true"><span></span></div>';
   }
-  function museFrame(goalBtn, trainInner, extra) {
-    var id = homeIdentity();
-    return '<div class="muse-home"><section class="avatar-band" aria-label="今日目标">' +
-      '<button type="button" class="menu-btn" data-act="me" aria-label="我的">' + ME + '</button>' +
-      '<div class="avatar-wrap"><div class="companion-pedestal"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button><span class="ground-shadow" aria-hidden="true"></span></div><div class="avatar-name">' + esc(id.name) + '</div></div>' +
-      goalBtn + '<div class="info-safe" aria-hidden="true"></div><svg class="band-hem" viewBox="0 0 368 32" preserveAspectRatio="none" aria-hidden="true"><rect width="368" height="32" fill="#EEF5FC"/><path fill="#FFFFFF" d="M0 2 A 949.4 949.4 0 0 0 368 2 L 368 32 L 0 32 Z"/></svg></section><section class="train-band" aria-label="训练"><div class="train-inner">' + trainInner + '</div></section></div>' + (extra || '');
-  }
-  function goalBtn(vm) {
-    var label = '进入计划总览：' + vm.day + ' · ' + vm.dayName;
-    return '<button type="button" class="goal-entry" data-act="overview" aria-label="' + esc(label) + '">' +
-      '<div class="goal-primary"><span><span class="sid">' + esc(vm.day) + '</span> · ' + esc(vm.dayName) + '</span><span class="goal-chev" aria-hidden="true">' + CHEV + '</span></div>' +
-      '<div class="goal-secondary">' + esc(goalStatusText(vm)) + ' · 本周 <span class="warm">' + vm.round.done + '/' + vm.round.total + '</span></div></button>';
+  function homeShell(live, inner, extra) {
+    return '<div class="muse-home' + (live ? ' session-live' : ' session-ready') + '">' +
+      '<div class="home-wash" aria-hidden="true"></div>' +
+      '<button type="button" class="gear-btn" data-act="me" aria-label="设置">' + GEAR + '</button>' +
+      '<div class="home-scroll">' + inner + '</div></div>' + (extra || '');
   }
   function daySeg(vm) {
     return '<div class="seg day-seg' + (vm.days.length > 4 ? ' wide' : '') + '" role="tablist" aria-label="本周训练日">' + vm.days.map(function (d) {
@@ -621,13 +614,15 @@
     if (it.isBW) return '<span class="weight num">自重</span>';
     return '<span class="weight num' + (it.manual ? ' manual' : '') + '">' + esc(it.weightText) + '</span><span class="unit">' + esc(it.unitText) + '</span>';
   }
-  function miniDots(it) {
-    if (!it.dots || !it.dots.length) return '';
-    var done = it.done || 0;
-    return '<div class="mini-dots" aria-hidden="true">' + it.dots.map(function (d) {
-      var cls = d.on ? 'done' : (d.i === done ? 'next' : '');
-      return '<span class="mini-dot ' + cls + '"></span>';
-    }).join('') + '</div>';
+  function setPips(it) {
+    var done = it.done || 0, n = it.sets || (it.dots ? it.dots.length : 0);
+    if (!n || done <= 0 || setsLogged(it)) return '';
+    var h = '<span class="set-pips" aria-hidden="true">';
+    for (var i = 0; i < n; i++) {
+      var cls = i < done ? 'done' : (i === done ? 'next' : 'todo');
+      h += '<i class="' + cls + '"></i>';
+    }
+    return h + '</span><span class="sets-count">' + done + ' / ' + n + ' 组</span>';
   }
   function setsLogged(it) { return !!(it.logged && it.value !== '未完成'); }
   function doneMark() { return '<span class="ex-done" aria-label="已完成"></span>'; }
@@ -698,46 +693,61 @@
     }
     return h;
   }
-  function midCard(it, open) {
-    var cap = progCap(it);
-    return '<section class="t1-mid' + (it.skip ? ' skipped' : '') + (setsLogged(it) ? ' is-done' : '') + (open ? ' is-open' : '') + '" aria-label="' + esc(it.name) + '">' +
-      '<div class="t1-mid-row"><div class="t1-mid-main" data-act="expand" data-keep="1" data-slot="' + it.slotId + '">' +
-      '<div class="t1-top">' + tier(it.tier, it.badge) + '<span class="ex-name">' + esc(it.name) + '</span>' + (setsLogged(it) ? doneMark() : '') + '</div>' +
-      flagHtml(it) +
-      '<div class="t1-metrics">' + weightHtml(it) + '<span class="scheme-pill">' + esc(it.repsText) + '</span></div>' +
-      (open ? '' : '<div class="progress-row">' + miniDots(it) + (cap ? '<span class="prog-cap">' + esc(cap) + '</span>' : '') + '</div>') +
-      '</div><div class="t1-actions">' +
-      '<button type="button" class="more-btn" data-act="more" data-slot="' + it.slotId + '" aria-label="更多">' + MORE + '</button>' +
-      '<button type="button" class="expand-btn' + (open ? ' open' : '') + '" data-act="expand" data-slot="' + it.slotId + '" aria-label="' + (open ? '收起' : '展开记组') + '" aria-expanded="' + (open ? 'true' : 'false') + '">' + EXPAND + '</button>' +
-      '</div></div>' + morePop(it) +
-      (open ? '<div class="t1-open">' + museLog(it) + '</div>' : '') + '</section>';
+  function ordinalText(i) { return (i < 9 ? '0' : '') + (i + 1); }
+  function weightBlock(it) {
+    if (it.isCardio) return '<span class="kg">' + esc(it.weightText) + '</span><span class="unit">分钟</span>';
+    if (it.isBW) return '<span class="kg bw">自重</span>';
+    return '<span class="kg' + (it.manual ? ' manual' : '') + '">' + esc(it.weightText) + '</span><span class="unit">' + esc(it.unitText || 'kg') + '</span>';
   }
-  function followList(items) {
-    if (!items.length) return '';
-    return '<section class="follow-list">' + items.map(function (it) {
-      return '<div class="follow-row' + (it.skip ? ' skipped' : '') + (setsLogged(it) ? ' is-done' : '') + '" data-act="focus" data-slot="' + it.slotId + '" role="button">' +
-        tier(it.tier, it.badge) + '<span class="follow-name">' + esc(it.name) + '</span>' + followMeta(it) + (setsLogged(it) ? doneMark() : '') + '</div>';
-    }).join('') + '</section>';
-  }
-  /** 选中项留在原位展开成卡片，其余保持最小行，不把当前动作抽到列表最前。 */
+  /** 原列表顺序。当前项白卡片，已完成只加小对勾，不整卡变绿。 */
   function exerciseStack(vm) {
-    var t = S.train, h = '', buf = [];
-    function flush() {
-      if (!buf.length) return;
-      h += followList(buf);
-      buf = [];
-    }
-    vm.items.forEach(function (it) {
-      if (it.slotId === t.focus) { flush(); h += midCard(it, !!t.open); }
-      else buf.push(it);
+    var t = S.train, h = '<div class="ex-list">';
+    vm.items.forEach(function (it, i) {
+      var current = it.slotId === t.focus;
+      var done = setsLogged(it);
+      var open = current && !!t.open;
+      var cls = 'ex' + (current ? ' current' : ' upcoming') + (done ? ' is-done' : '') + (it.skip ? ' skipped' : '') + (open ? ' is-open' : '');
+      var label = (current ? '当前动作' : '后续动作') + ' · ' + it.name + (done ? '，已完成' : '') + (it.skip ? '，已跳过' : '');
+      h += '<section class="' + cls + '">';
+      h += '<button type="button" class="ex-hit" data-act="row" data-slot="' + it.slotId + '" aria-label="' + esc(label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">';
+      h += '<div class="ordinal"><span>' + ordinalText(i) + '</span></div>';
+      h += '<div class="ex-body"><div class="ex-top"><div class="name">' + esc(it.name) + (done ? doneMark() : '') + '</div>';
+      h += '<div class="wt">' + weightBlock(it) + '</div></div>';
+      h += '<div class="ex-meta"><div class="scheme">' + esc(it.skip ? '已跳过' : Home.schemeLine(it)) + '</div>';
+      if (current && !it.skip) h += '<div class="sets">' + setPips(it) + '</div>';
+      h += '</div>' + flagHtml(it) + '</div></button>';
+      if (open) {
+        h += '<div class="ex-log">' +
+          (it.canAdjust ? '<button type="button" class="log-tool" data-act="editW" data-slot="' + it.slotId + '">' + (it.editW ? '完成调整' : '调整重量') + '</button>' : '') +
+          museLog(it) + '</div>';
+      }
+      h += '</section>';
     });
-    flush();
-    return h;
+    return h + '</div>';
+  }
+  function homeAction(vm, it, started) {
+    if (!it) return '';
+    var ready = vm.total > 0 && vm.filled === vm.total;
+    var label = Home.ctaLabel({ ready: ready, editing: vm.editing, started: started, name: it.name });
+    var act = ready ? 'submit' : 'startlog';
+    var h = '<div class="home-action"><button type="button" class="home-cta" data-act="' + act + '" data-slot="' + it.slotId + '">' + esc(label) + '</button>';
+    if (!started && !ready) {
+      h += '<div class="home-links"><button type="button" data-act="adjust">调整今天</button></div>';
+    } else if (!ready) {
+      h += '<div class="home-links"><button type="button" data-act="openswap" data-slot="' + it.slotId + '">换动作</button><i></i><button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
+    } else h += '<div class="home-links"><button type="button" data-act="adjust">日期与备注</button></div>';
+    return h + '</div>';
   }
   function sessionMenu(vm, t) {
     if (!t.menu) return '';
+    var deload = '';
+    if (!vm.locked && (vm.deloadSuggest || vm.deload)) {
+      deload = '<div class="deload-slim"><span class="dl-t">减载周</span><span class="dl-s">' + esc(vm.deloadTip || '降低负荷恢复') + '</span>' +
+        '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
+    }
     return '<div class="mask" data-act="menuclose"><div class="sheet session-sheet" data-stop="1"><div class="grabber"></div>' +
-      '<span class="sheet-cap">' + esc(vm.weekText) + (vm.editing ? ' · 编辑记录' : '') + '</span><div class="sheet-title">本次训练</div>' +
+      '<span class="sheet-cap">' + esc(vm.weekText) + (vm.editing ? ' · 编辑记录' : '') + '</span><div class="sheet-title">调整今天</div>' +
+      (vm.editing ? '' : daySeg(vm)) + deload +
       '<div class="list"><div class="cell"><span class="flex1">日期</span><label class="date-pick session-date"><span class="num">' + esc(GZ.dateLabel(t.date)) + '</span>' +
       (vm.locked ? '' : '<input type="date" data-act="date" value="' + t.date + '">') + '</label></div>' +
       '<div class="cell"><span class="flex1">体重</span><input class="cell-in num" inputmode="decimal" data-act="bw" value="' + esc(t.bw) + '" placeholder="可选"><span class="unit">kg</span></div>' +
@@ -752,26 +762,33 @@
 
   function renderTrainHold(cur) {
     var paused = cur.status === 'paused';
-    var goal = '<button type="button" class="goal-entry" data-act="opendetail" aria-label="打开这套计划">' +
-      '<div class="goal-primary"><span>' + esc(cur.name) + '</span><span class="goal-chev" aria-hidden="true">' + CHEV + '</span></div>' +
-      '<div class="goal-secondary">' + (paused ? '已暂停' : '已结束') + '</div></button>';
-    var body = '<div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
-      '<div class="hold-t">' + (paused ? '这套计划暂停了' : '这套计划已经结束') + '</div>' +
-      '<div class="hold-s">' + (paused ? '要继续或结束，打开工具里计划库中的这套计划。' : '不能再往这套里记训练。要换一套，去工具里的计划库开始。') + '</div>' +
-      '<div class="plan-ops"><div class="btn-ghost" data-act="opendetail">打开这套计划</div></div></div>';
-    return museFrame(goal, body, '');
+    var body = '<header class="session-guide"><div class="pedestal"><div class="seven-frame"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button></div><span class="ground-shadow" aria-hidden="true"></span></div>' +
+      '<p class="guide-title">' + (paused ? '这套计划先停着。' : '这套计划已经结束。') + '</p></header>' +
+      '<section class="training-block"><div class="card hold-card"><div class="st-pill ' + (paused ? 'st-paused' : 'st-ended') + '">' + (paused ? '已暂停' : '已结束') + '</div>' +
+      '<div class="hold-t">' + esc(cur.name) + '</div>' +
+      '<div class="hold-s">' + (paused ? '要继续或结束，打开计划库里的这套计划。' : '不能再往这套里记训练。要换一套，去计划库开始。') + '</div>' +
+      '<div class="plan-ops"><div class="btn-ghost" data-act="opendetail">打开这套计划</div></div></div></section>';
+    return homeShell(false, body, '');
   }
   function renderTrain() {
     var db0 = load(), cur0 = GZ.activeProgram(db0);
     if (cur0 && cur0.status !== 'active' && !S.train.recordId) return renderTrainHold(cur0);
     var vm = trainVM(), t = S.train, h = '';
     ensureFocus(vm);
+    var it = Home.focusItem(vm, t.focus);
+    var started = Home.sessionStarted(vm);
+    var pos = Home.positionOf(vm, it && it.slotId);
+    var ready = vm.total > 0 && vm.filled === vm.total;
+    var prompt = vm.locked ? ('本周的 ' + vm.day + ' 已经完成。') : Home.guidePrompt({
+      dayName: vm.dayName, name: it && it.name, done: it && it.done, sets: it && it.sets,
+      logged: it && setsLogged(it), skipped: it && it.skip, ready: ready && !vm.locked, started: started, editing: vm.editing
+    });
+    h += '<header class="session-guide"><div class="pedestal"><div class="seven-frame"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button></div><span class="ground-shadow" aria-hidden="true"></span></div>';
+    h += '<p class="guide-title" aria-live="polite">' + esc(prompt) + '</p></header>';
+    h += '<section class="training-block" aria-label="训练">';
     if (!vm.editing) h += backupNag();
-    if (!vm.editing) h += daySeg(vm);
-    if (!vm.locked && (vm.deloadSuggest || vm.deload)) {
-      h += '<div class="deload-slim"><span class="dl-t">减载周</span><span class="dl-s">' + esc(vm.deloadTip || '降低负荷恢复') + '</span>' +
-        '<label class="ios-sw"><input type="checkbox" data-act="deload" ' + (vm.deload ? 'checked' : '') + '><i></i></label></div>';
-    }
+    h += '<div class="session-context"><p class="when-line">' + esc(Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day)) + '</p>';
+    h += '<span class="session-position">第 <b>' + pos.index + '</b> / ' + pos.total + ' 个动作</span></div>';
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
       h += '<div class="card locked"><div class="lk-head"><div class="lk-ic">✓</div><div class="flex1"><div class="lk-t">本周 ' + vm.day + ' 已完成</div><div class="lk-s">' + L.dateText + ' · 容量 ' + L.vol + ' kg</div></div></div>' +
@@ -782,8 +799,9 @@
     } else if (!vm.locked) {
       if (vm.editing) h += '<button type="button" class="edit-cancel" data-act="cancelEdit">取消编辑</button>';
       h += exerciseStack(vm);
-      h += submitBar(vm);
+      h += homeAction(vm, it, started);
     }
+    h += '</section>';
     var extra = sessionMenu(vm, t);
     if (t.swap && t.swap.show) extra += renderSwap();
     if (t.result) {
@@ -796,7 +814,7 @@
         '<div class="list">' + r.items.map(function (x) { return '<div class="cell res-row">' + tier(x.tier, x.badge) + '<span class="res-name flex1">' + x.name + '</span><div class="res-r"><span class="jtag" style="color:' + x.color + '">' + x.j + '</span><span class="res-next num">' + x.next + '</span></div></div>'; }).join('') + '</div>' +
         '<div class="sheet-btns stack"><button type="button" class="btn-primary share-result" data-act="shareopen" data-id="' + r.logId + '">生成今日战报</button><div class="row"><div class="btn-ghost" data-act="gotoStats">查看数据</div><div class="btn-ghost solid" data-act="closeResult">好</div></div></div></div></div>';
     }
-    return museFrame(goalBtn(vm), h, extra);
+    return homeShell(started && !vm.locked, h, extra);
   }
 
   function setsBlock(it) {
@@ -862,17 +880,22 @@
       case 'day': if (t.recordId || !ds.day || ds.day === t.day) return; rememberTrain(); takeTrainDay(ds.day); return true;
       case 'deload': t.deload = el.checked; return true;
       case 'focus':
-        if (!ds.slot || ds.slot === t.focus) return false;
+      case 'row':
+        if (!ds.slot) return false;
+        if (ds.slot === t.focus) { t.open = !t.open; t.more = ''; return true; }
         t.focus = ds.slot; t.open = false; t.more = '';
         if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = t.focus; t.focusKey = t.day + '|' + (t.recordId || ''); }
-        render(true);
-        setTimeout(function () { var c = document.querySelector('.t1-mid'); if (c) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 20);
-        return false;
+        return true;
+      case 'startlog':
+        if (ds.slot) t.focus = ds.slot;
+        t.open = true; t.more = ''; t._scrollLog = true;
+        return true;
       case 'expand':
         if (ds.slot && t.focus !== ds.slot) t.focus = ds.slot;
         t.open = ds.keep === '1' ? true : !t.open;
         t.more = '';
         return true;
+      case 'adjust':
       case 'menu': t.menu = !t.menu; t.more = ''; return true;
       case 'me': t.menu = false; t.more = ''; S.tab = 'settings'; if (S.settings) S.settings.view = ''; render(); return false;
       case 'menuclose': t.menu = false; return true;
@@ -930,7 +953,7 @@
       case 'overview': S.tab = 'plan'; S.plan.view = ''; S.plan.from = 'train'; S.plan.slot = null; S.plan.detail = null; S.stats.ex = null; render(); return false;
       case 'opendetail':
         var curOpen = GZ.activeProgram(load());
-        S.tab = 'tools'; S.plan.view = 'browse'; S.plan.tpl = curOpen ? GZ.templateKey(curOpen.template) : '';
+        S.tab = 'plan'; S.plan.view = 'browse'; S.plan.tpl = curOpen ? GZ.templateKey(curOpen.template) : '';
         render(); return false;
       case 'closeResult': t.result = null; return true;
       case 'gotoStats': t.result = null; S.tab = 'stats'; S.data.seg = 1; return true;
@@ -1059,6 +1082,7 @@
     var live = !cur || cur.status === 'active', holding = cur && cur.status === 'paused';
     h += '<div class="lib-back" data-act="overviewback">‹ 训练</div><div class="pg-title">计划总览</div>';
     h += planStatusCard(cur);
+    h += '<div class="list plan-lib-entry"><div class="cell tap" data-act="openlib" role="button"><span class="flex1">计划库</span><span class="chev">›</span></div></div>';
     if (live) {
       h += '<div class="card next-card"><div class="row"><div class="flex1"><span class="cap">下一次训练</span><div class="next-t"><span class="num accent">' + vm.next.day + '</span> ' + vm.next.name + '</div>' +
         '<span class="cap">' + vm.next.weekText + (vm.next.deload ? ' · 减载周' : '') + '</span></div><div class="go-btn" data-act="go" data-day="' + vm.next.day + '">去训练</div></div>' +
@@ -1173,7 +1197,7 @@
       '<div class="tpl-blurb">' + esc(c.blurb) + '</div><div class="lib-more">查看安排 <span class="chev">›</span></div></div>';
   }
   function renderPlanLib() {
-    return '<div class="lib-back" data-act="libback">‹ 工具</div><div class="pg-title">计划库</div>' + renderPlanLibBody();
+    return '<div class="lib-back" data-act="libback">‹ 计划</div><div class="pg-title">计划库</div>' + renderPlanLibBody();
   }
   function renderPlanLibBody() {
     var db = load(), h = '';
@@ -1220,7 +1244,7 @@
   function renderTools() {
     var p = S.plan;
     if (p.view === 'browse') return renderPlanBrowse();
-    var h = '<div class="sec-h" style="padding-top:6px">计划库</div>';
+    var h = '<div class="lib-back" data-act="openplan">‹ 计划</div><div class="sec-h" style="padding-top:6px">计划库</div>';
     h += renderPlanLibBody();
     h += '<div class="sec-h">计算器</div><div class="list">' +
       '<div class="cell"><span class="flex1">1RM 计算</span><span class="val">即将推出</span></div>' +
@@ -1314,8 +1338,9 @@
     if (act === 'exopen') { closeSheets(); S.stats.ex = ds.name; return true; }
     if (act === 'exclose') { S.stats.ex = null; return true; }
     if (act === 'overviewback') { S.tab = 'train'; p.from = ''; p.slot = null; p.detail = null; S.stats.ex = null; render(); return false; }
+    if (act === 'openplan') { S.tab = 'plan'; p.view = ''; p.slot = null; p.detail = null; render(); return false; }
     if (act === 'openlib') { p.view = 'lib'; return true; }
-    if (act === 'libback') { p.view = ''; if (S.tab === 'plan') { S.tab = 'tools'; } return true; }
+    if (act === 'libback') { p.view = ''; if (S.tab === 'tools') S.tab = 'plan'; return true; }
     if (act === 'backlib') { p.view = 'lib'; return true; }
     if (act === 'browse') { p.tpl = ds.id; p.view = 'browse'; return true; }
     if (act === 'plannum') {
@@ -2227,7 +2252,7 @@
     var appEl = document.querySelector('.app');
     if (appEl) appEl.classList.toggle('on-train', trainHome);
     var theme = document.querySelector('meta[name="theme-color"]');
-    if (theme) theme.setAttribute('content', trainHome ? '#EEF5FC' : '#F7F7F8');
+    if (theme) theme.setAttribute('content', trainHome ? '#F8F8F8' : '#F7F7F8');
     if (gateOnboard()) {
       syncOnboardStep(load());
       if (tb) tb.style.display = 'none';
@@ -2248,13 +2273,22 @@
     body.innerHTML = '<div class="' + shellCls + '"><div class="page' + (trainHome ? ' muse-page' : '') + '">' + bigTitle + RENDER[S.tab]() + '</div>' + shareHtml + '</div>';
     body.scrollTop = keepScroll ? y : 0;
     navState();
-    var hl = (S.tab === 'plan' || S.tab === 'settings') ? 'train' : S.tab;
-    document.querySelectorAll('.tb-item').forEach(function (el) { el.classList.toggle('on', el.dataset.tab === hl); });
+    var hl = S.tab === 'tools' ? 'plan' : (S.tab === 'settings' ? '' : S.tab);
+    document.querySelectorAll('.tb-item').forEach(function (el) {
+      var on = el.dataset.tab === hl;
+      el.classList.toggle('on', on);
+      el.setAttribute('aria-current', on ? 'page' : 'false');
+    });
     if (S.tab === 'stats') requestAnimationFrame(drawStats);
     else if (S.stats.ex) requestAnimationFrame(drawExercise);
     if (S.review.share) paintSharePreview();
     if (S.tab === 'train' && window.CompanionView) CompanionView.attach(document.getElementById('companionSlot'));
     else if (window.CompanionView) CompanionView.attach(null);
+    if (S.train && S.train._scrollLog) {
+      S.train._scrollLog = false;
+      var logEl = document.querySelector('.ex.current .ex-log, .ex.current');
+      if (logEl && logEl.scrollIntoView) logEl.scrollIntoView({ block: 'nearest' });
+    }
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
   function navState() {
@@ -2373,17 +2407,18 @@
     body.addEventListener('scroll', navState, { passive: true });
     document.getElementById('tabbar').addEventListener('click', function (e) {
       var it = e.target.closest('.tb-item'); if (!it) return;
-      if (S.tab === it.dataset.tab || (it.dataset.tab === 'train' && S.tab === 'plan')) {
+      var dest = it.dataset.tab;
+      if (S.tab === dest && !(dest === 'plan' && S.plan.view)) {
         if (document.querySelector('#body .mask')) { closeSheets(); render(); }
         body.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
       var prevTab = S.tab;
-      var dest = it.dataset.tab;
       var back = S.review.returnTo;
       var restore = back && prevTab === 'settings' && dest === back.from ? back : null;
       closeSheets();
       S.train.menu = false; S.train.more = '';
+      if (dest === 'plan') { S.plan.view = ''; S.plan.slot = null; S.plan.detail = null; }
       S.tab = dest;
       if (restore) {
         if (dest === 'stats') S.data.seg = 2;
