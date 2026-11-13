@@ -575,7 +575,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .session-live .home-wash { background: radial-gradient(90% 80% at 50% 18%, #D8F0E4 0%, #F8F8F8 78%); }
 .pg-train .gear-btn { position: absolute; top: calc(env(safe-area-inset-top) + 8px); right: 16px; z-index: 6; width: 44px; height: 44px; border-radius: 22px; background: rgba(255,255,255,0.86); display: flex; align-items: center; justify-content: center; }
 .pg-train .gear-dot { width: 16px; height: 16px; border: 1.5px solid #141414; border-radius: 50%; box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 6px #141414; }
-.pg-train .home-scroll { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 8px) 24px 32px; }
+.pg-train .home-scroll { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 8px) 24px calc(32px + env(safe-area-inset-bottom)); }
 .pg-train .session-guide { text-align: center; }
 .pg-train .pedestal { position: relative; width: 132px; height: 114px; margin: 0 auto; }
 .pg-train .companion-slot { width: 120px; height: 102px; display: block; margin: 0 auto; position: relative; z-index: 2; }
@@ -1867,7 +1867,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app.on-train #body,
 .app.on-train #body > div,
 .app.on-train .muse-page { background: #F8F8F8; }
-.app.on-train #body { padding-top: 0; scroll-padding-bottom: calc(var(--tabh) + var(--tabbottom) + 128px); }
+.app.on-train {
+  --home-action-h: 116px;
+  --home-reserve: calc(var(--home-action-h) + 16px + var(--tabh) + var(--tabbottom));
+}
+.app.on-train #body { padding-top: 0; scroll-padding-bottom: var(--home-reserve); }
 .app.on-train .nav { display: none; }
 .app.on-train .muse-home {
   position: relative;
@@ -1916,7 +1920,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  padding: calc(env(safe-area-inset-top) + 8px) 24px calc(var(--tabh) + var(--tabbottom) + 8px);
+  padding: calc(env(safe-area-inset-top) + 8px) 24px calc(var(--tabh) + var(--tabbottom) + 16px);
+}
+.app.on-train .home-scroll:has(.home-action) {
+  padding-bottom: var(--home-reserve);
 }
 .app.on-train .session-guide { text-align: center; padding-top: 4px; }
 .app.on-train .pedestal {
@@ -2128,13 +2135,21 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   font-weight: 600;
 }
 .app.on-train .home-action {
-  position: sticky;
+  position: fixed;
+  z-index: 40;
+  left: 50%;
   bottom: calc(var(--tabh) + var(--tabbottom));
-  z-index: 4;
-  margin-top: auto;
-  padding-top: 12px;
-  background: linear-gradient(to bottom, rgba(248, 248, 248, 0), #F8F8F8 36%);
+  width: min(480px, 100%);
+  margin: 0;
+  padding: 8px 24px 0;
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  background: linear-gradient(to bottom, rgba(248, 248, 248, 0), #F8F8F8 28%);
+  pointer-events: none;
 }
+.app.on-train .home-cta,
+.app.on-train .home-links,
+.app.on-train .home-links button { pointer-events: auto; }
 .app.on-train .home-cta {
   width: 100%;
   height: 56px;

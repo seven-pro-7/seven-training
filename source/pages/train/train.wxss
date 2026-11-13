@@ -237,7 +237,7 @@
 .session-live .home-wash { background: radial-gradient(90% 80% at 50% 18%, #D8F0E4 0%, #F8F8F8 78%); }
 .gear-btn { position: absolute; top: calc(env(safe-area-inset-top) + 8px); right: 16px; z-index: 6; width: 44px; height: 44px; border-radius: 22px; background: rgba(255,255,255,0.86); display: flex; align-items: center; justify-content: center; }
 .gear-dot { width: 16px; height: 16px; border: 1.5px solid #141414; border-radius: 50%; box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 6px #141414; }
-.home-scroll { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 8px) 24px 32px; }
+.home-scroll { position: relative; z-index: 1; padding: calc(env(safe-area-inset-top) + 8px) 24px calc(32px + env(safe-area-inset-bottom)); }
 .session-guide { text-align: center; }
 .pedestal { position: relative; width: 132px; height: 114px; margin: 0 auto; }
 .companion-slot { width: 120px; height: 102px; display: block; margin: 0 auto; position: relative; z-index: 2; }

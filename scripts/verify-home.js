@@ -147,6 +147,11 @@ check('首页样式保留锁定色、32px 间距、14/12 字号，并且随宽�
   assert.ok(css.indexOf('max-width: 480px') >= 0);
   assert.ok(css.indexOf('max-height: 680px') >= 0);
   assert.ok(css.indexOf('min-height: 44px') >= 0);
+  assert.ok(css.indexOf('--home-reserve: calc(var(--home-action-h) + 16px + var(--tabh) + var(--tabbottom))') >= 0);
+  assert.ok(css.indexOf('padding-bottom: var(--home-reserve)') >= 0);
+  assert.ok(css.indexOf('scroll-padding-bottom: var(--home-reserve)') >= 0);
+  assert.ok(css.indexOf('env(safe-area-inset-bottom)') >= 0);
+  assert.ok(css.indexOf('pointer-events: none') >= 0);
   assert.ok(css.indexOf('prefers-reduced-motion') >= 0);
   assert.ok(py.indexOf("('train', '今天')") >= 0);
   assert.ok(py.indexOf("('plan', '计划')") >= 0);
