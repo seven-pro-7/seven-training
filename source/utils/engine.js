@@ -129,7 +129,7 @@
     ['T3', '绳索下压', '上肢·伸肘', '器械', '三头主项；配重约为卧推的 30%', 'bench', 0.3, 2.5],
     ['T3', '绳索三头屈伸', '上肢·伸肘', '器械', '三头容量；配重约为卧推的 25%', 'bench', 0.25, 2.5],
     ['T3', '过头绳索臂屈伸', '上肢·伸肘', '器械', '拉长位练三头长头，增肌优于下压（Maeo 2023）；配重约为卧推的 22%', 'bench', 0.22, 2.5],
-    ['T3', '仰卧臂屈伸', '上肢·伸肘', '杠铃', 'EZ 杆仰卧臂屈伸，三头长头；约为卧推的 30%', 'bench', 0.3, 1.25],
+    ['T3', '仰卧臂屈伸', '上肢·伸肘', '杠铃', 'EZ 杆仰卧臂屈伸，三头长头；约为卧推的 30%', 'bench', 0.3, 2.5],
     ['T3', '面拉', '肩·后束', '器械', '肩袖与后束；配重约为卧推的 22%', 'bench', 0.22, 2.5],
     ['T3', '绳索夹胸', '上肢·水平内收', '器械', '胸大肌孤立；单侧配重约为卧推的 15%', 'bench', 0.15, 2.5],
     ['T3', '平板哑铃飞鸟', '上肢·水平内收', '哑铃', '胸大肌孤立；单只≈卧推的 16%', 'bench', 0.16, 2],
@@ -140,8 +140,8 @@
     ['T3', '腿外展', '下肢·髋外展', '器械', '臀中肌；配重约为深蹲的 40%', 'squat', 0.4, 5],
     ['T3', '提踵', '下肢·踝', '器械', '小腿容量；配重约为深蹲的 60%', 'squat', 0.6, 5],
     ['T3', '腿举提踵', '下肢·踝', '器械', '腿举机提踵；配重约为深蹲的 90%', 'squat', 0.9, 5],
-    ['T3', '杠铃弯举', '上肢·屈肘', '杠铃', '二头主项；约为卧推的 40%', 'bench', 0.4, 1.25],
-    ['T3', 'EZ杆弯举', '上肢·屈肘', '杠铃', 'EZ 杆半旋握，腕部压力更小；约为卧推的 38%', 'bench', 0.38, 1.25],
+    ['T3', '杠铃弯举', '上肢·屈肘', '杠铃', '二头主项；约为卧推的 40%', 'bench', 0.4, 2.5],
+    ['T3', 'EZ杆弯举', '上肢·屈肘', '杠铃', 'EZ 杆半旋握，腕部压力更小；约为卧推的 38%', 'bench', 0.38, 2.5],
     ['T3', '哑铃弯举', '上肢·屈肘', '哑铃', '二头容量；单只≈卧推的 15%', 'bench', 0.15, 1],
     ['T3', '锤式弯举', '上肢·屈肘', '哑铃', '肱桡肌与二头；单只≈卧推的 17%', 'bench', 0.17, 1],
     ['T3', '上斜哑铃弯举', '上肢·屈肘', '哑铃', '肩伸位拉长二头长头；单只≈卧推的 12%', 'bench', 0.12, 1],
@@ -703,6 +703,22 @@
     return !!(lb && (lb.base === 'squat' || lb.base === 'deadlift') ||
       /深蹲|硬拉|腿|臀|小腿|提踵|分腿|台阶/.test(s.name || ''));
   }
+  /**
+   * 杠铃弯举、EZ杆弯举、仰卧臂屈伸必须两侧同时加片。
+   * 最小片是 1.25kg，所以总重一档是 2.5kg，不能按 1.25kg 总重去加。
+   * 动作库 inc 已是 2.5；这里再兜住模板或表格步幅仍写成 1.25 的情况。
+   */
+  var PAIRED_BAR = { '杠铃弯举': 1, 'EZ杆弯举': 1, '仰卧臂屈伸': 1 };
+  function pairedBarInc(name) {
+    if (!PAIRED_BAR[name]) return 0;
+    var lb = libFind(name);
+    return lb && lb.inc > 0 ? lb.inc : 2.5;
+  }
+  function atLeastPair(name, step) {
+    var pair = pairedBarInc(name), n = Number(step) || 0;
+    if (pair && n < pair - 1e-9) return pair;
+    return n;
+  }
   /** 该槽位的取整档位（优先用动作库声明的 inc） */
   function incOf(s, P) {
     var lb = libFindIn(null, s.name);
@@ -714,6 +730,7 @@
    * 该槽位的加重步幅
    *  - T1/T2：按器械和上下肢取（杠铃上肢 2.5、下肢 5；哑铃细档 1~2，更高走阶梯；器械 2.5~5；负重 1.25~2.5）
    *  - T3：孤立动作肌群小，一律只跨 1 个最小档位，避免一次加得太猛
+   *  - 杠铃弯举 / EZ杆弯举 / 仰卧臂屈伸：最小档是 2.5kg。表格模式的 t3u 仍是 1.25，只抬这三项
    *  - 自重：没有"加重"，步幅为 0（想加重请换成「负重」版本）
    *  - 严格按表格模式：沿用设置里的旧步幅，保证与 Excel 逐格一致
    */
@@ -721,7 +738,7 @@
     var legacy = P.steps[s.step];
     var lb = libFindIn(null, s.name);
     var eq = (lb && lb.equip) || normEquip(s.equip);
-    if (P.ruleMode === 'excel' && s.step && legacy) return legacy;
+    if (P.ruleMode === 'excel' && s.step && legacy) return atLeastPair(s.name, legacy);
     var r = EQUIP_RULE[eq];
     if (!r) return legacy || 2.5;
     if (eq === '自重') return 0;
@@ -827,23 +844,41 @@
     for (var i = 0; i < n; i++) cur = dumbbellNudge(cur, dir, fineInc);
     return cur;
   }
+  /** 杠铃总重按固定档对齐。已经在档上就加减一档；夹在两档之间则跳到下一档或上一档，不留下配不平的零头。 */
+  function gridNudge(w, dir, step) {
+    w = Math.max(0, Number(w) || 0);
+    if (!(step > 0)) return w;
+    var q = w / step, nearest = Math.round(q);
+    if (Math.abs(w - nearest * step) <= 1e-6 * Math.max(1, step)) return Math.max(0, fix((nearest + dir) * step));
+    var rung = dir > 0 ? Math.ceil(q - 1e-9) : Math.floor(q + 1e-9);
+    return Math.max(0, fix(rung * step));
+  }
   function nudgeWeight(name, equip, w, dir, kgStep) {
     w = Math.max(0, Number(w) || 0);
     dir = Number(dir) < 0 ? -1 : 1;
     if (equipOf(name, equip) === '哑铃') return dumbbellNudge(w, dir, dumbbellFineInc(name, equip, kgStep));
     var step = kgStep > 0 ? Number(kgStep) : 1;
+    var raised = atLeastPair(name, step);
+    if (raised > step) step = raised;
+    if (equipOf(name, equip) === '杠铃') return gridNudge(w, dir, step);
     return Math.max(0, fix(w + dir * step));
   }
-  /** 训练卡「每次」文案。哑铃在 10kg、20kg 两边的加减步长不同，分开写。 */
+  /** 训练卡「每次」文案。哑铃在 10kg、20kg 两边的加减步长不同，分开写。杠铃写档位本身，不把跳档的零头写成步幅。 */
   function weightStepView(name, equip, w, kgStep) {
-    var upW = nudgeWeight(name, equip, w, 1, kgStep);
+    var grid = kgStep > 0 ? Number(kgStep) : 1;
+    var raised = atLeastPair(name, grid);
+    if (raised > grid) grid = raised;
+    var upW = nudgeWeight(name, equip, w, 1, grid);
     var up = fix(upW - (Number(w) || 0));
-    if (!(up > 0)) up = kgStep > 0 ? Number(kgStep) : 1;
-    if (equipOf(name, equip) !== '哑铃') return { wStep: up, text: fmtW(up) };
-    var downW = nudgeWeight(name, equip, w, -1, kgStep);
-    var down = fix((Number(w) || 0) - downW);
-    var text = down > 1e-9 && Math.abs(up - down) > 1e-9 ? ('+' + fmtW(up) + ' / −' + fmtW(down)) : fmtW(up);
-    return { wStep: up, text: text };
+    if (!(up > 0)) up = grid;
+    if (equipOf(name, equip) === '哑铃') {
+      var downW = nudgeWeight(name, equip, w, -1, grid);
+      var down = fix((Number(w) || 0) - downW);
+      var text = down > 1e-9 && Math.abs(up - down) > 1e-9 ? ('+' + fmtW(up) + ' / −' + fmtW(down)) : fmtW(up);
+      return { wStep: up, text: text };
+    }
+    if (equipOf(name, equip) === '杠铃') return { wStep: grid, text: fmtW(grid) };
+    return { wStep: up, text: fmtW(up) };
   }
   function dumbbellStepText(fineInc) {
     fineInc = fineInc > 0 ? fineInc : 1;
@@ -1550,7 +1585,7 @@
   }
   function dualEvaluate(s, st, e) {
     var sc = s.scheme || { sets: 3, repMin: 8, repMax: 12, step: 2.5 };
-    var step = sc.step || 2.5, planned = st.weight, mw = manualW(e), w = mw !== null ? mw : planned;
+    var step = atLeastPair(s.name, sc.step || 2.5), planned = st.weight, mw = manualW(e), w = mw !== null ? mw : planned;
     var r = resultBase(s, st, w);
     r.manual = mw !== null; r.sets = sc.sets; r.reps = sc.repMax; r.inputMode = 'sets'; r.autoWeight = planned;
     r.nextStage = sc.repMin + '–' + sc.repMax;
@@ -1584,7 +1619,7 @@
   }
   function linearEvaluate(s, st, e) {
     var sc = s.scheme || { sets: 5, reps: 5, step: 2.5 };
-    var step = sc.step || 2.5, inc = sc.inc || 2.5, planned = st.weight, mw = manualW(e), w = mw !== null ? mw : planned;
+    var step = atLeastPair(s.name, sc.step || 2.5), inc = atLeastPair(s.name, sc.inc || 2.5), planned = st.weight, mw = manualW(e), w = mw !== null ? mw : planned;
     var r = resultBase(s, st, w);
     r.manual = mw !== null; r.sets = sc.sets; r.reps = sc.reps; r.inputMode = 'linear'; r.autoWeight = planned;
     r.nextStage = sc.sets + '×' + sc.reps + '+';
@@ -3157,8 +3192,8 @@
         d('UP3', 'T1', '杠铃划船', 3, 3, 5, 2.5, null, 'T1'),
         d('UP4', 'T2', '高位下拉', 3, 6, 10, 2.5, null, 'T2'),
         d('UP5', 'T2', '站姿实力推', 2, 5, 8, 2.5, 'ohp', 'T2'),
-        d('UP6', 'T3', '杠铃弯举', 2, 6, 10, 1.25, null, 'T3'),
-        d('UP7', 'T3', '仰卧臂屈伸', 2, 6, 10, 1.25, null, 'T3')
+        d('UP6', 'T3', '杠铃弯举', 2, 6, 10, 2.5, null, 'T3'),
+        d('UP7', 'T3', '仰卧臂屈伸', 2, 6, 10, 2.5, null, 'T3')
       ] },
       { id: 'LP', name: '下肢力量', slots: [
         d('LP1', 'T1', '杠铃深蹲', 3, 3, 5, 5, 'squat', 'T1'),
@@ -3528,7 +3563,7 @@
         dualSlot(db, 'BK2', 'T2', '高位下拉', 3, 8, 12, 2.5),
         dualSlot(db, 'BK3', 'T2', '单臂哑铃划船', 3, 8, 12, 2),
         dualSlot(db, 'BK4', 'T3', '面拉', 3, 12, 15, 2.5),
-        dualSlot(db, 'BK5', 'T3', '杠铃弯举', 3, 8, 12, 1.25)
+        dualSlot(db, 'BK5', 'T3', '杠铃弯举', 3, 8, 12, 2.5)
       ] },
       { id: 'BS', name: '肩', slots: [
         dualSlot(db, 'BS1', 'T1', '站姿实力推', 4, 6, 10, 2.5, 'ohp'),
@@ -3545,9 +3580,9 @@
       ] },
       { id: 'BA', name: '手臂', slots: [
         dualSlot(db, 'BA1', 'T2', '窄距卧推', 3, 8, 12, 2.5, 'bench'),
-        dualSlot(db, 'BA2', 'T3', '杠铃弯举', 3, 8, 12, 1.25),
+        dualSlot(db, 'BA2', 'T3', '杠铃弯举', 3, 8, 12, 2.5),
         dualSlot(db, 'BA3', 'T3', '锤式弯举', 3, 10, 15, 1),
-        dualSlot(db, 'BA4', 'T3', '仰卧臂屈伸', 3, 8, 12, 1.25),
+        dualSlot(db, 'BA4', 'T3', '仰卧臂屈伸', 3, 8, 12, 2.5),
         dualSlot(db, 'BA5', 'T3', '绳索三头屈伸', 3, 10, 15, 2.5)
       ] }
     ];
@@ -3568,7 +3603,7 @@
         dualSlot(db, 'D12', 'T2', '杠铃划船', 4, 6, 10, 2.5),
         dualSlot(db, 'D13', 'T2', '高位下拉', 3, 8, 12, 2.5),
         dualSlot(db, 'D14', 'T3', '面拉', 3, 12, 15, 2.5),
-        dualSlot(db, 'D15', 'T3', '杠铃弯举', 3, 8, 12, 1.25),
+        dualSlot(db, 'D15', 'T3', '杠铃弯举', 3, 8, 12, 2.5),
         dualSlot(db, 'D16', 'T2', '罗马尼亚硬拉', 3, 8, 12, 2.5, 'deadlift')
       ] },
       { id: 'P2', name: '推 B', slots: [
