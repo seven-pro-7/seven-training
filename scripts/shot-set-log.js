@@ -63,6 +63,12 @@ async function main() {
     if (msg.result.exceptionDetails) throw new Error(msg.result.exceptionDetails.exception && msg.result.exceptionDetails.exception.description || msg.result.exceptionDetails.text);
     return msg.result.result.value;
   }
+  async function chromeOk(s, where) {
+    var info = await ev(s, `(function(){var b=document.querySelector('.set-top .back-btn'); var g=document.querySelector('.set-top .gear-btn'); if(!b||!g) return 'missing'; var box=b.getBoundingClientRect(), gear=g.getBoundingClientRect(); var hit=document.elementFromPoint(box.left+box.width/2, box.top+box.height/2); var dots=[].map.call(document.querySelectorAll('.set-path .dot'), function(el){return el.textContent.trim();}).filter(Boolean); return JSON.stringify({w:Math.round(box.width),h:Math.round(box.height),overlap:box.right>gear.left-4,hit:!!(hit&&hit.closest&&hit.closest('.back-btn')),dots:dots.join(',')});})()`);
+    console.log(where, info);
+    var o = JSON.parse(info);
+    if (o.w < 44 || o.h < 44 || o.overlap || !o.hit || o.dots) throw new Error(where + ' ' + info);
+  }
   async function shot(s, name) {
     var pic = await b.send('Page.captureScreenshot', { format: 'png' }, s);
     fs.writeFileSync(path.join(OUT, name), Buffer.from(pic.result.data, 'base64'));
@@ -107,8 +113,10 @@ async function main() {
     throw new Error('没有进入记组 '+seen.join(' > ')+' errs '+window.__errs.join('|'));
   })()`;
   console.log('work', await ev(page.s, open));
+  await chromeOk(page.s, 'work');
   await shot(page.s, 'log-work-390x844.png');
   console.log('commit1', await ev(page.s, `(async function(){function wait(ms){return new Promise(function(r){setTimeout(r,ms);});} document.querySelector('[data-act=logsave]').click(); await wait(200); return document.querySelector('.rest-kicker').textContent; })()`));
+  await chromeOk(page.s, 'rest');
   await shot(page.s, 'log-rest-390x844.png');
   await ev(page.s, `document.querySelector('[data-act=logrestskip]').click()`);
   await sleep(200);
@@ -116,15 +124,18 @@ async function main() {
   await ev(page.s, `document.querySelector('[data-act=logfix]').click()`);
   await sleep(150);
   console.log('correct', await ev(page.s, `document.querySelector('.set-name').textContent+' '+(document.querySelector('.origin-card b')||{}).textContent`));
+  await chromeOk(page.s, 'correct');
   await shot(page.s, 'log-correct-390x844.png');
   await ev(page.s, `document.querySelector('[data-act=logwork]').click()`);
   await sleep(120);
   await ev(page.s, `(async function(){function wait(ms){return new Promise(function(r){setTimeout(r,ms);});} for (var i=0;i<3;i++){ document.querySelector('[data-act=logsave]').click(); await wait(150); var skip=document.querySelector('[data-act=logrestskip]'); if(skip){skip.click(); await wait(120);} } return document.querySelector('.path-cap')?document.querySelector('.path-cap').textContent:document.querySelector('.home-cta').textContent; })()`);
   console.log('amrap', await ev(page.s, `document.body.innerText.indexOf('末组')>=0 ? 'yes '+document.querySelector('.home-cta').textContent : document.querySelector('.home-cta').textContent`));
+  await chromeOk(page.s, 'amrap');
   await shot(page.s, 'log-amrap-390x844.png');
   await ev(page.s, `window.__SEVEN_FAIL_OPEN=true; document.querySelector('[data-act=logsave]').click()`);
   await sleep(200);
   console.log('fail', await ev(page.s, `document.querySelector('.set-name').textContent`));
+  await chromeOk(page.s, 'fail');
   await shot(page.s, 'log-fail-390x844.png');
   await ev(page.s, `window.__SEVEN_FAIL_OPEN=false; document.querySelector('[data-act=logretry]').click()`);
   await sleep(200);
@@ -135,6 +146,7 @@ async function main() {
   console.log('reopen', await ev(page.s, `(async function(){function wait(ms){return new Promise(function(r){setTimeout(r,ms);});} for (var n=0;n<8;n++){ var b=document.querySelector('.home-cta'); if(b) b.click(); await wait(400); if(document.querySelector('.set-screen')) return 'in'; } return 'home '+(document.querySelector('.home-cta')||{}).textContent; })()`));
   console.log('after reload', await ev(page.s, `(function(){var open=JSON.parse(localStorage.getItem('training_open_v1')||'null'); var rec=JSON.parse(localStorage.getItem('training_db_v1')||'{}'); var groups=open&&open.drafts&&open.drafts.A1&&open.drafts.A1.A1_1&&open.drafts.A1.A1_1.groups; return JSON.stringify({groups:groups&&groups.length, records:(rec.records||[]).length, screen:document.querySelector('.done-kicker')?document.querySelector('.done-kicker').textContent:(document.querySelector('.path-cap')||{}).textContent, rows:document.querySelectorAll('.set-log-row').length});})()`));
   console.log('done screen', await ev(page.s, `(function(){var k=document.querySelector('.done-kicker'), c=document.querySelector('.home-cta'), j=document.querySelector('.engine-j'); return (k?k.textContent:'')+' | '+(c?c.textContent:'')+' | '+(j?j.textContent:'');})()`));
+  await chromeOk(page.s, 'done');
   await shot(page.s, 'log-done-390x844.png');
   await b.send('Target.closeTarget', { targetId: page.id });
   async function freshWork(w, h, file) {

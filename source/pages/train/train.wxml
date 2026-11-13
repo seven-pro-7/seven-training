@@ -16,7 +16,7 @@
       <text class="set-name">{{log.name}}</text>
       <text class="set-scheme">{{log.scheme}}</text>
       <view class="set-path">
-        <view wx:for="{{log.dots}}" wx:key="i" class="sp {{item.cls}}"><text class="dot">{{item.mark}}</text><text class="lab">{{item.i + 1}}</text></view>
+        <view wx:for="{{log.dots}}" wx:key="i" class="sp {{item.cls}}" aria-label="第 {{item.lab}} 组"><text class="dot"></text><text class="lab">{{item.lab}}</text></view>
       </view>
       <view class="set-log">
         <view wx:for="{{log.rows}}" wx:key="i" class="set-log-row" data-i="{{item.i}}" bindtap="logFix"><text>{{item.label}}</text><text class="b">{{item.text}}</text><text class="fix">更正</text></view>
@@ -57,7 +57,7 @@
       <text class="set-scheme">{{log.scheme}}</text>
       <view class="weight-row" wx:if="{{log.showWeight}}"><text class="big-kg">{{log.weight}}</text><text class="unit">{{log.unit}}</text></view>
       <view class="set-path">
-        <view wx:for="{{log.dots}}" wx:key="i" class="sp {{item.cls}}"><text class="dot">{{item.mark}}</text><text class="lab">{{item.i + 1}}</text></view>
+        <view wx:for="{{log.dots}}" wx:key="i" class="sp {{item.cls}}" aria-label="第 {{item.lab}} 组"><text class="dot"></text><text class="lab">{{item.lab}}</text></view>
       </view>
       <text class="path-cap">{{log.pathCap}}</text>
       <view class="set-log" wx:if="{{log.collapsed}}"><view class="set-log-row"><text>{{log.collapsed}}</text></view></view>

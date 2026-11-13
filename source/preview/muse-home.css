@@ -953,9 +953,10 @@
   background: radial-gradient(90% 80% at 50% 18%, rgba(216,240,228,.5) 0%, #F8F8F8 78%); }
 .screen-rest .set-wash { background: radial-gradient(90% 80% at 50% 10%, #D8F0E4 0%, #F8F8F8 78%); }
 .screen-fail .set-wash { background: radial-gradient(90% 80% at 50% 18%, rgba(224,106,60,.10) 0%, #F8F8F8 78%); }
-.set-top { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: calc(env(safe-area-inset-top) + 8px) 16px 0; }
-.set-top .gear-btn { position: static; background: #fff; }
-.set-top .back-btn { background: transparent; box-shadow: none; }
+.app.on-log .set-top { position: relative; z-index: 4; display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: calc(env(safe-area-inset-top) + 8px) 8px 0; }
+.app.on-log .set-top .back-btn { position: relative; top: auto; right: auto; flex: 0 0 44px; width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 22px; background: transparent; box-shadow: none; display: flex; align-items: center; justify-content: center; }
+.app.on-log .set-top .gear-btn { position: relative; top: auto; right: auto; flex: 0 0 44px; }
+.app.on-log .set-path .dot { font-size: 0; color: transparent; }
 .set-scroll { position: relative; z-index: 1; flex: 1; padding: 12px 24px calc(196px + var(--kb, 0px) + env(safe-area-inset-bottom)); }
 .set-meta, .path-cap, .block-label, .hint, .rest-suggest, .st-unit { font-size: 12px; font-weight: 400; color: #6B7280; line-height: 1.4; }
 .set-name { margin: 8px 0 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }

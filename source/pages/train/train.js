@@ -470,7 +470,8 @@ Page({
     for (let i = 0; i < it.sets; i++) {
       const done = i < groups.length;
       const now = i === cur && screen !== 'done';
-      dots.push({ i, cls: done ? 'done' : (now ? 'now' : ''), mark: done ? '' : (SL.isAmrapIndex(it, i) ? (i + 1) + '+' : String(i + 1)) });
+      const amrapDot = SL.isAmrapIndex(it, i) && !done;
+      dots.push({ i, cls: done ? 'done' : (now ? 'now' : ''), lab: (i + 1) + (amrapDot ? '+' : '') });
     }
     const same = index > 0 && groups.every((g) => g.reps === groups[0].reps && g.weight === groups[0].weight);
     const rows = (amrap && same && screen === 'work') ? [] : groups.map((g, i) => ({
@@ -534,18 +535,17 @@ Page({
     }, 250);
   },
   logBack() {
-    const wrote = this.persistOpen();
-    if (!wrote) {
+    if (this.logScreen === 'correct') {
       const en = this.entry(this.logSlot);
-      this.logScreen = 'fail';
-      this.logFail = { index: ((en.groups || []).length), reps: en.pending && en.pending.reps, weight: en.pending && en.pending.weight };
-      this.refresh();
-      return;
+      en.correctPending = null;
+      return this.logWork();
     }
+    this.persistOpen();
     this.closeLog();
   },
   logWork() {
     const en = this.entry(this.logSlot);
+    en.correctPending = null;
     const it = (this.data.vm.items || []).find((x) => x.slotId === this.logSlot);
     this.logScreen = it && (en.groups || []).length >= it.sets ? 'done' : 'work';
     this.refresh();

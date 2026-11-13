@@ -791,7 +791,9 @@
     var stamp = Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day);
     var h = '<div class="set-screen screen-' + screen + '">';
     h += '<div class="set-wash" aria-hidden="true"></div>';
-    h += '<div class="set-top"><button type="button" class="gear-btn back-btn" data-act="logback" aria-label="返回今日列表">' + BACK + '</button>';
+    var backAct = screen === 'correct' ? 'logwork' : 'logback';
+    var backLabel = screen === 'correct' ? '取消更正，回到这一组' : '返回今日列表';
+    h += '<div class="set-top"><button type="button" class="back-btn" data-act="' + backAct + '" aria-label="' + backLabel + '">' + BACK + '</button>';
     h += '<button type="button" class="gear-btn" data-act="me" aria-label="设置">' + GEAR + '</button></div>';
     h += '<div class="set-scroll">';
     if (screen === 'rest') {
@@ -897,10 +899,15 @@
   }
   function logDots(it, en, current) {
     var h = '<div class="set-path" role="list">';
+    var logged = (en.groups || []).length;
     for (var i = 0; i < it.sets; i++) {
-      var cls = i < (en.groups || []).length ? 'done' : (i === current ? 'now' : '');
-      var mark = cls === 'done' ? '' : (SL.isAmrapIndex(it, i) ? (i + 1) + '+' : (i + 1));
-      h += '<div class="sp ' + cls + '" role="listitem"><span class="dot">' + mark + '</span><span class="lab">' + (i + 1) + '</span></div>';
+      var done = i < logged;
+      var now = !done && i === current;
+      var amrap = SL.isAmrapIndex(it, i) && !done;
+      var label = (i + 1) + (amrap ? '+' : '');
+      var state = done ? '已记下' : (now ? '当前' : '未记');
+      h += '<div class="sp ' + (done ? 'done' : (now ? 'now' : '')) + '" role="listitem" aria-label="第 ' + (i + 1) + ' 组，' + state + (amrap ? '，末组' : '') + '">';
+      h += '<span class="dot" aria-hidden="true"></span><span class="lab">' + label + '</span></div>';
     }
     return h + '</div>';
   }
@@ -1128,17 +1135,19 @@
         openSetLog(ds.slot || t.focus);
         return true;
       case 'logback':
-        if (t.log) {
-          var backCtx = logCtx(trainVM());
-          if (backCtx) {
-            var wrotePending = persistOpen();
-            if (!wrotePending && backCtx.en.pending) { t.log.screen = 'fail'; t.log.fail = { index: (backCtx.en.groups || []).length, reps: backCtx.en.pending.reps, weight: backCtx.en.pending.weight }; return true; }
-          }
+        if (t.log && t.log.screen === 'correct') {
+          var cancelCtx = logCtx(trainVM());
+          if (cancelCtx) cancelCtx.en.correctPending = null;
+          t.log.screen = cancelCtx && (cancelCtx.en.groups || []).length >= cancelCtx.it.sets ? 'done' : 'work';
+          t.log.correct = null;
+          return true;
         }
+        if (t.log) persistOpen();
         t.log = null; t.open = false; return true;
       case 'logwork':
         if (t.log) {
           var backDone = logCtx(trainVM());
+          if (backDone) backDone.en.correctPending = null;
           t.log.screen = backDone && (backDone.en.groups || []).length >= backDone.it.sets ? 'done' : 'work';
           t.log.correct = null;
         }
