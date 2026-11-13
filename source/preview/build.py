@@ -480,6 +480,7 @@ html = f"""<!DOCTYPE html>
 <script>{(ROOT / 'utils' / 'weekly.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'companion-core.js').read_text()}</script>
 <script>{(ROOT / 'utils' / 'home-copy.js').read_text()}</script>
+<script>{(ROOT / 'utils' / 'set-log.js').read_text()}</script>
 <script>{(ROOT / 'preview' / 'companion-view.js').read_text()}</script>
 <script>{(ROOT / 'preview' / 'app-h5.js').read_text()}</script>
 </body></html>"""

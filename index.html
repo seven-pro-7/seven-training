@@ -617,6 +617,38 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .pg-train .home-cta::after { border: none; }
 .pg-train .home-links { display: flex; align-items: center; justify-content: center; min-height: 44px; color: #6B7280; font-size: 15px; }
 .pg-train .home-links .sep { margin: 0 8px; }
+.pg-train .bk-nag { margin: 0 0 12px; padding: 12px 14px; border-radius: 14px; background: #fff; color: #141414; font-size: 13px; line-height: 1.4; }
+.pg-train .set-screen { position: relative; min-height: 100vh; background: #F8F8F8; color: #141414; box-sizing: border-box; }
+.pg-train .set-screen .set-top { display: flex; justify-content: space-between; align-items: center; padding: calc(env(safe-area-inset-top) + 8px) 16px 0; }
+.pg-train .set-screen .gear-btn { position: static; }
+.pg-train .set-screen .back-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.pg-train .set-scroll { padding: 12px 24px 180px; }
+.pg-train .set-name { display: block; margin-top: 8px; font-size: 17px; font-weight: 700; }
+.pg-train .set-scheme, .pg-train .set-meta, .pg-train .path-cap, .pg-train .hint, .pg-train .rest-suggest, .pg-train .block-label, .pg-train .rest-name, .pg-train .rest-next { display: block; font-size: 13px; color: #6B7280; line-height: 1.4; }
+.pg-train .big-kg { font-size: 52px; font-weight: 700; letter-spacing: -0.04em; }
+.pg-train .weight-row { display: flex; align-items: baseline; gap: 6px; margin-top: 16px; }
+.pg-train .set-path { display: flex; justify-content: space-between; margin: 18px 0 6px; }
+.pg-train .sp { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.pg-train .sp .dot { width: 28px; height: 28px; border-radius: 14px; border: 1.6px solid rgba(20,20,20,.22); display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.pg-train .sp.done .dot { background: #141414; color: #fff; border-color: #141414; }
+.pg-train .sp.now .dot { border: 2px solid #E06A3C; }
+.pg-train .set-log { background: #fff; border-radius: 20px; padding: 6px 16px; margin: 8px 0 12px; }
+.pg-train .set-log-row { display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-size: 13px; color: #6B7280; }
+.pg-train .set-log-row .b, .pg-train .origin-card .b { font-weight: 700; color: #141414; }
+.pg-train .rep-step { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 8px 0; }
+.pg-train .set-screen .st-btn, .pg-train .rest-skip, .pg-train .text-link { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+.pg-train .set-screen .st-val { width: 96px; text-align: center; font-size: 48px; font-weight: 700; }
+.pg-train .rest-kicker, .pg-train .done-kicker { display: block; text-align: center; margin-top: 24px; }
+.pg-train .rest-clock { display: block; text-align: center; font-size: 64px; font-weight: 700; margin: 12px 0; }
+.pg-train .rest-track { height: 4px; background: #E8E8EE; border-radius: 2px; margin: 0 24px 16px; }
+.pg-train .rest-fill { height: 100%; background: #5BB887; }
+.pg-train .origin-card, .pg-train .engine-card { background: #fff; border-radius: 20px; padding: 16px; margin: 16px 0; }
+.pg-train .engine-j, .pg-train .engine-next { display: block; font-weight: 700; }
+.pg-train .log-bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 24px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(248,248,248,0), #F8F8F8 24%); }
+.pg-train .rest-controls { display: flex; justify-content: center; gap: 8px; }
+.pg-train .rest-skip { padding: 0 16px; border-radius: 22px; box-shadow: inset 0 0 0 1.5px #141414; }
+.pg-train .text-link { color: #6B7280; }
+.pg-train .screen-fail { background: #F8F8F8; }
 .pg-plan .next-card { padding: 16px; }
 .pg-plan .next-t { font-size: 22px; font-weight: 700; letter-spacing: -0.25px; margin: 2px 0; }
 .pg-plan .go-btn { height: 36px; padding: 0 20px; border-radius: 499.5px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; display: flex; align-items: center; }
@@ -2202,8 +2234,73 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 @media (prefers-reduced-motion: reduce) {
   .app .tb-item,
   .app.on-train .home-cta,
-  .app.on-train .ex { transition: none; }
+  .app.on-train .ex,
+  .app.on-log .rest-fill { transition: none; }
   .app .tb-item:active { transform: none; }
+}
+
+.app.on-log .tabbar { display: none; }
+.app.on-log { background: #F8F8F8; color: #141414; }
+.app.on-log #body { background: #F8F8F8; }
+.set-screen { position: relative; min-height: 100%; display: flex; flex-direction: column; background: #F8F8F8; color: #141414; }
+.set-wash { position: absolute; left: 0; right: 0; top: 0; height: 420px; pointer-events: none;
+  background: radial-gradient(90% 80% at 50% 18%, rgba(216,240,228,.5) 0%, #F8F8F8 78%); }
+.screen-rest .set-wash { background: radial-gradient(90% 80% at 50% 10%, #D8F0E4 0%, #F8F8F8 78%); }
+.screen-fail .set-wash { background: radial-gradient(90% 80% at 50% 18%, rgba(224,106,60,.10) 0%, #F8F8F8 78%); }
+.set-top { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: calc(env(safe-area-inset-top) + 8px) 16px 0; }
+.set-top .gear-btn { position: static; background: #fff; }
+.set-top .back-btn { background: transparent; box-shadow: none; }
+.set-scroll { position: relative; z-index: 1; flex: 1; padding: 12px 24px calc(196px + var(--kb, 0px) + env(safe-area-inset-bottom)); }
+.set-meta, .path-cap, .block-label, .hint, .rest-suggest, .st-unit { font-size: 12px; font-weight: 400; color: #6B7280; line-height: 1.4; }
+.set-name { margin: 8px 0 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
+.set-scheme { margin: 3px 0 0; font-size: 13px; color: #6B7280; }
+.weight-row { display: flex; align-items: baseline; gap: 6px; margin: 18px 0 4px; }
+.big-kg { font-size: 52px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.w-adjust { margin-left: auto; min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: #6B7280; font: inherit; font-size: 13px; }
+.set-path { display: flex; justify-content: space-between; margin: 20px 0 6px; }
+.sp { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 44px; }
+.sp .dot { width: 28px; height: 28px; border-radius: 14px; border: 1.6px solid rgba(20,20,20,.22); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #6B7280; background: transparent; }
+.sp.done .dot { background: #141414; border-color: #141414; color: #fff; }
+.sp.now .dot { border: 2px solid #E06A3C; background: #fff; color: #C85A30; box-shadow: 0 0 0 4px rgba(224,106,60,.12); }
+.sp .lab { font-size: 11px; color: #6B7280; }
+.set-log { background: #fff; border-radius: 20px; box-shadow: 0 1px 2px rgba(20,20,20,.03), 0 6px 18px rgba(20,20,20,.035); padding: 6px 16px; margin: 8px 0 16px; }
+.set-log-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 0; border: 0; border-top: 1px solid #E8E8EE; background: transparent; color: #6B7280; font: inherit; font-size: 13px; text-align: left; }
+.set-log-row:first-child { border-top: 0; }
+.set-log-row b { font-weight: 600; color: #141414; font-variant-numeric: tabular-nums; }
+.set-log-row .fix { font-size: 12px; color: #6B7280; }
+.rep-panel { text-align: center; margin-top: 8px; }
+.target { font-size: 13px; color: #6B7280; margin-bottom: 8px; }
+.target em { font-style: normal; color: #141414; }
+.rep-step { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.set-screen .st-btn { width: 44px; height: 44px; border: 0; border-radius: 22px; background: #fff; box-shadow: 0 1px 2px rgba(20,20,20,.06); font-size: 22px; color: #141414; }
+.set-screen .st-val { width: 96px; border: 0; background: transparent; text-align: center; font-size: 56px; font-weight: 700; letter-spacing: -0.045em; color: #141414; font-variant-numeric: tabular-nums; }
+.app.on-log .log-bottom { position: fixed; z-index: 30; left: 0; right: 0; bottom: var(--kb, 0px); width: auto; max-width: 480px; margin: 0 auto; transform: none; box-sizing: border-box; padding: 8px 24px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(248,248,248,0), #F8F8F8 24%); pointer-events: none; }
+.app.on-log .log-bottom .home-cta,
+.app.on-log .log-bottom button,
+.app.on-log .log-bottom .home-links { pointer-events: auto; }
+.app.on-log .log-bottom .home-cta { display: block; width: 100%; box-sizing: border-box; height: 54px; line-height: 54px; padding: 0 16px; overflow: hidden; white-space: nowrap; }
+.log-bottom .home-cta:disabled { opacity: .45; }
+.text-link, .log-bottom .home-links button { min-height: 44px; border: 0; background: transparent; color: #6B7280; font: inherit; font-size: 15px; }
+.rest-kicker, .done-kicker { text-align: center; font-size: 14px; color: #141414; margin-top: 28px; }
+.rest-clock { text-align: center; font-size: 64px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin: 18px 0 12px; font-variant-numeric: tabular-nums; }
+.rest-track { height: 4px; border-radius: 2px; background: #E8E8EE; overflow: hidden; margin: 0 24px 18px; }
+.rest-fill { display: block; height: 100%; background: #5BB887; }
+.rest-name, .rest-next { text-align: center; color: #6B7280; font-size: 14px; }
+.rest-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.rest-controls button { min-width: 64px; min-height: 44px; border-radius: 22px; border: 0; background: #fff; box-shadow: 0 1px 2px rgba(20,20,20,.06); font: inherit; font-size: 15px; color: #141414; }
+.rest-controls .rest-skip { background: transparent; box-shadow: inset 0 0 0 1.5px #141414; }
+.rest-controls .text-link, .log-bottom .text-link { display: block; width: 100%; background: transparent; box-shadow: none; text-align: center; color: #6B7280; }
+.rest-suggest { width: 100%; text-align: center; }
+.origin-card, .engine-card { background: #fff; border-radius: 20px; padding: 16px; margin: 16px 0; box-shadow: 0 1px 2px rgba(20,20,20,.04); }
+.origin-card span, .engine-card p { display: block; font-size: 12px; color: #6B7280; line-height: 1.45; }
+.origin-card b, .engine-next { display: block; margin-top: 6px; font-size: 20px; font-weight: 700; }
+.engine-j { font-size: 14px; font-weight: 700; color: #141414; }
+@media (max-height: 680px) {
+  .big-kg, .set-screen .st-val, .rest-clock { font-size: 44px; }
+  .set-scroll { padding-top: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rest-fill { transition: none; }
 }
 </style></head>
 <body>
@@ -4981,6 +5078,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       if (e.slotInit && e.slotInit.type) entries[k].slotInit = { type: e.slotInit.type, base: e.slotInit.base, pct: e.slotInit.pct, value: e.slotInit.value };
       if (e.miss) entries[k].miss = true;
       if (e.sets && e.sets.length) entries[k].sets = e.sets.map(function (n) { return n === '' || n === undefined ? null : n; });
+      if (e.groups && e.groups.length) entries[k].groups = e.groups.map(function (g) {
+        return { reps: g.reps, weight: g.weight, correctedFrom: g.correctedFrom != null ? g.correctedFrom : undefined };
+      });
+      if (e.done) entries[k].done = e.done;
     });
     var day = dayById(db, rec.day);
     if (day) {
@@ -5038,6 +5139,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         if (n !== null && n !== undefined && n !== '') return true;
       }
     }
+    if (e.groups && e.groups.length) return true;
+    if (e.pending && e.pending.reps !== undefined && e.pending.reps !== null && e.pending.reps !== '') return true;
+    if (e.held && Object.keys(e.held).length) return true;
     return false;
   }
   function draftTouched(draft) {
@@ -8343,6 +8447,183 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 });
 </script>
 <script>/**
+ * 单动作记组草稿。只决定「这一组记没记下」，不计算进阶和下次重量。
+ * 次数沿用现有上限：力量 0–60，有氧 0–300。
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.SetLog = api;
+})(typeof window !== 'undefined' ? window : this, function () {
+  'use strict';
+
+  function repCap(inputType) { return inputType === 'cardio' ? 300 : 60; }
+
+  function clampReps(raw, inputType) {
+    if (raw === null || raw === undefined || raw === '') return null;
+    var n = Math.round(Number(raw));
+    if (isNaN(n)) return null;
+    return Math.max(0, Math.min(repCap(inputType), n));
+  }
+
+  function isAmrapIndex(it, index) {
+    if (!it || index < 0) return false;
+    if (it.inputType === 'done' || it.inputType === 'fixed' || it.inputType === 'deload') return false;
+    if (it.dots && it.dots[index]) return !!it.dots[index].amrap;
+    return index === (it.sets || 1) - 1 && it.inputType !== 'done';
+  }
+
+  function targetOf(it, index) {
+    var reps = it && it.reps != null ? it.reps : 0;
+    var amrap = isAmrapIndex(it, index);
+    return { reps: reps, amrap: amrap, text: amrap ? (reps + '+') : String(reps) };
+  }
+
+  function groupsOf(en) { return (en && en.groups) || []; }
+
+  /** 旧草稿只有 done 前缀时，用规定次数补出可显示的组，不另造一条训练记录。 */
+  function migrate(en, it) {
+    en = en || {};
+    if (!en.groups) en.groups = [];
+    var done = en.done || 0;
+    if (!en.groups.length && done > 0 && it) {
+      var weight = it.weight;
+      for (var i = 0; i < done && i < (it.sets || done); i++) {
+        var last = i === (it.sets || done) - 1;
+        var reps = last && en.v != null && en.v !== '完成' && en.v !== '未完成' ? Number(en.v) : (it.reps || 0);
+        en.groups.push({ reps: reps, weight: weight });
+      }
+    }
+    en.done = en.groups.length;
+    return en;
+  }
+
+  function syncEngine(en, it) {
+    var n = groupsOf(en).length;
+    en.done = n;
+    var sets = it && it.sets || 0;
+    if (n < sets) {
+      if (it && (it.inputType === 'done' || it.inputType === 'fixed' || it.inputType === 'deload')) en.v = null;
+      else if (!it || it.inputType !== 'cardio') en.v = null;
+      return en;
+    }
+    var last = en.groups[n - 1];
+    if (it && (it.inputType === 'done' || it.inputType === 'fixed' || it.inputType === 'deload')) en.v = '完成';
+    else en.v = last ? last.reps : null;
+    return en;
+  }
+
+  function defaultPending(en, it) {
+    if (en && en.pending && en.pending.reps !== undefined && en.pending.reps !== null && en.pending.reps !== '') return en.pending;
+    var index = groupsOf(en).length;
+    var target = targetOf(it, index);
+    var weight = en && en.w != null && en.w !== '' ? en.w : (it ? it.weight : 0);
+    return { reps: target.reps, weight: weight };
+  }
+
+  /**
+   * 纯计算。write 返回 false 时不采用新草稿。
+   * 返回 { ok, reason, entry, index, last }
+   */
+  function commitGroup(en, it, pending, write) {
+    en = migrate(Object.assign({}, en), it);
+    var index = en.groups.length;
+    if (!it || index >= it.sets) return { ok: false, reason: 'full', entry: en };
+    var reps = clampReps(pending && pending.reps, it.inputType);
+    if (reps == null) return { ok: false, reason: 'empty', entry: en };
+    var weight = pending && pending.weight != null && pending.weight !== '' ? Number(pending.weight) : (it.weight || 0);
+    if (isNaN(weight) || weight < 0) weight = it.weight || 0;
+    var next = Object.assign({}, en, {
+      groups: en.groups.concat([{ reps: reps, weight: weight }]),
+      pending: null
+    });
+    if (weight !== it.weight) next.w = weight;
+    syncEngine(next, it);
+    if (write && write(next) === false) return { ok: false, reason: 'write', entry: en, pending: { reps: pending.reps, weight: weight } };
+    return { ok: true, entry: next, index: index, last: index === it.sets - 1 };
+  }
+
+  function undoLast(en, it) {
+    en = migrate(Object.assign({}, en, { groups: groupsOf(en).slice() }), it);
+    if (!en.groups.length) return null;
+    var removed = en.groups[en.groups.length - 1];
+    var next = Object.assign({}, en, {
+      groups: en.groups.slice(0, -1),
+      pending: { reps: removed.reps, weight: removed.weight }
+    });
+    syncEngine(next, it);
+    return { entry: next, removed: removed };
+  }
+
+  /** 只改这一组。后面的组原样保留。 */
+  function correctGroup(en, it, index, reps, weight) {
+    en = migrate(Object.assign({}, en, { groups: groupsOf(en).slice() }), it);
+    if (index < 0 || index >= en.groups.length) return null;
+    var clean = clampReps(reps, it && it.inputType);
+    if (clean == null) return null;
+    var w = weight != null && weight !== '' ? Number(weight) : en.groups[index].weight;
+    if (isNaN(w) || w < 0) w = en.groups[index].weight;
+    var prev = en.groups[index];
+    var groups = en.groups.map(function (g, i) {
+      if (i !== index) return g;
+      return {
+        reps: clean,
+        weight: w,
+        correctedFrom: prev.correctedFrom != null ? prev.correctedFrom : prev.reps
+      };
+    });
+    var next = Object.assign({}, en, { groups: groups });
+    if (index === groups.length - 1 && w !== (it && it.weight)) next.w = w;
+    syncEngine(next, it);
+    return next;
+  }
+
+  /** 换动作时把已记组留在原动作名下，不删，也不算到新动作上。 */
+  function holdForSwap(en, fromName) {
+    en = en || {};
+    var held = Object.assign({}, en.held || {});
+    if ((en.groups && en.groups.length) || en.v != null && en.v !== '' || en.done) {
+      held[fromName] = {
+        groups: (en.groups || []).slice(),
+        done: en.done || 0,
+        v: en.v,
+        pending: en.pending || null,
+        w: en.w
+      };
+    }
+    var next = Object.assign({}, en, { held: held, groups: [], done: 0, v: null, pending: null });
+    return next;
+  }
+
+  function restoreHeld(en, name) {
+    var bag = en && en.held && en.held[name];
+    if (!bag) return Object.assign({}, en, { groups: [], done: 0, v: null, pending: null });
+    return Object.assign({}, en, {
+      groups: (bag.groups || []).slice(),
+      done: bag.done || (bag.groups || []).length,
+      v: bag.v,
+      pending: bag.pending || null,
+      w: bag.w
+    });
+  }
+
+  return {
+    repCap: repCap,
+    clampReps: clampReps,
+    isAmrapIndex: isAmrapIndex,
+    targetOf: targetOf,
+    migrate: migrate,
+    syncEngine: syncEngine,
+    defaultPending: defaultPending,
+    commitGroup: commitGroup,
+    undoLast: undoLast,
+    correctGroup: correctGroup,
+    holdForSwap: holdForSwap,
+    restoreHeld: restoreHeld
+  };
+});
+</script>
+<script>/**
  * 网页端角色动画。只改伙伴 SVG，不重建训练页。
  * 离屏或后台暂停 rAF；减弱动态或关闭动画时画静态帧。
  */
@@ -8491,7 +8772,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 <script>/* H5 版：复用 engine.js / chart.js，结构与类名与小程序 WXML 一一对应 */
 (function () {
   'use strict';
-  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly, Weekly = window.GZWeekly, Home = window.HomeCopy;
+  var GZ = window.GZ, Chart = window.GZChart, Share = window.GZShare, Badges = window.GZBadges, Insight = window.GZInsight, Monthly = window.GZMonthly, Weekly = window.GZWeekly, Home = window.HomeCopy, SL = window.SetLog;
   var KEY = 'training_db_v1', BK = 'training_last_backup', SYNC_KEY = 'training_sync_v1', WATCH_KEY = 'training_watch_v1', BK_DISMISS = 'training_bk_dismiss', OPEN_KEY = 'training_open_v1';
   [['training_db_v1', 'gzclp_db_v1'], ['training_last_backup', 'gzclp_last_backup'], ['training_sync_v1', 'gzclp_sync_v1'], ['training_watch_v1', 'gzclp_watch_v1'], ['training_bk_dismiss', 'gzclp_bk_dismiss']].forEach(function (pair) {
     try { if (localStorage.getItem(pair[0]) == null && localStorage.getItem(pair[1]) != null) localStorage.setItem(pair[0], localStorage.getItem(pair[1])); } catch (e) {}
@@ -8660,6 +8941,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var fromSync = opt && opt.fromSync, hasW = Object.prototype.hasOwnProperty.call(db.params || {}, 'watch'), w = hasW ? db.params.watch : undefined;
     if (hasW) { delete db.params.watch; watchSave(w || null); }  // 手表数据走独立键；主数据里不留
     if (!fromSync) { var prev = rawLoad(); if (prev && prev.params && prev.days) { prev = GZ.normalize(prev); delete prev.params.watch; GZ.stampConfig(prev, db); } }
+    if (window.__SEVEN_FAIL_DB) return false;
     var wrote = writeJson(KEY, db);
     if (hasW && w) db.params.watch = w;  // 调用方继续拿到完整对象
     if (!fromSync) Sync.schedule();
@@ -8708,7 +8990,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   }
   /** 把还没提交的训练写到 training_open_v1。空白草稿会删掉这个键，避免盖住以后真正填过的内容 */
   function persistOpen() {
-    if (!bootReady) return;
+    if (!bootReady) return false;
+    if (window.__SEVEN_FAIL_OPEN) return false;
     var t = S.train;
     if (t.day && t.draft) {
       if (!t.drafts) t.drafts = {};
@@ -8719,10 +9002,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       if (t.deload) t.deloads[t.day] = true; else delete t.deloads[t.day];
     }
     var snap = GZ.packOpenSession(t);
-    if (!GZ.sessionTouched(snap)) { removeJson(OPEN_KEY); return; }
-    writeJson(OPEN_KEY, snap);
+    if (!GZ.sessionTouched(snap)) { removeJson(OPEN_KEY); return true; }
+    return writeJson(OPEN_KEY, snap) !== false;
   }
-  var LIVE_INPUT = { amrap: 1, setin: 1, '5rm': 1, reps: 1, winput: 1, note: 1, bw: 1, date: 1 };
+  var LIVE_INPUT = { amrap: 1, setin: 1, '5rm': 1, reps: 1, winput: 1, note: 1, bw: 1, date: 1, logreps: 1, logw: 1, correps: 1, corw: 1 };
   /** 切到后台或刷新前，把还没触发 change 的输入框收进草稿 */
   function captureOpenInputs() {
     var root = document.getElementById('body');
@@ -9206,11 +9489,6 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       h += '<div class="ex-meta"><div class="scheme">' + esc(it.skip ? '已跳过' : Home.schemeLine(it)) + '</div>';
       if (current && !it.skip) h += '<div class="sets">' + setPips(it) + '</div>';
       h += '</div>' + flagHtml(it) + '</div></button>';
-      if (open) {
-        h += '<div class="ex-log">' +
-          (it.canAdjust ? '<button type="button" class="log-tool" data-act="editW" data-slot="' + it.slotId + '">' + (it.editW ? '完成调整' : '调整重量') + '</button>' : '') +
-          museLog(it) + '</div>';
-      }
       h += '</section>';
     });
     return h + '</div>';
@@ -9250,6 +9528,249 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return '<div class="submit-bar"><button type="button" class="sb-btn is-ready" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button></div>';
   }
 
+  var BACK = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12.2 4.2L6.4 10l5.8 5.8" stroke="#141414" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function logCtx(vm) {
+    var t = S.train, it = vm.items.filter(function (x) { return x.slotId === t.log.slot; })[0];
+    if (!it) return null;
+    var en = entry(it.slotId);
+    SL.migrate(en, it);
+    if (!en.pending) en.pending = SL.defaultPending(en, it);
+    return { it: it, en: en };
+  }
+  function putEntry(slot, next) {
+    var en = entry(slot);
+    Object.keys(en).forEach(function (k) { delete en[k]; });
+    Object.assign(en, next);
+  }
+  function openSetLog(slot) {
+    var t = S.train, vm = trainVM(), it = vm.items.filter(function (x) { return x.slotId === slot; })[0];
+    if (!it) return;
+    t.focus = slot; t.open = false;
+    if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = slot; t.focusKey = t.day + '|' + (t.recordId || ''); }
+    var en = entry(slot); SL.migrate(en, it);
+    var screen = 'work';
+    if ((en.groups || []).length >= it.sets) screen = 'done';
+    else if (rest.show && rest.slot === slot && rest.until > Date.now()) screen = 'rest';
+    t.log = { slot: slot, screen: screen, correct: null };
+  }
+  function renderSetLog(vm) {
+    var ctx = logCtx(vm); if (!ctx) { S.train.log = null; return renderTrain(); }
+    var t = S.train, it = ctx.it, en = ctx.en, screen = t.log.screen || 'work';
+    var index = (en.groups || []).length;
+    var target = SL.targetOf(it, Math.min(index, it.sets - 1));
+    var pending = en.pending || SL.defaultPending(en, it);
+    var stamp = Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day);
+    var h = '<div class="set-screen screen-' + screen + '">';
+    h += '<div class="set-wash" aria-hidden="true"></div>';
+    h += '<div class="set-top"><button type="button" class="gear-btn back-btn" data-act="logback" aria-label="返回今日列表">' + BACK + '</button>';
+    h += '<button type="button" class="gear-btn" data-act="me" aria-label="设置">' + GEAR + '</button></div>';
+    h += '<div class="set-scroll">';
+    if (screen === 'rest') {
+      var left = restLeft();
+      var nextN = index + 1;
+      h += '<p class="rest-kicker">第 ' + index + ' 组已记在本机</p>';
+      h += '<div class="rest-clock" aria-live="polite">' + fmtSec(left) + '</div>';
+      h += '<div class="rest-track" aria-hidden="true"><i class="rest-fill" style="width:' + Math.max(0, Math.min(100, left / (rest.total || 1) * 100)) + '%"></i></div>';
+      h += '<p class="rest-name">' + esc(it.name) + ' · 组间休息</p>';
+      h += '<p class="rest-next">接着第 ' + nextN + ' 组 · 目标 ' + esc(target.text) + (it.inputType === 'cardio' ? ' 分钟' : ' 次') + '</p>';
+      h += '</div><div class="log-bottom rest-controls">';
+      h += '<button type="button" data-act="logrest" data-d="-30">−30</button>';
+      h += '<button type="button" class="rest-skip" data-act="logrestskip">跳过休息</button>';
+      h += '<button type="button" data-act="logrest" data-d="30">+30</button>';
+      h += '<p class="rest-suggest">' + esc(it.badge || '') + ' 建议 ' + Math.round((it.rest || 0) / 60) + ' 分钟</p>';
+      h += '<button type="button" class="text-link" data-act="logundo">撤销这一组</button>';
+      h += '</div>';
+    } else if (screen === 'done') {
+      var p = it.preview;
+      var nxt = null;
+      vm.items.forEach(function (x) { if (!nxt && x.slotId !== it.slotId && !x.skip && !setsLogged(x)) nxt = x; });
+      h += '<p class="done-kicker">本动作已记下</p><h2 class="set-name">' + esc(it.name) + '</h2>';
+      h += '<p class="set-scheme">' + esc(Home.schemeLine(it)) + '</p>';
+      h += logDots(it, en, it.sets);
+      h += '<div class="set-log">';
+      (en.groups || []).forEach(function (g, i) {
+        h += '<button type="button" class="set-log-row" data-act="logfix" data-i="' + i + '"><span>第 ' + (i + 1) + ' 组</span><b>' + esc(g.weight) + ' kg × ' + esc(g.reps) + '</b><span class="fix">更正</span></button>';
+      });
+      h += '</div>';
+      if (p) {
+        h += '<div class="engine-card"><div class="engine-j">' + esc(p.judgment) + '</div>';
+        h += '<div class="engine-next">下次 <b>' + esc(p.nextWeight) + '</b> kg · ' + esc(p.nextStage) + '</div>';
+        h += '<p>由进阶引擎计算。界面不另算下次重量。' + (p.adaptNote ? esc(p.adaptNote) : '') + '</p></div>';
+      }
+      h += '</div><div class="log-bottom">';
+      if (nxt) h += '<button type="button" class="home-cta" data-act="lognext" data-slot="' + nxt.slotId + '">下一动作 · ' + esc(Home.shortLift(nxt.name)) + '</button>';
+      else h += '<button type="button" class="home-cta" data-act="logback">返回今日列表</button>';
+      if (nxt) h += '<button type="button" class="text-link" data-act="logback">返回今日列表</button>';
+      h += '</div>';
+    } else if (screen === 'correct') {
+      var ci = t.log.correct || 0;
+      var g = (en.groups || [])[ci] || { reps: 0, weight: it.weight };
+      var shownReps = en.correctPending && en.correctPending.reps != null ? en.correctPending.reps : g.reps;
+      var shownW = en.correctPending && en.correctPending.weight != null ? en.correctPending.weight : g.weight;
+      h += '<p class="set-meta">' + esc(stamp) + '</p>';
+      h += '<h2 class="set-name">更正第 ' + (ci + 1) + ' 组</h2>';
+      h += '<p class="set-scheme">' + esc(it.name) + ' · ' + esc(Home.schemeLine(it)) + '</p>';
+      h += '<div class="origin-card"><span>原记录</span><b>' + esc(g.weight) + ' kg × ' + esc(g.correctedFrom != null ? g.correctedFrom : g.reps) + ' 次</b></div>';
+      h += '<p class="block-label">更正次数</p>' + stepperHtml('correps', shownReps, '次');
+      h += '<p class="block-label">重量</p>' + stepperHtml('corw', shownW, 'kg');
+      h += '<p class="hint">保存后会标明已更正。后面的组还在。中间组次数不改写进阶。</p>';
+      h += '</div><div class="log-bottom">';
+      h += '<button type="button" class="home-cta" data-act="logcorrectsave">保存更正</button>';
+      h += '<div class="home-links">';
+      if (ci === (en.groups || []).length - 1) h += '<button type="button" data-act="logundo">撤销这一组</button><i></i>';
+      h += '<button type="button" data-act="logwork">返回</button></div></div>';
+    } else if (screen === 'fail') {
+      var fail = t.log.fail || { index: index, reps: pending.reps, weight: pending.weight };
+      h += '<h2 class="set-name">第 ' + (fail.index + 1) + ' 组还没有记到本机</h2>';
+      h += '<p class="hint">本机写入没有成功。不是云同步问题。你刚填的重量和次数都还在，可以再试一次。</p>';
+      h += '<div class="origin-card"><span>仍保留的输入</span><b>' + esc(fail.weight) + ' kg × ' + esc(fail.reps) + ' 次</b><span>' + esc(it.name) + ' · 第 ' + (fail.index + 1) + ' 组</span></div>';
+      h += '</div><div class="log-bottom">';
+      h += '<button type="button" class="home-cta" data-act="logretry">再试一次</button>';
+      h += '<button type="button" class="text-link" data-act="logwork">先留在本页</button></div>';
+    } else {
+      var cur = Math.min(index, it.sets - 1);
+      var amrap = SL.isAmrapIndex(it, cur);
+      h += '<p class="set-meta">' + esc(stamp) + '</p>';
+      h += '<h2 class="set-name">' + esc(it.name) + '</h2>';
+      h += '<p class="set-scheme">' + esc(Home.schemeLine(it)) + '</p>';
+      if (!it.isBW && !it.isCardio) {
+        h += '<div class="weight-row"><span class="big-kg">' + esc(pending.weight) + '</span><span class="unit">' + esc(it.unitText || 'kg') + '</span>';
+        h += '<button type="button" class="w-adjust" data-act="logwedit">' + (t.log.wedit ? '完成' : '调整') + '</button></div>';
+        if (t.log.wedit) h += stepperHtml('logw', pending.weight, it.unitText || 'kg');
+      }
+      h += logDots(it, en, cur);
+      h += '<p class="path-cap">第 ' + (cur + 1) + ' / ' + it.sets + ' 组' + (amrap ? ' · 末组' : '') + '</p>';
+      var samePrev = index > 0 && en.groups.every(function (g) { return g.reps === en.groups[0].reps && g.weight === en.groups[0].weight; });
+      if (amrap && samePrev) {
+        h += '<div class="set-log"><div class="set-log-row"><span>第 1–' + index + ' 组</span><b>均 ' + esc(en.groups[0].weight) + ' kg × ' + esc(en.groups[0].reps) + '</b></div></div>';
+      } else if ((en.groups || []).length) {
+        h += '<div class="set-log">';
+        en.groups.forEach(function (g, i) {
+          var note = g.correctedFrom != null ? '已更正（原 ' + g.correctedFrom + ' 次）' : '';
+          h += '<button type="button" class="set-log-row" data-act="logfix" data-i="' + i + '"><span>第 ' + (i + 1) + ' 组</span><b>' + esc(g.weight) + ' kg × ' + esc(g.reps) + '</b><span class="fix">' + (note || '更正') + '</span></button>';
+        });
+        h += '</div>';
+      }
+      h += '<div class="rep-panel"><p class="target">目标 <em>' + esc(amrap ? target.text : target.reps) + '</em> ' + (it.isCardio ? '分钟' : '次') + '</p>';
+      h += stepperHtml('logreps', pending.reps, it.isCardio ? '分钟' : '次');
+      if (amrap) h += '<p class="hint">至少 ' + esc(target.reps) + ' 次。按实际完成填写，多做如实记录。</p>';
+      h += '</div></div><div class="log-bottom">';
+      var can = pending.reps !== '' && pending.reps != null;
+      h += '<button type="button" class="home-cta" data-act="logsave"' + (can ? '' : ' disabled') + '>记下第 ' + (cur + 1) + ' 组</button>';
+      h += '<div class="home-links"><button type="button" data-act="openswap" data-slot="' + it.slotId + '">换动作</button><i></i>';
+      h += '<button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
+      if ((en.groups || []).length) h += '<button type="button" class="text-link" data-act="logundo">撤销上一组</button>';
+      h += '</div>';
+    }
+    h += '</div>';
+    if (t.swap && t.swap.show) h += renderSwap();
+    return h;
+  }
+  function logDots(it, en, current) {
+    var h = '<div class="set-path" role="list">';
+    for (var i = 0; i < it.sets; i++) {
+      var cls = i < (en.groups || []).length ? 'done' : (i === current ? 'now' : '');
+      var mark = cls === 'done' ? '' : (SL.isAmrapIndex(it, i) ? (i + 1) + '+' : (i + 1));
+      h += '<div class="sp ' + cls + '" role="listitem"><span class="dot">' + mark + '</span><span class="lab">' + (i + 1) + '</span></div>';
+    }
+    return h + '</div>';
+  }
+  function logField(key, value) {
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    ctx.en.pending = ctx.en.pending || SL.defaultPending(ctx.en, ctx.it);
+    ctx.en.pending[key] = value;
+    return false;
+  }
+  function logCorrectField(key, value) {
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var g = (ctx.en.groups || [])[S.train.log.correct || 0] || {};
+    ctx.en.correctPending = ctx.en.correctPending || { reps: g.reps, weight: g.weight };
+    ctx.en.correctPending[key] = value;
+    return false;
+  }
+  function logStep(ds) {
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var key = ds.k === 'logw' || ds.k === 'corw' ? 'weight' : 'reps';
+    var bag = (ds.k === 'correps' || ds.k === 'corw') ? (ctx.en.correctPending || (ctx.en.correctPending = { reps: 0, weight: ctx.it.weight })) : (ctx.en.pending || (ctx.en.pending = SL.defaultPending(ctx.en, ctx.it)));
+    if (key === 'reps') {
+      var cur = bag.reps === '' || bag.reps == null ? 0 : Number(bag.reps);
+      bag.reps = SL.clampReps((isNaN(cur) ? 0 : cur) + Number(ds.d), ctx.it.inputType);
+    } else {
+      var dir = Number(ds.d) < 0 ? -1 : 1;
+      bag.weight = GZ.nudgeWeight(ctx.it.name, ctx.it.equip, Number(bag.weight) || 0, dir, ctx.it.wStep);
+    }
+    return true;
+  }
+  function commitSet() {
+    var t = S.train; if (t._writing) return false;
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var field = document.querySelector('[data-act=logreps]');
+    var pending = ctx.en.pending || SL.defaultPending(ctx.en, ctx.it);
+    if (field) pending.reps = field.value;
+    t._writing = true;
+    var result = SL.commitGroup(ctx.en, ctx.it, pending, function (next) {
+      var prev = JSON.parse(JSON.stringify(ctx.en));
+      putEntry(ctx.it.slotId, next);
+      var ok = persistOpen();
+      if (!ok) putEntry(ctx.it.slotId, prev);
+      return ok;
+    });
+    t._writing = false;
+    if (!result.ok && result.reason === 'empty') { toast('填写本次次数'); return false; }
+    if (!result.ok && result.reason === 'write') {
+      t.log.screen = 'fail';
+      t.log.fail = { index: (ctx.en.groups || []).length, reps: pending.reps, weight: pending.weight };
+      return true;
+    }
+    if (!result.ok) return false;
+    if (result.last) t.log.screen = 'done';
+    else { t.log.screen = 'rest'; beginRest(ctx.it.rest || 60, ctx.it.name, ctx.it.slotId); }
+    return true;
+  }
+  function saveCorrection() {
+    var t = S.train; if (t._writing) return false;
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var bag = ctx.en.correctPending || {};
+    var repsField = document.querySelector('[data-act=correps]');
+    var wField = document.querySelector('[data-act=corw]');
+    var reps = repsField ? repsField.value : bag.reps;
+    var weight = wField ? wField.value : bag.weight;
+    var next = SL.correctGroup(ctx.en, ctx.it, t.log.correct || 0, reps, weight);
+    if (!next) { toast('填写本次次数'); return false; }
+    t._writing = true;
+    var prev = JSON.parse(JSON.stringify(ctx.en));
+    putEntry(ctx.it.slotId, next);
+    var ok = persistOpen();
+    t._writing = false;
+    if (!ok) { putEntry(ctx.it.slotId, prev); t.log.screen = 'fail'; t.log.fail = { index: t.log.correct || 0, reps: reps, weight: weight }; return true; }
+    t.log.screen = 'work'; t.log.correct = null; return true;
+  }
+  function undoSet() {
+    var ctx = logCtx(trainVM()); if (!ctx) return false;
+    var undone = SL.undoLast(ctx.en, ctx.it);
+    if (!undone) return false;
+    var prev = JSON.parse(JSON.stringify(ctx.en));
+    putEntry(ctx.it.slotId, undone.entry);
+    var ok = persistOpen();
+    if (!ok) { putEntry(ctx.it.slotId, prev); toast('这一组还没从本机撤下'); return false; }
+    if (rest.show && rest.slot === ctx.it.slotId) { clearInterval(rest.timer); rest.show = false; rest.until = 0; companionBus('rest', { on: false }); renderRest(); }
+    S.train.log.screen = 'work'; S.train.log.correct = null;
+    return true;
+  }
+  function nudgeLogRest(delta) {
+    if (!rest.until) return false;
+    var left = Math.max(5, restLeft() + delta);
+    rest.until = Date.now() + left * 1000;
+    rest.total = Math.max(rest.total, left);
+    rest.left = left;
+    tickRest();
+    return false;
+  }
+  function stepperHtml(act, value, unit) {
+    return '<div class="rep-step"><button type="button" class="st-btn" data-act="logstep" data-k="' + act + '" data-d="-1" aria-label="减少">−</button>' +
+      '<input class="st-val" inputmode="numeric" data-act="' + act + '" value="' + esc(value) + '" aria-label="' + esc(unit) + '">' +
+      '<button type="button" class="st-btn" data-act="logstep" data-k="' + act + '" data-d="1" aria-label="增加">+</button></div><p class="st-unit">' + esc(unit) + '</p>';
+  }
   function renderTrainHold(cur) {
     var paused = cur.status === 'paused';
     var body = '<header class="session-guide"><div class="pedestal"><div class="seven-frame"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button></div><span class="ground-shadow" aria-hidden="true"></span></div>' +
@@ -9265,6 +9786,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (cur0 && cur0.status !== 'active' && !S.train.recordId) return renderTrainHold(cur0);
     var vm = trainVM(), t = S.train, h = '';
     ensureFocus(vm);
+    if (t.log && !vm.locked) return renderSetLog(vm);
     var it = Home.focusItem(vm, t.focus);
     var started = Home.sessionStarted(vm);
     var pos = Home.positionOf(vm, it && it.slotId);
@@ -9276,6 +9798,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     h += '<header class="session-guide"><div class="pedestal"><div class="seven-frame"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button></div><span class="ground-shadow" aria-hidden="true"></span></div>';
     h += '<p class="guide-title" aria-live="polite">' + esc(prompt) + '</p></header>';
     h += '<section class="training-block" aria-label="训练">';
+    if (t.saveFail) h += '<div class="bk-nag"><div class="flex1"><div class="bk-t">这次训练还没记到本机</div><div class="bk-s">草稿还在，可以再点完成训练。这不是云同步问题。</div></div></div>';
     if (!vm.editing) h += backupNag();
     h += '<div class="session-context"><p class="when-line">' + esc(Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day)) + '</p>';
     h += '<span class="session-position">第 <b>' + pos.index + '</b> / ' + pos.total + ' 个动作</span></div>';
@@ -9371,15 +9894,40 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'deload': t.deload = el.checked; return true;
       case 'focus':
       case 'row':
-        if (!ds.slot) return false;
-        if (ds.slot === t.focus) { t.open = !t.open; t.more = ''; return true; }
-        t.focus = ds.slot; t.open = false; t.more = '';
-        if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = t.focus; t.focusKey = t.day + '|' + (t.recordId || ''); }
-        return true;
       case 'startlog':
-        if (ds.slot) t.focus = ds.slot;
-        t.open = true; t.more = ''; t._scrollLog = true;
+        if (!ds.slot && !t.focus) return false;
+        openSetLog(ds.slot || t.focus);
         return true;
+      case 'logback':
+        if (t.log) {
+          var backCtx = logCtx(trainVM());
+          if (backCtx) {
+            var wrotePending = persistOpen();
+            if (!wrotePending && backCtx.en.pending) { t.log.screen = 'fail'; t.log.fail = { index: (backCtx.en.groups || []).length, reps: backCtx.en.pending.reps, weight: backCtx.en.pending.weight }; return true; }
+          }
+        }
+        t.log = null; t.open = false; return true;
+      case 'logwork':
+        if (t.log) {
+          var backDone = logCtx(trainVM());
+          t.log.screen = backDone && (backDone.en.groups || []).length >= backDone.it.sets ? 'done' : 'work';
+          t.log.correct = null;
+        }
+        return true;
+      case 'lognext': openSetLog(ds.slot); return true;
+      case 'logfix': if (t.log) { t.log.screen = 'correct'; t.log.correct = Number(ds.i); var cen = entry(t.log.slot); cen.correctPending = null; } return true;
+      case 'logwedit': if (t.log) t.log.wedit = !t.log.wedit; return true;
+      case 'logstep': return logStep(ds);
+      case 'logreps': return logField('reps', el.value);
+      case 'logw': return logField('weight', el.value);
+      case 'correps': return logCorrectField('reps', el.value);
+      case 'corw': return logCorrectField('weight', el.value);
+      case 'logsave':
+      case 'logretry': return commitSet();
+      case 'logcorrectsave': return saveCorrection();
+      case 'logundo': return undoSet();
+      case 'logrest': return nudgeLogRest(Number(ds.d));
+      case 'logrestskip': finishRest(false); return false;
       case 'expand':
         if (ds.slot && t.focus !== ds.slot) t.focus = ds.slot;
         t.open = ds.keep === '1' ? true : !t.open;
@@ -9417,7 +9965,18 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         en.sets[Number(ds.i)] = el.value === '' ? null : Math.max(0, Math.min(60, parseInt(el.value, 10) || 0)); return true;
       case 'miss': en = entry(ds.slot); en.miss = !!el.checked; return true;
       case 'reps': entry(ds.slot).reps = el.value; return true;
-      case 'skip': en = entry(ds.slot); en.skip = !en.skip; t.more = ''; return true;
+      case 'skip':
+        en = entry(ds.slot);
+        var skipIt = trainVM().items.filter(function (x) { return x.slotId === ds.slot; })[0];
+        if (!en.skip && ((en.groups && en.groups.length) || en.done)) {
+          confirmBox('跳过这个动作？', '已记下的组留在草稿里，这次不按这些组进阶。恢复后还能看到。', function () {
+            en.skip = true; t.more = ''; t.log = null; persistOpen(); render();
+          });
+          return false;
+        }
+        en.skip = !en.skip; t.more = '';
+        if (skipIt) SL.syncEngine(en, skipIt);
+        return true;
       case 'editW': en = entry(ds.slot); en.editW = !en.editW; t.open = true; t.more = ''; return true;
       case 'wstep':
         en = entry(ds.slot); vm = trainVM();
@@ -9471,7 +10030,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var rec = GZ.saveRecord(db, { id: t.recordId, date: t.date, day: t.day, deload: vm.deload, note: t.note, bw: bw, entries: t.draft, createdAt: t.recordId ? t.createdAt : Date.now() });
       if (bw > 0) db.params.bodyWeight = bw;
       var persisted = save(db);
-      if (window.CompanionView) CompanionView.machine.dispatch('complete', { persisted: !!persisted, eventId: rec && rec.id ? ('session:' + rec.id) : '', redo: editing, backfill: sessionDate !== shDate(), levelUp: false });
+      if (!persisted) {
+        t.saveFail = true;
+        toast('这次训练还没记到本机');
+        render();
+        return;
+      }
+      t.saveFail = false;
+      if (window.CompanionView) CompanionView.machine.dispatch('complete', { persisted: true, eventId: rec && rec.id ? ('session:' + rec.id) : '', redo: editing, backfill: sessionDate !== shDate(), levelUp: false });
       var s = GZ.sessionResult(db, rec.id), rdn = GZ.roundInfo(db), wDone = !t.recordId && s && rdn.week > s.week;
       var dCyc = s ? GZ.cycleOf(s.week, db.params).cycle : 1, nCyc = GZ.cycleOf(rdn.week, db.params).cycle, cDone = wDone && nCyc > dCyc;
       var rotated = cDone ? GZ.buildRotation(db, nCyc).changed : 0;
@@ -9520,23 +10086,51 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     }
     return h + '</div></div>';
   }
+  function loggedSwap(en) {
+    return !!((en.groups && en.groups.length) || en.done || (en.v != null && en.v !== '') || (en.held && Object.keys(en.held).length));
+  }
+  function retargetLogged(en, fromName, toName) {
+    var stashed = SL.holdForSwap(en, fromName);
+    var back = SL.restoreHeld(stashed, toName);
+    var keep = stashed.held;
+    Object.keys(en).forEach(function (k) { delete en[k]; });
+    Object.assign(en, back, { held: keep });
+  }
   function swapConfirm() {
     var t = S.train, sw = t.swap, en = entry(sw.slotId);
     var wEl = document.querySelector('[data-act=swapw]'); if (wEl) sw.weight = wEl.value;
+    var had = loggedSwap(en);
     if (sw.scope === 'once' || sw.editing) {
-      en.ex = sw.sel; en.w = Number(sw.weight) || 0;
-      toast('本次改为 ' + sw.sel + ' · ' + sw.recText + (sw.recUnit === '自重' ? '' : ' ' + sw.recUnit));
+      var applyOnce = function () {
+        retargetLogged(en, sw.curName, sw.sel);
+        en.ex = sw.sel; en.w = Number(sw.weight) || 0;
+        toast('本次改为 ' + sw.sel + ' · ' + sw.recText + (sw.recUnit === '自重' ? '' : ' ' + sw.recUnit));
+        sw.show = false; persistOpen(); render();
+      };
+      if (had) {
+        confirmBox('更换这个动作？', '已记下的组留在原来的动作上，不会算进新动作。换回来还能看到。', applyOnce);
+        return false;
+      }
+      applyOnce();
+      return false;
     }
-    else {
+    var applyPerm = function () {
       var w = parseFloat(sw.weight);
-      if (isNaN(w) || w < 0) { toast('请填写起始重量'); return false; }
+      if (isNaN(w) || w < 0) { toast('请填写起始重量'); return; }
       var db = load(), r = GZ.swapSlot(db, sw.dayId, sw.slotId, sw.sel, w);
-      if (r && r.error) { toast(r.error); return false; }
-      save(db);
+      if (r && r.error) { toast(r.error); return; }
+      if (!save(db)) { toast('这次更换还没记到本机'); return; }
+      retargetLogged(en, sw.curName, sw.sel);
       delete en.ex; en.w = null; en.editW = false;
       toast(r && r.base ? '已更换为 ' + sw.sel : '第 ' + r.fromWeek + ' 周起改为 ' + sw.sel);
+      sw.show = false; persistOpen(); render();
+    };
+    if (had) {
+      confirmBox('更换这个动作？', '已记下的组留在原来的动作上，不会算进新动作。换回来还能看到。', applyPerm);
+      return false;
     }
-    sw.show = false; return true;
+    applyPerm();
+    return false;
   }
   function startEdit(id) {
     var db = load(), rec = GZ.getRecord(db, id), t = S.train; if (!rec) return;
@@ -9545,17 +10139,36 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     t.recordId = id; t.day = rec.day; t.deload = !!rec.deload; t.draft = draft; t.date = rec.date; t.bw = rec.bw || ''; t.note = rec.note || ''; t.createdAt = rec.createdAt;
     S.tab = 'train';
   }
-  function beginRest(sec, name) {
-    clearInterval(rest.timer); rest.show = true; rest.open = false; rest.left = sec; rest.total = sec; rest.name = name; companionBus('rest', { on: true }); renderRest();
-    rest.timer = setInterval(function () {
-      rest.left -= 1;
-      if (rest.left <= 0) { clearInterval(rest.timer); rest.show = false; companionBus('rest', { on: false }); renderRest(); toast('休息结束，开始下一组'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); return; }
-      renderRest();
-    }, 1000);
+  function restLeft() { return rest.until ? Math.max(0, Math.ceil((rest.until - Date.now()) / 1000)) : 0; }
+  function tickRest() {
+    rest.left = restLeft();
+    if (rest.left <= 0) { finishRest(true); return; }
+    if (S.train.log && S.train.log.screen === 'rest') {
+      var num = document.querySelector('.rest-clock');
+      var bar = document.querySelector('.rest-fill');
+      if (num) num.textContent = fmtSec(rest.left);
+      if (bar) bar.style.width = Math.max(0, Math.min(100, rest.left / rest.total * 100)) + '%';
+      return;
+    }
+    renderRest();
+  }
+  function finishRest(expired) {
+    clearInterval(rest.timer); rest.timer = null; rest.show = false; rest.until = 0; companionBus('rest', { on: false });
+    var backToWork = S.train.log && S.train.log.screen === 'rest';
+    if (backToWork) S.train.log.screen = 'work';
+    renderRest();
+    if (expired) { toast('休息结束'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); }
+    if (backToWork) render();
+  }
+  function beginRest(sec, name, slot) {
+    clearInterval(rest.timer); rest.show = true; rest.open = false; rest.total = sec; rest.name = name; rest.slot = slot || '';
+    rest.until = Date.now() + sec * 1000; rest.left = sec; companionBus('rest', { on: true });
+    if (!(S.train.log && S.train.log.screen === 'rest')) renderRest();
+    rest.timer = setInterval(tickRest, 250);
   }
   function renderRest() {
     var el = document.getElementById('rest');
-    if (!rest.show) { el.innerHTML = ''; return; }
+    if (!rest.show || (S.train.log && S.train.log.screen === 'rest')) { if (el) el.innerHTML = ''; return; }
     var pct = Math.max(0, Math.min(100, rest.left / rest.total * 100)), app = document.querySelector('.app'), tb = document.getElementById('tabbar');
     var bottom = 12 + (app && tb ? app.getBoundingClientRect().bottom - tb.getBoundingClientRect().top : 60) + (S.tab === 'train' && !S.train.result ? 72 : 0);
     el.innerHTML = '<div class="rest-float" style="bottom:' + Math.round(bottom) + 'px">' +
@@ -10740,7 +11353,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var tb = document.getElementById('tabbar');
     var trainHome = !gateOnboard() && S.tab === 'train';
     var appEl = document.querySelector('.app');
-    if (appEl) appEl.classList.toggle('on-train', trainHome);
+    if (appEl) {
+      appEl.classList.toggle('on-train', trainHome);
+      appEl.classList.toggle('on-log', trainHome && !!(S.train && S.train.log));
+    }
     var theme = document.querySelector('meta[name="theme-color"]');
     if (theme) theme.setAttribute('content', trainHome ? '#F8F8F8' : '#F7F7F8');
     if (gateOnboard()) {
@@ -10919,12 +11535,20 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     });
     document.getElementById('rest').addEventListener('click', function (e) {
       var a = e.target.closest('[data-rest-adj]'), s = e.target.closest('[data-rest-stop]');
-      if (a) { rest.left = Math.max(5, rest.left + Number(a.dataset.restAdj)); rest.total = Math.max(rest.total, rest.left); renderRest(); }
-      if (s) { clearInterval(rest.timer); rest.show = false; renderRest(); }
+      if (a) {
+        var delta = Number(a.dataset.restAdj);
+        var left = Math.max(5, restLeft() + delta);
+        rest.until = Date.now() + left * 1000;
+        rest.total = Math.max(rest.total, left);
+        rest.left = left;
+        tickRest();
+      }
+      if (s) finishRest(false);
       if (e.target.closest('[data-rest-toggle]')) { rest.open = !rest.open; renderRest(); }
     });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'hidden') { flushOpen(); return; }
+      if (rest.show && rest.until) tickRest();
       var c = Sync.cfg(); if (Sync.on() && (!c.lastAt || Date.now() - c.lastAt > 30000)) Sync.run();
     });
     window.addEventListener('pagehide', flushOpen);
@@ -10932,6 +11556,14 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     window.addEventListener('online', function () { if (Sync.on()) Sync.run(); });
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); else if (S.stats.ex) drawExercise(); }, 120); });
     bindSwipeBack();
+    if (window.visualViewport) {
+      var liftKb = function () {
+        var gap = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+        document.documentElement.style.setProperty('--kb', gap + 'px');
+      };
+      window.visualViewport.addEventListener('resize', liftKb);
+      window.visualViewport.addEventListener('scroll', liftKb);
+    }
     boot().catch(function () {}).then(function () {
       bootReady = true;
       tryRestoreOpen();

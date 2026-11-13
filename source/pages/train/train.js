@@ -1,5 +1,6 @@
 const GZ = require('../../utils/engine.js');
 const Home = require('../../utils/home-copy.js');
+const SL = require('../../utils/set-log.js');
 const store = require('../../utils/store.js');
 const app = getApp();
 
@@ -17,6 +18,8 @@ Page({
   setDate(d) { this.date = d; this.setData({ date: d, dateText: GZ.dateLabel(d) }); },
 
   onShow() {
+    if (this.restUntil) this.armRest();
+    if (this.logOn && wx.hideTabBar) wx.hideTabBar({ animation: false });
     if (!this._openReady) { this.restoreOpen(); this._openReady = true; }
     const g = app.globalData;
     if (g.editRecordId) { this.startEdit(g.editRecordId); g.editRecordId = null; return; }
@@ -36,7 +39,10 @@ Page({
       recordId: this.recordId, createdAt: this.editCreatedAt, deload: this.deload
     };
   },
-  persistOpen() { if (this._openReady) store.saveOpen(GZ.packOpenSession(this.openSnap())); },
+  persistOpen() {
+    if (!this._openReady) return false;
+    return store.saveOpen(GZ.packOpenSession(this.openSnap())) !== false;
+  },
   restoreOpen() {
     const snap = store.loadOpen();
     if (!GZ.applyOpenSession(this, snap)) return;
@@ -98,8 +104,11 @@ Page({
     else if (vm.locked) goalStatus = '已完成';
     else if (vm.filled > 0) goalStatus = '进行中';
     else if (vm.day === vm.recommended) goalStatus = '待开练';
+    const log = this.logOn ? this.viewLog(vm) : null;
+    if (this.logOn && !log) this.logOn = false;
     this.setData({
-      vm, exBlocks, focus, goalStatus, home,
+      vm, exBlocks, focus, goalStatus, home, log,
+      saveFail: !!this.saveFail,
       profileName: (sp.name || '').trim() || 'Seven',
       profileAvatar: sp.avatar || '',
       expanded: !!this.expanded,
@@ -153,15 +162,11 @@ Page({
   onRow(e) {
     const slot = e.currentTarget.dataset.slot;
     if (!slot) return;
-    if (slot === this.focus) { this.expanded = !this.expanded; this.moreOpen = false; }
-    else { this.focus = slot; this.expanded = false; this.moreOpen = false; }
-    this.refresh();
+    this.openLog(slot);
   },
   onStart() {
     if (this.data.home && this.data.home.ready) return this.onSubmit();
-    this.expanded = true;
-    this.moreOpen = false;
-    this.refresh();
+    if (this.data.home && this.data.home.slot) this.openLog(this.data.home.slot);
   },
   onAdjust() { this.menuOpen = true; this.moreOpen = false; this.setData({ menuOpen: true, moreOpen: false }); },
   onFocus(e) {
@@ -244,21 +249,43 @@ Page({
     const en = this.entry(this.swapState.slotId); delete en.ex; en.w = null;
     this.closeSwap(); this.refresh();
   },
+  retargetLogged(en, fromName, toName) {
+    const stashed = SL.holdForSwap(en, fromName);
+    const back = SL.restoreHeld(stashed, toName);
+    const keep = stashed.held;
+    Object.keys(en).forEach((k) => { delete en[k]; });
+    Object.assign(en, back, { held: keep });
+  },
+  applySwap(en, s) {
+    if (s.scope === 'once' || s.editing) {
+      this.retargetLogged(en, s.curName, s.sel);
+      en.ex = s.sel; en.w = Number(s.weight) || 0;
+      wx.showToast({ title: '本次改为 ' + s.sel, icon: 'none' });
+      return true;
+    }
+    const w = parseFloat(s.weight);
+    if (isNaN(w) || w < 0) { wx.showToast({ title: '请填写起始重量', icon: 'none' }); return false; }
+    const db = this.db(), r = GZ.swapSlot(db, s.dayId, s.slotId, s.sel, w);
+    if (r && r.error) { wx.showToast({ title: r.error, icon: 'none' }); return false; }
+    if (!store.save(db)) { wx.showToast({ title: '这次更换还没记到本机', icon: 'none' }); return false; }
+    this.retargetLogged(en, s.curName, s.sel);
+    delete en.ex; en.w = null; en.editW = false;
+    wx.showToast({ title: r && r.base ? '已更换为 ' + s.sel : '第 ' + r.fromWeek + ' 周起改为 ' + s.sel, icon: 'none' });
+    return true;
+  },
   swapConfirm() {
     const s = this.swapState, en = this.entry(s.slotId);
-    if (s.scope === 'once' || s.editing) {
-      en.ex = s.sel; en.w = Number(s.weight) || 0; // 本次替换直接采用该动作的器械感知推荐重量
-      wx.showToast({ title: '本次改为 ' + s.sel + ' · ' + s.recText + (s.recUnit === '自重' ? '' : ' ' + s.recUnit), icon: 'none' });
-    } else {
-      const w = parseFloat(s.weight);
-      if (isNaN(w) || w < 0) return wx.showToast({ title: '请填写起始重量', icon: 'none' });
-      const db = this.db(), r = GZ.swapSlot(db, s.dayId, s.slotId, s.sel, w);
-      if (r && r.error) return wx.showToast({ title: r.error, icon: 'none' });
-      store.save(db);
-      delete en.ex; en.w = null; en.editW = false;
-      wx.showToast({ title: r && r.base ? '已更换为 ' + s.sel : '第 ' + r.fromWeek + ' 周起改为 ' + s.sel, icon: 'none' });
+    const had = !!((en.groups && en.groups.length) || en.done || (en.v != null && en.v !== '') || (en.held && Object.keys(en.held).length));
+    const go = () => { if (this.applySwap(en, s)) { this.closeSwap(); this.refresh(); } };
+    if (had) {
+      wx.showModal({
+        title: '更换这个动作？',
+        content: '已记下的组留在「' + s.curName + '」上，不会算进「' + s.sel + '」。换过去从它自己的组开始，换回来还能看到。',
+        success: (r) => { if (r.confirm) go(); }
+      });
+      return;
     }
-    this.closeSwap(); this.refresh();
+    go();
   },
 
   // ---- 手动调整重量 ----
@@ -279,7 +306,28 @@ Page({
     this.refresh();
   },
   onWReset(e) { const en = this.entry(e.currentTarget.dataset.slot); en.w = null; this.refresh(); },
-  onSkip(e) { const en = this.entry(e.currentTarget.dataset.slot); en.skip = !en.skip; this.moreOpen = false; this.refresh(); },
+  onSkip(e) {
+    const slot = e.currentTarget.dataset.slot;
+    const en = this.entry(slot);
+    this.moreOpen = false;
+    if (!en.skip && ((en.groups && en.groups.length) || en.done)) {
+      wx.showModal({
+        title: '跳过这个动作？',
+        content: '已记下的组留在草稿里，这次不按这些组进阶。恢复后还能看到。',
+        success: (r) => {
+          if (!r.confirm) return;
+          en.skip = true;
+          this.logOn = false;
+          this.logScreen = null;
+          if (wx.showTabBar) wx.showTabBar({ animation: false });
+          this.refresh();
+        }
+      });
+      return;
+    }
+    en.skip = !en.skip;
+    this.refresh();
+  },
   onBw(e) { this.bw = e.detail.value; this.setData({ bw: e.detail.value }); this.persistOpen(); },
   onNote(e) { this.note = e.detail.value; this.setData({ note: e.detail.value }); this.persistOpen(); },
 
@@ -337,7 +385,13 @@ Page({
       createdAt: this.recordId ? this.editCreatedAt : Date.now()
     });
     if (bw > 0) db.params.bodyWeight = bw; // 负重动作推荐重量以最近体重为基准
-    store.save(db);
+    if (!store.save(db)) {
+      this.saveFail = true;
+      wx.showToast({ title: '这次训练还没记到本机', icon: 'none' });
+      this.refresh();
+      return;
+    }
+    this.saveFail = false;
     const s = GZ.sessionResult(db, rec.id), rd = GZ.roundInfo(db);
     const weekDone = !this.recordId && s && rd.week > s.week;
     const doneCyc = s ? GZ.cycleOf(s.week, db.params).cycle : 1;
@@ -372,5 +426,243 @@ Page({
     this.setData({ result: null, share: { show: true, kind: 'day', recordId: id, week: 0, ym: '' } });
   },
   closeShare() { this.setData({ 'share.show': false }); },
+
+  replaceEntry(slot, next) {
+    const en = this.entry(slot);
+    Object.keys(en).forEach((k) => { delete en[k]; });
+    Object.assign(en, next);
+  },
+  openLog(slot) {
+    this.logOn = true;
+    this.logSlot = slot;
+    this.logScreen = null;
+    this.focus = slot;
+    this.moreOpen = false;
+    if (wx.hideTabBar) wx.hideTabBar({ animation: false });
+    this.refresh();
+  },
+  closeLog() {
+    this.logOn = false;
+    this.logScreen = null;
+    if (wx.showTabBar) wx.showTabBar({ animation: false });
+    this.refresh();
+  },
+  viewLog(vm) {
+    const it = (vm.items || []).find((x) => x.slotId === this.logSlot);
+    if (!it) return null;
+    const en = this.entry(it.slotId);
+    SL.migrate(en, it);
+    if (!en.pending) en.pending = SL.defaultPending(en, it);
+    const groups = en.groups || [];
+    const index = groups.length;
+    let screen = this.logScreen;
+    if (!screen) {
+      if (index >= it.sets) screen = 'done';
+      else if (this.restUntil && this.restSlot === it.slotId && this.restUntil > Date.now()) screen = 'rest';
+      else screen = 'work';
+      this.logScreen = screen;
+    }
+    const cur = Math.min(index, Math.max(it.sets - 1, 0));
+    const target = SL.targetOf(it, cur);
+    const amrap = SL.isAmrapIndex(it, cur);
+    const pending = en.pending || SL.defaultPending(en, it);
+    const dots = [];
+    for (let i = 0; i < it.sets; i++) {
+      const done = i < groups.length;
+      const now = i === cur && screen !== 'done';
+      dots.push({ i, cls: done ? 'done' : (now ? 'now' : ''), mark: done ? '' : (SL.isAmrapIndex(it, i) ? (i + 1) + '+' : String(i + 1)) });
+    }
+    const same = index > 0 && groups.every((g) => g.reps === groups[0].reps && g.weight === groups[0].weight);
+    const rows = (amrap && same && screen === 'work') ? [] : groups.map((g, i) => ({
+      i, label: '第 ' + (i + 1) + ' 组', text: g.weight + ' kg × ' + g.reps,
+      note: g.correctedFrom != null ? '已更正（原 ' + g.correctedFrom + ' 次）' : '更正'
+    }));
+    const nxt = (vm.items || []).find((x) => x.slotId !== it.slotId && !x.skip && !(x.logged && x.value !== '未完成'));
+    const left = this.restUntil ? Math.max(0, Math.ceil((this.restUntil - Date.now()) / 1000)) : 0;
+    const ci = this.logCorrect || 0;
+    const g = groups[ci] || { reps: 0, weight: it.weight };
+    const bag = en.correctPending || {};
+    const fail = this.logFail || { index, reps: pending.reps, weight: pending.weight };
+    const p = it.preview;
+    return {
+      screen, slot: it.slotId, name: it.name, scheme: Home.schemeLine(it), badge: it.badge || '',
+      stamp: Home.sessionStamp(this.date || GZ.today(), vm.weekInCycle, vm.cycle, vm.day),
+      showWeight: !it.isBW && !it.isCardio,
+      weight: pending.weight, unit: it.unitText || 'kg',
+      dots, pathCap: '第 ' + (cur + 1) + ' / ' + it.sets + ' 组' + (amrap ? ' · 末组' : ''),
+      rows, collapsed: amrap && same && screen === 'work' ? ('第 1–' + index + ' 组均 ' + groups[0].weight + ' kg × ' + groups[0].reps) : '',
+      target: '目标 ' + (amrap ? target.text : target.reps) + (it.isCardio ? ' 分钟' : ' 次'),
+      hint: amrap ? ('至少 ' + target.reps + ' 次。按实际完成填写，多做如实记录。') : '',
+      reps: pending.reps, repsUnit: it.isCardio ? '分钟' : '次',
+      canSave: pending.reps !== '' && pending.reps != null,
+      cta: '记下第 ' + (cur + 1) + ' 组',
+      restText: fmtSec(left),
+      restPct: Math.max(0, Math.min(100, left / (this.restTotal || 1) * 100)),
+      restKicker: '第 ' + index + ' 组已记在本机',
+      restNext: '接着第 ' + (index + 1) + ' 组 · 目标 ' + target.text + (it.isCardio ? ' 分钟' : ' 次'),
+      restMin: Math.round((it.rest || 0) / 60),
+      origin: g.weight + ' kg × ' + (g.correctedFrom != null ? g.correctedFrom : g.reps) + ' 次',
+      corTitle: '更正第 ' + (ci + 1) + ' 组',
+      corReps: bag.reps != null ? bag.reps : g.reps,
+      corW: bag.weight != null ? bag.weight : g.weight,
+      showUndo: ci === groups.length - 1,
+      failTitle: '第 ' + (fail.index + 1) + ' 组还没有记到本机',
+      failKeep: (fail.weight != null ? fail.weight : '') + ' kg × ' + fail.reps + ' 次',
+      nextLabel: nxt ? ('下一动作 · ' + Home.shortLift(nxt.name)) : '返回今日列表',
+      nextSlot: nxt ? nxt.slotId : '',
+      engineJudgment: p ? p.judgment : '',
+      engineNext: p ? ('下次 ' + p.nextWeight + ' kg · ' + p.nextStage) : '',
+      engineNote: p ? ('由进阶引擎计算。界面不另算下次重量。' + (p.adaptNote || '')) : ''
+    };
+  },
+  armRest() {
+    this.clearTimer();
+    if (!this.restUntil) return;
+    this.timer = setInterval(() => {
+      const left = this.restUntil ? Math.ceil((this.restUntil - Date.now()) / 1000) : 0;
+      if (left <= 0) {
+        this.restUntil = 0;
+        this.clearTimer();
+        if (this.logScreen === 'rest') {
+          this.logScreen = 'work';
+          wx.showToast({ title: '休息结束', icon: 'none' });
+          this.refresh();
+        }
+        return;
+      }
+      if (this.logScreen === 'rest') this.setData({ 'log.restText': fmtSec(left), 'log.restPct': Math.max(0, Math.min(100, left / (this.restTotal || 1) * 100)) });
+    }, 250);
+  },
+  logBack() {
+    const wrote = this.persistOpen();
+    if (!wrote) {
+      const en = this.entry(this.logSlot);
+      this.logScreen = 'fail';
+      this.logFail = { index: ((en.groups || []).length), reps: en.pending && en.pending.reps, weight: en.pending && en.pending.weight };
+      this.refresh();
+      return;
+    }
+    this.closeLog();
+  },
+  logWork() {
+    const en = this.entry(this.logSlot);
+    const it = (this.data.vm.items || []).find((x) => x.slotId === this.logSlot);
+    this.logScreen = it && (en.groups || []).length >= it.sets ? 'done' : 'work';
+    this.refresh();
+  },
+  logNext(e) { this.openLog(e.currentTarget.dataset.slot); },
+  logFix(e) {
+    this.logScreen = 'correct';
+    this.logCorrect = Number(e.currentTarget.dataset.i);
+    this.entry(this.logSlot).correctPending = null;
+    this.refresh();
+  },
+  onLogReps(e) {
+    const en = this.entry(this.logSlot);
+    const it = (this.data.vm.items || []).find((x) => x.slotId === this.logSlot);
+    en.pending = en.pending || SL.defaultPending(en, it);
+    en.pending.reps = e.detail.value;
+    this.setData({ 'log.reps': e.detail.value, 'log.canSave': e.detail.value !== '' });
+  },
+  logStep(e) {
+    const en = this.entry(this.logSlot);
+    const it = (this.data.vm.items || []).find((x) => x.slotId === this.logSlot);
+    const key = e.currentTarget.dataset.k === 'w' ? 'weight' : 'reps';
+    const bag = en.pending || (en.pending = SL.defaultPending(en, it));
+    if (key === 'reps') bag.reps = SL.clampReps((Number(bag.reps) || 0) + Number(e.currentTarget.dataset.d), it.inputType);
+    else bag.weight = GZ.nudgeWeight(it.name, it.equip, Number(bag.weight) || 0, Number(e.currentTarget.dataset.d) < 0 ? -1 : 1, it.wStep);
+    this.refresh();
+  },
+  corStep(e) {
+    const en = this.entry(this.logSlot);
+    const it = (this.data.vm.items || []).find((x) => x.slotId === this.logSlot);
+    const g = (en.groups || [])[this.logCorrect || 0] || { reps: 0, weight: it.weight };
+    const bag = en.correctPending || (en.correctPending = { reps: g.reps, weight: g.weight });
+    if (e.currentTarget.dataset.k === 'w') bag.weight = GZ.nudgeWeight(it.name, it.equip, Number(bag.weight) || 0, Number(e.currentTarget.dataset.d) < 0 ? -1 : 1, it.wStep);
+    else bag.reps = SL.clampReps((Number(bag.reps) || 0) + Number(e.currentTarget.dataset.d), it.inputType);
+    this.refresh();
+  },
+  logSave() {
+    if (this._writing) return;
+    const it = (this.data.vm.items || []).find((x) => x.slotId === this.logSlot);
+    const en = this.entry(this.logSlot);
+    const pending = en.pending || SL.defaultPending(en, it);
+    this._writing = true;
+    const result = SL.commitGroup(en, it, pending, (next) => {
+      const prev = JSON.parse(JSON.stringify(en));
+      this.replaceEntry(this.logSlot, next);
+      const ok = this.persistOpen();
+      if (!ok) this.replaceEntry(this.logSlot, prev);
+      return ok;
+    });
+    this._writing = false;
+    if (!result.ok && result.reason === 'empty') { wx.showToast({ title: '填写本次次数', icon: 'none' }); return; }
+    if (!result.ok && result.reason === 'write') {
+      this.logScreen = 'fail';
+      this.logFail = { index: (this.entry(this.logSlot).groups || []).length, reps: pending.reps, weight: pending.weight };
+      this.refresh();
+      return;
+    }
+    if (!result.ok) return;
+    if (result.last) { this.logScreen = 'done'; this.restUntil = 0; this.clearTimer(); }
+    else {
+      this.restUntil = Date.now() + (it.rest || 60) * 1000;
+      this.restTotal = it.rest || 60;
+      this.restSlot = it.slotId;
+      this.logScreen = 'rest';
+      this.armRest();
+    }
+    this.refresh();
+  },
+  logUndo() {
+    const it = (this.data.vm.items || []).find((x) => x.slotId === this.logSlot);
+    const en = this.entry(this.logSlot);
+    const undone = SL.undoLast(en, it);
+    if (!undone) return;
+    const prev = JSON.parse(JSON.stringify(en));
+    this.replaceEntry(this.logSlot, undone.entry);
+    if (!this.persistOpen()) { this.replaceEntry(this.logSlot, prev); wx.showToast({ title: '这一组还没从本机撤下', icon: 'none' }); return; }
+    this.restUntil = 0;
+    this.clearTimer();
+    this.logScreen = 'work';
+    this.refresh();
+  },
+  logCorrectSave() {
+    if (this._writing) return;
+    const it = (this.data.vm.items || []).find((x) => x.slotId === this.logSlot);
+    const en = this.entry(this.logSlot);
+    const bag = en.correctPending || {};
+    const g = (en.groups || [])[this.logCorrect || 0] || {};
+    const next = SL.correctGroup(en, it, this.logCorrect || 0, bag.reps != null ? bag.reps : g.reps, bag.weight != null ? bag.weight : g.weight);
+    if (!next) { wx.showToast({ title: '填写本次次数', icon: 'none' }); return; }
+    this._writing = true;
+    const prev = JSON.parse(JSON.stringify(en));
+    this.replaceEntry(this.logSlot, next);
+    const ok = this.persistOpen();
+    this._writing = false;
+    if (!ok) {
+      this.replaceEntry(this.logSlot, prev);
+      this.logScreen = 'fail';
+      this.logFail = { index: this.logCorrect || 0, reps: bag.reps, weight: bag.weight };
+      this.refresh();
+      return;
+    }
+    this.logScreen = (next.groups || []).length >= it.sets ? 'done' : 'work';
+    this.refresh();
+  },
+  logRest(e) {
+    if (!this.restUntil) return;
+    const left = Math.max(5, Math.ceil((this.restUntil - Date.now()) / 1000) + Number(e.currentTarget.dataset.d));
+    this.restUntil = Date.now() + left * 1000;
+    this.restTotal = Math.max(this.restTotal || 0, left);
+    this.setData({ 'log.restText': fmtSec(left), 'log.restPct': Math.max(0, Math.min(100, left / (this.restTotal || 1) * 100)) });
+  },
+  logSkipRest() {
+    this.restUntil = 0;
+    this.clearTimer();
+    this.logScreen = 'work';
+    this.refresh();
+  },
+
   noop() {}
 });

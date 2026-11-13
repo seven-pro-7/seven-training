@@ -2748,6 +2748,10 @@
       if (e.slotInit && e.slotInit.type) entries[k].slotInit = { type: e.slotInit.type, base: e.slotInit.base, pct: e.slotInit.pct, value: e.slotInit.value };
       if (e.miss) entries[k].miss = true;
       if (e.sets && e.sets.length) entries[k].sets = e.sets.map(function (n) { return n === '' || n === undefined ? null : n; });
+      if (e.groups && e.groups.length) entries[k].groups = e.groups.map(function (g) {
+        return { reps: g.reps, weight: g.weight, correctedFrom: g.correctedFrom != null ? g.correctedFrom : undefined };
+      });
+      if (e.done) entries[k].done = e.done;
     });
     var day = dayById(db, rec.day);
     if (day) {
@@ -2805,6 +2809,9 @@
         if (n !== null && n !== undefined && n !== '') return true;
       }
     }
+    if (e.groups && e.groups.length) return true;
+    if (e.pending && e.pending.reps !== undefined && e.pending.reps !== null && e.pending.reps !== '') return true;
+    if (e.held && Object.keys(e.held).length) return true;
     return false;
   }
   function draftTouched(draft) {

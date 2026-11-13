@@ -93,11 +93,17 @@ var PAGE = `(async function () {
 
   var beforeRec = records().length;
   rows[rows.length - 1].querySelector('.ex-hit').click();
+  await wait(120);
+  if (!document.querySelector('.set-screen')) throw new Error('点最后一项没有进入记组');
+  if (document.querySelector('#companionSlot')) throw new Error('记组页出现了伙伴');
+  var tab = document.querySelector('.tabbar');
+  if (tab && getComputedStyle(tab).display !== 'none') throw new Error('记组页还有底栏');
+  if (records().length !== beforeRec) throw new Error('点最后一项写入了训练记录');
+  click('[data-act=logback]');
   await wait(80);
-  report.afterRow = { cta: text('.home-cta'), sets: text('.sets-count'), records: records().length, prompt: text('.guide-title') };
-  if (report.afterRow.records !== beforeRec) throw new Error('点最后一项写入了训练记录');
-  if (report.afterRow.sets) throw new Error('点最后一项记了一组');
-  if (/已记下/.test(report.afterRow.prompt)) throw new Error('点最后一项被当成记组');
+  if (document.querySelector('.set-screen')) throw new Error('返回后还在记组页');
+  report.afterRow = { cta: text('.home-cta'), records: records().length };
+  note('reach', report.afterRow);
 
   click('[data-act=adjust]');
   await wait(80);
@@ -105,25 +111,58 @@ var PAGE = `(async function () {
   click('[data-act=menuclose]');
   await wait(80);
   if (records().length !== beforeRec) throw new Error('调整今天写入了训练记录');
-  note('reach', report.afterRow);
 
   var squat = [].filter.call(document.querySelectorAll('.ex-hit'), function (el) { return el.textContent.indexOf('杠铃深蹲') >= 0; })[0];
   squat.click();
-  await wait(80);
-  click('.home-cta');
   await wait(100);
-  var firstDot = document.querySelector('.ex-log [data-act=dot][data-i="0"]');
-  if (!firstDot) throw new Error('深蹲记组没有组次点');
-  firstDot.click();
+  if (!document.querySelector('[data-act=logsave]')) throw new Error('深蹲没有记下按钮：' + text('.home-cta'));
+  window.__SEVEN_FAIL_OPEN = true;
+  click('[data-act=logsave]');
   await wait(80);
-  report.dotted = text('.sets-count');
-  if (report.dotted.indexOf('1 /') !== 0) throw new Error('点第 1 组后不是 1 组：' + report.dotted);
-  var stop = document.querySelector('[data-rest-stop]');
-  if (stop) stop.click();
-  var skipBtn = document.querySelector('[data-act=skip]');
-  if (!skipBtn) throw new Error('没有跳过按钮，链接是 ' + (document.querySelector('.home-links') ? document.querySelector('.home-links').innerHTML : '无') + ' 组次 ' + text('.sets-count'));
-  skipBtn.click();
+  if (!document.querySelector('.screen-fail')) throw new Error('本机写入失败没有留在失败页');
+  if (document.querySelector('.rest-clock')) throw new Error('写入失败却开始了休息');
+  window.__SEVEN_FAIL_OPEN = false;
+  click('[data-act=logretry]');
+  await wait(100);
+  if (!document.querySelector('.rest-clock')) throw new Error('重试成功后没有休息');
+  click('[data-act=logundo]');
   await wait(80);
+  if (document.querySelector('.rest-clock')) throw new Error('撤销最近一组后休息还在');
+  if (document.querySelector('[data-act=logfix]')) throw new Error('撤销后组还在');
+  click('[data-act=logsave]');
+  await wait(80);
+  click('[data-act=logrestskip]');
+  await wait(80);
+  window.__confirms = 0;
+  window.confirm = function () { window.__confirms += 1; return false; };
+  click('[data-act=openswap]');
+  await wait(100);
+  var squatPick = [].filter.call(document.querySelectorAll('[data-act=swappick]'), function (el) { return el.textContent.indexOf('杠铃深蹲') < 0; })[0];
+  if (!squatPick) throw new Error('深蹲没有可更换的动作');
+  squatPick.click();
+  await wait(60);
+  click('[data-act=swapok]');
+  await wait(80);
+  if (!window.__confirms) throw new Error('已有组时更换没有确认');
+  if (text('.set-name').indexOf('杠铃深蹲') < 0) throw new Error('拒绝更换后动作变了：' + text('.set-name'));
+  window.confirm = function () { window.__confirms += 1; return true; };
+  click('[data-act=swapok]');
+  await wait(120);
+  if (text('.set-name').indexOf('杠铃深蹲') >= 0) throw new Error('确认更换后还是深蹲');
+  if (document.querySelector('[data-act=logfix]')) throw new Error('新动作带上了深蹲的组');
+  click('[data-act=openswap]');
+  await wait(100);
+  var backSquat = [].filter.call(document.querySelectorAll('[data-act=swappick]'), function (el) { return el.textContent.indexOf('杠铃深蹲') >= 0; })[0];
+  if (!backSquat) throw new Error('列表里换不回深蹲');
+  backSquat.click();
+  await wait(60);
+  click('[data-act=swapok]');
+  await wait(120);
+  if (text('.set-name').indexOf('杠铃深蹲') < 0) throw new Error('换回后不是深蹲：' + text('.set-name'));
+  if (!document.querySelector('[data-act=logfix]')) throw new Error('换回后原来的组没了');
+  click('[data-act=skip]');
+  await wait(100);
+  if (document.querySelector('.set-screen')) throw new Error('跳过后还停在记组页');
   report.skipped = text('.ex.current .scheme') + ' / ' + text('.home-links');
   if (report.skipped.indexOf('已跳过') < 0 || report.skipped.indexOf('恢复') < 0) throw new Error('跳过没有切到恢复：' + report.skipped);
   click('[data-act=skip]');
@@ -145,6 +184,7 @@ var PAGE = `(async function () {
   await wait(80);
   click('[data-act=swapok]');
   await wait(120);
+  if (document.querySelector('.set-screen')) { click('[data-act=logback]'); await wait(80); }
   report.swapped = [].map.call(document.querySelectorAll('.ex .name'), function (el) { return el.childNodes[0].textContent.trim(); });
   report.pickedName = pickedName;
   if (report.swapped.indexOf(pickedName) < 0) throw new Error('本次更换没有出现 ' + pickedName + '：' + report.swapped.join(','));
@@ -152,41 +192,50 @@ var PAGE = `(async function () {
   note('swap', { names: report.swapped });
   squat = [].filter.call(document.querySelectorAll('.ex-hit'), function (el) { return el.textContent.indexOf('杠铃深蹲') >= 0; })[0];
   squat.click();
+  await wait(100);
+  if (!document.querySelector('[data-act=logundo]')) throw new Error('恢复后没有可撤销的组');
+  click('[data-act=logundo]');
   await wait(80);
-  if (!document.querySelector('.ex-log [data-act=dot]')) { click('.home-cta'); await wait(80); }
-  firstDot = document.querySelector('.ex-log [data-act=dot][data-i="0"]');
-  if (!firstDot) throw new Error('换回来后没有组次点可撤销');
-  firstDot.click();
+  click('[data-act=logback]');
   await wait(80);
-  stop = document.querySelector('[data-rest-stop]');
-  if (stop) stop.click();
   report.undot = text('.sets-count');
   if (report.undot) throw new Error('撤销组次后仍显示 ' + report.undot);
-  note('undo-set', { dotted: report.dotted, undot: report.undot || '0' });
+  note('undo-set', { undot: report.undot || '0' });
 
-  for (var n = 0; n < 8; n++) {
-    if (text('.home-cta') === '完成训练') break;
-    var pending = document.querySelector('.ex:not(.is-done) .ex-hit');
-    if (!pending) break;
-    var pendingEx = pending.closest('.ex');
-    if (!pendingEx.classList.contains('current') || !pendingEx.querySelector('.ex-log')) {
-      pending.click();
-      await wait(100);
+  async function finishOpen() {
+    for (var i = 0; i < 8; i++) {
+      if (document.querySelector('.done-kicker')) return;
+      var save = document.querySelector('[data-act=logsave]');
+      if (!save) throw new Error('没有记下按钮，当前 ' + text('.set-name') + ' / ' + text('.home-cta'));
+      save.click();
+      await wait(50);
+      var skipRest = document.querySelector('[data-act=logrestskip]');
+      if (skipRest) { skipRest.click(); await wait(40); }
     }
-    if (!document.querySelector('.ex.current .ex-log')) { click('.home-cta'); await wait(100); }
-    var doneBtn = document.querySelector('.ex-log [data-act=done][data-v="完成"]');
-    if (doneBtn) { doneBtn.click(); await wait(120); continue; }
-    var amrap = document.querySelector('.ex-log [data-act=amrap]');
-    if (!amrap) throw new Error('没有记组控件，按钮是 ' + text('.home-cta') + '，当前 ' + text('.ex.current .name'));
-    var goal = parseInt(amrap.getAttribute('placeholder'), 10);
-    amrap.value = String(goal > 0 ? goal : 8);
-    amrap.dispatchEvent(new Event('input', { bubbles: true }));
-    await wait(40);
-    var curHit = document.querySelector('.ex.current .ex-hit');
-    if (curHit) curHit.click();
-    await wait(100);
+    if (!document.querySelector('.done-kicker')) throw new Error('动作没有记完：' + text('.set-name'));
   }
-  if (text('.home-cta') !== '完成训练') throw new Error('五项都填了仍不是完成训练：' + text('.home-cta'));
+  for (var n = 0; n < 8; n++) {
+    if (!document.querySelector('.set-screen') && text('.home-cta') === '完成训练') break;
+    if (!document.querySelector('.set-screen')) {
+      var start = document.querySelector('.home-cta');
+      if (!start || start.getAttribute('data-act') === 'submit') break;
+      start.click();
+      await wait(80);
+    }
+    await finishOpen();
+    var nextEx = document.querySelector('[data-act=lognext]');
+    if (nextEx) { nextEx.click(); await wait(50); }
+    else if (document.querySelector('[data-act=logback]')) { click('[data-act=logback]'); await wait(50); }
+  }
+  if (text('.home-cta') !== '完成训练') throw new Error('五项都填了仍不是完成训练：' + text('.home-cta') + ' ' + text('.guide-title'));
+  var recBeforeFail = records().length;
+  window.__SEVEN_FAIL_DB = true;
+  click('.home-cta');
+  await wait(120);
+  if (records().length !== recBeforeFail) throw new Error('整次保存失败却多了记录');
+  if (document.body.innerText.indexOf('还没记到本机') < 0) throw new Error('整次保存失败没有提示');
+  if (text('.home-cta') !== '完成训练') throw new Error('失败后按钮变成了 ' + text('.home-cta'));
+  window.__SEVEN_FAIL_DB = false;
   var happyBefore = window.CompanionView.machine.snapshot().state;
   click('.home-cta');
   await wait(150);
@@ -214,12 +263,31 @@ var PAGE = `(async function () {
   if (text('.lk-t').indexOf('已完成') < 0) throw new Error('回到 A1 没有完成卡：' + text('.lk-t'));
   click('[data-act=editLocked]');
   await wait(100);
-  if (!document.querySelector('.ex-log')) document.querySelector('.ex.current .ex-hit').click();
-  await wait(80);
-  var edit = document.querySelector('.ex-log [data-act=amrap]');
-  if (!edit) throw new Error('修改这次没有末组输入');
+  if (!document.querySelector('.set-screen')) document.querySelector('.ex.current .ex-hit').click();
+  await wait(100);
+  var fixes = document.querySelectorAll('[data-act=logfix]');
+  if (!fixes.length) throw new Error('修改这次没有可更正的组');
+  fixes[0].click();
+  await wait(60);
+  if (document.querySelector('[data-act=logundo]')) throw new Error('更正前面的组不该出现撤销后续组');
+  var early = document.querySelector('[data-act=correps]');
+  early.value = '9';
+  early.dispatchEvent(new Event('input', { bubbles: true }));
+  await wait(40);
+  click('[data-act=logwork]');
+  await wait(60);
+  if (document.body.innerText.indexOf('60 kg × 9') >= 0) throw new Error('取消更正仍写进了第 1 组');
+  fixes = document.querySelectorAll('[data-act=logfix]');
+  fixes[fixes.length - 1].click();
+  await wait(60);
+  var edit = document.querySelector('[data-act=correps]');
+  if (!edit) throw new Error('修改这次没有次数输入');
   edit.value = '4';
   edit.dispatchEvent(new Event('input', { bubbles: true }));
+  await wait(40);
+  click('[data-act=logcorrectsave]');
+  await wait(80);
+  click('[data-act=logback]');
   await wait(80);
   if (text('.home-cta') !== '保存修改') throw new Error('改正时按钮是 ' + text('.home-cta'));
   click('.home-cta');

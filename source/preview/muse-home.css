@@ -940,6 +940,71 @@
 @media (prefers-reduced-motion: reduce) {
   .app .tb-item,
   .app.on-train .home-cta,
-  .app.on-train .ex { transition: none; }
+  .app.on-train .ex,
+  .app.on-log .rest-fill { transition: none; }
   .app .tb-item:active { transform: none; }
+}
+
+.app.on-log .tabbar { display: none; }
+.app.on-log { background: #F8F8F8; color: #141414; }
+.app.on-log #body { background: #F8F8F8; }
+.set-screen { position: relative; min-height: 100%; display: flex; flex-direction: column; background: #F8F8F8; color: #141414; }
+.set-wash { position: absolute; left: 0; right: 0; top: 0; height: 420px; pointer-events: none;
+  background: radial-gradient(90% 80% at 50% 18%, rgba(216,240,228,.5) 0%, #F8F8F8 78%); }
+.screen-rest .set-wash { background: radial-gradient(90% 80% at 50% 10%, #D8F0E4 0%, #F8F8F8 78%); }
+.screen-fail .set-wash { background: radial-gradient(90% 80% at 50% 18%, rgba(224,106,60,.10) 0%, #F8F8F8 78%); }
+.set-top { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: calc(env(safe-area-inset-top) + 8px) 16px 0; }
+.set-top .gear-btn { position: static; background: #fff; }
+.set-top .back-btn { background: transparent; box-shadow: none; }
+.set-scroll { position: relative; z-index: 1; flex: 1; padding: 12px 24px calc(196px + var(--kb, 0px) + env(safe-area-inset-bottom)); }
+.set-meta, .path-cap, .block-label, .hint, .rest-suggest, .st-unit { font-size: 12px; font-weight: 400; color: #6B7280; line-height: 1.4; }
+.set-name { margin: 8px 0 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
+.set-scheme { margin: 3px 0 0; font-size: 13px; color: #6B7280; }
+.weight-row { display: flex; align-items: baseline; gap: 6px; margin: 18px 0 4px; }
+.big-kg { font-size: 52px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.w-adjust { margin-left: auto; min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: #6B7280; font: inherit; font-size: 13px; }
+.set-path { display: flex; justify-content: space-between; margin: 20px 0 6px; }
+.sp { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 44px; }
+.sp .dot { width: 28px; height: 28px; border-radius: 14px; border: 1.6px solid rgba(20,20,20,.22); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #6B7280; background: transparent; }
+.sp.done .dot { background: #141414; border-color: #141414; color: #fff; }
+.sp.now .dot { border: 2px solid #E06A3C; background: #fff; color: #C85A30; box-shadow: 0 0 0 4px rgba(224,106,60,.12); }
+.sp .lab { font-size: 11px; color: #6B7280; }
+.set-log { background: #fff; border-radius: 20px; box-shadow: 0 1px 2px rgba(20,20,20,.03), 0 6px 18px rgba(20,20,20,.035); padding: 6px 16px; margin: 8px 0 16px; }
+.set-log-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 0; border: 0; border-top: 1px solid #E8E8EE; background: transparent; color: #6B7280; font: inherit; font-size: 13px; text-align: left; }
+.set-log-row:first-child { border-top: 0; }
+.set-log-row b { font-weight: 600; color: #141414; font-variant-numeric: tabular-nums; }
+.set-log-row .fix { font-size: 12px; color: #6B7280; }
+.rep-panel { text-align: center; margin-top: 8px; }
+.target { font-size: 13px; color: #6B7280; margin-bottom: 8px; }
+.target em { font-style: normal; color: #141414; }
+.rep-step { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.set-screen .st-btn { width: 44px; height: 44px; border: 0; border-radius: 22px; background: #fff; box-shadow: 0 1px 2px rgba(20,20,20,.06); font-size: 22px; color: #141414; }
+.set-screen .st-val { width: 96px; border: 0; background: transparent; text-align: center; font-size: 56px; font-weight: 700; letter-spacing: -0.045em; color: #141414; font-variant-numeric: tabular-nums; }
+.app.on-log .log-bottom { position: fixed; z-index: 30; left: 0; right: 0; bottom: var(--kb, 0px); width: auto; max-width: 480px; margin: 0 auto; transform: none; box-sizing: border-box; padding: 8px 24px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(248,248,248,0), #F8F8F8 24%); pointer-events: none; }
+.app.on-log .log-bottom .home-cta,
+.app.on-log .log-bottom button,
+.app.on-log .log-bottom .home-links { pointer-events: auto; }
+.app.on-log .log-bottom .home-cta { display: block; width: 100%; box-sizing: border-box; height: 54px; line-height: 54px; padding: 0 16px; overflow: hidden; white-space: nowrap; }
+.log-bottom .home-cta:disabled { opacity: .45; }
+.text-link, .log-bottom .home-links button { min-height: 44px; border: 0; background: transparent; color: #6B7280; font: inherit; font-size: 15px; }
+.rest-kicker, .done-kicker { text-align: center; font-size: 14px; color: #141414; margin-top: 28px; }
+.rest-clock { text-align: center; font-size: 64px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin: 18px 0 12px; font-variant-numeric: tabular-nums; }
+.rest-track { height: 4px; border-radius: 2px; background: #E8E8EE; overflow: hidden; margin: 0 24px 18px; }
+.rest-fill { display: block; height: 100%; background: #5BB887; }
+.rest-name, .rest-next { text-align: center; color: #6B7280; font-size: 14px; }
+.rest-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.rest-controls button { min-width: 64px; min-height: 44px; border-radius: 22px; border: 0; background: #fff; box-shadow: 0 1px 2px rgba(20,20,20,.06); font: inherit; font-size: 15px; color: #141414; }
+.rest-controls .rest-skip { background: transparent; box-shadow: inset 0 0 0 1.5px #141414; }
+.rest-controls .text-link, .log-bottom .text-link { display: block; width: 100%; background: transparent; box-shadow: none; text-align: center; color: #6B7280; }
+.rest-suggest { width: 100%; text-align: center; }
+.origin-card, .engine-card { background: #fff; border-radius: 20px; padding: 16px; margin: 16px 0; box-shadow: 0 1px 2px rgba(20,20,20,.04); }
+.origin-card span, .engine-card p { display: block; font-size: 12px; color: #6B7280; line-height: 1.45; }
+.origin-card b, .engine-next { display: block; margin-top: 6px; font-size: 20px; font-weight: 700; }
+.engine-j { font-size: 14px; font-weight: 700; color: #141414; }
+@media (max-height: 680px) {
+  .big-kg, .set-screen .st-val, .rest-clock { font-size: 44px; }
+  .set-scroll { padding-top: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rest-fill { transition: none; }
 }
