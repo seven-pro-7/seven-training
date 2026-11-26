@@ -732,10 +732,6 @@
     for (var i = n; i < (it && it.sets || 0); i++) if (SL.isAmrapIndex(it, i)) return i;
     return -1;
   }
-  function loggedLine(done, sets) {
-    if (!sets || sets < 2 || done <= 0) return '0%';
-    return ((Math.min(done, sets) - 1) / (sets - 1) * 100) + '%';
-  }
   function miniPips(it) {
     var done = it.done || 0, n = it.sets || 0;
     if (!n || done <= 0) return '';
@@ -751,7 +747,7 @@
     var done = it.done || 0;
     var gate = gateIndex(it);
     var current = done >= it.sets ? -1 : (gate >= 0 ? gate : done);
-    var h = '<div class="qm-sets" style="--logged-line:' + loggedLine(done, it.sets) + '">';
+    var h = '<div class="qm-sets">';
     for (var i = 0; i < it.sets; i++) {
       var cls = i < done ? 'done' : (i === current ? 'current' : '');
       var amrap = SL.isAmrapIndex(it, i);
