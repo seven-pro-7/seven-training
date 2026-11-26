@@ -131,6 +131,96 @@
   }
 
   /** 换动作时把已记组留在原动作名下，不删，也不算到新动作上。 */
+  /** 这一组的规定次数。波浪组用该组次数；区间组用达到上限的次数。不另算进阶。 */
+  function prescribedReps(it, index) {
+    var load = it && it.loads && it.loads[index];
+    if (load && load.reps != null && load.reps !== '' && !isNaN(Number(load.reps))) return Number(load.reps);
+    if (it && it.inputType === 'sets' && it.scheme && it.scheme.repMax != null && !isNaN(Number(it.scheme.repMax))) return Number(it.scheme.repMax);
+    var n = Number(it && it.reps);
+    return isNaN(n) ? null : n;
+  }
+
+  /** 这一组的工作重量。波浪组用该组重量，否则用本次调整重量或计划重量。 */
+  function setWeight(it, en, index) {
+    var load = it && it.loads && it.loads[index];
+    if (load && load.weight != null && load.weight !== '' && !isNaN(Number(load.weight))) return Number(load.weight);
+    if (en && en.w != null && en.w !== '' && !isNaN(Number(en.w))) return Number(en.w);
+    return it && it.weight != null ? (Number(it.weight) || 0) : 0;
+  }
+
+  function mirrorShape(next, it) {
+    if (it && it.inputType === 'sets') next.sets = (next.groups || []).map(function (g) { return g.reps; });
+    return next;
+  }
+
+  /**
+   * 一次补上若干尚未记下的组。已有组不改。write 返回 false 时整批不采用。
+   * additions: [{ index, reps, weight }]，index 必须从当前组数连续接上。
+   */
+  function commitBatch(en, it, additions, write) {
+    en = migrate(Object.assign({}, en), it);
+    if (!it || !additions || !additions.length) return { ok: false, reason: 'empty', entry: en };
+    var groups = groupsOf(en).slice();
+    var start = groups.length;
+    var i;
+    for (i = 0; i < additions.length; i++) {
+      if (additions[i].index !== start + i) return { ok: false, reason: 'order', entry: en };
+      if (start + i >= it.sets) return { ok: false, reason: 'full', entry: en };
+      var reps = clampReps(additions[i].reps, it.inputType);
+      if (reps == null) return { ok: false, reason: 'empty', entry: en };
+      var weight = additions[i].weight != null && additions[i].weight !== '' ? Number(additions[i].weight) : (it.weight || 0);
+      if (isNaN(weight) || weight < 0) weight = it.weight || 0;
+      groups.push({ reps: reps, weight: weight });
+    }
+    var next = Object.assign({}, en, { groups: groups, pending: null });
+    var lastW = groups[groups.length - 1].weight;
+    if (lastW !== (it.weight || 0)) next.w = lastW;
+    syncEngine(next, it);
+    mirrorShape(next, it);
+    if (write && write(next) === false) return { ok: false, reason: 'write', entry: en, pending: additions };
+    return { ok: true, entry: next, from: start, count: additions.length, last: groups.length >= it.sets };
+  }
+
+  /**
+   * 按每组实际次数整段记下。空值拒绝，0 保留为 0。已记组只有次数变了才标更正。
+   * opts.miss：完成类（T2 / 固定 / 减载）不写成「完成」，实际总次数交给引擎原有的未完成入口；
+   * 线性与波浪沿用已有的 miss 标记。其余类型仍把末组次数交给引擎自行判定。
+   */
+  function commitActuals(en, it, actuals, opts, write) {
+    en = migrate(Object.assign({}, en), it);
+    opts = opts || {};
+    if (!it || !actuals || actuals.length !== it.sets) return { ok: false, reason: 'empty', entry: en };
+    var prev = groupsOf(en);
+    var groups = [];
+    var i;
+    for (i = 0; i < it.sets; i++) {
+      var reps = clampReps(actuals[i], it.inputType);
+      if (reps == null) return { ok: false, reason: 'empty', entry: en };
+      var weight = prev[i] && prev[i].weight != null ? prev[i].weight : setWeight(it, en, i);
+      var g = { reps: reps, weight: weight };
+      if (prev[i]) {
+        if (prev[i].reps !== reps) g.correctedFrom = prev[i].correctedFrom != null ? prev[i].correctedFrom : prev[i].reps;
+        else if (prev[i].correctedFrom != null) g.correctedFrom = prev[i].correctedFrom;
+      }
+      groups.push(g);
+    }
+    var next = Object.assign({}, en, { groups: groups, pending: null });
+    syncEngine(next, it);
+    mirrorShape(next, it);
+    if (opts.miss) {
+      if (it.inputType === 'done' || it.inputType === 'fixed' || it.inputType === 'deload') {
+        var sum = 0;
+        groups.forEach(function (g) { sum += g.reps; });
+        next.v = '未完成';
+        next.reps = sum;
+      } else if (it.inputType === 'linear' || it.inputType === 'wave') {
+        next.miss = true;
+      }
+    }
+    if (write && write(next) === false) return { ok: false, reason: 'write', entry: en };
+    return { ok: true, entry: next, last: true, miss: !!opts.miss };
+  }
+
   function holdForSwap(en, fromName) {
     en = en || {};
     var held = Object.assign({}, en.held || {});
@@ -167,7 +257,11 @@
     migrate: migrate,
     syncEngine: syncEngine,
     defaultPending: defaultPending,
+    prescribedReps: prescribedReps,
+    setWeight: setWeight,
     commitGroup: commitGroup,
+    commitBatch: commitBatch,
+    commitActuals: commitActuals,
     undoLast: undoLast,
     correctGroup: correctGroup,
     holdForSwap: holdForSwap,

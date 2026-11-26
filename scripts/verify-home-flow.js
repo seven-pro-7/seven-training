@@ -67,42 +67,68 @@ var PAGE = `(async function () {
   }
   var report = { steps: [] };
   function note(name, extra) { report.steps.push(Object.assign({ name: name }, extra || {})); }
+  function itemOf(name) {
+    return [].filter.call(document.querySelectorAll('.qm-item'), function (el) { return el.textContent.indexOf(name) >= 0; })[0];
+  }
+  async function openDetail(name) {
+    var item = itemOf(name);
+    if (!item) throw new Error('找不到 ' + name);
+    var row = item.querySelector('.qm-row');
+    if (row) { row.click(); await wait(60); }
+    var head = document.querySelector('.qm-item.is-open [data-act=qmopen]');
+    if (!head) throw new Error(name + ' 没有进入记录的区域');
+    head.click();
+    await wait(80);
+  }
+  async function openMore() {
+    if (!document.querySelector('.action-sheet')) {
+      click('[data-act=logmore]');
+      await wait(70);
+    }
+  }
 
   var body = document.getElementById('body');
-  body.scrollTop = body.scrollHeight;
+  var scroller = document.querySelector('.home-scroll') || body;
+  scroller.scrollTop = scroller.scrollHeight;
   await wait(60);
-  var rows = document.querySelectorAll('.ex');
+  var rows = document.querySelectorAll('.qm-item');
   var last = rows[rows.length - 1].getBoundingClientRect();
-  var cta = document.querySelector('.home-cta').getBoundingClientRect();
   var dock = document.querySelector('.tabbar').getBoundingClientRect();
-  var midX = last.left + Math.min(80, last.width / 2);
-  var midY = last.top + last.height / 2;
+  var cue = document.querySelector('.guide-title').getBoundingClientRect();
+  var block = document.querySelector('.training-block').getBoundingClientRect();
+  var midX = last.left + Math.min(120, last.width / 2);
+  var midY = Math.max(last.top + 12, Math.min(last.bottom - 12, dock.top - 12));
   var hit = document.elementFromPoint(midX, midY);
   report.layout = {
     vw: window.innerWidth, vh: window.innerHeight,
-    lastBottom: Math.round(last.bottom), ctaTop: Math.round(cta.top),
-    gap: Math.round(cta.top - last.bottom),
-    ctaBottom: Math.round(cta.bottom), dockTop: Math.round(dock.top),
-    hit: hit ? (hit.closest('.home-cta') ? 'cta' : hit.closest('.ex-hit') ? 'row' : hit.className) : 'none',
-    names: [].map.call(rows, function (el) { return el.querySelector('.name').childNodes[0].textContent.trim(); })
+    lastBottom: Math.round(last.bottom),
+    gap: Math.round(dock.top - last.bottom),
+    dockTop: Math.round(dock.top),
+    cueGap: Math.round(block.top - cue.bottom),
+    hit: hit ? (hit.closest('.qm-row') ? 'row' : hit.closest('.tabbar') ? 'tab' : (hit.className || hit.tagName)) : 'none',
+    names: [].map.call(rows, function (el) { return el.querySelector('.qm-name').childNodes[0].textContent.trim(); })
   };
-  if (report.layout.gap < 8) throw new Error('滚到底后最后一项离按钮只有 ' + report.layout.gap + 'px');
-  if (report.layout.hit === 'cta') throw new Error('最后一项的点击落在开始按钮上');
-  if (last.bottom > cta.top) throw new Error('最后一项伸进了按钮');
-  if (cta.bottom > dock.top + 1) throw new Error('按钮伸进了底栏');
+  if (report.layout.cueGap < 32) throw new Error('伙伴和训练模块间隙只有 ' + report.layout.cueGap + 'px');
+  if (last.bottom > dock.top - 8) throw new Error('最后一项伸进了底栏');
+  if (report.layout.hit === 'tab') throw new Error('最后一项的点击落在底栏上');
 
   var beforeRec = records().length;
-  rows[rows.length - 1].querySelector('.ex-hit').click();
+  rows[rows.length - 1].querySelector('.qm-row').click();
   await wait(120);
-  if (!document.querySelector('.set-screen')) throw new Error('点最后一项没有进入记组');
+  if (document.querySelector('.set-screen')) throw new Error('点收起行直接打开了详情');
+  if (!document.querySelector('.qm-item.is-open')) throw new Error('点收起行没有展开');
+  if (records().length !== beforeRec) throw new Error('点最后一项写入了训练记录');
+  click('[data-act=qmopen]');
+  await wait(120);
+  if (!document.querySelector('.set-screen')) throw new Error('展开头部没有进入记组');
   if (document.querySelector('#companionSlot')) throw new Error('记组页出现了伙伴');
   var tab = document.querySelector('.tabbar');
   if (tab && getComputedStyle(tab).display !== 'none') throw new Error('记组页还有底栏');
-  if (records().length !== beforeRec) throw new Error('点最后一项写入了训练记录');
   click('[data-act=logback]');
   await wait(80);
   if (document.querySelector('.set-screen')) throw new Error('返回后还在记组页');
-  report.afterRow = { cta: text('.home-cta'), records: records().length };
+  if (!document.querySelector('.qm-item.is-open')) throw new Error('返回后没有回到展开的动作');
+  report.afterRow = { records: records().length };
   note('reach', report.afterRow);
 
   click('[data-act=adjust]');
@@ -112,9 +138,57 @@ var PAGE = `(async function () {
   await wait(80);
   if (records().length !== beforeRec) throw new Error('调整今天写入了训练记录');
 
-  var squat = [].filter.call(document.querySelectorAll('.ex-hit'), function (el) { return el.textContent.indexOf('杠铃深蹲') >= 0; })[0];
-  squat.click();
+  var squatItem = itemOf('杠铃深蹲');
+  if (!squatItem.querySelector('.qm-row')) squatItem.querySelector('[data-act=qmcollapse]').click();
+  await wait(40);
+  squatItem = itemOf('杠铃深蹲');
+  squatItem.querySelector('.qm-row').click();
+  await wait(80);
+  if (document.querySelector('[data-act=qmall]')) throw new Error('AMRAP 列表出现了全部完成');
+  var setBtns = document.querySelectorAll('.qm-item.is-open [data-act=qmset]');
+  if (setBtns.length < 5) throw new Error('深蹲组点只有 ' + setBtns.length);
+  var box0 = setBtns[0].getBoundingClientRect();
+  if (box0.width < 44 || box0.height < 44) throw new Error('组点热区 ' + Math.round(box0.width) + '×' + Math.round(box0.height));
+  var node = setBtns[0].querySelector('.qm-node').getBoundingClientRect();
+  if (node.width > 36 || node.height > 36) throw new Error('组点视觉圆 ' + Math.round(node.width));
+  var fold = document.querySelector('.qm-fold').getBoundingClientRect();
+  var head = document.querySelector('.qm-head-content').getBoundingClientRect();
+  if (head.height < 64) throw new Error('头部内容区高度 ' + Math.round(head.height));
+  var gapHit = document.elementFromPoint((fold.right + head.left) / 2, fold.top + fold.height / 2);
+  if (gapHit && (gapHit.closest('[data-act=qmopen]') || gapHit.closest('[data-act=qmcollapse]'))) throw new Error('收起和进入详情共用了命中区');
+  var label = document.querySelector('.qm-stage-label').getBoundingClientRect();
+  var labelHit = document.elementFromPoint(label.left + 10, label.top + label.height / 2);
+  if (labelHit && (labelHit.closest('[data-act=qmopen]') || labelHit.closest('[data-act=qmset]'))) throw new Error('目标文字会导航或记组');
+  setBtns[0].click();
   await wait(100);
+  if (document.querySelector('.set-screen') || document.querySelector('.rest-clock')) throw new Error('列表记完非末组跳进了全屏休息');
+  if (!document.querySelector('.qm-set.done')) throw new Error('写入成功后没有点亮');
+  if (!document.querySelector('[data-act=qmrest]')) throw new Error('列表没有休息提示');
+  var lit = document.querySelectorAll('.qm-set.done').length;
+  document.querySelector('.qm-set.done').click();
+  await wait(50);
+  if (document.querySelectorAll('.qm-set.done').length !== lit) throw new Error('已记组可以在列表取消');
+  document.querySelectorAll('.qm-item.is-open [data-act=qmset]')[4].click();
+  await wait(60);
+  var actual = document.querySelector('[data-act=qreps]');
+  if (!actual) throw new Error('点末组没有出现实际次数');
+  if (actual.value !== '') throw new Error('末组预填了目标：' + actual.value);
+  if (actual.getAttribute('placeholder') && /\\d/.test(actual.getAttribute('placeholder'))) throw new Error('占位写成了目标次数');
+  var confirmBtn = document.querySelector('[data-act=qmconfirm]');
+  if (!confirmBtn || !confirmBtn.disabled) throw new Error('空的末组可以确认');
+  click('[data-act=qmcancel]');
+  await wait(40);
+  if (document.querySelectorAll('.qm-set.done').length !== 1) throw new Error('取消末组仍写入了');
+  click('[data-act=qmopen]');
+  await wait(80);
+  var fixesNow = document.querySelectorAll('[data-act=logfix]');
+  if (!fixesNow.length) throw new Error('详情里看不到刚记下的组');
+  fixesNow[fixesNow.length - 1].click();
+  await wait(50);
+  if (!document.querySelector('[data-act=logundo]')) throw new Error('最新一组的更正里没有撤销');
+  click('[data-act=logundo]');
+  await wait(80);
+  if (document.querySelector('[data-act=logfix]')) throw new Error('撤销后组还在');
   if (!document.querySelector('[data-act=logsave]')) throw new Error('深蹲没有记下按钮：' + text('.home-cta'));
   function assertBack(where) {
     var b = document.querySelector('.set-top .back-btn');
@@ -146,9 +220,7 @@ var PAGE = `(async function () {
   await wait(80);
   if (document.querySelector('.set-screen')) throw new Error('失败后返回没有回到今日列表');
   if (records().length !== beforeRec) throw new Error('失败后返回写入了训练记录');
-  squat = [].filter.call(document.querySelectorAll('.ex-hit'), function (el) { return el.textContent.indexOf('杠铃深蹲') >= 0; })[0];
-  squat.click();
-  await wait(100);
+  await openDetail('杠铃深蹲');
   if (document.querySelector('[data-act=logreps]').value !== '7') throw new Error('返回后待记次数丢了：' + document.querySelector('[data-act=logreps]').value);
   if (document.querySelector('.sp.done')) throw new Error('返回后这一组被标成已记');
   window.__SEVEN_FAIL_OPEN = false;
@@ -168,6 +240,7 @@ var PAGE = `(async function () {
   await wait(80);
   window.__confirms = 0;
   window.confirm = function () { window.__confirms += 1; return false; };
+  await openMore();
   click('[data-act=openswap]');
   await wait(100);
   var squatPick = [].filter.call(document.querySelectorAll('[data-act=swappick]'), function (el) { return el.textContent.indexOf('杠铃深蹲') < 0; })[0];
@@ -183,6 +256,7 @@ var PAGE = `(async function () {
   await wait(120);
   if (text('.set-name').indexOf('杠铃深蹲') >= 0) throw new Error('确认更换后还是深蹲');
   if (document.querySelector('[data-act=logfix]')) throw new Error('新动作带上了深蹲的组');
+  await openMore();
   click('[data-act=openswap]');
   await wait(100);
   var backSquat = [].filter.call(document.querySelectorAll('[data-act=swappick]'), function (el) { return el.textContent.indexOf('杠铃深蹲') >= 0; })[0];
@@ -193,21 +267,27 @@ var PAGE = `(async function () {
   await wait(120);
   if (text('.set-name').indexOf('杠铃深蹲') < 0) throw new Error('换回后不是深蹲：' + text('.set-name'));
   if (!document.querySelector('[data-act=logfix]')) throw new Error('换回后原来的组没了');
+  await openMore();
+  if (text('.action-sheet').indexOf('恢复') >= 0 && text('.action-sheet').indexOf('跳过本动作') < 0) throw new Error('还没跳过就显示恢复');
   click('[data-act=skip]');
   await wait(100);
   if (document.querySelector('.set-screen')) throw new Error('跳过后还停在记组页');
-  report.skipped = text('.ex.current .scheme') + ' / ' + text('.home-links');
-  if (report.skipped.indexOf('已跳过') < 0 || report.skipped.indexOf('恢复') < 0) throw new Error('跳过没有切到恢复：' + report.skipped);
+  report.skipped = text('.qm-item.is-skip .qm-meta');
+  if (report.skipped.indexOf('已跳过') < 0) throw new Error('跳过没有标成已跳过：' + report.skipped);
+  var skippedRow = document.querySelector('.qm-item.is-skip .qm-row');
+  if (skippedRow) { skippedRow.click(); await wait(50); }
+  click('[data-act=qmopen]');
+  await wait(50);
+  await openMore();
+  if (text('.action-sheet').indexOf('恢复') < 0) throw new Error('跳过没有切到恢复：' + text('.action-sheet'));
   click('[data-act=skip]');
   await wait(80);
-  report.restored = text('.ex.current .scheme');
-  if (report.restored.indexOf('已跳过') >= 0) throw new Error('恢复后仍是跳过');
+  report.restored = text('.qm-item .qm-meta');
+  if (document.querySelector('.qm-item.is-skip')) throw new Error('恢复后仍是跳过');
   note('skip', { skipped: report.skipped, restored: report.restored });
 
-  var rdl = [].filter.call(document.querySelectorAll('.ex-hit'), function (el) { return el.textContent.indexOf('罗马尼亚硬拉') >= 0; })[0];
-  if (!rdl) throw new Error('找不到罗马尼亚硬拉');
-  rdl.click();
-  await wait(80);
+  await openDetail('罗马尼亚硬拉');
+  await openMore();
   click('[data-act=openswap]');
   await wait(120);
   var pick = [].filter.call(document.querySelectorAll('[data-act=swappick]'), function (el) { return !el.querySelector('.lib-cur'); })[0];
@@ -218,21 +298,23 @@ var PAGE = `(async function () {
   click('[data-act=swapok]');
   await wait(120);
   if (document.querySelector('.set-screen')) { click('[data-act=logback]'); await wait(80); }
-  report.swapped = [].map.call(document.querySelectorAll('.ex .name'), function (el) { return el.childNodes[0].textContent.trim(); });
+  report.swapped = [].map.call(document.querySelectorAll('.qm-name'), function (el) { return el.childNodes[0].textContent.trim(); });
   report.pickedName = pickedName;
   if (report.swapped.indexOf(pickedName) < 0) throw new Error('本次更换没有出现 ' + pickedName + '：' + report.swapped.join(','));
   if (report.swapped.indexOf('罗马尼亚硬拉') >= 0) throw new Error('更换后原动作还在列表里');
   note('swap', { names: report.swapped });
-  squat = [].filter.call(document.querySelectorAll('.ex-hit'), function (el) { return el.textContent.indexOf('杠铃深蹲') >= 0; })[0];
-  squat.click();
-  await wait(100);
-  if (!document.querySelector('[data-act=logundo]')) throw new Error('恢复后没有可撤销的组');
+  await openDetail('杠铃深蹲');
+  var undoRows = document.querySelectorAll('[data-act=logfix]');
+  if (!undoRows.length) throw new Error('恢复后没有可更正的组');
+  undoRows[undoRows.length - 1].click();
+  await wait(60);
+  if (!document.querySelector('[data-act=logundo]')) throw new Error('最新一组不能撤销');
   click('[data-act=logundo]');
   await wait(80);
   click('[data-act=logback]');
   await wait(80);
-  report.undot = text('.sets-count');
-  if (report.undot) throw new Error('撤销组次后仍显示 ' + report.undot);
+  report.undot = document.querySelector('.qm-mini') ? 'pips' : '';
+  if (report.undot) throw new Error('撤销组次后仍显示进度点');
   note('undo-set', { undot: report.undot || '0' });
 
   async function finishOpen() {
@@ -250,10 +332,13 @@ var PAGE = `(async function () {
   for (var n = 0; n < 8; n++) {
     if (!document.querySelector('.set-screen') && text('.home-cta') === '完成训练') break;
     if (!document.querySelector('.set-screen')) {
-      var start = document.querySelector('.home-cta');
-      if (!start || start.getAttribute('data-act') === 'submit') break;
-      start.click();
-      await wait(80);
+      if (text('.home-cta') === '完成训练') break;
+      var nextRow = document.querySelector('.qm-row');
+      if (!nextRow) throw new Error('没有可以继续记的动作');
+      nextRow.click();
+      await wait(50);
+      click('[data-act=qmopen]');
+      await wait(50);
     }
     await finishOpen();
     var nextEx = document.querySelector('[data-act=lognext]');
@@ -296,7 +381,12 @@ var PAGE = `(async function () {
   if (text('.lk-t').indexOf('已完成') < 0) throw new Error('回到 A1 没有完成卡：' + text('.lk-t'));
   click('[data-act=editLocked]');
   await wait(100);
-  if (!document.querySelector('.set-screen')) document.querySelector('.ex.current .ex-hit').click();
+  if (!document.querySelector('.set-screen')) {
+    var editRow = document.querySelector('.qm-row');
+    if (editRow) { editRow.click(); await wait(60); }
+    var editHead = document.querySelector('[data-act=qmopen]');
+    if (editHead) editHead.click();
+  }
   await wait(100);
   var fixes = document.querySelectorAll('[data-act=logfix]');
   if (!fixes.length) throw new Error('修改这次没有可更正的组');
@@ -356,7 +446,7 @@ async function main() {
   await new Promise(function (r) { server.listen(PORT, '127.0.0.1', r); });
   var chrome = spawn('google-chrome', [
     '--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run',
-    '--user-data-dir=/tmp/seven-flow-profile', '--remote-debugging-port=9333', 'about:blank'
+    '--user-data-dir=/tmp/seven-flow-' + Date.now(), '--remote-debugging-port=9333', 'about:blank'
   ], { stdio: 'ignore' });
   var list = null;
   for (var i = 0; i < 30; i++) {
@@ -394,10 +484,10 @@ async function main() {
   var narrow = [['390x640', 390, 640], ['360x640', 360, 640]];
   for (var n = 0; n < narrow.length; n++) {
     var tab = await openAt(narrow[n][1], narrow[n][2]);
-    var layout = await run(tab.s, `(function(){var body=document.getElementById('body');body.scrollTop=body.scrollHeight;var rows=document.querySelectorAll('.ex');var last=rows[rows.length-1].getBoundingClientRect();var cta=document.querySelector('.home-cta').getBoundingClientRect();var dock=document.querySelector('.tabbar').getBoundingClientRect();var hit=document.elementFromPoint(last.left+40,last.top+last.height/2);return JSON.stringify({gap:Math.round(cta.top-last.bottom),last:Math.round(last.bottom),cta:Math.round(cta.top),dock:Math.round(dock.top),ctaBottom:Math.round(cta.bottom),hit:hit&&hit.closest('.home-cta')?'cta':hit&&hit.closest('.ex-hit')?'row':'other'});})()`);
+    var layout = await run(tab.s, `(function(){var scroller=document.querySelector('.home-scroll')||document.getElementById('body');scroller.scrollTop=scroller.scrollHeight;var rows=document.querySelectorAll('.qm-item');var last=rows[rows.length-1].getBoundingClientRect();var dock=document.querySelector('.tabbar').getBoundingClientRect();var cue=document.querySelector('.guide-title').getBoundingClientRect();var block=document.querySelector('.training-block').getBoundingClientRect();var hit=document.elementFromPoint(last.left+40,Math.min(last.bottom-8,dock.top-12));return JSON.stringify({gap:Math.round(dock.top-last.bottom),cueGap:Math.round(block.top-cue.bottom),last:Math.round(last.bottom),dock:Math.round(dock.top),hit:hit&&hit.closest('.tabbar')?'tab':hit&&hit.closest('.qm-row')?'row':'other'});})()`);
     var info = JSON.parse(layout);
-    console.log(narrow[n][0], 'gap', info.gap, 'hit', info.hit, 'cta/dock', info.ctaBottom, info.dock);
-    if (info.gap < 8 || info.hit === 'cta' || info.ctaBottom > info.dock + 1) throw new Error(narrow[n][0] + ' 仍被挡住 ' + layout);
+    console.log(narrow[n][0], 'gap', info.gap, 'cue', info.cueGap, 'hit', info.hit);
+    if (info.gap < 8 || info.hit === 'tab' || info.cueGap < 32) throw new Error(narrow[n][0] + ' 仍被挡住 ' + layout);
     await shot(tab.s, 'home-scrolled-' + narrow[n][0] + '.png');
     await browser.send('Target.closeTarget', { targetId: tab.id });
   }
