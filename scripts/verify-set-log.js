@@ -105,6 +105,61 @@ check('T2 完成前不把 v 写成完成，T3 末组才写入实际次数', func
   assert.strictEqual(e3.v, 20);
 });
 
+check('批量补记一次写入，失败则一组都不增加，已记组不改', function () {
+  var db = GZ.normalize(GZ.defaults(false));
+  var it = item(db, 'A1', 'A1_1');
+  var en = { v: null, done: 0, groups: [{ reps: 4, weight: it.weight }] };
+  var blocked = SL.commitBatch(en, it, [
+    { index: 1, reps: it.reps, weight: it.weight },
+    { index: 2, reps: it.reps, weight: it.weight }
+  ], function () { return false; });
+  assert.strictEqual(blocked.ok, false);
+  assert.strictEqual(blocked.reason, 'write');
+  assert.strictEqual(blocked.entry.groups.length, 1);
+  assert.strictEqual(blocked.entry.groups[0].reps, 4);
+  var ok = SL.commitBatch(en, it, [
+    { index: 1, reps: it.reps, weight: it.weight },
+    { index: 2, reps: it.reps, weight: it.weight }
+  ], function () { return true; });
+  assert.strictEqual(ok.ok, true);
+  assert.strictEqual(ok.entry.groups.length, 3);
+  assert.strictEqual(ok.entry.groups[0].reps, 4);
+  assert.strictEqual(ok.last, false);
+  assert.strictEqual(ok.entry.v, null);
+});
+
+check('T2 按目标补齐才写成完成，未完成路径不写成完成', function () {
+  var db = GZ.normalize(GZ.defaults(false));
+  var t2 = item(db, 'A1', 'A1_2');
+  assert.strictEqual(SL.isAmrapIndex(t2, t2.sets - 1), false);
+  var en = { v: null, done: 0, groups: [] };
+  var adds = [];
+  for (var i = 0; i < t2.sets; i++) adds.push({ index: i, reps: SL.prescribedReps(t2, i), weight: t2.weight });
+  en = SL.commitBatch(en, t2, adds, function () { return true; }).entry;
+  assert.strictEqual(en.v, '完成');
+  assert.strictEqual(en.groups.length, t2.sets);
+  var miss = SL.commitActuals({ v: null, done: 0, groups: [] }, t2, [8, 8, 0], { miss: true }, function () { return true; });
+  assert.strictEqual(miss.ok, true);
+  assert.strictEqual(miss.entry.v, '未完成');
+  assert.strictEqual(miss.entry.reps, 16);
+  assert.notStrictEqual(miss.entry.v, '完成');
+  var judged = GZ.evaluate(GZ.dayById(db, 'A1').slots[1], { stage: t2.stage, weight: t2.weight, fail: 0, last3x10: 0 }, miss.entry, db.params, false);
+  assert.notStrictEqual(judged.judgment, '加重');
+});
+
+check('未完成实际次数空值整批不写，0 可以记下且不当成完成', function () {
+  var db = GZ.normalize(GZ.defaults(false));
+  var it = item(db, 'A1', 'A1_1');
+  var empty = SL.commitActuals({ groups: [] }, it, ['', 3, 3, 3, 2], { miss: true }, function () { return true; });
+  assert.strictEqual(empty.ok, false);
+  var zero = SL.commitActuals({ groups: [{ reps: 3, weight: it.weight }] }, it, [3, 3, 3, 3, 0], { miss: true }, function () { return true; });
+  assert.strictEqual(zero.ok, true);
+  assert.strictEqual(zero.entry.groups[0].reps, 3);
+  assert.strictEqual(zero.entry.groups[4].reps, 0);
+  assert.strictEqual(zero.entry.v, 0);
+  assert.strictEqual(zero.entry.groups[0].correctedFrom, undefined);
+});
+
 check('草稿组次能让未完成训练在重开后被认出来，但不是一条训练记录', function () {
   var draft = { A1_1: { v: null, done: 0, groups: [{ reps: 3, weight: 60 }], pending: { reps: 3, weight: 60 } } };
   assert.strictEqual(GZ.sessionTouched({ day: 'A1', draft: draft, drafts: { A1: draft } }), true);

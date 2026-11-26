@@ -561,7 +561,14 @@
   var CHEV = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5.2 3.2L9 7l-3.8 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var GEAR = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8.1 1.9h3.8l.3 1.95c.62.15 1.2.4 1.72.74l1.86-.76 1.86 3.22-1.56 1.26c.12.5.2 1.04.2 1.59 0 .55-.08 1.09-.2 1.59l1.56 1.26-1.86 3.22-1.86-.76a5.9 5.9 0 0 1-1.72.74L11.9 18.1H8.1l-.3-1.95a5.9 5.9 0 0 1-1.72-.74l-1.86.76-1.86-3.22 1.56-1.26A5.8 5.8 0 0 1 3.66 10c0-.55.08-1.09.2-1.59L2.3 7.15 4.16 3.93l1.86.76c.52-.34 1.1-.59 1.72-.74L8.1 1.9Z" stroke="#141414" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.4" stroke="#141414" stroke-width="1.5"/></svg>';
   var EXPAND = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M5 7.2l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var MORE = '<svg width="16" height="4" viewBox="0 0 16 4" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.6"/><circle cx="8" cy="2" r="1.6"/><circle cx="14" cy="2" r="1.6"/></svg>';
+  var MORE = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg>';
+  var FOLD = '<svg width="12" height="8" viewBox="0 0 10 7" fill="none" aria-hidden="true"><path d="M2 5l3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var IC_CHEV = '<svg class="sh-chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" stroke="#9CA3AF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var IC_X = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4.5 4.5 13.5 13.5M13.5 4.5 4.5 13.5" stroke="#141414" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  var IC_CHECK = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="6.75" stroke="#141414" stroke-width="1.5"/><path d="M6.2 9.1 8.1 11l3.8-3.8" stroke="#141414" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var IC_NOTE = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3.5 5.2h11M3.5 9h7M3.5 12.8h5" stroke="#141414" stroke-width="1.5" stroke-linecap="round"/><path d="m11.5 12.8 3-3 1.4 1.4-3 3-1.8.4.4-1.8Z" stroke="#141414" stroke-width="1.35" stroke-linejoin="round"/></svg>';
+  var IC_SWAP = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3.5 6.2h10.5l-2.4-2.4M14.5 11.8H4l2.4 2.4" stroke="#141414" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var IC_SKIP = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4.2 5.2 9.4 9 4.2 12.8V5.2ZM10.4 5.2 15.2 9l-4.8 3.8V5.2Z" stroke="#141414" stroke-width="1.45" stroke-linejoin="round"/></svg>';
   var CHECK = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.2 6.2l2.4 2.4L9.8 3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function homeIdentity() {
@@ -701,39 +708,184 @@
     if (it.isBW) return '<span class="kg bw">自重</span>';
     return '<span class="kg' + (it.manual ? ' manual' : '') + '">' + esc(it.weightText) + '</span><span class="unit">' + esc(it.unitText || 'kg') + '</span>';
   }
-  /** 原列表顺序。当前项白卡片，已完成只加小对勾，不整卡变绿。 */
-  function exerciseStack(vm) {
-    var t = S.train, h = '<div class="ex-list">';
-    vm.items.forEach(function (it, i) {
-      var current = it.slotId === t.focus;
-      var done = setsLogged(it);
-      var open = current && !!t.open;
-      var cls = 'ex' + (current ? ' current' : ' upcoming') + (done ? ' is-done' : '') + (it.skip ? ' skipped' : '') + (open ? ' is-open' : '');
-      var label = (current ? '当前动作' : '后续动作') + ' · ' + it.name + (done ? '，已完成' : '') + (it.skip ? '，已跳过' : '');
-      h += '<section class="' + cls + '">';
-      h += '<button type="button" class="ex-hit" data-act="row" data-slot="' + it.slotId + '" aria-label="' + esc(label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">';
-      h += '<div class="ordinal"><span>' + ordinalText(i) + '</span></div>';
-      h += '<div class="ex-body"><div class="ex-top"><div class="name">' + esc(it.name) + (done ? doneMark() : '') + '</div>';
-      h += '<div class="wt">' + weightBlock(it) + '</div></div>';
-      h += '<div class="ex-meta"><div class="scheme">' + esc(it.skip ? '已跳过' : Home.schemeLine(it)) + '</div>';
-      if (current && !it.skip) h += '<div class="sets">' + setPips(it) + '</div>';
-      h += '</div>' + flagHtml(it) + '</div></button>';
-      h += '</section>';
-    });
+  function itemBySlot(vm, slot) {
+    var hit = null;
+    (vm && vm.items || []).forEach(function (x) { if (x.slotId === slot) hit = x; });
+    return hit;
+  }
+  function unitWord(it) { return it && it.isCardio ? '分钟' : '次'; }
+  function goalLabel(it, index) {
+    var load = it && it.loads && it.loads[index];
+    if (load && load.reps != null && isNaN(Number(load.reps))) return String(load.reps);
+    var reps = SL.prescribedReps(it, index);
+    if (reps == null) return SL.targetOf(it, index).text;
+    return SL.isAmrapIndex(it, index) ? (reps + '+') : String(reps);
+  }
+  function headScheme(it) {
+    if (!it || it.skip) return '已跳过';
+    if (it.isCardio) return Home.schemeLine(it);
+    var body = (it.sets != null ? it.sets : '') + ' 组';
+    return it.badge ? (it.badge + ' · ' + body) : body;
+  }
+  function amrapPendingIndex(it) {
+    var n = it && it.done || 0;
+    for (var i = n; i < (it && it.sets || 0); i++) if (SL.isAmrapIndex(it, i)) return i;
+    return -1;
+  }
+  function miniPips(it) {
+    var done = it.done || 0, n = it.sets || 0;
+    if (!n || done <= 0) return '';
+    var h = '<span class="qm-mini" aria-hidden="true">';
+    for (var i = 0; i < n; i++) h += '<i class="' + (i < done ? 'on' : '') + '"></i>';
+    return h + '</span>';
+  }
+  function gateIndex(it) {
+    var g = S.train.gate;
+    return g && g.slot === it.slotId ? g.index : -1;
+  }
+  function setButtons(it) {
+    var done = it.done || 0;
+    var gate = gateIndex(it);
+    var current = done >= it.sets ? -1 : (gate >= 0 ? gate : done);
+    var h = '<div class="qm-sets">';
+    for (var i = 0; i < it.sets; i++) {
+      var cls = i < done ? 'done' : (i === current ? 'current' : '');
+      var amrap = SL.isAmrapIndex(it, i);
+      var word = i < done ? '已记下' : (i === done || i === gate ? '待记' : '未记');
+      h += '<button type="button" class="qm-set ' + cls + '" data-act="qmset" data-slot="' + it.slotId + '" data-i="' + i + '" aria-label="第 ' + (i + 1) + ' 组，' + word + (amrap ? '，末组' : '') + '"><span class="qm-node">' + (i + 1) + (amrap ? '+' : '') + '</span></button>';
+    }
     return h + '</div>';
   }
-  function homeAction(vm, it, started) {
-    if (!it) return '';
-    var ready = vm.total > 0 && vm.filled === vm.total;
-    var label = Home.ctaLabel({ ready: ready, editing: vm.editing, started: started, name: it.name });
-    var act = ready ? 'submit' : 'startlog';
-    var h = '<div class="home-action"><button type="button" class="home-cta" data-act="' + act + '" data-slot="' + it.slotId + '">' + esc(label) + '</button>';
-    if (!started && !ready) {
-      h += '<div class="home-links"><button type="button" data-act="adjust">调整今天</button></div>';
-    } else if (!ready) {
-      h += '<div class="home-links"><button type="button" data-act="openswap" data-slot="' + it.slotId + '">换动作</button><i></i><button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
-    } else h += '<div class="home-links"><button type="button" data-act="adjust">日期与备注</button></div>';
+  function instrumentBlock(it) {
+    var done = it.done || 0;
+    var gate = gateIndex(it);
+    var idx = gate >= 0 ? gate : Math.min(done, Math.max(0, (it.sets || 1) - 1));
+    return '<div class="qm-train"><p class="qm-stage-label">第 ' + (idx + 1) + ' 组目标</p><div class="qm-instrument"><p class="qm-goal"><strong>' + esc(goalLabel(it, idx)) + '</strong><small>' + unitWord(it) + '</small></p>' + setButtons(it) + '</div></div>';
+  }
+  function resultRow(it) {
+    var t = S.train, done = it.done || 0;
+    if (it.skip || done >= it.sets) return '';
+    var gateOn = t.gate && t.gate.slot === it.slotId;
+    var resting = !!(rest.show && rest.slot === it.slotId && restLeft() > 0 && !gateOn);
+    var amrap = amrapPendingIndex(it) >= 0;
+    if (gateOn) {
+      var buf = (t.gates && t.gates[it.slotId]) || '';
+      var dis = String(buf).trim() === '' ? ' disabled' : '';
+      return '<div class="qm-actual"><div class="qm-actual-field"><label for="qm-actual">实际次数</label><div class="qm-entry"><input id="qm-actual" inputmode="numeric" autocomplete="off" data-act="qreps" data-slot="' + it.slotId + '" value="' + esc(buf) + '" placeholder="—" aria-label="实际次数"><small>' + unitWord(it) + '</small></div></div>' +
+        '<button type="button" class="qm-confirm" data-act="qmconfirm" data-slot="' + it.slotId + '"' + dis + '>记下末组</button></div>' +
+        '<div class="qm-result split"><button type="button" data-act="qmcancel" data-slot="' + it.slotId + '">取消</button><button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button></div>';
+    }
+    var h = '<div class="qm-result' + (resting || !amrap ? ' split' : '') + ( !resting && !amrap ? ' pair' : '') + '">';
+    if (resting) {
+      h += '<button type="button" class="qm-rest" data-act="qmrest" data-slot="' + it.slotId + '" aria-label="组间休息，打开休息页">休息 <time>' + fmtSec(restLeft()) + '</time><span aria-hidden="true"> ›</span></button>';
+      h += '<button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button>';
+    } else if (amrap) {
+      h += '<button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button>';
+    } else {
+      h += '<button type="button" class="qm-all" data-act="qmall" data-slot="' + it.slotId + '">全部完成</button>';
+      h += '<button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button>';
+    }
     return h + '</div>';
+  }
+  function retryBanner(it) {
+    var r = S.train.quickRetry;
+    if (!r || r.slot !== it.slotId) return '';
+    return '<div class="qm-retry"><p>未能记下，原记录还在。</p><button type="button" data-act="qmretry" data-slot="' + it.slotId + '">重试</button></div>';
+  }
+  function collapsedRow(it, i) {
+    return '<button type="button" class="qm-row" data-act="qmexpand" data-slot="' + it.slotId + '" aria-expanded="false" aria-label="' + esc(it.name) + '，展开快速菜单' + (it.skip ? '，已跳过' : '') + '">' +
+      '<span class="qm-gutter"><span class="qm-ord">' + ordinalText(i) + '</span></span>' +
+      '<span class="qm-row-content"><span class="qm-ident"><span class="qm-name">' + esc(it.name) + '</span><span class="qm-wt">' + weightBlock(it) + '</span></span>' +
+      '<span class="qm-meta"><span>' + esc(it.skip ? '已跳过' : Home.schemeLine(it)) + '</span>' + miniPips(it) + '</span>' + flagHtml(it) + '</span></button>';
+  }
+  function expandedRow(it, i) {
+    var region = 'qm-panel-' + it.slotId;
+    return '<div class="qm-head"><button type="button" class="qm-fold" data-act="qmcollapse" data-slot="' + it.slotId + '" aria-expanded="true" aria-controls="' + region + '" aria-label="收起' + esc(it.name) + '快速菜单"><span class="qm-num">' + ordinalText(i) + '</span>' + FOLD + '</button>' +
+      '<button type="button" class="qm-head-content" data-act="qmopen" data-slot="' + it.slotId + '" aria-label="进入' + esc(it.name) + '完整记录"><span class="qm-ident"><span class="qm-name">' + esc(it.name) + '<span class="qm-go" aria-hidden="true">›</span></span><span class="qm-wt">' + weightBlock(it) + '</span></span>' +
+      '<span class="qm-meta"><span>' + esc(headScheme(it)) + '</span></span>' + flagHtml(it) + '</button></div>' +
+      '<div class="qm-panel" id="' + region + '">' + (it.skip ? '' : instrumentBlock(it) + resultRow(it) + retryBanner(it)) + '</div>';
+  }
+  /** 原列表顺序。同一时间只展开一行；点收起行只展开，不打开详情。 */
+  function exerciseStack(vm) {
+    var t = S.train, h = '<div class="qm-list">';
+    vm.items.forEach(function (it, i) {
+      var open = !!(t.open && it.slotId === t.focus);
+      h += '<section class="qm-item' + (open ? ' is-open' : '') + (it.skip ? ' is-skip' : '') + '">';
+      h += open ? expandedRow(it, i) : collapsedRow(it, i);
+      h += '</section>';
+    });
+    h += '</div><p class="qm-live" aria-live="polite">' + esc(t._announce || '') + '</p>';
+    t._announce = '';
+    return h;
+  }
+  function homeAction(vm) {
+    var ready = vm.total > 0 && vm.filled === vm.total;
+    var h = '<div class="qm-foot">';
+    if (ready) {
+      h += '<button type="button" class="home-cta" data-act="submit">' + (vm.editing ? '保存修改' : '完成训练') + '</button>';
+      h += '<button type="button" class="qm-text" data-act="adjust">日期与备注</button>';
+    } else h += '<button type="button" class="qm-text" data-act="adjust">调整今天</button>';
+    return h + '</div>';
+  }
+  function missValues(it) {
+    var t = S.train, slot = it.slotId;
+    var stored = t.missBuffer && t.missBuffer[slot];
+    if (stored && stored.length === it.sets) return stored.slice();
+    var en = entry(slot);
+    SL.migrate(en, it);
+    var values = [];
+    for (var i = 0; i < it.sets; i++) values.push(en.groups && en.groups[i] ? String(en.groups[i].reps) : '');
+    return values;
+  }
+  function unsentQuick() {
+    var t = S.train;
+    if (!t) return false;
+    if (t.gate && t.gates && String(t.gates[t.gate.slot] || '').trim()) return true;
+    if (t.log && t.log.screen === 'gate' && String(t.log.gateReps || '').trim()) return true;
+    if (t.miss) return true;
+    return false;
+  }
+  function openMiss(slot) {
+    var vm = trainVM(), it = itemBySlot(vm, slot), t = S.train;
+    if (!it) return;
+    if (!t.missBuffer) t.missBuffer = {};
+    if (!t.missBuffer[slot]) t.missBuffer[slot] = missValues(it);
+    t.miss = { slot: slot, values: t.missBuffer[slot].slice() };
+    if (t.log) t.log.more = false;
+  }
+  function missSheet(it) {
+    if (!it) return '';
+    var values = (S.train.miss && S.train.miss.slot === it.slotId && S.train.miss.values) || missValues(it);
+    var ready = values.every(function (v) { return String(v).trim() !== ''; });
+    var rows = '';
+    for (var i = 0; i < it.sets; i++) {
+      rows += '<div class="qm-miss-row"><span>第 ' + (i + 1) + ' 组</span><span class="qm-miss-target">目标 ' + esc(goalLabel(it, i)) + '</span><input inputmode="numeric" autocomplete="off" data-act="qmiss" data-slot="' + it.slotId + '" data-i="' + i + '" value="' + esc(values[i]) + '" placeholder="—" aria-label="第 ' + (i + 1) + ' 组实际次数"><small>' + unitWord(it) + '</small></div>';
+    }
+    return '<div class="qm-layer mask" data-act="missclose"><section class="qm-miss" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="miss-title"><div class="qm-miss-head"><h3 id="miss-title">未完成</h3><button type="button" class="qm-x" data-act="missclose" aria-label="关闭">×</button></div>' +
+      '<p class="qm-miss-info">' + esc(it.name) + ' · 按实际填写，未做填 0。已记下的次数会带出来；空项不代表达标。</p>' + rows +
+      '<button type="button" class="qm-miss-save' + (ready ? ' is-ready' : '') + '" data-act="misssave" data-slot="' + it.slotId + '"' + (ready ? '' : ' disabled') + '>记下未完成</button>' +
+      '<p class="qm-miss-foot">先补全空项，仅记录本动作未达到目标。不是整节「完成训练」。</p></section></div>';
+  }
+  function moreRow(act, icon, title, sub, extra) {
+    return '<button type="button" class="sh-row" data-act="' + act + '"' + (extra || '') + '><span class="sh-ic">' + icon + '</span><span class="sh-txt"><span class="sh-t">' + title + '</span><span class="sh-s">' + sub + '</span></span>' + IC_CHEV + '</button>';
+  }
+  function moreSheet(it) {
+    var en = entry(it.slotId);
+    SL.migrate(en, it);
+    var idx = Math.min((en.groups || []).length, Math.max(0, it.sets - 1));
+    var amrap = amrapPendingIndex(it) >= 0;
+    var targetSub = amrap ? ('未记组按目标补齐，末组 ' + goalLabel(it, it.sets - 1) + ' 须填实际') : '未记组按目标补齐';
+    var skipLabel = it.skip ? '恢复本动作' : '跳过本动作';
+    var skipSub = it.skip ? '恢复后可以继续记这一项' : '本节不做此动作，不计入完成；可再恢复';
+    var slot = ' data-slot="' + it.slotId + '"';
+    return '<div class="qm-layer mask" data-act="logmoreclose"><section class="action-sheet" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="more-actions-title"><div class="sh-grabber" aria-hidden="true"></div><div class="sh-header"><div class="sh-title-wrap"><h3 id="more-actions-title">更多操作</h3><p>' + esc(it.name) + ' · 第 ' + (idx + 1) + ' / ' + it.sets + ' 组</p></div>' +
+      '<button type="button" class="qm-x sh-close" data-act="logmoreclose" aria-label="关闭更多操作">' + IC_X + '</button></div><div class="sh-body"><div class="sh-group-label">记录本动作结果</div><div class="sh-card">' +
+      moreRow('logtarget', IC_CHECK, '按目标完成', esc(targetSub), slot) +
+      moreRow('logincomplete', IC_NOTE, '未完成', '补填各组实际次数，不按达标记满', slot) +
+      '</div><div class="sh-group-label">调整本次训练</div><div class="sh-card">' +
+      moreRow('openswap', IC_SWAP, '换动作', '替换当前动作，已记组留在原动作名下', slot) +
+      moreRow('skip', IC_SKIP, skipLabel, esc(skipSub), slot) +
+      '</div></div></section></div>';
   }
   function sessionMenu(vm, t) {
     if (!t.menu) return '';
@@ -771,15 +923,17 @@
     Object.keys(en).forEach(function (k) { delete en[k]; });
     Object.assign(en, next);
   }
-  function openSetLog(slot) {
+  function openSetLog(slot, forced) {
     var t = S.train, vm = trainVM(), it = vm.items.filter(function (x) { return x.slotId === slot; })[0];
     if (!it) return;
-    t.focus = slot; t.open = false;
+    t.focus = slot;
     if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = slot; t.focusKey = t.day + '|' + (t.recordId || ''); }
     var en = entry(slot); SL.migrate(en, it);
-    var screen = 'work';
-    if ((en.groups || []).length >= it.sets) screen = 'done';
-    else if (rest.show && rest.slot === slot && rest.until > Date.now()) screen = 'rest';
+    if (t.gates && String(t.gates[slot] || '').trim() !== '') {
+      en.pending = Object.assign({}, en.pending || {}, { reps: t.gates[slot], weight: en.pending && en.pending.weight != null ? en.pending.weight : it.weight });
+    }
+    var screen = forced || 'work';
+    if (!forced && (en.groups || []).length >= it.sets) screen = 'done';
     t.log = { slot: slot, screen: screen, correct: null };
   }
   function renderSetLog(vm) {
@@ -811,11 +965,11 @@
       h += '<p class="rest-suggest">' + esc(it.badge || '') + ' 建议 ' + Math.round((it.rest || 0) / 60) + ' 分钟</p>';
       h += '<button type="button" class="text-link" data-act="logundo">撤销这一组</button>';
       h += '</div>';
-    } else if (screen === 'done') {
+    } else if (screen === 'done' || screen === 'miss') {
       var p = it.preview;
       var nxt = null;
       vm.items.forEach(function (x) { if (!nxt && x.slotId !== it.slotId && !x.skip && !setsLogged(x)) nxt = x; });
-      h += '<p class="done-kicker">本动作已记下</p><h2 class="set-name">' + esc(it.name) + '</h2>';
+      h += '<p class="' + (screen === 'miss' ? 'miss-kicker' : 'done-kicker') + '">' + (screen === 'miss' ? '未达到目标' : '本动作已记下') + '</p><h2 class="set-name">' + esc(it.name) + '</h2>';
       h += '<p class="set-scheme">' + esc(Home.schemeLine(it)) + '</p>';
       h += logDots(it, en, it.sets);
       h += '<div class="set-log">';
@@ -858,6 +1012,20 @@
       h += '</div><div class="log-bottom">';
       h += '<button type="button" class="home-cta" data-act="logretry">再试一次</button>';
       h += '<button type="button" class="text-link" data-act="logwork">先留在本页</button></div>';
+    } else if (screen === 'gate') {
+      var rawGate = t.log.gateReps || '';
+      var gateOk = String(rawGate).trim() !== '';
+      var gateIdx = amrapPendingIndex(it);
+      if (gateIdx < 0) gateIdx = Math.max(0, it.sets - 1);
+      h += '<p class="set-meta">' + esc(stamp) + '</p>';
+      h += '<h2 class="set-name">' + esc(it.name) + '</h2>';
+      h += '<p class="set-scheme">' + esc(Home.schemeLine(it)) + '</p>';
+      h += '<p class="block-label">第 ' + (gateIdx + 1) + ' 组目标 ' + esc(goalLabel(it, gateIdx)) + ' ' + unitWord(it) + '</p>';
+      h += '<div class="qm-actual detail"><div class="qm-actual-field"><label for="gate-actual">实际次数</label><div class="qm-entry"><input id="gate-actual" inputmode="numeric" autocomplete="off" data-act="gatereps" data-slot="' + it.slotId + '" value="' + esc(rawGate) + '" placeholder="—" aria-label="实际次数"><small>' + unitWord(it) + '</small></div></div></div>';
+      h += '<p class="hint">未记的组按目标补齐。末组按你填的实际记下，不会预填目标。</p>';
+      h += '</div><div class="log-bottom">';
+      h += '<button type="button" class="home-cta" data-act="gateconfirm" data-slot="' + it.slotId + '"' + (gateOk ? '' : ' disabled') + '>记下末组</button>';
+      h += '<button type="button" class="more-btn" data-act="gatecancel">取消</button></div>';
     } else {
       var cur = Math.min(index, it.sets - 1);
       var amrap = SL.isAmrapIndex(it, cur);
@@ -888,12 +1056,12 @@
       h += '</div></div><div class="log-bottom">';
       var can = pending.reps !== '' && pending.reps != null;
       h += '<button type="button" class="home-cta" data-act="logsave"' + (can ? '' : ' disabled') + '>记下第 ' + (cur + 1) + ' 组</button>';
-      h += '<div class="home-links"><button type="button" data-act="openswap" data-slot="' + it.slotId + '">换动作</button><i></i>';
-      h += '<button type="button" data-act="skip" data-slot="' + it.slotId + '">' + (it.skip ? '恢复' : '跳过') + '</button></div>';
-      if ((en.groups || []).length) h += '<button type="button" class="text-link" data-act="logundo">撤销上一组</button>';
+      h += '<div class="more-wrap"><button type="button" class="more-btn" data-act="logmore" aria-haspopup="dialog" aria-expanded="' + (t.log.more ? 'true' : 'false') + '">' + MORE + '<span>更多操作</span></button></div>';
       h += '</div>';
     }
     h += '</div>';
+    if (t.log.more && screen === 'work') h += moreSheet(it);
+    if (t.miss && t.miss.slot === it.slotId) h += missSheet(it);
     if (t.swap && t.swap.show) h += renderSwap();
     return h;
   }
@@ -963,6 +1131,171 @@
     else { t.log.screen = 'rest'; beginRest(ctx.it.rest || 60, ctx.it.name, ctx.it.slotId); }
     return true;
   }
+  function applyWrite(it, next, prev) {
+    putEntry(it.slotId, next);
+    var ok = persistOpen();
+    if (!ok) putEntry(it.slotId, prev);
+    return ok;
+  }
+  function clearRestSlot(slot) {
+    if (rest.show && (!slot || rest.slot === slot)) {
+      clearInterval(rest.timer); rest.timer = null; rest.show = false; rest.until = 0; rest.list = false;
+      companionBus('rest', { on: false });
+      var el = document.getElementById('rest'); if (el) el.innerHTML = '';
+    }
+  }
+  function finishExercise(it, screen) {
+    var t = S.train;
+    clearRestSlot(it.slotId);
+    t.gate = null;
+    t.quickRetry = null;
+    t.miss = null;
+    if (t.missBuffer) delete t.missBuffer[it.slotId];
+    if (t.gates) delete t.gates[it.slotId];
+    t.focus = it.slotId;
+    t.open = true;
+    t.log = { slot: it.slotId, screen: screen || 'done', more: false };
+  }
+  function additionsThrough(it, en, through, lastReps) {
+    var start = (en.groups || []).length;
+    var additions = [];
+    for (var i = start; i <= through; i++) {
+      var reps = lastReps != null && i === through ? lastReps : SL.prescribedReps(it, i);
+      if (reps == null) return null;
+      additions.push({ index: i, reps: reps, weight: SL.setWeight(it, en, i) });
+    }
+    return additions;
+  }
+  function runBatch(it, additions, opts) {
+    var t = S.train;
+    opts = opts || {};
+    if (t._writing || !it || !additions || !additions.length) return false;
+    var en = entry(it.slotId);
+    SL.migrate(en, it);
+    var prev = JSON.parse(JSON.stringify(en));
+    t._writing = true;
+    var result = SL.commitBatch(en, it, additions, function (next) { return applyWrite(it, next, prev); });
+    t._writing = false;
+    if (!result.ok && result.reason === 'write') {
+      var pending = { index: (prev.groups || []).length, reps: additions[additions.length - 1].reps, weight: additions[additions.length - 1].weight };
+      if (opts.surface === 'detail') {
+        t.log = t.log || { slot: it.slotId };
+        t.log.slot = it.slotId; t.log.screen = 'fail'; t.log.more = false; t.log.fail = pending;
+        t.log.retryBatch = { batch: additions, screen: opts.screen || 'done' };
+      } else {
+        t.quickRetry = { slot: it.slotId, batch: additions };
+        t._announce = '未能记下';
+      }
+      return true;
+    }
+    if (!result.ok) { toast(result.reason === 'empty' ? '填写本次次数' : '这次没能记下'); return false; }
+    t.quickRetry = null;
+    if (t.log) t.log.retryBatch = null;
+    if (result.last) { finishExercise(it, opts.screen || 'done'); return true; }
+    t.gate = null;
+    t.focus = it.slotId;
+    t.open = true;
+    if (opts.surface !== 'detail') t.log = null;
+    else if (t.log) { t.log.screen = 'work'; t.log.more = false; }
+    beginRest(it.rest || 60, it.name, it.slotId, { list: opts.surface !== 'detail' });
+    t._announce = '已记下';
+    return true;
+  }
+  function onQuickSet(slot, index) {
+    var it = itemBySlot(trainVM(), slot);
+    if (!it || it.skip) return false;
+    var en = entry(slot);
+    SL.migrate(en, it);
+    var logged = (en.groups || []).length;
+    if (index < logged || index >= it.sets) return false;
+    for (var i = logged; i <= index; i++) {
+      if (SL.isAmrapIndex(it, i)) {
+        S.train.gate = { slot: slot, index: i };
+        S.train.focus = slot;
+        S.train.open = true;
+        return true;
+      }
+    }
+    var additions = additionsThrough(it, en, index, null);
+    if (!additions) { toast('这一组没有目标次数'); return false; }
+    return runBatch(it, additions, { surface: 'list' });
+  }
+  function confirmGate(slot, raw) {
+    var t = S.train, it = itemBySlot(trainVM(), slot);
+    if (!it) return false;
+    if (String(raw).trim() === '') { toast('填写实际次数'); return false; }
+    var reps = SL.clampReps(raw, it.inputType);
+    if (reps == null) { toast('填写实际次数'); return false; }
+    var gateIndex = t.gate && t.gate.slot === slot ? t.gate.index : (t.log && t.log.screen === 'gate' ? amrapPendingIndex(it) : -1);
+    if (gateIndex < 0) gateIndex = amrapPendingIndex(it);
+    if (gateIndex < 0) return false;
+    var en = entry(slot);
+    SL.migrate(en, it);
+    if (gateIndex < (en.groups || []).length) return false;
+    var additions = additionsThrough(it, en, gateIndex, reps);
+    if (!additions) return false;
+    var surface = t.log ? 'detail' : 'list';
+    t.gate = null;
+    if (t.gates) delete t.gates[slot];
+    if (t.log) t.log.gateReps = '';
+    return runBatch(it, additions, { surface: surface, screen: 'done' });
+  }
+  function completeAll(slot, surface) {
+    var t = S.train, it = itemBySlot(trainVM(), slot);
+    if (!it || it.skip) return false;
+    var en = entry(slot);
+    SL.migrate(en, it);
+    var loggedNow = (en.groups || []).length;
+    var pendingAmrap = -1;
+    for (var ai = loggedNow; ai < it.sets; ai++) if (SL.isAmrapIndex(it, ai)) { pendingAmrap = ai; break; }
+    if (pendingAmrap >= 0) {
+      if (surface === 'detail') {
+        t.log = t.log || { slot: slot };
+        t.log.slot = slot; t.log.screen = 'gate'; t.log.more = false; t.log.gateReps = '';
+        t._focusDialog = false;
+        return true;
+      }
+      t.gate = { slot: slot, index: pendingAmrap };
+      t.focus = slot; t.open = true;
+      return true;
+    }
+    if (loggedNow >= it.sets) { toast('这个动作已经记完'); return false; }
+    var additions = additionsThrough(it, en, it.sets - 1, null);
+    if (!additions || !additions.length) return false;
+    return runBatch(it, additions, { surface: surface, screen: 'done' });
+  }
+  function saveActuals(slot, values) {
+    var t = S.train, it = itemBySlot(trainVM(), slot);
+    if (!it || t._writing) return false;
+    var en = entry(slot);
+    SL.migrate(en, it);
+    var prev = JSON.parse(JSON.stringify(en));
+    t._writing = true;
+    var result = SL.commitActuals(en, it, values, { miss: true }, function (next) { return applyWrite(it, next, prev); });
+    t._writing = false;
+    if (!result.ok && result.reason === 'write') {
+      t.quickRetry = { slot: slot, actuals: values.slice() };
+      t.miss = { slot: slot, values: values.slice() };
+      t._announce = '未能记下';
+      return true;
+    }
+    if (!result.ok) { toast('每组都要填写实际次数，没做就填 0'); return false; }
+    finishExercise(it, 'miss');
+    return true;
+  }
+  function retryQuick() {
+    var t = S.train;
+    if (t.log && t.log.retryBatch && t.log.retryBatch.batch) {
+      var dit = itemBySlot(trainVM(), t.log.slot);
+      return runBatch(dit, t.log.retryBatch.batch, { surface: 'detail', screen: t.log.retryBatch.screen || 'done' });
+    }
+    var r = t.quickRetry;
+    if (!r) return commitSet();
+    var it = itemBySlot(trainVM(), r.slot);
+    if (!it) return false;
+    if (r.actuals) return saveActuals(it.slotId, r.actuals);
+    return runBatch(it, r.batch, { surface: 'list', screen: 'done' });
+  }
   function saveCorrection() {
     var t = S.train; if (t._writing) return false;
     var ctx = logCtx(trainVM()); if (!ctx) return false;
@@ -1025,19 +1358,18 @@
     if (t.log && !vm.locked) return renderSetLog(vm);
     var it = Home.focusItem(vm, t.focus);
     var started = Home.sessionStarted(vm);
-    var pos = Home.positionOf(vm, it && it.slotId);
     var ready = vm.total > 0 && vm.filled === vm.total;
-    var prompt = vm.locked ? ('本周的 ' + vm.day + ' 已经完成。') : Home.guidePrompt({
-      dayName: vm.dayName, name: it && it.name, done: it && it.done, sets: it && it.sets,
-      logged: it && setsLogged(it), skipped: it && it.skip, ready: ready && !vm.locked, started: started, editing: vm.editing
-    });
+    var prompt = vm.locked ? ('本周的 ' + vm.day + ' 已经完成。')
+      : (vm.editing ? Home.guidePrompt({ editing: true, name: it && it.name })
+      : (ready ? '今天的动作都记好了。' : '练完一组，再点亮对应组。'));
+    h += '<div class="qm-stage"><div class="qm-pad qm-pad-top" aria-hidden="true"></div>';
     h += '<header class="session-guide"><div class="pedestal"><div class="seven-frame"><button type="button" class="companion-slot" id="companionSlot" aria-label="训练伙伴，随机看一个动作"></button></div><span class="ground-shadow" aria-hidden="true"></span></div>';
     h += '<p class="guide-title" aria-live="polite">' + esc(prompt) + '</p></header>';
+    h += '<div class="qm-pad qm-pad-bottom" aria-hidden="true"></div></div>';
     h += '<section class="training-block" aria-label="训练">';
     if (t.saveFail) h += '<div class="bk-nag"><div class="flex1"><div class="bk-t">这次训练还没记到本机</div><div class="bk-s">草稿还在，可以再点完成训练。这不是云同步问题。</div></div></div>';
     if (!vm.editing) h += backupNag();
-    h += '<div class="session-context"><p class="when-line">' + esc(Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day)) + '</p>';
-    h += '<span class="session-position">第 <b>' + pos.index + '</b> / ' + pos.total + ' 个动作</span></div>';
+    h += '<div class="session-context"><p class="when-line">' + esc(Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day)) + '</p></div>';
     if (vm.locked && vm.lockedInfo) {
       var L = vm.lockedInfo;
       h += '<div class="card locked"><div class="lk-head"><div class="lk-ic">✓</div><div class="flex1"><div class="lk-t">本周 ' + vm.day + ' 已完成</div><div class="lk-s">' + L.dateText + ' · 容量 ' + L.vol + ' kg</div></div></div>' +
@@ -1048,10 +1380,11 @@
     } else if (!vm.locked) {
       if (vm.editing) h += '<button type="button" class="edit-cancel" data-act="cancelEdit">取消编辑</button>';
       h += exerciseStack(vm);
-      h += homeAction(vm, it, started);
+      h += homeAction(vm);
     }
     h += '</section>';
     var extra = sessionMenu(vm, t);
+    if (t.miss) extra += missSheet(itemBySlot(vm, t.miss.slot));
     if (t.swap && t.swap.show) extra += renderSwap();
     if (t.result) {
       var r = t.result;
@@ -1111,7 +1444,7 @@
       case 'bkdismiss': localStorage.setItem(BK_DISMISS, GZ.today()); return true;
       case 'bkset': S.tab = 'settings'; S.settings.view = ''; render(); setTimeout(function () { var x = document.getElementById('syncSec'); if (x) x.scrollIntoView({ block: 'start' }); }, 30); return false;
       case 'editLocked': startEdit(ds.id); return true;
-      case 'openswap': t.more = ''; openSwap(ds.slot); return true;
+      case 'openswap': t.more = ''; if (t.log) t.log.more = false; openSwap(ds.slot || (t.log && t.log.slot)); return true;
       case 'closeswap': t.swap.show = false; return true;
       case 'swapfit': if (t.swap.category && t.swap.category.locked) return false; t.swap.fit = ds.f; return true;
       case 'swapq': t.swap.q = el.value; updateSwapList(); return false;
@@ -1126,13 +1459,94 @@
       case 'swapw': t.swap.weight = el.value; return false;
       case 'swaprestore': en = entry(t.swap.slotId); delete en.ex; en.w = null; t.swap.show = false; return true;
       case 'swapok': return swapConfirm();
-      case 'day': if (t.recordId || !ds.day || ds.day === t.day) return; rememberTrain(); takeTrainDay(ds.day); return true;
+      case 'day':
+        if (t.recordId || !ds.day || ds.day === t.day) return;
+        if (unsentQuick() && !window.confirm('还有没提交的次数。离开后不会记入这次训练。')) return false;
+        rememberTrain(); takeTrainDay(ds.day); return true;
       case 'deload': t.deload = el.checked; return true;
       case 'focus':
       case 'row':
       case 'startlog':
-        if (!ds.slot && !t.focus) return false;
+      case 'qmexpand':
+        var expandSlot = ds.slot || t.focus;
+        if (!expandSlot) return false;
+        t.focus = expandSlot;
+        t.open = true;
+        t.more = '';
+        if (t.day) { if (!t.focusByDay) t.focusByDay = {}; t.focusByDay[t.day] = expandSlot; t.focusKey = t.day + '|' + (t.recordId || ''); }
+        t._focusSel = '.qm-fold[data-slot="' + expandSlot + '"]';
+        return true;
+      case 'qmcollapse':
+        if (!ds.slot || t.focus === ds.slot) t.open = false;
+        t._focusSel = '.qm-row[data-slot="' + (ds.slot || t.focus) + '"]';
+        return true;
+      case 'qmopen':
         openSetLog(ds.slot || t.focus);
+        return true;
+      case 'qmset': return onQuickSet(ds.slot, Number(ds.i));
+      case 'qmconfirm':
+      case 'gateconfirm':
+        var gateField = document.querySelector(act === 'gateconfirm' ? '[data-act=gatereps]' : '[data-act=qreps]');
+        var gateRaw = gateField ? gateField.value : ((t.gates && t.gates[ds.slot]) || (t.log && t.log.gateReps) || '');
+        return confirmGate(ds.slot || (t.log && t.log.slot), gateRaw);
+      case 'qmcancel':
+        t.gate = null;
+        return true;
+      case 'gatecancel':
+        if (t.log) { t.log.screen = 'work'; t.log.more = false; }
+        return true;
+      case 'qreps':
+        if (!t.gates) t.gates = {};
+        t.gates[ds.slot] = el.value;
+        var confirmBtn = document.querySelector('.qm-confirm[data-slot="' + ds.slot + '"]');
+        if (confirmBtn) confirmBtn.disabled = String(el.value).trim() === '';
+        return false;
+      case 'gatereps':
+        if (t.log) t.log.gateReps = el.value;
+        var gateBtn = document.querySelector('[data-act=gateconfirm]');
+        if (gateBtn) gateBtn.disabled = String(el.value).trim() === '';
+        return false;
+      case 'qmall': return completeAll(ds.slot, 'list');
+      case 'logtarget':
+        if (t.log) t.log.more = false;
+        return completeAll(ds.slot || (t.log && t.log.slot), 'detail');
+      case 'qmincomplete':
+      case 'logincomplete':
+        openMiss(ds.slot || (t.log && t.log.slot));
+        t._focusDialog = true;
+        return true;
+      case 'qmiss':
+        if (!t.miss || t.miss.slot !== ds.slot) openMiss(ds.slot);
+        t.miss.values[Number(ds.i)] = el.value;
+        if (!t.missBuffer) t.missBuffer = {};
+        t.missBuffer[ds.slot] = t.miss.values.slice();
+        var missBtn = document.querySelector('.qm-miss-save');
+        if (missBtn) {
+          var missOk = t.miss.values.every(function (v) { return String(v).trim() !== ''; });
+          missBtn.disabled = !missOk;
+          missBtn.classList.toggle('is-ready', missOk);
+        }
+        return false;
+      case 'missclose':
+        t.miss = null;
+        t._focusSel = '[data-act=qmincomplete], [data-act=logincomplete]';
+        return true;
+      case 'misssave':
+        var missInputs = document.querySelectorAll('[data-act=qmiss]');
+        var missVals = [];
+        for (var msi = 0; msi < missInputs.length; msi++) missVals.push(missInputs[msi].value);
+        if (!missVals.length && t.miss) missVals = t.miss.values.slice();
+        return saveActuals(ds.slot || (t.miss && t.miss.slot), missVals);
+      case 'qmrest':
+        openSetLog(ds.slot, 'rest');
+        return true;
+      case 'qmretry': return retryQuick();
+      case 'logmore':
+        if (t.log) { t.log.more = !t.log.more; t._focusDialog = !!t.log.more; }
+        return true;
+      case 'logmoreclose':
+        if (t.log) t.log.more = false;
+        t._focusSel = '.more-btn';
         return true;
       case 'logback':
         if (t.log && t.log.screen === 'correct') {
@@ -1143,7 +1557,7 @@
           return true;
         }
         if (t.log) persistOpen();
-        t.log = null; t.open = false; return true;
+        t.log = null; t.open = true; return true;
       case 'logwork':
         if (t.log) {
           var backDone = logCtx(trainVM());
@@ -1160,8 +1574,8 @@
       case 'logw': return logField('weight', el.value);
       case 'correps': return logCorrectField('reps', el.value);
       case 'corw': return logCorrectField('weight', el.value);
-      case 'logsave':
-      case 'logretry': return commitSet();
+      case 'logsave': return commitSet();
+      case 'logretry': return retryQuick();
       case 'logcorrectsave': return saveCorrection();
       case 'logundo': return undoSet();
       case 'logrest': return nudgeLogRest(Number(ds.d));
@@ -1204,15 +1618,17 @@
       case 'miss': en = entry(ds.slot); en.miss = !!el.checked; return true;
       case 'reps': entry(ds.slot).reps = el.value; return true;
       case 'skip':
+        if (t.log) t.log.more = false;
         en = entry(ds.slot);
         var skipIt = trainVM().items.filter(function (x) { return x.slotId === ds.slot; })[0];
-        if (!en.skip && ((en.groups && en.groups.length) || en.done)) {
-          confirmBox('跳过这个动作？', '已记下的组留在草稿里，这次不按这些组进阶。恢复后还能看到。', function () {
+        var nLogged = (en.groups && en.groups.length) || en.done || 0;
+        if (!en.skip && nLogged) {
+          confirmBox('跳过这个动作？', '已记下 ' + nLogged + ' 组，跳过后本动作不计入完成，稍后可恢复。', function () {
             en.skip = true; t.more = ''; t.log = null; persistOpen(); render();
           });
           return false;
         }
-        en.skip = !en.skip; t.more = '';
+        en.skip = !en.skip; t.more = ''; t.log = null;
         if (skipIt) SL.syncEngine(en, skipIt);
         return true;
       case 'editW': en = entry(ds.slot); en.editW = !en.editW; t.open = true; t.more = ''; return true;
@@ -1256,6 +1672,7 @@
   function submit() {
     var db0 = load(), cur0 = GZ.activeProgram(db0);
     if (cur0 && cur0.status !== 'active' && !S.train.recordId) return toast(cur0.status === 'paused' ? '计划已暂停' : '计划已结束');
+    if (unsentQuick() && !window.confirm('还有没提交的次数。继续保存的话，这些次数不会记入这次训练。')) return;
     var vm = trainVM(), t = S.train;
     if (vm.locked) return;
     var missing = vm.deload ? [] : vm.items.filter(function (it) { return !it.skip && !it.logged; });
@@ -1388,20 +1805,31 @@
       if (bar) bar.style.width = Math.max(0, Math.min(100, rest.left / rest.total * 100)) + '%';
       return;
     }
+    if (S.tab === 'train' && !S.train.log) {
+      var hint = document.querySelector('.qm-rest time');
+      if (hint) hint.textContent = fmtSec(rest.left);
+      var floatEl = document.getElementById('rest');
+      if (floatEl && floatEl.innerHTML) floatEl.innerHTML = '';
+      return;
+    }
     renderRest();
   }
   function finishRest(expired) {
-    clearInterval(rest.timer); rest.timer = null; rest.show = false; rest.until = 0; companionBus('rest', { on: false });
+    var listed = !!rest.list || (S.tab === 'train' && !(S.train.log && S.train.log.screen === 'rest'));
+    clearInterval(rest.timer); rest.timer = null; rest.show = false; rest.until = 0; rest.list = false; companionBus('rest', { on: false });
     var backToWork = S.train.log && S.train.log.screen === 'rest';
     if (backToWork) S.train.log.screen = 'work';
     renderRest();
     if (expired) { toast('休息结束'); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); }
-    if (backToWork) render();
+    if (backToWork || listed) render(true);
   }
-  function beginRest(sec, name, slot) {
+  function beginRest(sec, name, slot, opts) {
     clearInterval(rest.timer); rest.show = true; rest.open = false; rest.total = sec; rest.name = name; rest.slot = slot || '';
+    rest.list = !!(opts && opts.list);
     rest.until = Date.now() + sec * 1000; rest.left = sec; companionBus('rest', { on: true });
-    if (!(S.train.log && S.train.log.screen === 'rest')) renderRest();
+    if (rest.list) {
+      var el = document.getElementById('rest'); if (el) el.innerHTML = '';
+    } else if (!(S.train.log && S.train.log.screen === 'rest')) renderRest();
     rest.timer = setInterval(tickRest, 250);
   }
   function renderRest() {
@@ -2628,6 +3056,16 @@
     if (S.review.share) paintSharePreview();
     if (S.tab === 'train' && window.CompanionView) CompanionView.attach(document.getElementById('companionSlot'));
     else if (window.CompanionView) CompanionView.attach(null);
+    if (S.train && S.train._focusDialog) {
+      S.train._focusDialog = false;
+      var dialog = document.querySelector('#body [role="dialog"]');
+      var closeBtn = dialog && (dialog.querySelector('.qm-x') || dialog.querySelector('button'));
+      if (closeBtn && closeBtn.focus) closeBtn.focus();
+    } else if (S.train && S.train._focusSel) {
+      var focusEl = document.querySelector(S.train._focusSel);
+      if (focusEl && focusEl.focus) focusEl.focus();
+      S.train._focusSel = '';
+    }
     if (S.train && S.train._scrollLog) {
       S.train._scrollLog = false;
       var logEl = document.querySelector('.ex.current .ex-log, .ex.current');
@@ -2654,7 +3092,7 @@
         clearTimeout(companionBus._t);
         companionBus._t = setTimeout(function () { companionBus('inputEnd'); }, 800);
       } else if (type === 'click') {
-        CompanionView.machine.dispatch({ dot: 1, step: 1, wstep: 1, setrep: 1, done: 1, cardiodone: 1 }[ca] ? 'set' : 'activity');
+        CompanionView.machine.dispatch({ dot: 1, step: 1, wstep: 1, setrep: 1, done: 1, cardiodone: 1, qmset: 1, qmall: 1, qmconfirm: 1, gateconfirm: 1, misssave: 1 }[ca] ? 'set' : 'activity');
       }
     }
     if (type === 'input' && LIVE_INPUT[el.dataset.act] && !gateOnboard() && S.tab === 'train') {
@@ -2662,7 +3100,7 @@
       persistOpen();
       return;
     }
-    if (type === 'input' && ['note', 'bw', 'swapq', 'libq', 'slotq', 'obbw'].indexOf(el.dataset.act) < 0) return;
+    if (type === 'input' && ['note', 'bw', 'swapq', 'libq', 'slotq', 'obbw', 'qreps', 'qmiss', 'gatereps'].indexOf(el.dataset.act) < 0) return;
     if (type === 'change' && (el.dataset.act === 'swapq' || el.dataset.act === 'libq')) return;
     if (el.classList.contains('mask') && e.target.closest('[data-stop]')) return;
     var prevTab = S.tab;
@@ -2794,6 +3232,45 @@
     window.addEventListener('online', function () { if (Sync.on()) Sync.run(); });
     var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.tab === 'stats') drawStats(); else if (S.stats.ex) drawExercise(); }, 120); });
     bindSwipeBack();
+    document.addEventListener('keydown', function (e) {
+      if (!S.train || S.tab !== 'train') return;
+      if (e.key === 'Escape') {
+        if (S.train.miss) { S.train.miss = null; render(true); e.preventDefault(); return; }
+        if (S.train.log && S.train.log.more) { S.train.log.more = false; S.train._focusSel = '.more-btn'; render(true); e.preventDefault(); return; }
+        if (S.train.log && S.train.log.screen === 'gate') { S.train.log.screen = 'work'; render(true); e.preventDefault(); return; }
+        if (S.train.gate) { S.train.gate = null; render(true); e.preventDefault(); return; }
+      }
+      if (e.key !== 'Tab') return;
+      var dialog = document.querySelector('#body [role="dialog"]');
+      if (!dialog) return;
+      var nodes = dialog.querySelectorAll('button:not([disabled]), input:not([disabled])');
+      if (!nodes.length) return;
+      var first = nodes[0], last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
+      else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+    });
+    (function bindSheetDrag() {
+      var drag = null;
+      document.addEventListener('pointerdown', function (e) {
+        var grab = e.target.closest && e.target.closest('.sh-grabber');
+        if (!grab) return;
+        var sheet = grab.closest('.action-sheet');
+        if (!sheet) return;
+        drag = { y: e.clientY, sheet: sheet };
+      });
+      document.addEventListener('pointermove', function (e) {
+        if (!drag) return;
+        var dy = Math.max(0, e.clientY - drag.y);
+        drag.sheet.style.transform = 'translateY(' + dy + 'px)';
+      });
+      document.addEventListener('pointerup', function (e) {
+        if (!drag) return;
+        var dy = e.clientY - drag.y, sheet = drag.sheet;
+        drag = null;
+        sheet.style.transform = '';
+        if (dy > 48 && S.train && S.train.log) { S.train.log.more = false; S.train._focusSel = '.more-btn'; render(true); }
+      });
+    })();
     if (window.visualViewport) {
       var liftKb = function () {
         var gap = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
