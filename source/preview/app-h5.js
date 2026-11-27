@@ -599,7 +599,9 @@
     return '<div class="avatar-mark" aria-hidden="true"><span></span></div>';
   }
   function homeShell(live, inner, extra) {
-    return '<div class="muse-home' + (live ? ' session-live' : ' session-ready') + '">' +
+    var enter = (S.train && S.train._listIn) ? ' qm-list-in' : '';
+    if (S.train) S.train._listIn = false;
+    return '<div class="muse-home' + enter + (live ? ' session-live' : ' session-ready') + '">' +
       '<div class="home-wash" aria-hidden="true"></div>' +
       '<button type="button" class="gear-btn" data-act="me" aria-label="设置">' + GEAR + '</button>' +
       '<div class="home-scroll">' + inner + '</div></div>' + (extra || '');
@@ -762,20 +764,34 @@
     var idx = gate >= 0 ? gate : Math.min(done, Math.max(0, (it.sets || 1) - 1));
     return '<div class="qm-train"><p class="qm-stage-label">第 ' + (idx + 1) + ' 组目标</p><div class="qm-instrument"><p class="qm-goal"><strong>' + esc(goalLabel(it, idx)) + '</strong><small>' + unitWord(it) + '</small></p>' + setButtons(it) + '</div></div>';
   }
+  function actualBlock(it, mode) {
+    var buf = (S.train.gates && S.train.gates[it.slotId]) || '';
+    var empty = String(buf).trim() === '';
+    var dis = empty ? ' disabled' : '';
+    var slotCls = 'qm-actual-slot' + (mode === 'arm' ? ' qm-arm' : ' is-on') + (mode === 'closing' ? ' is-closing' : '');
+    return '<div class="' + slotCls + '"><div class="qm-actual-clip"><div class="qm-actual-pad"><div class="qm-actual"><div class="qm-actual-field"><label for="qm-actual">实际次数</label><div class="qm-entry"><input id="qm-actual" inputmode="numeric" autocomplete="off" data-act="qreps" data-slot="' + it.slotId + '" value="' + esc(buf) + '" placeholder="—" aria-label="实际次数"><small>' + unitWord(it) + '</small></div></div>' +
+      '<button type="button" class="qm-confirm' + (empty ? '' : ' is-ready') + '" data-act="qmconfirm" data-slot="' + it.slotId + '"' + dis + '>记下末组</button></div></div></div></div>';
+  }
   function resultRow(it) {
     var t = S.train, done = it.done || 0;
     if (it.skip || done >= it.sets) return '';
     var gateOn = t.gate && t.gate.slot === it.slotId;
-    var resting = !!(rest.show && rest.slot === it.slotId && restLeft() > 0 && !gateOn);
+    var closing = !gateOn && t._gateClose === it.slotId;
+    var resting = !!(rest.show && rest.slot === it.slotId && restLeft() > 0 && !gateOn && !closing);
     var amrap = amrapPendingIndex(it) >= 0;
-    if (gateOn) {
-      var buf = (t.gates && t.gates[it.slotId]) || '';
-      var dis = String(buf).trim() === '' ? ' disabled' : '';
-      return '<div class="qm-actual"><div class="qm-actual-field"><label for="qm-actual">实际次数</label><div class="qm-entry"><input id="qm-actual" inputmode="numeric" autocomplete="off" data-act="qreps" data-slot="' + it.slotId + '" value="' + esc(buf) + '" placeholder="—" aria-label="实际次数"><small>' + unitWord(it) + '</small></div></div>' +
-        '<button type="button" class="qm-confirm" data-act="qmconfirm" data-slot="' + it.slotId + '"' + dis + '>记下末组</button></div>' +
-        '<div class="qm-result split"><button type="button" data-act="qmcancel" data-slot="' + it.slotId + '">取消</button><button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button></div>';
+    var fields = '';
+    if (gateOn || closing) {
+      var mode = closing ? 'closing' : (t._gateArm === it.slotId ? 'arm' : 'on');
+      if (mode === 'arm') t._gateArm = '';
+      if (closing) t._gateClose = '';
+      fields = actualBlock(it, mode);
+      if (gateOn) {
+        return fields + '<div class="qm-result split"><button type="button" data-act="qmcancel" data-slot="' + it.slotId + '">取消</button><button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button></div>';
+      }
     }
-    var h = '<div class="qm-result' + (resting || !amrap ? ' split' : '') + ( !resting && !amrap ? ' pair' : '') + '">';
+    var restArm = resting && t._restArm === it.slotId;
+    if (restArm) t._restArm = '';
+    var h = fields + '<div class="qm-result' + (resting || !amrap ? ' split' : '') + (!resting && !amrap ? ' pair' : '') + (resting ? (restArm ? ' qm-rest-arm' : ' is-resting') : '') + '">';
     if (resting) {
       h += '<button type="button" class="qm-rest" data-act="qmrest" data-slot="' + it.slotId + '" aria-label="组间休息，打开休息页">休息 <time>' + fmtSec(restLeft()) + '</time><span aria-hidden="true"> ›</span></button>';
       h += '<button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button>';
@@ -805,17 +821,31 @@
       '<span class="qm-meta"><span>' + esc(headScheme(it)) + '</span></span>' + flagHtml(it) + '</button></div>' +
       '<div class="qm-panel" id="' + region + '">' + (it.skip ? '' : instrumentBlock(it) + resultRow(it) + retryBanner(it)) + '</div>';
   }
+  function menuBody(it, i, inert) {
+    return '<div class="qm-body"' + (inert ? ' inert aria-hidden="true"' : '') + '><div class="qm-body-inner"><div class="qm-reveal">' + expandedRow(it, i) + '</div></div></div>';
+  }
   /** 原列表顺序。同一时间只展开一行；点收起行只展开，不打开详情。 */
   function exerciseStack(vm) {
     var t = S.train, h = '<div class="qm-list">';
+    var collapseSlot = t._collapse && t._collapse.slot;
+    var collapseFrom = t._collapseFrom || 0;
     vm.items.forEach(function (it, i) {
       var open = !!(t.open && it.slotId === t.focus);
-      h += '<section class="qm-item' + (open ? ' is-open' : '') + (it.skip ? ' is-skip' : '') + '">';
-      h += open ? expandedRow(it, i) : collapsedRow(it, i);
+      var collapsing = !open && collapseSlot === it.slotId;
+      var from = open && t._expandSlot === it.slotId;
+      h += '<section class="qm-item' + (open ? ' is-open' : '') + (from ? ' is-from' : '') + (collapsing ? ' is-collapsing' : '') + (it.skip ? ' is-skip' : '') + '" data-slot="' + it.slotId + '"' + (collapsing ? ' data-from="' + collapseFrom + '"' : '') + '>';
+      if (open) h += menuBody(it, i, false);
+      else {
+        h += collapsedRow(it, i);
+        if (collapsing) h += menuBody(it, i, true);
+      }
       h += '</section>';
     });
     h += '</div><p class="qm-live" aria-live="polite">' + esc(t._announce || '') + '</p>';
     t._announce = '';
+    t._expandSlot = '';
+    t._collapse = null;
+    t._collapseFrom = 0;
     return h;
   }
   function homeAction(vm) {
@@ -851,6 +881,8 @@
     if (!t.missBuffer) t.missBuffer = {};
     if (!t.missBuffer[slot]) t.missBuffer[slot] = missValues(it);
     t.miss = { slot: slot, values: t.missBuffer[slot].slice() };
+    t._missIn = true;
+    if (t.log && t.log.more) t._sheetLeave = true;
     if (t.log) t.log.more = false;
   }
   function missSheet(it) {
@@ -861,7 +893,9 @@
     for (var i = 0; i < it.sets; i++) {
       rows += '<div class="qm-miss-row"><span>第 ' + (i + 1) + ' 组</span><span class="qm-miss-target">目标 ' + esc(goalLabel(it, i)) + '</span><input inputmode="numeric" autocomplete="off" data-act="qmiss" data-slot="' + it.slotId + '" data-i="' + i + '" value="' + esc(values[i]) + '" placeholder="—" aria-label="第 ' + (i + 1) + ' 组实际次数"><small>' + unitWord(it) + '</small></div>';
     }
-    return '<div class="qm-layer mask" data-act="missclose"><section class="qm-miss" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="miss-title"><div class="qm-miss-head"><h3 id="miss-title">未完成</h3><button type="button" class="qm-x" data-act="missclose" aria-label="关闭">×</button></div>' +
+    var missArm = !!S.train._missIn;
+    S.train._missIn = false;
+    return '<div class="qm-layer mask' + (missArm ? ' qm-arm' : ' is-on') + '" data-act="missclose"><section class="qm-miss' + (missArm ? '' : ' is-on') + '" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="miss-title"><div class="qm-miss-head"><h3 id="miss-title">未完成</h3><button type="button" class="qm-x" data-act="missclose" aria-label="关闭">×</button></div>' +
       '<p class="qm-miss-info">' + esc(it.name) + ' · 按实际填写，未做填 0。已记下的次数会带出来；空项不代表达标。</p>' + rows +
       '<button type="button" class="qm-miss-save' + (ready ? ' is-ready' : '') + '" data-act="misssave" data-slot="' + it.slotId + '"' + (ready ? '' : ' disabled') + '>记下未完成</button>' +
       '<p class="qm-miss-foot">先补全空项，仅记录本动作未达到目标。不是整节「完成训练」。</p></section></div>';
@@ -878,7 +912,9 @@
     var skipLabel = it.skip ? '恢复本动作' : '跳过本动作';
     var skipSub = it.skip ? '恢复后可以继续记这一项' : '本节不做此动作，不计入完成；可再恢复';
     var slot = ' data-slot="' + it.slotId + '"';
-    return '<div class="qm-layer mask" data-act="logmoreclose"><section class="action-sheet" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="more-actions-title"><div class="sh-grabber" aria-hidden="true"></div><div class="sh-header"><div class="sh-title-wrap"><h3 id="more-actions-title">更多操作</h3><p>' + esc(it.name) + ' · 第 ' + (idx + 1) + ' / ' + it.sets + ' 组</p></div>' +
+    var sheetArm = !!S.train._sheetIn;
+    S.train._sheetIn = false;
+    return '<div class="qm-layer mask' + (sheetArm ? ' qm-arm' : ' is-on') + '" data-act="logmoreclose"><section class="action-sheet' + (sheetArm ? '' : ' is-on') + '" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="more-actions-title"><div class="sh-grabber" aria-hidden="true"></div><div class="sh-header"><div class="sh-title-wrap"><h3 id="more-actions-title">更多操作</h3><p>' + esc(it.name) + ' · 第 ' + (idx + 1) + ' / ' + it.sets + ' 组</p></div>' +
       '<button type="button" class="qm-x sh-close" data-act="logmoreclose" aria-label="关闭更多操作">' + IC_X + '</button></div><div class="sh-body"><div class="sh-group-label">记录本动作结果</div><div class="sh-card">' +
       moreRow('logtarget', IC_CHECK, '按目标完成', esc(targetSub), slot) +
       moreRow('logincomplete', IC_NOTE, '未完成', '补填各组实际次数，不按达标记满', slot) +
@@ -934,7 +970,9 @@
     }
     var screen = forced || 'work';
     if (!forced && (en.groups || []).length >= it.sets) screen = 'done';
+    var fromList = !t.log;
     t.log = { slot: slot, screen: screen, correct: null };
+    if (fromList) t._detailIn = true;
   }
   function renderSetLog(vm) {
     var ctx = logCtx(vm); if (!ctx) { S.train.log = null; return renderTrain(); }
@@ -943,7 +981,9 @@
     var target = SL.targetOf(it, Math.min(index, it.sets - 1));
     var pending = en.pending || SL.defaultPending(en, it);
     var stamp = Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day);
-    var h = '<div class="set-screen screen-' + screen + '">';
+    var enter = t._detailIn ? ' qm-enter' : '';
+    t._detailIn = false;
+    var h = '<div class="set-screen' + enter + ' screen-' + screen + '">';
     h += '<div class="set-wash" aria-hidden="true"></div>';
     var backAct = screen === 'correct' ? 'logwork' : 'logback';
     var backLabel = screen === 'correct' ? '取消更正，回到这一组' : '返回今日列表';
@@ -1198,6 +1238,7 @@
     if (opts.surface !== 'detail') t.log = null;
     else if (t.log) { t.log.screen = 'work'; t.log.more = false; }
     beginRest(it.rest || 60, it.name, it.slotId, { list: opts.surface !== 'detail' });
+    if (opts.surface !== 'detail') t._restArm = it.slotId;
     t._announce = '已记下';
     return true;
   }
@@ -1213,6 +1254,7 @@
         S.train.gate = { slot: slot, index: i };
         S.train.focus = slot;
         S.train.open = true;
+        S.train._gateArm = slot;
         return true;
       }
     }
@@ -1470,6 +1512,12 @@
       case 'qmexpand':
         var expandSlot = ds.slot || t.focus;
         if (!expandSlot) return false;
+        if (t.open && t.focus && t.focus !== expandSlot && !motionReduce()) {
+          var prevOpen = document.querySelector('.qm-item.is-open');
+          t._collapse = { slot: t.focus };
+          t._collapseFrom = prevOpen ? prevOpen.offsetHeight : 0;
+        }
+        t._expandSlot = expandSlot;
         t.focus = expandSlot;
         t.open = true;
         t.more = '';
@@ -1477,6 +1525,11 @@
         t._focusSel = '.qm-fold[data-slot="' + expandSlot + '"]';
         return true;
       case 'qmcollapse':
+        if (!motionReduce()) {
+          var prevFold = document.querySelector('.qm-item.is-open');
+          t._collapse = { slot: ds.slot || t.focus };
+          t._collapseFrom = prevFold ? prevFold.offsetHeight : 0;
+        }
         if (!ds.slot || t.focus === ds.slot) t.open = false;
         t._focusSel = '.qm-row[data-slot="' + (ds.slot || t.focus) + '"]';
         return true;
@@ -1490,6 +1543,7 @@
         var gateRaw = gateField ? gateField.value : ((t.gates && t.gates[ds.slot]) || (t.log && t.log.gateReps) || '');
         return confirmGate(ds.slot || (t.log && t.log.slot), gateRaw);
       case 'qmcancel':
+        if (t.gate) t._gateClose = t.gate.slot;
         t.gate = null;
         return true;
       case 'gatecancel':
@@ -1499,7 +1553,11 @@
         if (!t.gates) t.gates = {};
         t.gates[ds.slot] = el.value;
         var confirmBtn = document.querySelector('.qm-confirm[data-slot="' + ds.slot + '"]');
-        if (confirmBtn) confirmBtn.disabled = String(el.value).trim() === '';
+        if (confirmBtn) {
+          var confirmEmpty = String(el.value).trim() === '';
+          confirmBtn.disabled = confirmEmpty;
+          confirmBtn.classList.toggle('is-ready', !confirmEmpty);
+        }
         return false;
       case 'gatereps':
         if (t.log) t.log.gateReps = el.value;
@@ -1528,6 +1586,7 @@
         }
         return false;
       case 'missclose':
+        if (t.miss) t._missLeave = true;
         t.miss = null;
         t._focusSel = '[data-act=qmincomplete], [data-act=logincomplete]';
         return true;
@@ -1542,9 +1601,15 @@
         return true;
       case 'qmretry': return retryQuick();
       case 'logmore':
-        if (t.log) { t.log.more = !t.log.more; t._focusDialog = !!t.log.more; }
+        if (t.log) {
+          if (t.log.more) t._sheetLeave = true;
+          else t._sheetIn = true;
+          t.log.more = !t.log.more;
+          t._focusDialog = !!t.log.more;
+        }
         return true;
       case 'logmoreclose':
+        if (t.log && t.log.more) t._sheetLeave = true;
         if (t.log) t.log.more = false;
         t._focusSel = '.more-btn';
         return true;
@@ -1557,6 +1622,8 @@
           return true;
         }
         if (t.log) persistOpen();
+        t._detailLeave = !!t.log;
+        t._listIn = true;
         t.log = null; t.open = true; return true;
       case 'logwork':
         if (t.log) {
@@ -3014,7 +3081,153 @@
     S.review.share = null;
     S.review.returnTo = null;
   }
+  function motionReduce() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function stripMotionActs(root) {
+    root.querySelectorAll('[data-act]').forEach(function (el) { el.removeAttribute('data-act'); });
+    root.querySelectorAll('[id]').forEach(function (el) { el.removeAttribute('id'); });
+  }
+  function spawnDetailGhost() {
+    var screen = document.querySelector('.set-screen');
+    if (!screen) return;
+    var g = screen.cloneNode(true);
+    g.className = 'qm-detail-ghost' + (motionReduce() ? ' is-reduce' : '');
+    stripMotionActs(g);
+    g.setAttribute('aria-hidden', 'true');
+    var app = document.querySelector('.app');
+    if (app) app.appendChild(g);
+    setTimeout(function () { if (g.parentNode) g.remove(); }, motionReduce() ? 180 : 260);
+  }
+  function spawnLayerGhost() {
+    var layer = document.querySelector('.qm-layer.mask');
+    if (!layer) return;
+    var reduce = motionReduce();
+    var app = document.querySelector('.app');
+    if (!app) return;
+    var mask = document.createElement('div');
+    mask.className = 'qm-mask-ghost';
+    app.appendChild(mask);
+    var sheet = layer.querySelector('.action-sheet, .qm-miss');
+    var g = null;
+    if (sheet) {
+      g = sheet.cloneNode(true);
+      var miss = sheet.classList.contains('qm-miss');
+      g.className = (miss ? 'qm-miss-ghost' : 'qm-sheet-ghost') + (reduce ? ' is-reduce' : '');
+      stripMotionActs(g);
+      g.setAttribute('aria-hidden', 'true');
+      if (!reduce && !miss && S.train && S.train._sheetDrag) g.style.transform = S.train._sheetDrag;
+      app.appendChild(g);
+    }
+    if (S.train) S.train._sheetDrag = '';
+    requestAnimationFrame(function () {
+      mask.classList.add('is-leaving');
+      if (g) {
+        g.style.transition = '';
+        g.classList.add('is-leaving');
+        if (!g.classList.contains('qm-miss-ghost')) g.style.transform = '';
+      }
+    });
+    setTimeout(function () {
+      if (mask.parentNode) mask.remove();
+      if (g && g.parentNode) g.remove();
+    }, reduce ? 180 : 280);
+  }
+  function paintLoggedLine() {
+    if (!S.train) return;
+    if (!S.train._dotScale) S.train._dotScale = {};
+    var reduce = motionReduce();
+    document.querySelectorAll('.qm-sets').forEach(function (sets) {
+      var item = sets.closest('.qm-item');
+      if (!item) return;
+      var slot = item.getAttribute('data-slot') || '';
+      var n = sets.querySelectorAll('.qm-set').length;
+      var done = sets.querySelectorAll('.qm-set.done').length;
+      var scale = (n <= 1 || done <= 1) ? 0 : (done - 1) / (n - 1);
+      var prev = S.train._dotScale[slot];
+      S.train._dotScale[slot] = scale;
+      if (reduce || prev == null || prev === scale) {
+        sets.style.setProperty('--logged', String(scale));
+        return;
+      }
+      sets.style.setProperty('--logged', String(prev));
+      void sets.offsetWidth;
+      sets.style.setProperty('--logged', String(scale));
+    });
+  }
+  function kickMotion() {
+    if (!S.train || S.tab !== 'train') return;
+    var reduce = motionReduce();
+    var openItem = document.querySelector('.qm-item.is-open.is-from');
+    if (openItem) {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { if (openItem.isConnected) openItem.classList.remove('is-from'); });
+      });
+    }
+    kickMotion._n = (kickMotion._n || 0) + 1;
+    var token = kickMotion._n;
+    var collapsing = document.querySelector('.qm-item.is-collapsing');
+    if (collapsing) {
+      var from = Number(collapsing.getAttribute('data-from')) || 0;
+      var row = collapsing.querySelector('.qm-row');
+      var body = collapsing.querySelector('.qm-body');
+      if (reduce || from < 8) {
+        if (body) body.remove();
+        collapsing.classList.remove('is-collapsing');
+        collapsing.style.height = '';
+        collapsing.style.overflow = '';
+      } else {
+        collapsing.style.height = from + 'px';
+        collapsing.style.overflow = 'hidden';
+        void collapsing.offsetHeight;
+        var target = row ? row.offsetHeight : 56;
+        requestAnimationFrame(function () {
+          if (!collapsing.isConnected) return;
+          collapsing.classList.add('is-collapse-go');
+          collapsing.style.height = target + 'px';
+        });
+        setTimeout(function () {
+          if (token !== kickMotion._n || !collapsing.isConnected) return;
+          if (body && body.parentNode) body.remove();
+          collapsing.style.height = '';
+          collapsing.style.overflow = '';
+          collapsing.classList.remove('is-collapsing');
+          collapsing.classList.remove('is-collapse-go');
+        }, 230);
+      }
+    }
+    var restRow = document.querySelector('.qm-result.qm-rest-arm');
+    if (restRow) requestAnimationFrame(function () { restRow.classList.add('is-resting'); });
+    document.querySelectorAll('.qm-actual-slot.qm-arm').forEach(function (slot) {
+      if (reduce) slot.classList.add('is-on');
+      else requestAnimationFrame(function () { requestAnimationFrame(function () { if (slot.isConnected) slot.classList.add('is-on'); }); });
+    });
+    document.querySelectorAll('.qm-actual-slot.is-closing').forEach(function (slot) {
+      requestAnimationFrame(function () { if (slot.isConnected) slot.classList.remove('is-on'); });
+      setTimeout(function () { if (slot.parentNode) slot.remove(); }, reduce ? 20 : 240);
+    });
+    document.querySelectorAll('.qm-layer.qm-arm').forEach(function (layer) {
+      var panel = layer.querySelector('.action-sheet, .qm-miss');
+      var go = function () {
+        layer.classList.add('is-on');
+        if (panel) panel.classList.add('is-on');
+      };
+      if (reduce) go();
+      else requestAnimationFrame(go);
+    });
+    paintLoggedLine();
+  }
+  kickMotion._n = 0;
   function render(keepScroll) {
+    if (S.train && S.train._detailLeave) {
+      spawnDetailGhost();
+      S.train._detailLeave = false;
+    }
+    if (S.train && (S.train._sheetLeave || S.train._missLeave)) {
+      spawnLayerGhost();
+      S.train._sheetLeave = false;
+      S.train._missLeave = false;
+    }
     var body = document.getElementById('body'), y = body.scrollTop;
     var tb = document.getElementById('tabbar');
     var trainHome = !gateOnboard() && S.tab === 'train';
@@ -3071,6 +3284,7 @@
       var logEl = document.querySelector('.ex.current .ex-log, .ex.current');
       if (logEl && logEl.scrollIntoView) logEl.scrollIntoView({ block: 'nearest' });
     }
+    kickMotion();
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
   function navState() {
@@ -3235,10 +3449,10 @@
     document.addEventListener('keydown', function (e) {
       if (!S.train || S.tab !== 'train') return;
       if (e.key === 'Escape') {
-        if (S.train.miss) { S.train.miss = null; render(true); e.preventDefault(); return; }
-        if (S.train.log && S.train.log.more) { S.train.log.more = false; S.train._focusSel = '.more-btn'; render(true); e.preventDefault(); return; }
+        if (S.train.miss) { S.train._missLeave = true; S.train.miss = null; render(true); e.preventDefault(); return; }
+        if (S.train.log && S.train.log.more) { S.train._sheetLeave = true; S.train.log.more = false; S.train._focusSel = '.more-btn'; render(true); e.preventDefault(); return; }
         if (S.train.log && S.train.log.screen === 'gate') { S.train.log.screen = 'work'; render(true); e.preventDefault(); return; }
-        if (S.train.gate) { S.train.gate = null; render(true); e.preventDefault(); return; }
+        if (S.train.gate) { S.train._gateClose = S.train.gate.slot; S.train.gate = null; render(true); e.preventDefault(); return; }
       }
       if (e.key !== 'Tab') return;
       var dialog = document.querySelector('#body [role="dialog"]');
@@ -3267,8 +3481,13 @@
         if (!drag) return;
         var dy = e.clientY - drag.y, sheet = drag.sheet;
         drag = null;
-        sheet.style.transform = '';
-        if (dy > 48 && S.train && S.train.log) { S.train.log.more = false; S.train._focusSel = '.more-btn'; render(true); }
+        if (dy > 48 && S.train && S.train.log) {
+          S.train._sheetDrag = sheet.style.transform || '';
+          S.train._sheetLeave = true;
+          S.train.log.more = false;
+          S.train._focusSel = '.more-btn';
+          render(true);
+        } else sheet.style.transform = '';
       });
     })();
     if (window.visualViewport) {

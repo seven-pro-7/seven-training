@@ -2342,10 +2342,16 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   z-index: 0;
   pointer-events: none;
 }
-.app.on-train .qm-item { position: relative; z-index: 1; }
+.app.on-train .qm-item {
+  position: relative;
+  z-index: 1;
+  border-radius: 23px;
+  background: transparent;
+  box-shadow: none;
+  transition: background-color var(--duration-default) var(--ease-out), box-shadow var(--duration-default) var(--ease-out);
+}
 .app.on-train .qm-item.is-open {
   background: #fff;
-  border-radius: 23px;
   box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04), 0 8px 22px rgba(20, 20, 20, 0.05);
 }
 .app.on-train .qm-row,
@@ -2451,7 +2457,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   cursor: pointer;
 }
 .app.on-train .qm-go { display: inline-block; margin-left: 4px; font-size: 15px; font-weight: 400; color: #959C9D; }
-.app.on-train .qm-train { display: flex; flex-direction: column; gap: 2px; padding: 8px 18px 4px 62px; }
+.app.on-train .qm-train { display: flex; flex-direction: column; gap: 2px; padding: 8px 18px 4px 54px; overflow: visible; }
 .app.on-train .qm-stage-label { margin: 0; font-size: 12px; line-height: 1.4; font-weight: 400; color: #6B7280; }
 .app.on-train .qm-instrument { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .app.on-train .qm-goal { display: flex; align-items: baseline; gap: 3px; margin: 0; flex: 0 0 auto; }
@@ -2464,9 +2470,28 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   align-items: center;
   gap: 0;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
   overflow: visible;
-  scrollbar-width: none;
+  overflow-x: visible;
+}
+.app.on-train .qm-sets::before,
+.app.on-train .qm-sets::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 22px;
+  height: 1px;
+  pointer-events: none;
+}
+.app.on-train .qm-sets::before { background: #E1E6E3; }
+.app.on-train .qm-sets::after {
+  right: auto;
+  width: calc(100% - 44px);
+  background: #141414;
+  transform: scaleX(var(--logged, 0));
+  transform-origin: left center;
+  transition: transform 160ms var(--ease-out);
 }
 .app.on-train .qm-set {
   position: relative;
@@ -2476,6 +2501,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   height: 44px;
   min-width: 44px;
   min-height: 44px;
+  margin-left: -12px;
   padding: 6px;
   border: 0;
   border-radius: 0;
@@ -2485,6 +2511,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   justify-content: center;
   cursor: pointer;
 }
+.app.on-train .qm-set:first-child { margin-left: 0; }
 .app.on-train .qm-node {
   width: 32px;
   height: 32px;
@@ -2499,6 +2526,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   font-weight: 400;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
 .app.on-train .qm-set.done .qm-node { border-color: #141414; background: #141414; color: #fff; }
 .app.on-train .qm-set.current .qm-node { border: 2px solid #E06A3C; color: #141414; font-weight: 700; background: #fff; }
@@ -2507,7 +2535,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   align-items: center;
   justify-content: flex-end;
   min-height: 44px;
-  margin: 0 18px 4px 62px;
+  margin: 0 18px 4px 54px;
   gap: 8px;
   position: relative;
 }
@@ -2543,7 +2571,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin: 0 18px 4px 62px;
+  margin: 0 18px 4px 54px;
   padding: 8px 0 4px;
 }
 .app.on-train .qm-actual label { display: block; margin: 0 0 2px; font-size: 12px; line-height: 1.4; font-weight: 400; color: #6B7280; }
@@ -2576,11 +2604,20 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   padding: 0 16px;
   border: 0;
   border-radius: 15px;
-  background: #5BB887;
-  color: #141414;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #DEE5E0;
+  color: #A0AAA4;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 400;
   cursor: pointer;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.app.on-train .qm-confirm:not(:disabled),
+.app.on-train .qm-confirm.is-ready {
+  background: #5BB887;
+  box-shadow: none;
+  color: #141414;
+  font-weight: 700;
 }
 .app.on-train .qm-confirm:disabled {
   background: #fff;
@@ -2589,7 +2626,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   font-weight: 400;
   cursor: default;
 }
-.app.on-train .qm-retry { margin: 0 18px 8px 62px; }
+.app.on-train .qm-retry { margin: 0 18px 8px 54px; }
 .app.on-train .qm-retry p { margin: 0 0 4px; font-size: 12px; color: #6B7280; }
 .app.on-train .qm-retry button {
   min-height: 44px;
@@ -2696,6 +2733,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
   color: #A0AAA4;
   font-size: 14px;
   font-weight: 400;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
 .app .qm-miss-save.is-ready { background: #5BB887; border-color: #5BB887; color: #141414; font-weight: 700; }
 .app .qm-miss-save:disabled { cursor: default; }
@@ -2759,8 +2797,249 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
 .app .qm-miss-save.is-ready { color: #141414; }
 .miss-kicker { text-align: center; font-size: 14px; color: #141414; margin-top: 28px; }
 .app.on-log .qm-actual.detail { margin-left: 0; margin-right: 0; border-top: 0; }
+
+/* 列表快速菜单与详情更多操作：短、可打断的过渡。只过渡明确属性。 */
+.app {
+  --duration-press: 90ms;
+  --duration-fast: 120ms;
+  --duration-default: 200ms;
+  --duration-layout: 240ms;
+  --duration-sheet-in: 260ms;
+  --duration-sheet-out: 200ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-distance-sm: 6px;
+  --motion-distance-md: 8px;
+}
+.app.on-train .qm-body { display: grid; grid-template-rows: 0fr; }
+.app.on-train .qm-body-inner { overflow: hidden; min-height: 0; }
+.app.on-train .qm-item.is-open .qm-body {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--duration-layout) var(--ease-out);
+}
+.app.on-train .qm-item.is-open.is-from {
+  background: transparent;
+  box-shadow: none;
+  transition: none;
+}
+.app.on-train .qm-item.is-open.is-from .qm-body { grid-template-rows: 0fr; transition: none; }
+.app.on-train .qm-reveal { opacity: 1; transform: none; }
+.app.on-train .qm-item.is-open .qm-reveal {
+  transition: opacity var(--duration-default) var(--ease-out) 40ms, transform var(--duration-default) var(--ease-out) 40ms;
+}
+.app.on-train .qm-item.is-open.is-from .qm-reveal {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md));
+  transition: none;
+}
+.app.on-train .qm-item.is-collapsing {
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04), 0 8px 22px rgba(20, 20, 20, 0.05);
+  transition: height 200ms var(--ease-out), background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+.app.on-train .qm-item.is-collapsing.is-collapse-go { background: transparent; box-shadow: none; }
+.app.on-train .qm-item.is-collapsing .qm-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  grid-template-rows: 1fr;
+  pointer-events: none;
+}
+.app.on-train .qm-item.is-collapsing .qm-reveal { opacity: 1; transform: none; }
+.app.on-train .qm-item.is-collapsing.is-collapse-go .qm-reveal {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-sm));
+  transition: opacity 150ms var(--ease-in), transform 150ms var(--ease-in);
+}
+.app.on-train .qm-actual-slot { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 220ms var(--ease-out); }
+.app.on-train .qm-actual-slot.is-on { grid-template-rows: 1fr; }
+.app.on-train .qm-actual-clip { overflow: hidden; min-height: 0; }
+.app.on-train .qm-actual-pad {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-sm));
+  transition: opacity var(--duration-default) var(--ease-out), transform var(--duration-default) var(--ease-out);
+}
+.app.on-train .qm-actual-slot.is-on .qm-actual-pad { opacity: 1; transform: none; }
+.app.on-train .qm-rest {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-sm));
+  pointer-events: none;
+  transition: opacity var(--duration-default) var(--ease-out), transform var(--duration-default) var(--ease-out);
+}
+.app.on-train .qm-result.is-resting .qm-rest {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.app .qm-layer.mask {
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.app .qm-layer.mask.is-on { opacity: 1; }
+.app .action-sheet {
+  transform: translateY(100%);
+  transition: transform var(--duration-sheet-in) var(--ease-out);
+  pointer-events: none;
+}
+.app .action-sheet.is-on { transform: none; pointer-events: auto; }
+.app .qm-miss {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md));
+  transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+}
+.app .qm-miss.is-on { opacity: 1; transform: none; }
+.set-screen.qm-enter { animation: qm-detail-in var(--duration-sheet-in) var(--ease-out); }
+@keyframes qm-detail-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+.muse-home.qm-list-in { animation: qm-fade-in 200ms var(--ease-out); }
+@keyframes qm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qm-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes qm-detail-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(16px); }
+}
+.qm-detail-ghost {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: #F8F8F8;
+  color: #141414;
+  pointer-events: none;
+  overflow: hidden;
+  animation: qm-detail-out var(--duration-sheet-out) var(--ease-in) forwards;
+}
+.qm-detail-ghost .set-top {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+  padding: calc(env(safe-area-inset-top) + 8px) 8px 0;
+}
+.qm-mask-ghost {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  background: rgba(20, 20, 20, 0.34);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 150ms var(--ease-in);
+}
+.qm-mask-ghost.is-leaving { opacity: 0; }
+.qm-sheet-ghost {
+  position: fixed;
+  z-index: 220;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: min(480px, 100%);
+  margin: 0 auto;
+  background: #F8F8F8;
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -10px 36px rgba(20, 20, 20, 0.16);
+  padding: 10px 18px calc(28px + env(safe-area-inset-bottom));
+  pointer-events: none;
+  transition: transform var(--duration-sheet-out) var(--ease-in);
+}
+.qm-sheet-ghost.is-leaving { transform: translateY(100%); }
+.qm-miss-ghost {
+  position: fixed;
+  z-index: 220;
+  left: 10px;
+  right: 10px;
+  bottom: 20px;
+  background: #fff;
+  border-radius: 26px;
+  box-shadow: 0 -10px 36px rgba(20, 20, 20, 0.16);
+  padding: 14px 20px 34px;
+  pointer-events: none;
+  transition: opacity 180ms var(--ease-in), transform 180ms var(--ease-in);
+}
+.qm-miss-ghost.is-leaving { opacity: 0; transform: translateY(var(--motion-distance-md)); }
+.app.on-train .qm-row:active,
+.app.on-train .qm-fold:active,
+.app.on-train .qm-head-content:active,
+.app.on-train .qm-set:active,
+.app.on-train .qm-result button:active,
+.app.on-train .qm-confirm:not(:disabled):active,
+.app.on-train .qm-text:active,
+.app.on-log .more-btn:active,
+.app.on-log .back-btn:active,
+.app.on-log .home-cta:active,
+.app .sh-row:active,
+.app .qm-x:active,
+.app .qm-miss-save:not(:disabled):active {
+  transform: scale(0.98);
+  transition: transform var(--duration-press) var(--ease-out);
+}
 @media (prefers-reduced-motion: reduce) {
-  .app .action-sheet, .app .qm-miss, .app .qm-layer { transition: none; }
+  .app.on-train .qm-item,
+  .app.on-train .qm-body,
+  .app.on-train .qm-item.is-collapsing,
+  .app.on-train .qm-actual-slot,
+  .app.on-train .qm-sets::after,
+  .app.on-train .qm-node,
+  .app.on-train .qm-confirm,
+  .app .qm-miss-save { transition: none !important; }
+  .app.on-train .qm-item.is-open.is-from .qm-body { grid-template-rows: 1fr !important; }
+  .app.on-train .qm-item.is-open.is-from { background: #fff !important; box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04), 0 8px 22px rgba(20, 20, 20, 0.05) !important; }
+  .app.on-train .qm-reveal,
+  .app.on-train .qm-rest,
+  .app.on-train .qm-actual-pad,
+  .app .qm-miss,
+  .app .action-sheet,
+  .app .qm-layer.mask,
+  .qm-mask-ghost,
+  .qm-sheet-ghost,
+  .qm-miss-ghost {
+    transform: none !important;
+    animation: none !important;
+  }
+  .app.on-train .qm-item.is-open.is-from .qm-reveal {
+    opacity: 0 !important;
+    transition: none !important;
+  }
+  .app.on-train .qm-item.is-open .qm-reveal,
+  .app.on-train .qm-result.is-resting .qm-rest,
+  .app.on-train .qm-actual-slot.is-on .qm-actual-pad {
+    transform: none !important;
+    transition: opacity 120ms var(--ease-out) !important;
+  }
+  .app .qm-layer.mask,
+  .app .qm-layer.mask.is-on,
+  .app .qm-miss,
+  .app .qm-miss.is-on,
+  .app .action-sheet,
+  .app .action-sheet.is-on {
+    transform: none !important;
+    transition: opacity 150ms var(--ease-out) !important;
+  }
+  .app .action-sheet { opacity: 0; }
+  .app .action-sheet.is-on { opacity: 1; pointer-events: auto; }
+  .set-screen.qm-enter { animation: qm-fade-in 150ms var(--ease-out) !important; }
+  .muse-home.qm-list-in { animation: qm-fade-in 150ms var(--ease-out) !important; }
+  .qm-detail-ghost { animation: qm-fade-out 150ms var(--ease-in) forwards !important; }
+  .qm-detail-ghost.is-reduce { animation: qm-fade-out 150ms var(--ease-in) forwards !important; }
+  .app.on-train .qm-row:active,
+  .app.on-train .qm-fold:active,
+  .app.on-train .qm-head-content:active,
+  .app.on-train .qm-set:active,
+  .app.on-train .qm-result button:active,
+  .app.on-train .qm-confirm:active,
+  .app.on-train .qm-text:active,
+  .app.on-log .more-btn:active,
+  .app.on-log .back-btn:active,
+  .app.on-log .home-cta:active,
+  .app .sh-row:active,
+  .app .qm-x:active,
+  .app .qm-miss-save:active { transform: none !important; }
 }
 </style></head>
 <body>
@@ -9924,7 +10203,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     return '<div class="avatar-mark" aria-hidden="true"><span></span></div>';
   }
   function homeShell(live, inner, extra) {
-    return '<div class="muse-home' + (live ? ' session-live' : ' session-ready') + '">' +
+    var enter = (S.train && S.train._listIn) ? ' qm-list-in' : '';
+    if (S.train) S.train._listIn = false;
+    return '<div class="muse-home' + enter + (live ? ' session-live' : ' session-ready') + '">' +
       '<div class="home-wash" aria-hidden="true"></div>' +
       '<button type="button" class="gear-btn" data-act="me" aria-label="设置">' + GEAR + '</button>' +
       '<div class="home-scroll">' + inner + '</div></div>' + (extra || '');
@@ -10087,20 +10368,34 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var idx = gate >= 0 ? gate : Math.min(done, Math.max(0, (it.sets || 1) - 1));
     return '<div class="qm-train"><p class="qm-stage-label">第 ' + (idx + 1) + ' 组目标</p><div class="qm-instrument"><p class="qm-goal"><strong>' + esc(goalLabel(it, idx)) + '</strong><small>' + unitWord(it) + '</small></p>' + setButtons(it) + '</div></div>';
   }
+  function actualBlock(it, mode) {
+    var buf = (S.train.gates && S.train.gates[it.slotId]) || '';
+    var empty = String(buf).trim() === '';
+    var dis = empty ? ' disabled' : '';
+    var slotCls = 'qm-actual-slot' + (mode === 'arm' ? ' qm-arm' : ' is-on') + (mode === 'closing' ? ' is-closing' : '');
+    return '<div class="' + slotCls + '"><div class="qm-actual-clip"><div class="qm-actual-pad"><div class="qm-actual"><div class="qm-actual-field"><label for="qm-actual">实际次数</label><div class="qm-entry"><input id="qm-actual" inputmode="numeric" autocomplete="off" data-act="qreps" data-slot="' + it.slotId + '" value="' + esc(buf) + '" placeholder="—" aria-label="实际次数"><small>' + unitWord(it) + '</small></div></div>' +
+      '<button type="button" class="qm-confirm' + (empty ? '' : ' is-ready') + '" data-act="qmconfirm" data-slot="' + it.slotId + '"' + dis + '>记下末组</button></div></div></div></div>';
+  }
   function resultRow(it) {
     var t = S.train, done = it.done || 0;
     if (it.skip || done >= it.sets) return '';
     var gateOn = t.gate && t.gate.slot === it.slotId;
-    var resting = !!(rest.show && rest.slot === it.slotId && restLeft() > 0 && !gateOn);
+    var closing = !gateOn && t._gateClose === it.slotId;
+    var resting = !!(rest.show && rest.slot === it.slotId && restLeft() > 0 && !gateOn && !closing);
     var amrap = amrapPendingIndex(it) >= 0;
-    if (gateOn) {
-      var buf = (t.gates && t.gates[it.slotId]) || '';
-      var dis = String(buf).trim() === '' ? ' disabled' : '';
-      return '<div class="qm-actual"><div class="qm-actual-field"><label for="qm-actual">实际次数</label><div class="qm-entry"><input id="qm-actual" inputmode="numeric" autocomplete="off" data-act="qreps" data-slot="' + it.slotId + '" value="' + esc(buf) + '" placeholder="—" aria-label="实际次数"><small>' + unitWord(it) + '</small></div></div>' +
-        '<button type="button" class="qm-confirm" data-act="qmconfirm" data-slot="' + it.slotId + '"' + dis + '>记下末组</button></div>' +
-        '<div class="qm-result split"><button type="button" data-act="qmcancel" data-slot="' + it.slotId + '">取消</button><button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button></div>';
+    var fields = '';
+    if (gateOn || closing) {
+      var mode = closing ? 'closing' : (t._gateArm === it.slotId ? 'arm' : 'on');
+      if (mode === 'arm') t._gateArm = '';
+      if (closing) t._gateClose = '';
+      fields = actualBlock(it, mode);
+      if (gateOn) {
+        return fields + '<div class="qm-result split"><button type="button" data-act="qmcancel" data-slot="' + it.slotId + '">取消</button><button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button></div>';
+      }
     }
-    var h = '<div class="qm-result' + (resting || !amrap ? ' split' : '') + ( !resting && !amrap ? ' pair' : '') + '">';
+    var restArm = resting && t._restArm === it.slotId;
+    if (restArm) t._restArm = '';
+    var h = fields + '<div class="qm-result' + (resting || !amrap ? ' split' : '') + (!resting && !amrap ? ' pair' : '') + (resting ? (restArm ? ' qm-rest-arm' : ' is-resting') : '') + '">';
     if (resting) {
       h += '<button type="button" class="qm-rest" data-act="qmrest" data-slot="' + it.slotId + '" aria-label="组间休息，打开休息页">休息 <time>' + fmtSec(restLeft()) + '</time><span aria-hidden="true"> ›</span></button>';
       h += '<button type="button" data-act="qmincomplete" data-slot="' + it.slotId + '">未完成</button>';
@@ -10130,17 +10425,31 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       '<span class="qm-meta"><span>' + esc(headScheme(it)) + '</span></span>' + flagHtml(it) + '</button></div>' +
       '<div class="qm-panel" id="' + region + '">' + (it.skip ? '' : instrumentBlock(it) + resultRow(it) + retryBanner(it)) + '</div>';
   }
+  function menuBody(it, i, inert) {
+    return '<div class="qm-body"' + (inert ? ' inert aria-hidden="true"' : '') + '><div class="qm-body-inner"><div class="qm-reveal">' + expandedRow(it, i) + '</div></div></div>';
+  }
   /** 原列表顺序。同一时间只展开一行；点收起行只展开，不打开详情。 */
   function exerciseStack(vm) {
     var t = S.train, h = '<div class="qm-list">';
+    var collapseSlot = t._collapse && t._collapse.slot;
+    var collapseFrom = t._collapseFrom || 0;
     vm.items.forEach(function (it, i) {
       var open = !!(t.open && it.slotId === t.focus);
-      h += '<section class="qm-item' + (open ? ' is-open' : '') + (it.skip ? ' is-skip' : '') + '">';
-      h += open ? expandedRow(it, i) : collapsedRow(it, i);
+      var collapsing = !open && collapseSlot === it.slotId;
+      var from = open && t._expandSlot === it.slotId;
+      h += '<section class="qm-item' + (open ? ' is-open' : '') + (from ? ' is-from' : '') + (collapsing ? ' is-collapsing' : '') + (it.skip ? ' is-skip' : '') + '" data-slot="' + it.slotId + '"' + (collapsing ? ' data-from="' + collapseFrom + '"' : '') + '>';
+      if (open) h += menuBody(it, i, false);
+      else {
+        h += collapsedRow(it, i);
+        if (collapsing) h += menuBody(it, i, true);
+      }
       h += '</section>';
     });
     h += '</div><p class="qm-live" aria-live="polite">' + esc(t._announce || '') + '</p>';
     t._announce = '';
+    t._expandSlot = '';
+    t._collapse = null;
+    t._collapseFrom = 0;
     return h;
   }
   function homeAction(vm) {
@@ -10176,6 +10485,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (!t.missBuffer) t.missBuffer = {};
     if (!t.missBuffer[slot]) t.missBuffer[slot] = missValues(it);
     t.miss = { slot: slot, values: t.missBuffer[slot].slice() };
+    t._missIn = true;
+    if (t.log && t.log.more) t._sheetLeave = true;
     if (t.log) t.log.more = false;
   }
   function missSheet(it) {
@@ -10186,7 +10497,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     for (var i = 0; i < it.sets; i++) {
       rows += '<div class="qm-miss-row"><span>第 ' + (i + 1) + ' 组</span><span class="qm-miss-target">目标 ' + esc(goalLabel(it, i)) + '</span><input inputmode="numeric" autocomplete="off" data-act="qmiss" data-slot="' + it.slotId + '" data-i="' + i + '" value="' + esc(values[i]) + '" placeholder="—" aria-label="第 ' + (i + 1) + ' 组实际次数"><small>' + unitWord(it) + '</small></div>';
     }
-    return '<div class="qm-layer mask" data-act="missclose"><section class="qm-miss" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="miss-title"><div class="qm-miss-head"><h3 id="miss-title">未完成</h3><button type="button" class="qm-x" data-act="missclose" aria-label="关闭">×</button></div>' +
+    var missArm = !!S.train._missIn;
+    S.train._missIn = false;
+    return '<div class="qm-layer mask' + (missArm ? ' qm-arm' : ' is-on') + '" data-act="missclose"><section class="qm-miss' + (missArm ? '' : ' is-on') + '" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="miss-title"><div class="qm-miss-head"><h3 id="miss-title">未完成</h3><button type="button" class="qm-x" data-act="missclose" aria-label="关闭">×</button></div>' +
       '<p class="qm-miss-info">' + esc(it.name) + ' · 按实际填写，未做填 0。已记下的次数会带出来；空项不代表达标。</p>' + rows +
       '<button type="button" class="qm-miss-save' + (ready ? ' is-ready' : '') + '" data-act="misssave" data-slot="' + it.slotId + '"' + (ready ? '' : ' disabled') + '>记下未完成</button>' +
       '<p class="qm-miss-foot">先补全空项，仅记录本动作未达到目标。不是整节「完成训练」。</p></section></div>';
@@ -10203,7 +10516,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var skipLabel = it.skip ? '恢复本动作' : '跳过本动作';
     var skipSub = it.skip ? '恢复后可以继续记这一项' : '本节不做此动作，不计入完成；可再恢复';
     var slot = ' data-slot="' + it.slotId + '"';
-    return '<div class="qm-layer mask" data-act="logmoreclose"><section class="action-sheet" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="more-actions-title"><div class="sh-grabber" aria-hidden="true"></div><div class="sh-header"><div class="sh-title-wrap"><h3 id="more-actions-title">更多操作</h3><p>' + esc(it.name) + ' · 第 ' + (idx + 1) + ' / ' + it.sets + ' 组</p></div>' +
+    var sheetArm = !!S.train._sheetIn;
+    S.train._sheetIn = false;
+    return '<div class="qm-layer mask' + (sheetArm ? ' qm-arm' : ' is-on') + '" data-act="logmoreclose"><section class="action-sheet' + (sheetArm ? '' : ' is-on') + '" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="more-actions-title"><div class="sh-grabber" aria-hidden="true"></div><div class="sh-header"><div class="sh-title-wrap"><h3 id="more-actions-title">更多操作</h3><p>' + esc(it.name) + ' · 第 ' + (idx + 1) + ' / ' + it.sets + ' 组</p></div>' +
       '<button type="button" class="qm-x sh-close" data-act="logmoreclose" aria-label="关闭更多操作">' + IC_X + '</button></div><div class="sh-body"><div class="sh-group-label">记录本动作结果</div><div class="sh-card">' +
       moreRow('logtarget', IC_CHECK, '按目标完成', esc(targetSub), slot) +
       moreRow('logincomplete', IC_NOTE, '未完成', '补填各组实际次数，不按达标记满', slot) +
@@ -10259,7 +10574,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     }
     var screen = forced || 'work';
     if (!forced && (en.groups || []).length >= it.sets) screen = 'done';
+    var fromList = !t.log;
     t.log = { slot: slot, screen: screen, correct: null };
+    if (fromList) t._detailIn = true;
   }
   function renderSetLog(vm) {
     var ctx = logCtx(vm); if (!ctx) { S.train.log = null; return renderTrain(); }
@@ -10268,7 +10585,9 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     var target = SL.targetOf(it, Math.min(index, it.sets - 1));
     var pending = en.pending || SL.defaultPending(en, it);
     var stamp = Home.sessionStamp(t.date, vm.weekInCycle, vm.cycle, vm.day);
-    var h = '<div class="set-screen screen-' + screen + '">';
+    var enter = t._detailIn ? ' qm-enter' : '';
+    t._detailIn = false;
+    var h = '<div class="set-screen' + enter + ' screen-' + screen + '">';
     h += '<div class="set-wash" aria-hidden="true"></div>';
     var backAct = screen === 'correct' ? 'logwork' : 'logback';
     var backLabel = screen === 'correct' ? '取消更正，回到这一组' : '返回今日列表';
@@ -10523,6 +10842,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     if (opts.surface !== 'detail') t.log = null;
     else if (t.log) { t.log.screen = 'work'; t.log.more = false; }
     beginRest(it.rest || 60, it.name, it.slotId, { list: opts.surface !== 'detail' });
+    if (opts.surface !== 'detail') t._restArm = it.slotId;
     t._announce = '已记下';
     return true;
   }
@@ -10538,6 +10858,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         S.train.gate = { slot: slot, index: i };
         S.train.focus = slot;
         S.train.open = true;
+        S.train._gateArm = slot;
         return true;
       }
     }
@@ -10795,6 +11116,12 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       case 'qmexpand':
         var expandSlot = ds.slot || t.focus;
         if (!expandSlot) return false;
+        if (t.open && t.focus && t.focus !== expandSlot && !motionReduce()) {
+          var prevOpen = document.querySelector('.qm-item.is-open');
+          t._collapse = { slot: t.focus };
+          t._collapseFrom = prevOpen ? prevOpen.offsetHeight : 0;
+        }
+        t._expandSlot = expandSlot;
         t.focus = expandSlot;
         t.open = true;
         t.more = '';
@@ -10802,6 +11129,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         t._focusSel = '.qm-fold[data-slot="' + expandSlot + '"]';
         return true;
       case 'qmcollapse':
+        if (!motionReduce()) {
+          var prevFold = document.querySelector('.qm-item.is-open');
+          t._collapse = { slot: ds.slot || t.focus };
+          t._collapseFrom = prevFold ? prevFold.offsetHeight : 0;
+        }
         if (!ds.slot || t.focus === ds.slot) t.open = false;
         t._focusSel = '.qm-row[data-slot="' + (ds.slot || t.focus) + '"]';
         return true;
@@ -10815,6 +11147,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         var gateRaw = gateField ? gateField.value : ((t.gates && t.gates[ds.slot]) || (t.log && t.log.gateReps) || '');
         return confirmGate(ds.slot || (t.log && t.log.slot), gateRaw);
       case 'qmcancel':
+        if (t.gate) t._gateClose = t.gate.slot;
         t.gate = null;
         return true;
       case 'gatecancel':
@@ -10824,7 +11157,11 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         if (!t.gates) t.gates = {};
         t.gates[ds.slot] = el.value;
         var confirmBtn = document.querySelector('.qm-confirm[data-slot="' + ds.slot + '"]');
-        if (confirmBtn) confirmBtn.disabled = String(el.value).trim() === '';
+        if (confirmBtn) {
+          var confirmEmpty = String(el.value).trim() === '';
+          confirmBtn.disabled = confirmEmpty;
+          confirmBtn.classList.toggle('is-ready', !confirmEmpty);
+        }
         return false;
       case 'gatereps':
         if (t.log) t.log.gateReps = el.value;
@@ -10853,6 +11190,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         }
         return false;
       case 'missclose':
+        if (t.miss) t._missLeave = true;
         t.miss = null;
         t._focusSel = '[data-act=qmincomplete], [data-act=logincomplete]';
         return true;
@@ -10867,9 +11205,15 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         return true;
       case 'qmretry': return retryQuick();
       case 'logmore':
-        if (t.log) { t.log.more = !t.log.more; t._focusDialog = !!t.log.more; }
+        if (t.log) {
+          if (t.log.more) t._sheetLeave = true;
+          else t._sheetIn = true;
+          t.log.more = !t.log.more;
+          t._focusDialog = !!t.log.more;
+        }
         return true;
       case 'logmoreclose':
+        if (t.log && t.log.more) t._sheetLeave = true;
         if (t.log) t.log.more = false;
         t._focusSel = '.more-btn';
         return true;
@@ -10882,6 +11226,8 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
           return true;
         }
         if (t.log) persistOpen();
+        t._detailLeave = !!t.log;
+        t._listIn = true;
         t.log = null; t.open = true; return true;
       case 'logwork':
         if (t.log) {
@@ -12339,7 +12685,153 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     S.review.share = null;
     S.review.returnTo = null;
   }
+  function motionReduce() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function stripMotionActs(root) {
+    root.querySelectorAll('[data-act]').forEach(function (el) { el.removeAttribute('data-act'); });
+    root.querySelectorAll('[id]').forEach(function (el) { el.removeAttribute('id'); });
+  }
+  function spawnDetailGhost() {
+    var screen = document.querySelector('.set-screen');
+    if (!screen) return;
+    var g = screen.cloneNode(true);
+    g.className = 'qm-detail-ghost' + (motionReduce() ? ' is-reduce' : '');
+    stripMotionActs(g);
+    g.setAttribute('aria-hidden', 'true');
+    var app = document.querySelector('.app');
+    if (app) app.appendChild(g);
+    setTimeout(function () { if (g.parentNode) g.remove(); }, motionReduce() ? 180 : 260);
+  }
+  function spawnLayerGhost() {
+    var layer = document.querySelector('.qm-layer.mask');
+    if (!layer) return;
+    var reduce = motionReduce();
+    var app = document.querySelector('.app');
+    if (!app) return;
+    var mask = document.createElement('div');
+    mask.className = 'qm-mask-ghost';
+    app.appendChild(mask);
+    var sheet = layer.querySelector('.action-sheet, .qm-miss');
+    var g = null;
+    if (sheet) {
+      g = sheet.cloneNode(true);
+      var miss = sheet.classList.contains('qm-miss');
+      g.className = (miss ? 'qm-miss-ghost' : 'qm-sheet-ghost') + (reduce ? ' is-reduce' : '');
+      stripMotionActs(g);
+      g.setAttribute('aria-hidden', 'true');
+      if (!reduce && !miss && S.train && S.train._sheetDrag) g.style.transform = S.train._sheetDrag;
+      app.appendChild(g);
+    }
+    if (S.train) S.train._sheetDrag = '';
+    requestAnimationFrame(function () {
+      mask.classList.add('is-leaving');
+      if (g) {
+        g.style.transition = '';
+        g.classList.add('is-leaving');
+        if (!g.classList.contains('qm-miss-ghost')) g.style.transform = '';
+      }
+    });
+    setTimeout(function () {
+      if (mask.parentNode) mask.remove();
+      if (g && g.parentNode) g.remove();
+    }, reduce ? 180 : 280);
+  }
+  function paintLoggedLine() {
+    if (!S.train) return;
+    if (!S.train._dotScale) S.train._dotScale = {};
+    var reduce = motionReduce();
+    document.querySelectorAll('.qm-sets').forEach(function (sets) {
+      var item = sets.closest('.qm-item');
+      if (!item) return;
+      var slot = item.getAttribute('data-slot') || '';
+      var n = sets.querySelectorAll('.qm-set').length;
+      var done = sets.querySelectorAll('.qm-set.done').length;
+      var scale = (n <= 1 || done <= 1) ? 0 : (done - 1) / (n - 1);
+      var prev = S.train._dotScale[slot];
+      S.train._dotScale[slot] = scale;
+      if (reduce || prev == null || prev === scale) {
+        sets.style.setProperty('--logged', String(scale));
+        return;
+      }
+      sets.style.setProperty('--logged', String(prev));
+      void sets.offsetWidth;
+      sets.style.setProperty('--logged', String(scale));
+    });
+  }
+  function kickMotion() {
+    if (!S.train || S.tab !== 'train') return;
+    var reduce = motionReduce();
+    var openItem = document.querySelector('.qm-item.is-open.is-from');
+    if (openItem) {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { if (openItem.isConnected) openItem.classList.remove('is-from'); });
+      });
+    }
+    kickMotion._n = (kickMotion._n || 0) + 1;
+    var token = kickMotion._n;
+    var collapsing = document.querySelector('.qm-item.is-collapsing');
+    if (collapsing) {
+      var from = Number(collapsing.getAttribute('data-from')) || 0;
+      var row = collapsing.querySelector('.qm-row');
+      var body = collapsing.querySelector('.qm-body');
+      if (reduce || from < 8) {
+        if (body) body.remove();
+        collapsing.classList.remove('is-collapsing');
+        collapsing.style.height = '';
+        collapsing.style.overflow = '';
+      } else {
+        collapsing.style.height = from + 'px';
+        collapsing.style.overflow = 'hidden';
+        void collapsing.offsetHeight;
+        var target = row ? row.offsetHeight : 56;
+        requestAnimationFrame(function () {
+          if (!collapsing.isConnected) return;
+          collapsing.classList.add('is-collapse-go');
+          collapsing.style.height = target + 'px';
+        });
+        setTimeout(function () {
+          if (token !== kickMotion._n || !collapsing.isConnected) return;
+          if (body && body.parentNode) body.remove();
+          collapsing.style.height = '';
+          collapsing.style.overflow = '';
+          collapsing.classList.remove('is-collapsing');
+          collapsing.classList.remove('is-collapse-go');
+        }, 230);
+      }
+    }
+    var restRow = document.querySelector('.qm-result.qm-rest-arm');
+    if (restRow) requestAnimationFrame(function () { restRow.classList.add('is-resting'); });
+    document.querySelectorAll('.qm-actual-slot.qm-arm').forEach(function (slot) {
+      if (reduce) slot.classList.add('is-on');
+      else requestAnimationFrame(function () { requestAnimationFrame(function () { if (slot.isConnected) slot.classList.add('is-on'); }); });
+    });
+    document.querySelectorAll('.qm-actual-slot.is-closing').forEach(function (slot) {
+      requestAnimationFrame(function () { if (slot.isConnected) slot.classList.remove('is-on'); });
+      setTimeout(function () { if (slot.parentNode) slot.remove(); }, reduce ? 20 : 240);
+    });
+    document.querySelectorAll('.qm-layer.qm-arm').forEach(function (layer) {
+      var panel = layer.querySelector('.action-sheet, .qm-miss');
+      var go = function () {
+        layer.classList.add('is-on');
+        if (panel) panel.classList.add('is-on');
+      };
+      if (reduce) go();
+      else requestAnimationFrame(go);
+    });
+    paintLoggedLine();
+  }
+  kickMotion._n = 0;
   function render(keepScroll) {
+    if (S.train && S.train._detailLeave) {
+      spawnDetailGhost();
+      S.train._detailLeave = false;
+    }
+    if (S.train && (S.train._sheetLeave || S.train._missLeave)) {
+      spawnLayerGhost();
+      S.train._sheetLeave = false;
+      S.train._missLeave = false;
+    }
     var body = document.getElementById('body'), y = body.scrollTop;
     var tb = document.getElementById('tabbar');
     var trainHome = !gateOnboard() && S.tab === 'train';
@@ -12396,6 +12888,7 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
       var logEl = document.querySelector('.ex.current .ex-log, .ex.current');
       if (logEl && logEl.scrollIntoView) logEl.scrollIntoView({ block: 'nearest' });
     }
+    kickMotion();
   }
   /** 导航栏：一滚动就出现滚动边缘效果；滚过大标题后才显示小标题（iOS 大标题导航的行为） */
   function navState() {
@@ -12560,10 +13053,10 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
     document.addEventListener('keydown', function (e) {
       if (!S.train || S.tab !== 'train') return;
       if (e.key === 'Escape') {
-        if (S.train.miss) { S.train.miss = null; render(true); e.preventDefault(); return; }
-        if (S.train.log && S.train.log.more) { S.train.log.more = false; S.train._focusSel = '.more-btn'; render(true); e.preventDefault(); return; }
+        if (S.train.miss) { S.train._missLeave = true; S.train.miss = null; render(true); e.preventDefault(); return; }
+        if (S.train.log && S.train.log.more) { S.train._sheetLeave = true; S.train.log.more = false; S.train._focusSel = '.more-btn'; render(true); e.preventDefault(); return; }
         if (S.train.log && S.train.log.screen === 'gate') { S.train.log.screen = 'work'; render(true); e.preventDefault(); return; }
-        if (S.train.gate) { S.train.gate = null; render(true); e.preventDefault(); return; }
+        if (S.train.gate) { S.train._gateClose = S.train.gate.slot; S.train.gate = null; render(true); e.preventDefault(); return; }
       }
       if (e.key !== 'Tab') return;
       var dialog = document.querySelector('#body [role="dialog"]');
@@ -12592,8 +13085,13 @@ input, textarea { border: none; background: transparent; -webkit-appearance: non
         if (!drag) return;
         var dy = e.clientY - drag.y, sheet = drag.sheet;
         drag = null;
-        sheet.style.transform = '';
-        if (dy > 48 && S.train && S.train.log) { S.train.log.more = false; S.train._focusSel = '.more-btn'; render(true); }
+        if (dy > 48 && S.train && S.train.log) {
+          S.train._sheetDrag = sheet.style.transform || '';
+          S.train._sheetLeave = true;
+          S.train.log.more = false;
+          S.train._focusSel = '.more-btn';
+          render(true);
+        } else sheet.style.transform = '';
       });
     })();
     if (window.visualViewport) {
