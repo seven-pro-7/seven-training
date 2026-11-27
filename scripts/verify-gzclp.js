@@ -963,6 +963,119 @@ check('哑铃阶梯：10 kg 及以下保留细档，10–20 每 2 kg，20 kg 起
   assert.ok(card.wStepText);
 });
 
+check('杠铃孤立按双侧配片：总重一档 2.5，加减和进阶都不留 0.625', function () {
+  var names = ['杠铃弯举', 'EZ杆弯举', '仰卧臂屈伸'];
+  var params = P();
+  assert.strictEqual(params.steps.t3u, 1.25);
+  assert.deepStrictEqual(GZ.EQUIP_RULE['杠铃'], { inc: 2.5, step: 2.5, incL: 2.5, stepL: 5 });
+  names.forEach(function (name) {
+    var row = GZ.LIB.filter(function (x) { return x.name === name; })[0];
+    var slot = { name: name, equip: '杠铃', tier: 'T3', step: 't3u' };
+    assert.strictEqual(row.inc, 2.5, name);
+    assert.strictEqual(GZ.incOf(slot, params), 2.5, name);
+    assert.strictEqual(GZ.stepOf(slot, params), 2.5, name);
+    assert.strictEqual(GZ.stepOf(slot, P({ ruleMode: 'excel' })), 2.5, name + ' excel');
+    assert.strictEqual(GZ.nudgeWeight(name, '杠铃', 20, 1, 1.25), 22.5, name + ' +');
+    assert.strictEqual(GZ.nudgeWeight(name, '杠铃', 20, -1, 1.25), 17.5, name + ' -');
+    assert.strictEqual(GZ.nudgeWeight(name, '杠铃', 21.25, 1, 2.5), 22.5, name + ' off +');
+    assert.strictEqual(GZ.nudgeWeight(name, '杠铃', 21.25, -1, 2.5), 20, name + ' off -');
+    assert.strictEqual(GZ.nudgeWeight(name, '杠铃', 21.3, 1, 2.5), 22.5, name + ' typed +');
+    assert.strictEqual(GZ.nudgeWeight(name, '杠铃', 21.3, -1, 2.5), 20, name + ' typed -');
+    [20, 22.5, 25, 27.5].forEach(function (w) {
+      assert.ok(GZ.platesFor(w, params, '杠铃').indexOf('差') < 0, name + ' ' + w + ' ' + GZ.platesFor(w, params, '杠铃'));
+    });
+    assert.ok(GZ.platesFor(21.25, params, '杠铃').indexOf('差') >= 0, name);
+    var up = ev(slot, { stage: '3×15+', weight: 20, fail: 0 }, { v: 25 });
+    var down = ev(slot, { stage: '3×15+', weight: 22.5, fail: 0 }, { v: 10 });
+    var off = ev(slot, { stage: '3×15+', weight: 21.25, fail: 0 }, { v: 25 });
+    var offDown = ev(slot, { stage: '3×15+', weight: 21.25, fail: 0 }, { v: 10 });
+    var excel = ev(slot, { stage: '3×15+', weight: 21.25, fail: 0 }, { v: 25 }, { ruleMode: 'excel' });
+    assert.strictEqual(up.nextWeight, 22.5, name);
+    assert.strictEqual(down.judgment, '减轻');
+    assert.strictEqual(down.nextWeight, 20, name);
+    assert.strictEqual(off.nextWeight, 25, name);
+    assert.strictEqual(offDown.nextWeight, 20, name);
+    assert.strictEqual(excel.nextWeight, 25, name + ' excel');
+    [up.nextWeight, down.nextWeight, off.nextWeight, excel.nextWeight].forEach(function (w) {
+      assert.ok(GZ.platesFor(w, params, '杠铃').indexOf('差') < 0, name + ' prog ' + w);
+    });
+  });
+
+  var cable = { name: '绳索侧平举', equip: '器械', tier: 'T3', step: 't3u' };
+  assert.strictEqual(GZ.LIB.filter(function (x) { return x.name === '绳索侧平举'; })[0].inc, 1.25);
+  assert.strictEqual(GZ.incOf(cable, params), 1.25);
+  assert.strictEqual(GZ.stepOf(cable, params), 1.25);
+  assert.strictEqual(GZ.stepOf(cable, P({ ruleMode: 'excel' })), 1.25);
+  assert.strictEqual(GZ.nudgeWeight('绳索侧平举', '器械', 10, 1, 1.25), 11.25);
+  assert.strictEqual(GZ.nudgeWeight('绳索侧平举', '器械', 10.4, 1, 1.25), 11.65);
+  assert.strictEqual(GZ.nudgeWeight('负重引体向上', '负重', 10.3, 1, 1.25), 11.55);
+  assert.strictEqual(GZ.nudgeWeight('平板卧推', '杠铃', 50, 1, 2.5), 52.5);
+  assert.strictEqual(GZ.nudgeWeight('平板卧推', '杠铃', 50, -1, 2.5), 47.5);
+  assert.strictEqual(GZ.nudgeWeight('平板卧推', '杠铃', 51.25, 1, 2.5), 52.5);
+  assert.strictEqual(GZ.nudgeWeight('平板卧推', '杠铃', 51.25, -1, 2.5), 50);
+
+  var db = GZ.defaults(false);
+  var draft = GZ.blankDraft(db, 'A2');
+  draft.A2_5.w = 21.25;
+  var curl = GZ.buildTrain(db, { day: 'A2', draft: draft }).items.filter(function (it) { return it.slotId === 'A2_5'; })[0];
+  assert.strictEqual(curl.name, '杠铃弯举');
+  assert.strictEqual(curl.weight, 21.25);
+  assert.strictEqual(curl.wStep, 2.5);
+  assert.strictEqual(curl.wStepText, '2.5');
+  assert.ok(curl.plates.indexOf('差') >= 0);
+  assert.strictEqual(GZ.nudgeWeight(curl.name, curl.equip, curl.weight, 1, curl.wStep), 22.5);
+  assert.strictEqual(GZ.nudgeWeight(curl.name, curl.equip, curl.weight, -1, curl.wStep), 20);
+  var info = GZ.slotInfo(db, 'A2', 'A2_5');
+  assert.strictEqual(info.wStep, 2.5);
+  assert.strictEqual(info.wStepText, '2.5');
+  assert.strictEqual(GZ.nudgeWeight(info.name, info.equip, 21.25, 1, info.wStep), 22.5);
+  assert.strictEqual(GZ.nudgeWeight(info.name, info.equip, 21.25, -1, info.wStep), 20);
+  var stepSlot = { name: '杠铃弯举', equip: '杠铃', tier: 'T3', step: 't3u' };
+  assert.strictEqual('每次 +' + GZ.stepOf(stepSlot, db.params) + ' kg · 按 ' + GZ.incOf(stepSlot, db.params) + ' kg 档', '每次 +2.5 kg · 按 2.5 kg 档');
+
+  var seen = 0;
+  GZ.templateCatalog().forEach(function (cat) {
+    GZ.templateDef(db, cat.id).days.forEach(function (d) {
+      d.slots.forEach(function (s) {
+        if (names.indexOf(s.name) < 0) return;
+        seen++;
+        if (s.scheme) assert.strictEqual(s.scheme.step, 2.5, cat.id + ' ' + s.id);
+      });
+    });
+  });
+  assert.strictEqual(seen, 7);
+  function named(id, name) {
+    var out = [];
+    GZ.templateDef(db, id).days.forEach(function (d) {
+      d.slots.forEach(function (s) { if (s.name === name) out.push(s); });
+    });
+    return out;
+  }
+  named('ppl', '面拉').forEach(function (s) { assert.strictEqual(s.scheme.step, 1.25); });
+  named('pp4', '绳索侧平举').forEach(function (s) { assert.strictEqual(s.scheme.step, 1.25); });
+  assert.ok(named('ppl', '面拉').length >= 1);
+  assert.strictEqual(named('pp4', '绳索侧平举').length, 1);
+
+  var dual = { id: 'x', tier: 'T3', name: 'EZ杆弯举', equip: '杠铃', prog: 'dual', scheme: { sets: 3, repMin: 8, repMax: 12, step: 1.25 } };
+  var dualUp = GZ.PROGRESSIONS.dual.evaluate(dual, { stage: '8–12', weight: 20, fail: 0 }, { sets: [12, 12, 12] });
+  var dualDown = GZ.PROGRESSIONS.dual.evaluate(dual, { stage: '8–12', weight: 22.5, fail: 0 }, { sets: [6, 8, 8] });
+  var dualOff = GZ.PROGRESSIONS.dual.evaluate(dual, { stage: '8–12', weight: 21.25, fail: 0 }, { sets: [12, 12, 12] });
+  assert.strictEqual(dualUp.nextWeight, 22.5);
+  assert.strictEqual(dualDown.nextWeight, 20);
+  assert.strictEqual(dualOff.nextWeight, 25);
+  var face = { id: 'f', tier: 'T3', name: '面拉', equip: '器械', prog: 'dual', scheme: { sets: 3, repMin: 12, repMax: 15, step: 1.25 } };
+  var faceUp = GZ.PROGRESSIONS.dual.evaluate(face, { stage: '12–15', weight: 20, fail: 0 }, { sets: [15, 15, 15] });
+  assert.strictEqual(faceUp.nextWeight, 21.25);
+
+  var lin = { id: 'l', tier: 'T3', name: '仰卧臂屈伸', equip: '杠铃', prog: 'linear', scheme: { sets: 3, reps: 8, step: 1.25, inc: 1.25 } };
+  var linUp = GZ.PROGRESSIONS.linear.evaluate(lin, { weight: 20, fail: 0 }, { v: 8 });
+  var linCut = GZ.PROGRESSIONS.linear.evaluate(lin, { weight: 20, fail: 2 }, { v: 5 });
+  assert.strictEqual(linUp.nextWeight, 22.5);
+  assert.strictEqual(linCut.judgment, '减载');
+  assert.strictEqual(linCut.nextWeight, 17.5);
+  assert.ok(GZ.platesFor(linUp.nextWeight, params, '杠铃').indexOf('差') < 0);
+});
+
 if (failed) {
   console.error('\n' + failed + ' failed');
   process.exit(1);
