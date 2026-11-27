@@ -1048,10 +1048,16 @@
   z-index: 0;
   pointer-events: none;
 }
-.app.on-train .qm-item { position: relative; z-index: 1; }
+.app.on-train .qm-item {
+  position: relative;
+  z-index: 1;
+  border-radius: 23px;
+  background: transparent;
+  box-shadow: none;
+  transition: background-color var(--duration-default) var(--ease-out), box-shadow var(--duration-default) var(--ease-out);
+}
 .app.on-train .qm-item.is-open {
   background: #fff;
-  border-radius: 23px;
   box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04), 0 8px 22px rgba(20, 20, 20, 0.05);
 }
 .app.on-train .qm-row,
@@ -1157,7 +1163,7 @@
   cursor: pointer;
 }
 .app.on-train .qm-go { display: inline-block; margin-left: 4px; font-size: 15px; font-weight: 400; color: #959C9D; }
-.app.on-train .qm-train { display: flex; flex-direction: column; gap: 2px; padding: 8px 18px 4px 62px; }
+.app.on-train .qm-train { display: flex; flex-direction: column; gap: 2px; padding: 8px 18px 4px 54px; overflow: visible; }
 .app.on-train .qm-stage-label { margin: 0; font-size: 12px; line-height: 1.4; font-weight: 400; color: #6B7280; }
 .app.on-train .qm-instrument { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .app.on-train .qm-goal { display: flex; align-items: baseline; gap: 3px; margin: 0; flex: 0 0 auto; }
@@ -1170,9 +1176,28 @@
   align-items: center;
   gap: 0;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
   overflow: visible;
-  scrollbar-width: none;
+  overflow-x: visible;
+}
+.app.on-train .qm-sets::before,
+.app.on-train .qm-sets::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 22px;
+  height: 1px;
+  pointer-events: none;
+}
+.app.on-train .qm-sets::before { background: #E1E6E3; }
+.app.on-train .qm-sets::after {
+  right: auto;
+  width: calc(100% - 44px);
+  background: #141414;
+  transform: scaleX(var(--logged, 0));
+  transform-origin: left center;
+  transition: transform 160ms var(--ease-out);
 }
 .app.on-train .qm-set {
   position: relative;
@@ -1182,6 +1207,7 @@
   height: 44px;
   min-width: 44px;
   min-height: 44px;
+  margin-left: -12px;
   padding: 6px;
   border: 0;
   border-radius: 0;
@@ -1191,6 +1217,7 @@
   justify-content: center;
   cursor: pointer;
 }
+.app.on-train .qm-set:first-child { margin-left: 0; }
 .app.on-train .qm-node {
   width: 32px;
   height: 32px;
@@ -1205,6 +1232,7 @@
   font-weight: 400;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
 .app.on-train .qm-set.done .qm-node { border-color: #141414; background: #141414; color: #fff; }
 .app.on-train .qm-set.current .qm-node { border: 2px solid #E06A3C; color: #141414; font-weight: 700; background: #fff; }
@@ -1213,7 +1241,7 @@
   align-items: center;
   justify-content: flex-end;
   min-height: 44px;
-  margin: 0 18px 4px 62px;
+  margin: 0 18px 4px 54px;
   gap: 8px;
   position: relative;
 }
@@ -1249,7 +1277,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin: 0 18px 4px 62px;
+  margin: 0 18px 4px 54px;
   padding: 8px 0 4px;
 }
 .app.on-train .qm-actual label { display: block; margin: 0 0 2px; font-size: 12px; line-height: 1.4; font-weight: 400; color: #6B7280; }
@@ -1282,11 +1310,20 @@
   padding: 0 16px;
   border: 0;
   border-radius: 15px;
-  background: #5BB887;
-  color: #141414;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #DEE5E0;
+  color: #A0AAA4;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 400;
   cursor: pointer;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.app.on-train .qm-confirm:not(:disabled),
+.app.on-train .qm-confirm.is-ready {
+  background: #5BB887;
+  box-shadow: none;
+  color: #141414;
+  font-weight: 700;
 }
 .app.on-train .qm-confirm:disabled {
   background: #fff;
@@ -1295,7 +1332,7 @@
   font-weight: 400;
   cursor: default;
 }
-.app.on-train .qm-retry { margin: 0 18px 8px 62px; }
+.app.on-train .qm-retry { margin: 0 18px 8px 54px; }
 .app.on-train .qm-retry p { margin: 0 0 4px; font-size: 12px; color: #6B7280; }
 .app.on-train .qm-retry button {
   min-height: 44px;
@@ -1402,6 +1439,7 @@
   color: #A0AAA4;
   font-size: 14px;
   font-weight: 400;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
 .app .qm-miss-save.is-ready { background: #5BB887; border-color: #5BB887; color: #141414; font-weight: 700; }
 .app .qm-miss-save:disabled { cursor: default; }
@@ -1465,6 +1503,247 @@
 .app .qm-miss-save.is-ready { color: #141414; }
 .miss-kicker { text-align: center; font-size: 14px; color: #141414; margin-top: 28px; }
 .app.on-log .qm-actual.detail { margin-left: 0; margin-right: 0; border-top: 0; }
+
+/* 列表快速菜单与详情更多操作：短、可打断的过渡。只过渡明确属性。 */
+.app {
+  --duration-press: 90ms;
+  --duration-fast: 120ms;
+  --duration-default: 200ms;
+  --duration-layout: 240ms;
+  --duration-sheet-in: 260ms;
+  --duration-sheet-out: 200ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-distance-sm: 6px;
+  --motion-distance-md: 8px;
+}
+.app.on-train .qm-body { display: grid; grid-template-rows: 0fr; }
+.app.on-train .qm-body-inner { overflow: hidden; min-height: 0; }
+.app.on-train .qm-item.is-open .qm-body {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--duration-layout) var(--ease-out);
+}
+.app.on-train .qm-item.is-open.is-from {
+  background: transparent;
+  box-shadow: none;
+  transition: none;
+}
+.app.on-train .qm-item.is-open.is-from .qm-body { grid-template-rows: 0fr; transition: none; }
+.app.on-train .qm-reveal { opacity: 1; transform: none; }
+.app.on-train .qm-item.is-open .qm-reveal {
+  transition: opacity var(--duration-default) var(--ease-out) 40ms, transform var(--duration-default) var(--ease-out) 40ms;
+}
+.app.on-train .qm-item.is-open.is-from .qm-reveal {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md));
+  transition: none;
+}
+.app.on-train .qm-item.is-collapsing {
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04), 0 8px 22px rgba(20, 20, 20, 0.05);
+  transition: height 200ms var(--ease-out), background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+.app.on-train .qm-item.is-collapsing.is-collapse-go { background: transparent; box-shadow: none; }
+.app.on-train .qm-item.is-collapsing .qm-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  grid-template-rows: 1fr;
+  pointer-events: none;
+}
+.app.on-train .qm-item.is-collapsing .qm-reveal { opacity: 1; transform: none; }
+.app.on-train .qm-item.is-collapsing.is-collapse-go .qm-reveal {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-sm));
+  transition: opacity 150ms var(--ease-in), transform 150ms var(--ease-in);
+}
+.app.on-train .qm-actual-slot { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 220ms var(--ease-out); }
+.app.on-train .qm-actual-slot.is-on { grid-template-rows: 1fr; }
+.app.on-train .qm-actual-clip { overflow: hidden; min-height: 0; }
+.app.on-train .qm-actual-pad {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-sm));
+  transition: opacity var(--duration-default) var(--ease-out), transform var(--duration-default) var(--ease-out);
+}
+.app.on-train .qm-actual-slot.is-on .qm-actual-pad { opacity: 1; transform: none; }
+.app.on-train .qm-rest {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-sm));
+  pointer-events: none;
+  transition: opacity var(--duration-default) var(--ease-out), transform var(--duration-default) var(--ease-out);
+}
+.app.on-train .qm-result.is-resting .qm-rest {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.app .qm-layer.mask {
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.app .qm-layer.mask.is-on { opacity: 1; }
+.app .action-sheet {
+  transform: translateY(100%);
+  transition: transform var(--duration-sheet-in) var(--ease-out);
+  pointer-events: none;
+}
+.app .action-sheet.is-on { transform: none; pointer-events: auto; }
+.app .qm-miss {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md));
+  transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+}
+.app .qm-miss.is-on { opacity: 1; transform: none; }
+.set-screen.qm-enter { animation: qm-detail-in var(--duration-sheet-in) var(--ease-out); }
+@keyframes qm-detail-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+.muse-home.qm-list-in { animation: qm-fade-in 200ms var(--ease-out); }
+@keyframes qm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qm-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes qm-detail-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(16px); }
+}
+.qm-detail-ghost {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: #F8F8F8;
+  color: #141414;
+  pointer-events: none;
+  overflow: hidden;
+  animation: qm-detail-out var(--duration-sheet-out) var(--ease-in) forwards;
+}
+.qm-detail-ghost .set-top {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+  padding: calc(env(safe-area-inset-top) + 8px) 8px 0;
+}
+.qm-mask-ghost {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  background: rgba(20, 20, 20, 0.34);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 150ms var(--ease-in);
+}
+.qm-mask-ghost.is-leaving { opacity: 0; }
+.qm-sheet-ghost {
+  position: fixed;
+  z-index: 220;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: min(480px, 100%);
+  margin: 0 auto;
+  background: #F8F8F8;
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -10px 36px rgba(20, 20, 20, 0.16);
+  padding: 10px 18px calc(28px + env(safe-area-inset-bottom));
+  pointer-events: none;
+  transition: transform var(--duration-sheet-out) var(--ease-in);
+}
+.qm-sheet-ghost.is-leaving { transform: translateY(100%); }
+.qm-miss-ghost {
+  position: fixed;
+  z-index: 220;
+  left: 10px;
+  right: 10px;
+  bottom: 20px;
+  background: #fff;
+  border-radius: 26px;
+  box-shadow: 0 -10px 36px rgba(20, 20, 20, 0.16);
+  padding: 14px 20px 34px;
+  pointer-events: none;
+  transition: opacity 180ms var(--ease-in), transform 180ms var(--ease-in);
+}
+.qm-miss-ghost.is-leaving { opacity: 0; transform: translateY(var(--motion-distance-md)); }
+.app.on-train .qm-row:active,
+.app.on-train .qm-fold:active,
+.app.on-train .qm-head-content:active,
+.app.on-train .qm-set:active,
+.app.on-train .qm-result button:active,
+.app.on-train .qm-confirm:not(:disabled):active,
+.app.on-train .qm-text:active,
+.app.on-log .more-btn:active,
+.app.on-log .back-btn:active,
+.app.on-log .home-cta:active,
+.app .sh-row:active,
+.app .qm-x:active,
+.app .qm-miss-save:not(:disabled):active {
+  transform: scale(0.98);
+  transition: transform var(--duration-press) var(--ease-out);
+}
 @media (prefers-reduced-motion: reduce) {
-  .app .action-sheet, .app .qm-miss, .app .qm-layer { transition: none; }
+  .app.on-train .qm-item,
+  .app.on-train .qm-body,
+  .app.on-train .qm-item.is-collapsing,
+  .app.on-train .qm-actual-slot,
+  .app.on-train .qm-sets::after,
+  .app.on-train .qm-node,
+  .app.on-train .qm-confirm,
+  .app .qm-miss-save { transition: none !important; }
+  .app.on-train .qm-item.is-open.is-from .qm-body { grid-template-rows: 1fr !important; }
+  .app.on-train .qm-item.is-open.is-from { background: #fff !important; box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04), 0 8px 22px rgba(20, 20, 20, 0.05) !important; }
+  .app.on-train .qm-reveal,
+  .app.on-train .qm-rest,
+  .app.on-train .qm-actual-pad,
+  .app .qm-miss,
+  .app .action-sheet,
+  .app .qm-layer.mask,
+  .qm-mask-ghost,
+  .qm-sheet-ghost,
+  .qm-miss-ghost {
+    transform: none !important;
+    animation: none !important;
+  }
+  .app.on-train .qm-item.is-open.is-from .qm-reveal {
+    opacity: 0 !important;
+    transition: none !important;
+  }
+  .app.on-train .qm-item.is-open .qm-reveal,
+  .app.on-train .qm-result.is-resting .qm-rest,
+  .app.on-train .qm-actual-slot.is-on .qm-actual-pad {
+    transform: none !important;
+    transition: opacity 120ms var(--ease-out) !important;
+  }
+  .app .qm-layer.mask,
+  .app .qm-layer.mask.is-on,
+  .app .qm-miss,
+  .app .qm-miss.is-on,
+  .app .action-sheet,
+  .app .action-sheet.is-on {
+    transform: none !important;
+    transition: opacity 150ms var(--ease-out) !important;
+  }
+  .app .action-sheet { opacity: 0; }
+  .app .action-sheet.is-on { opacity: 1; pointer-events: auto; }
+  .set-screen.qm-enter { animation: qm-fade-in 150ms var(--ease-out) !important; }
+  .muse-home.qm-list-in { animation: qm-fade-in 150ms var(--ease-out) !important; }
+  .qm-detail-ghost { animation: qm-fade-out 150ms var(--ease-in) forwards !important; }
+  .qm-detail-ghost.is-reduce { animation: qm-fade-out 150ms var(--ease-in) forwards !important; }
+  .app.on-train .qm-row:active,
+  .app.on-train .qm-fold:active,
+  .app.on-train .qm-head-content:active,
+  .app.on-train .qm-set:active,
+  .app.on-train .qm-result button:active,
+  .app.on-train .qm-confirm:active,
+  .app.on-train .qm-text:active,
+  .app.on-log .more-btn:active,
+  .app.on-log .back-btn:active,
+  .app.on-log .home-cta:active,
+  .app .sh-row:active,
+  .app .qm-x:active,
+  .app .qm-miss-save:active { transform: none !important; }
 }
